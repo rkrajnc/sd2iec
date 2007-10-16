@@ -58,7 +58,7 @@ FORMAT = ihex
 
 
 # Target file name (without extension).
-TARGET = mmc2iec
+TARGET = sd2iec
 
 
 # List C source files here. (C dependencies are automatically generated.)
