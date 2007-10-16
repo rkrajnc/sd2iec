@@ -291,3 +291,11 @@ FRESULT f_rename (const char*, const char*);		/* Rename/Move a file or directory
 
 #define _FATFS
 #endif /* _FATFS */
+
+/*
+Emacs stuff:
+  Local Variables:
+  c-basic-offset: 4
+  tab-width: 4
+  End:
+*/

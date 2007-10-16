@@ -1586,3 +1586,10 @@ FRESULT f_rename (
 #endif /* _FS_MINIMIZE <= 1 */
 #endif /* _FS_MINIMIZE <= 2 */
 
+/*
+Emacs stuff:
+  Local Variables:
+  c-basic-offset: 4
+  tab-width: 4
+  End:
+*/
