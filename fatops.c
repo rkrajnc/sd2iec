@@ -71,16 +71,17 @@ static const PROGMEM uint8_t dirfooter[] = {
 #define TYPE_PRG 2
 #define TYPE_USR 3
 #define TYPE_REL 4
-#define TYPE_DIR 5
+#define TYPE_CBM 5
+#define TYPE_DIR 6
 
-// FIXME: Welcher Typ ist CBM der 1581?
 static const PROGMEM uint8_t filetypes[] = {
   'D','E','L', // 0
   'S','E','Q', // 1
   'P','R','G', // 2
   'U','S','R', // 3
   'R','E','L', // 4
-  'D','I','R'  // 5
+  'C','B','M', // 5
+  'D','I','R'  // 6
 };
 
 /* ------------------------------------------------------------------------- */
