@@ -1,4 +1,19 @@
 sd2iec - a controller/interface adapting SD/MMC to the CBM serial bus
 
-This file hasn't been written yet.
+This file needs to be expanded. A lot.
+
+Compilation notes:
+==================
+sd2iec is set up to be compiled in multiple configurations, controlled by
+variables supplied to the make command line.
+
+The target chip must always be supplied by using either "make CHIP=m32"
+for the ATmega32 or "make CHIP=m644" for the ATmega644.
+
+By default the codes is configured for the I/O pin usage of the "Shadowwolf"
+variant of the MMC2IEC board. If your circuit uses the original LarsP
+circuit instead, add "LARSP=yes" to the make command line to change the
+defaults. If you use a variant that is not covered by either of those options,
+edit config.h yourself - the commented section is the one used by default.
+
 

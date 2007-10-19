@@ -68,59 +68,94 @@ typedef struct
 // Must be a power of 2
 #define UART_BUFFER_SIZE 128
 
+
+#ifndef LARSP_HARDWARE
+/* Default case: Configure for your own hardware    */
+/* example values are for the "Shadowwolf" variant. */
+
 // CARD_DETECT must return non-zero when card is inserted
 // If no card detect signal is available, comment the defines
-#define SDCARD_DETECT         (!(PIND & _BV(PD2)))
-#define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
+#  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
+#  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
 
 // CARD Write Protect must return non-zero when card is write protected
 // If no card detect signal is available, comment the defines
-#define SDCARD_WP         (PIND & _BV(PD6))
-#define SDCARD_WP_SETUP() do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
+#  define SDCARD_WP         (PIND & _BV(PD6))
+#  define SDCARD_WP_SETUP() do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
 
 // DEV9 jumper. If jumped, IEC device number is 9, otherwise 8
 // If no DEV9 jumper is available, comment the defines
 /* R.Riedel uses PORTD.7 instead of PA2 */
-#define DEV9_JUMPER         (!(PIND & _BV(PD7)))
-#define DEV9_JUMPER_SETUP() do { DDRD &= ~_BV(PD7); PORTD |= _BV(PD7); } while(0)
+#  define DEV9_JUMPER         (!(PIND & _BV(PD7)))
+#  define DEV9_JUMPER_SETUP() do { DDRD &= ~_BV(PD7); PORTD |= _BV(PD7); } while(0)
 
 // If DEV10_JUMPER is non-zero, IEC device number is 10, otherwise 8
 // If no DEV10 jumper is available, comment the defines
 /* R.Riedel uses PORTD.5 instead of PA3 */
-#define DEV10_JUMPER         (!(PIND & _BV(PD5)))
-#define DEV10_JUMPER_SETUP() do { DDRD &= ~_BV(PD5); PORTD |= _BV(PD5); } while(0)
+#  define DEV10_JUMPER         (!(PIND & _BV(PD5)))
+#  define DEV10_JUMPER_SETUP() do { DDRD &= ~_BV(PD5); PORTD |= _BV(PD5); } while(0)
 
 // BUSY led, recommended color: green
 /* R.Riedel - using PORTC instead of the original PORTA here plus inverse polarity */
-#define BUSY_LED_SETDDR() DDRC  |= _BV(PC0)
-#define BUSY_LED_ON()     PORTC |= _BV(PC0)
-#define BUSY_LED_OFF()    PORTC &= ~_BV(PC0)
+#  define BUSY_LED_SETDDR() DDRC  |= _BV(PC0)
+#  define BUSY_LED_ON()     PORTC |= _BV(PC0)
+#  define BUSY_LED_OFF()    PORTC &= ~_BV(PC0)
 
 
 // DIRTY led, recommended color: red
 /* R.Riedel - using PORTC instead of the original PORTA here plus inverse polarity */
-#define DIRTY_LED_SETDDR() DDRC  |= _BV(PC1)
-#define DIRTY_LED_ON()     PORTC |= _BV(PC1)
-#define DIRTY_LED_OFF()    PORTC &= ~_BV(PC1)
-#define DIRTY_LED_PORT     PORTC
-#define DIRTY_LED_BIT()    _BV(PC1)
+#  define DIRTY_LED_SETDDR() DDRC  |= _BV(PC1)
+#  define DIRTY_LED_ON()     PORTC |= _BV(PC1)
+#  define DIRTY_LED_OFF()    PORTC &= ~_BV(PC1)
+#  define DIRTY_LED_PORT     PORTC
+#  define DIRTY_LED_BIT()    _BV(PC1)
 
 /* Auxiliary LED for debugging */
-#define AUX_LED_SETDDR()   DDRD  |= _BV(PC2)
-#define AUX_LED_ON()       PORTD |= _BV(PC2)
-#define AUX_LED_OFF()      PORTD &= ~_BV(PC2)
+#  define AUX_LED_SETDDR()   DDRD  |= _BV(PC2)
+#  define AUX_LED_ON()       PORTD |= _BV(PC2)
+#  define AUX_LED_OFF()      PORTD &= ~_BV(PC2)
 
 // IEC signals
 /* R.Riedel - using PORTA instead of the original PORTC for the IEC */
 
-#define IEC_PIN  PINA
-#define IEC_DDR  DDRA
-#define IEC_PORT PORTA
+#  define IEC_PIN  PINA
+#  define IEC_DDR  DDRA
+#  define IEC_PORT PORTA
 
-#define IEC_BIT_ATN   _BV(PA0)
-#define IEC_BIT_DATA  _BV(PA1)
-#define IEC_BIT_CLOCK _BV(PA2)
-#define IEC_BIT_SRQ   _BV(PA3)
+#  define IEC_BIT_ATN   _BV(PA0)
+#  define IEC_BIT_DATA  _BV(PA1)
+#  define IEC_BIT_CLOCK _BV(PA2)
+#  define IEC_BIT_SRQ   _BV(PA3)
+
+#else
+/* Abridged version: LarsP hardware */
+#  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
+#  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
+#  define SDCARD_WP             (PIND & _BV(PD6))
+#  define SDCARD_WP_SETUP()     do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
+#  define DEV9_JUMPER           (!(PINA & _BV(PA2)))
+#  define DEV9_JUMPER_SETUP()   do { DDRA &= ~_BV(PA2); PORTA |= _BV(PA2); } while(0)
+#  define DEV10_JUMPER          (!(PINA & _BV(PA3)))
+#  define DEV10_JUMPER_SETUP()  do { DDRA &= ~_BV(PA3); PORTA |= _BV(PA3); } while(0)
+#  define BUSY_LED_SETDDR()     DDRA  |= _BV(PA0)
+#  define BUSY_LED_ON()         PORTA |= _BV(PA0)
+#  define BUSY_LED_OFF()        PORTA &= ~_BV(PA0)
+#  define DIRTY_LED_SETDDR()    DDRA  |= _BV(PA1)
+#  define DIRTY_LED_ON()        PORTA |= _BV(PA1)
+#  define DIRTY_LED_OFF()       PORTA &= ~_BV(PA1)
+#  define DIRTY_LED_PORT        PORTA
+#  define DIRTY_LED_BIT()       _BV(PA1)
+#  define AUX_LED_SETDDR()      do {}  while (0)
+#  define AUX_LED_ON()          do {}  while (0)
+#  define AUX_LED_OFF()         do {}  while (0)
+#  define IEC_PIN               PINC
+#  define IEC_DDR               DDRC
+#  define IEC_PORT              PORTC
+#  define IEC_BIT_ATN           _BV(PC0)
+#  define IEC_BIT_DATA          _BV(PC1)
+#  define IEC_BIT_CLOCK         _BV(PC2)
+#  define IEC_BIT_SRQ           _BV(PC3)
+#endif
 
 // SD Card supply voltage - choose the one appropiate to your board
 //#define SD_SUPPLY_VOLTAGE (1L<<15)  // 2.7V - 2.8V

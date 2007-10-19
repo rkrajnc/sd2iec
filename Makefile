@@ -40,8 +40,11 @@
 
 
 # MCU name
+ifeq ($(CHIP),m32)
 MCU = atmega32
-#MCU = atmega644
+else ifeq ($(CHIP),m644)
+MCU = atmega644
+endif
 
 
 # Processor frequency.
@@ -106,6 +109,10 @@ CSTANDARD = -std=gnu99
 
 # Place -D or -U options here
 CDEFS = -DF_CPU=$(F_CPU)UL
+
+ifdef LARSP
+CDEFS += -DLARSP_HARDWARE
+endif
 
 
 # Place -I options here
