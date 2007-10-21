@@ -64,8 +64,6 @@ enum { BUS_IDLE = 0, BUS_ATNACTIVE, BUS_FOUNDATN, BUS_FORME, BUS_NOTFORME, BUS_A
 
 enum { DEVICE_IDLE = 0, DEVICE_LISTEN, DEVICE_TALK } device_state;
 
-enum { DATA_IDLE = 0, DATA_FILENAME, DATA_COMMAND, DATA_BUFFER } data_state;
-
 /* ------------------------------------------------------------------------- */
 /*  Utility stuff                                                            */
 /* ------------------------------------------------------------------------- */
@@ -305,35 +303,34 @@ static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
 /* ------------------------------------------------------------------------- */
 
 /* Handle an incoming LISTEN request - see EA2E */
-static uint8_t iec_listen_handler(uint8_t cmd) {
+static uint8_t iec_listen_handler(const uint8_t cmd) {
   int16_t c;
   buffer_t *buf;
+  enum { DATA_COMMAND, DATA_BUFFER } data_state;
 
   uart_putc('L');
 
   buf = find_buffer(cmd & 0x0f);
     
-  if ((cmd & 0x0f) >= 0x0f)
+  /* Abort if there is no buffer or it's not open for writing */
+  /* and it isn't an OPEN command                             */
+  if ((buf == NULL || !buf->write) && (cmd & 0xf0) != 0xf0) {
+    uart_putc('c');
+    bus_state = BUS_CLEANUP;
+    return 1;
+  }
+
+  if ((cmd & 0x0f) == 0x0f || (cmd & 0xf0) == 0xf0) {
     data_state = DATA_COMMAND;
-  else if ((cmd & 0xf0) == 0xf0)
-    data_state = DATA_FILENAME;
-  else if ((cmd & 0xf0) == 0x60) {
-    data_state = DATA_BUFFER;
-    
-    if (buf == NULL) {
-      uart_putc('c');
-      bus_state = BUS_CLEANUP;
-      return 1;
-    }
   } else {
-    uart_puts_P(PSTR("unknown data state\n"));
+    data_state = DATA_BUFFER;
   }
 
   while (1) {
     c = iec_getc();
     if (c < 0) return 1;
-    
-    if (data_state == DATA_COMMAND || data_state == DATA_FILENAME) {
+
+    if (data_state == DATA_COMMAND) {
       if (command_length < COMMAND_BUFFER_SIZE)
 	command_buffer[command_length++] = c;
       if (iecflags.eoi_recvd)
@@ -455,7 +452,6 @@ void iec_mainloop(void) {
   iecflags.vc20mode     = 0;
 
   bus_state    = BUS_IDLE;
-  data_state   = DATA_IDLE;
 
   while (1) {
     switch (bus_state) {
@@ -535,7 +531,6 @@ void iec_mainloop(void) {
 	      }
 	    buf->read = 0;
 	  }
-	  device_state = DEVICE_IDLE; // FIXME: Big Fat Hack. Check what 1571 really does.
 	  bus_state = BUS_FORME;
 	} else {
 	  bus_state = BUS_ATNFINISH;
