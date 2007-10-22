@@ -443,7 +443,6 @@ void iec_mainloop(void) {
   DDRC = 0x0f;
   PORTC = 0;
 
-  iecflags.eoi_recvd    = 0;
   iecflags.jiffy_active = 0;
   iecflags.vc20mode     = 0;
 
@@ -465,7 +464,8 @@ void iec_mainloop(void) {
       set_atnack(0);
 
       device_state = DEVICE_IDLE;
-      bus_state = BUS_ATNACTIVE;
+      bus_state    = BUS_ATNACTIVE;
+      iecflags.eoi_recvd    = 0;
 
       /* Slight protocol violation:                        */
       /*   Wait until clock is low or 100us have passed    */
