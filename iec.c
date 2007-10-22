@@ -158,9 +158,6 @@ ISR(TIMER2_COMPA_vect) {
 static int16_t iec_getc(void) {
   uint8_t i,val,tmp;
 
-  //uart_putc('g');
-  toggle_srq();
-
   val = 0;
 
   do {                                                 // E9CD-E9D5
@@ -441,7 +438,6 @@ void iec_mainloop(void) {
   uart_puthex(device_address);
   uart_putcrlf();
 
-  set_srq(0);
   sei();
 
   DDRC = 0x0f;
@@ -451,7 +447,7 @@ void iec_mainloop(void) {
   iecflags.jiffy_active = 0;
   iecflags.vc20mode     = 0;
 
-  bus_state    = BUS_IDLE;
+  bus_state = BUS_IDLE;
 
   while (1) {
     switch (bus_state) {
