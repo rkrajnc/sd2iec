@@ -1,6 +1,9 @@
 2007-xx-xx - release 0.2
-	- Conditional compilation via make command line for chip type
+	- conditional compilation via make command line for chip type
 	  and IO pin assignment (Shadowwolf/LarsP)
+	- object files are generated in a subdirectory
+	- bug fixes in IEC and buffer handling
+	- added project file for AVR Studio (untested)
 
 2007-10-16 - release 0.1
 	Initial release
