@@ -44,8 +44,26 @@ ifeq ($(CHIP),m32)
 MCU = atmega32
 else ifeq ($(CHIP),m644)
 MCU = atmega644
+else
+.PHONY: nochip
+nochip:
+	@echo '=============================================================='
+	@echo 'No known target chip specified. To specify a target chip, use:'
+	@echo
+	@echo '    $(MAKE) CHIP=chiptype'
+	@echo
+	@echo 'Currently known chip types:'
+	@echo '  m32   - ATmega32'
+	@echo '  m644  - ATmega644'
+	@echo '=============================================================='
+	@exit 1
+
+# Catch a common use case
+clean: nochip
 endif
 
+# Directory for all generated files
+OBJDIR := obj-$(CHIP)
 
 # Processor frequency.
 #     This will define a symbol, F_CPU, in all source code files equal to the 
@@ -61,7 +79,7 @@ FORMAT = ihex
 
 
 # Target file name (without extension).
-TARGET = sd2iec
+TARGET = $(OBJDIR)/sd2iec
 
 
 # List C source files here. (C dependencies are automatically generated.)
@@ -132,7 +150,7 @@ CFLAGS += $(CDEFS) $(CINCS)
 CFLAGS += -O$(OPT)
 CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 CFLAGS += -Wall -Wstrict-prototypes -Werror -Wno-unused
-CFLAGS += -Wa,-adhlns=$(<:.c=.lst)
+CFLAGS += -Wa,-adhlns=$(OBJDIR)/$(<:.c=.lst)
 CFLAGS += $(patsubst %,-I%,$(EXTRAINCDIRS))
 CFLAGS += $(CSTANDARD)
 
@@ -144,7 +162,7 @@ CFLAGS += $(CSTANDARD)
 #             for use in COFF files, additional information about filenames
 #             and function names needs to be present in the assembler source
 #             files -- see avr-libc docs [FIXME: not yet described there]
-ASFLAGS = -Wa,-adhlns=$(<:.S=.lst),-gstabs 
+ASFLAGS = -Wa,-adhlns=$(OBJDIR)/$(<:.S=.lst),-gstabs 
 
 
 #---------------- Library Options ----------------
@@ -286,10 +304,10 @@ WINSHELL = cmd
 
 
 # Define all object files.
-OBJ = $(SRC:.c=.o) $(ASRC:.S=.o) 
+OBJ := $(patsubst %,$(OBJDIR)/%,$(SRC:.c=.o) $(ASRC:.S=.o))
 
 # Define all listing files.
-LST = $(SRC:.c=.lst) $(ASRC:.S=.lst) 
+LST := $(patsubst %,$(OBJDIR)/%,$(SRC:.c=.lst) $(ASRC:.S=.lst))
 
 
 # Compiler flags to generate dependency files.
@@ -308,18 +326,19 @@ ALL_ASFLAGS = -mmcu=$(MCU) -I. -x assembler-with-cpp $(ASFLAGS)
 # Default target.
 all: build
 
-build: elf bin hex #copy2card
+build: elf bin hex
 	$(ELFSIZE)|grep -v debug
 
 elf: $(TARGET).elf
 bin: $(TARGET).bin
-	-../utils/crcgen $(TARGET).bin
 hex: $(TARGET).hex
 eep: $(TARGET).eep
 lss: $(TARGET).lss 
 sym: $(TARGET).sym
 
+# A little helper target for the maintainer =)
 copy2card:
+	../utils/crcgen $(TARGET).bin
 	mount /mnt
 	cp $(TARGET).bin /mnt
 	umount /mnt
@@ -392,22 +411,22 @@ extcoff: $(TARGET).elf
 
 
 # Create final output files (.hex, .eep) from ELF output file.
-%.bin: %.elf
+$(OBJDIR)/%.bin: $(OBJDIR)/%.elf
 	$(OBJCOPY) -O binary -R .eeprom $< $@
 
-%.hex: %.elf
+$(OBJDIR)/%.hex: $(OBJDIR)/%.elf
 	$(OBJCOPY) -O $(FORMAT) -R .eeprom $< $@
 
-%.eep: %.elf
+$(OBJDIR)/%.eep: $(OBJDIR)/%.elf
 	-$(OBJCOPY) -j .eeprom --set-section-flags=.eeprom="alloc,load" \
 	--change-section-lma .eeprom=0 -O $(FORMAT) $< $@
 
 # Create extended listing file from ELF output file.
-%.lss: %.elf
+$(OBJDIR)/%.lss: $(OBJDIR) $(OBJDIR)/%.elf
 	$(OBJDUMP) -h -S $< > $@
 
 # Create a symbol table from ELF output file.
-%.sym: %.elf
+$(OBJDIR)/%.sym: $(OBJDIR)/%.elf
 	$(NM) -n $< > $@
 
 
@@ -415,28 +434,31 @@ extcoff: $(TARGET).elf
 # Link: create ELF output file from object files.
 .SECONDARY : $(TARGET).elf
 .PRECIOUS : $(OBJ)
-%.elf: $(OBJ)
+$(OBJDIR)/%.elf: $(OBJ)
 	$(CC) $(ALL_CFLAGS) $^ --output $@ $(LDFLAGS)
 
 
 # Compile: create object files from C source files.
-%.o : %.c
+$(OBJDIR)/%.o : %.c $(OBJDIR)
 	$(CC) -c $(ALL_CFLAGS) $< -o $@ 
 
 
 # Compile: create assembler files from C source files.
-%.s : %.c
+$(OBJDIR)/%.s : %.c $(OBJDIR)
 	$(CC) -S $(ALL_CFLAGS) $< -o $@
 
 
 # Assemble: create object files from assembler source files.
-%.o : %.S
+$(OBJDIR)/%.o : %.S $(OBJDIR)
 	$(CC) -c $(ALL_ASFLAGS) $< -o $@
 
 # Create preprocessed source for use in sending a bug report.
-%.i : %.c
+$(OBJDIR)/%.i : %.c $(OBJDIR)
 	$(CC) -E -mmcu=$(MCU) -I. $(CFLAGS) $< -o $@ 
 
+# Create the output directory
+$(OBJDIR):
+	mkdir $(OBJDIR)
 
 # Target: clean project.
 clean: begin clean_list end
@@ -455,6 +477,7 @@ clean_list :
 	$(REMOVE) $(SRC:.c=.s)
 	$(REMOVE) $(SRC:.c=.d)
 	$(REMOVE) .dep/*
+	-rmdir $(OBJDIR)
 
 
 
