@@ -1,4 +1,11 @@
 # Hey Emacs, this is a -*- makefile -*-
+
+# Define version number
+MAJOR = 0
+MINOR = 2
+PATCHLEVEL = 
+
+
 #----------------------------------------------------------------------------
 # WinAVR Makefile Template written by Eric B. Weddington, Jörg Wunsch, et al.
 #
@@ -132,6 +139,14 @@ ifdef LARSP
 CDEFS += -DLARSP_HARDWARE
 endif
 
+# Create a version number define
+ifdef PATCHLEVEL
+PROGRAMVERSION := $(MAJOR).$(MINOR).$(PATCHLEVEL)
+else
+PROGRAMVERSION := $(MAJOR).$(MINOR)
+endif
+
+CDEFS += -DVERSION=\"$(PROGRAMVERSION)\"
 
 # Place -I options here
 CINCS =

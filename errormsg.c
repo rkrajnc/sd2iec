@@ -93,11 +93,14 @@ static const prog_uint8_t messages[] = {
   EC(72),
     5,'F','U','L','L',
   EC(73),
-    'S','D','2','I','E','C',' ','V','0','.','1',
+    'S','D','2','I','E','C',' ','V',
   EC(74),
     'D','R','I','V','E',4,1,'Y',
   EC(127)
 };
+
+/* Version number string, will be added to message 73 */
+static const prog_uint8_t versionstr[] = VERSION;
 
 static void appendmsg(const prog_uint8_t *table, const uint8_t entry) {
   uint8_t i,tmp;
@@ -153,6 +156,13 @@ void set_error(uint8_t errornum, uint8_t track, uint8_t sector) {
   error_buffer[buffer[BUFFER_COUNT].length++] = ',';
 
   appendmsg(messages,errornum);
+  if (errornum == ERROR_DOSVERSION) {
+    /* Append the version string */
+    uint8_t i = 0;
+    while ((error_buffer[buffer[BUFFER_COUNT].length++] = 
+	    pgm_read_byte(versionstr+i++))) ;
+    buffer[BUFFER_COUNT].length--;
+  }
   error_buffer[buffer[BUFFER_COUNT].length++] = ',';
 
   appendnumber(track);
