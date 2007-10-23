@@ -525,7 +525,6 @@ void iec_mainloop(void) {
 		bus_state = BUS_CLEANUP;
 		break;
 	      }
-	    buf->read = 0;
 	  }
 	  bus_state = BUS_FORME;
 	} else {
