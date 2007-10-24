@@ -46,6 +46,7 @@ FATFS *FatFs;			/* Pointer to the file system objects (logical drive) */
 static
 WORD fsid;				/* File system mount ID */
 
+CLUST current_dir;
 
 /*-------------------------------------------------------------------------
 
@@ -422,16 +423,17 @@ void get_fileinfo (		/* No return code */
 
 static
 char make_dirfile (			/* 1: error - detected an invalid format, '\0'or'/': next character */
-	const char **path,		/* Pointer to the file path pointer */
+	char **path,   	        /* Pointer to the file path pointer */
 	char *dirname			/* Pointer to directory name buffer {Name(8), Ext(3), NT flag(1)} */
 )
 {
-	BYTE n, t, c, a, b;
+	BYTE n, t, c, a, b, oldn;
 
 
 	memset(dirname, ' ', 8+3);	/* Fill buffer with spaces */
 	a = 0; b = 0x18;	/* NT flag */
 	n = 0; t = 8;
+	oldn = -1;
 	for (;;) {
 		c = *(*path)++;
 		if (c == '\0' || c == '/') {		/* Reached to end of str or directory separator */
@@ -441,6 +443,10 @@ char make_dirfile (			/* 1: error - detected an invalid format, '\0'or'/': next 
 		}
 		if (c <= ' ' || c == 0x7F) break;		/* Reject invisible chars */
 		if (c == '.') {
+			if (n == 0 || (n == 1 && oldn == 0)) {
+				oldn = n;
+				goto md_l2;
+			}
 			if (!(a & 1) && n >= 1 && n <= 8) {	/* Enter extension part */
 				n = 8; t = 11; continue;
 			}
@@ -487,7 +493,7 @@ static
 FRESULT trace_path (	/* FR_OK(0): successful, !=0: error code */
 	DIR *dirobj,		/* Pointer to directory object to return last directory */
 	char *fn,			/* Pointer to last segment name to return */
-	const char *path,	/* Full-path string to trace a file or directory */
+	const char *origpath,	/* Full-path string to trace a file or directory */
 	BYTE **dir			/* Directory pointer in Win[] to retutn */
 )
 {
@@ -495,18 +501,32 @@ FRESULT trace_path (	/* FR_OK(0): successful, !=0: error code */
 	char ds;
 	BYTE *dptr = NULL;
 	FATFS *fs = FatFs;
+	char *path;
 
 	/* Initialize directory object */
-	clust = fs->dirbase;
+	path = (char *)origpath;
+	while (path[0] == '/') path++;
+
 #if _FAT32
 	if (fs->fs_type == FS_FAT32) {
+		if (current_dir == 0 || origpath[0] == '/')
+			clust = fs->dirbase;
+		else
+			clust = current_dir;
 		dirobj->clust = dirobj->sclust = clust;
 		dirobj->sect = clust2sect(clust);
 	} else
 #endif
 	{
-		dirobj->clust = dirobj->sclust = 0;
-		dirobj->sect = clust;
+		if (current_dir == 0 || origpath[0] == '/') {
+			clust = fs->dirbase;
+			dirobj->clust = dirobj->sclust = 0;
+			dirobj->sect = clust;
+		} else {
+			clust = current_dir;
+			dirobj->clust = dirobj->sclust = clust;
+			dirobj->sect = clust2sect(clust);
+		}
 	}
 	dirobj->index = 0;
 	dirobj->fs = fs;
@@ -648,7 +668,7 @@ FRESULT auto_mount (		/* FR_OK(0): successful, !=0: any error occured */
 
 
 	while (*p == ' ') p++;	/* Strip leading spaces */
-	if (*p == '/') p++;		/* Strip heading slash */
+	//if (*p == '/') p++;		/* Strip heading slash */
 	*path = p;				/* Return pointer to the path name */
 
 	/* Is the file system object registered? */
@@ -788,11 +808,48 @@ FRESULT f_mount (
 	if (fsobj) memset(fsobj, 0, sizeof(FATFS));
 	if (fs) memset(fs, 0, sizeof(FATFS));
 
+	current_dir = 0;
+
 	return FR_OK;
 }
 
 
+/*-----------------------------------------------------------------------*/
+/* Change the current directory                                          */
+/*-----------------------------------------------------------------------*/
 
+FRESULT f_chdir (
+	const char *path	/* Pointer to the file name */
+)
+{
+	FRESULT res;
+	BYTE *dir;
+	DIR dirobj;
+	char fn[8+3+1];
+	FATFS *fs = FatFs;
+
+
+	res = auto_mount(&path, 0);
+	if (res != FR_OK) return res;
+
+	/* Trace the file path */
+	res = trace_path(&dirobj, fn, path, &dir);	/* Trace the file path */
+
+	if (res == FR_OK) {
+		if (dir == NULL) {
+			current_dir = 0;
+		} else if (dir[DIR_Attr] & AM_DIR) {
+			current_dir =
+#if _FAT32
+				((DWORD)LD_WORD(&dir[DIR_FstClusHI]) << 16) |
+#endif
+				LD_WORD(&dir[DIR_FstClusLO]);
+			} else
+				return FR_NO_FILE;
+	}
+
+	return res;
+}
 
 /*-----------------------------------------------------------------------*/
 /* Open or Create a File                                                 */
