@@ -437,7 +437,7 @@ $(OBJDIR)/%.eep: $(OBJDIR)/%.elf
 	--change-section-lma .eeprom=0 -O $(FORMAT) $< $@
 
 # Create extended listing file from ELF output file.
-$(OBJDIR)/%.lss: $(OBJDIR) $(OBJDIR)/%.elf
+$(OBJDIR)/%.lss: $(OBJDIR)/%.elf
 	$(OBJDUMP) -h -S $< > $@
 
 # Create a symbol table from ELF output file.
@@ -454,21 +454,21 @@ $(OBJDIR)/%.elf: $(OBJ)
 
 
 # Compile: create object files from C source files.
-$(OBJDIR)/%.o : %.c $(OBJDIR)
+$(OBJDIR)/%.o : %.c | $(OBJDIR)
 	$(CC) -c $(ALL_CFLAGS) $< -o $@ 
 
 
 # Compile: create assembler files from C source files.
-$(OBJDIR)/%.s : %.c $(OBJDIR)
+$(OBJDIR)/%.s : %.c | $(OBJDIR)
 	$(CC) -S $(ALL_CFLAGS) $< -o $@
 
 
 # Assemble: create object files from assembler source files.
-$(OBJDIR)/%.o : %.S $(OBJDIR)
+$(OBJDIR)/%.o : %.S | $(OBJDIR)
 	$(CC) -c $(ALL_ASFLAGS) $< -o $@
 
 # Create preprocessed source for use in sending a bug report.
-$(OBJDIR)/%.i : %.c $(OBJDIR)
+$(OBJDIR)/%.i : %.c | $(OBJDIR)
 	$(CC) -E -mmcu=$(MCU) -I. $(CFLAGS) $< -o $@ 
 
 # Create the output directory
