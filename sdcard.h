@@ -22,7 +22,7 @@
    
    sdcard.h: Definitions for the SD/MMC access routines
 
-   Based on original code by Lars Pontoppidan et al., see sdcard.c
+   Based on diskio.h from TinyFatFS by ChaN, see tff.c for
    for full copyright details.
 
 */
@@ -30,21 +30,36 @@
 #ifndef SDCARD_H
 #define SDCARD_H
 
-// functions
+#include "integer.h"
 
-//! Initialize the card and prepare it for use.
-/// Returns zero if successful.
-char sdReset(void);
+/* Status of Disk Functions */
+typedef BYTE	DSTATUS;
 
-//! Read 512-byte sector from card to buffer
-/// Returns zero if successful.
-char sdRead(uint32_t sector, uint8_t *buffer);
+/* Disk Status Bits (DSTATUS) */
+#define STA_NOINIT		0x01	/* Drive not initialized */
+#define STA_NODISK		0x02	/* No medium in the drive */
+#define STA_PROTECT		0x04	/* Write protected */
 
-//! Write 512-byte sector from buffer to card
-/// Returns zero if successful.
-char sdWrite(uint32_t sector, uint8_t *buffer);
+/* Results of Disk Functions */
+typedef enum {
+	RES_OK = 0,		/* 0: Successful */
+	RES_ERROR,		/* 1: R/W Error */
+	RES_WRPRT,		/* 2: Write Protected */
+	RES_NOTRDY,		/* 3: Not Ready */
+	RES_PARERR		/* 4: Invalid Parameter */
+} DRESULT;
 
 
+/*---------------------------------------*/
+/* Prototypes for disk control functions */
+
+DSTATUS disk_initialize (BYTE);
+DSTATUS disk_status (BYTE);
+DRESULT disk_read (BYTE, BYTE*, DWORD, BYTE);
+DRESULT disk_write (BYTE, const BYTE*, DWORD, BYTE);
+#define disk_ioctl(a,b,c) RES_OK
+
+/* Will be set to FALSE if any access on the card fails */
 extern uint8_t sdCardOK;
 
 #endif

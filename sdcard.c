@@ -228,8 +228,17 @@ static char extendedInit(void) {
 //
 // Public functions
 //
-char sdReset(void)
-{
+DSTATUS disk_status(BYTE drv) {
+  if (SDCARD_DETECT)
+    if (SDCARD_WP)
+      return STA_PROTECT;
+    else
+      return RES_OK;
+  else
+    return STA_NOINIT|STA_NODISK;
+}
+
+DSTATUS disk_initialize(BYTE drv) {
   uint8_t  i;
   uint16_t counter;
   uint32_t answer;
@@ -253,12 +262,12 @@ char sdReset(void)
   // Reset card
   i = sendCommand(GO_IDLE_STATE, 0, 0x95, 1);
   if (i != 1) {
-    return FALSE;
+    return STA_NOINIT | STA_NODISK;
   }
 
 #ifdef SDHC_SUPPORT
   if (!extendedInit())
-    return FALSE;
+    return STA_NOINIT | STA_NODISK;
 #endif
 
   counter = 0xff;
@@ -281,7 +290,7 @@ char sdReset(void)
       // The code isn't set up to completely ignore the card,
       // but at least report it as nonworking
       deselectCard();
-      return FALSE;
+      return STA_NOINIT | STA_NODISK;
     }
     
 #ifdef SDHC_SUPPORT
@@ -300,7 +309,7 @@ char sdReset(void)
   } while (i != 0 && counter > 0);
   
   if (counter==0) {
-    return FALSE;
+    return STA_NOINIT | STA_NODISK;
   }
   
   // Send MMC CMD16(SET_BLOCKLEN) to 512 bytes
@@ -311,106 +320,108 @@ char sdReset(void)
     
   // Thats it!
   sdCardOK = TRUE;
-  return TRUE;
+  return disk_status(drv);
 }
 
 
 
 // Reads sector to buffer
-char sdRead(uint32_t sector, uint8_t *buffer)
-{  
-  uint8_t res;
+DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {  
+  uint8_t sec,res;
 
-  if (isSDHC)
-    res = sendCommand(READ_SINGLE_BLOCK, sector, 0xff, 0);
-  else
-    res = sendCommand(READ_SINGLE_BLOCK, sector << 9, 0xff, 0);
+  for (sec=0;sec<count;sec++) {
+    if (isSDHC)
+      res = sendCommand(READ_SINGLE_BLOCK, sector+sec, 0xff, 0);
+    else
+      res = sendCommand(READ_SINGLE_BLOCK, (sector+sec) << 9, 0xff, 0);
+    
+    if (res != 0) {
+      SPI_SS_HIGH();
+      sdCardOK = FALSE;
+      return RES_ERROR;
+    }
+    
+    // Wait for data token
+    if (!sdResponse(0xFE)) {
+      SPI_SS_HIGH();
+      sdCardOK = FALSE;
+      return RES_ERROR;
+    }
   
-  if (res != 0) {
-    SPI_SS_HIGH();
-    sdCardOK = FALSE;
-    return FALSE;
+    uint16_t i;
+  
+    // Get data
+    for (i=0; i<512; i++) {
+      *(buffer++) = spiTransferByte(0xFF);
+    }
+    
+    // Discard chksum
+    // FIXME: Check CRC16
+    spiTransferByte(0xFF);
+    spiTransferByte(0xFF);
+    
+    deselectCard();
   }
-  
-  // Wait for data token
-  if (!sdResponse(0xFE)) {
-    SPI_SS_HIGH();
-    sdCardOK = FALSE;
-    return FALSE;
-  }
-  
-  uint16_t i;
-  
-  // Get data
-  for (i=0; i<512; i++) {
-    *(buffer++) = spiTransferByte(0xFF);
-  }
-  
-  // Discard chksum
-  // FIXME: Check CRC16
-  spiTransferByte(0xFF);
-  spiTransferByte(0xFF);
-  
-  deselectCard();
-  
-  return TRUE;
+
+  return RES_OK;
 }
 
 
 
 // Writes sector to buffer
-char sdWrite(uint32_t sector, uint8_t *buffer)
-{ 
-  uint8_t res;
+DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) { 
+  uint8_t res,sec;
 
 #ifdef SDCARD_WP
-  if (SDCARD_WP) return FALSE; 
+  if (SDCARD_WP) return RES_WRPRT;
 #endif
 
-  if (isSDHC)
-    res = sendCommand(WRITE_BLOCK, sector, 0xff, 0);
-  else
-    res = sendCommand(WRITE_BLOCK, sector<<9, 0xff, 0);
-
-  if (res != 0) {
-    SPI_SS_HIGH();
-    sdCardOK = FALSE;
-    return FALSE;
+  for (sec=0;sec<count;sec++) {
+    if (isSDHC)
+      res = sendCommand(WRITE_BLOCK, sector+sec, 0xff, 0);
+    else
+      res = sendCommand(WRITE_BLOCK, (sector+sec)<<9, 0xff, 0);
+    
+    if (res != 0) {
+      SPI_SS_HIGH();
+      sdCardOK = FALSE;
+      return RES_ERROR;
+    }
+  
+    // Send data token
+    spiTransferByte(0xFE);
+    
+    uint16_t i;
+    
+    // Send data
+    for (i=0; i<512; i++) {
+      spiTransferByte(*(buffer++)); 
+    }
+    
+    // Send bogus chksum
+    // FIXME: Send real CRC16
+    spiTransferByte(0xFF);
+    spiTransferByte(0xFF);
+    
+    // Get and check status feedback
+    uint8_t status;
+    status = spiTransferByte(0xFF);
+    
+    if ((status & 0x0F) != 0x05) {
+      SPI_SS_HIGH();
+      sdCardOK = FALSE;
+      return RES_ERROR;
+    }
+    
+    // Wait for write finish
+    if (!sdWaitWriteFinish()) {
+      SPI_SS_HIGH();
+      sdCardOK = FALSE;
+      return RES_ERROR;
+    }
+    
+    deselectCard();
   }
   
-  // Send data token
-  spiTransferByte(0xFE);
-  
-  uint16_t i;
-  
-  // Send data
-  for (i=0; i<512; i++) {
-    spiTransferByte(*(buffer++)); 
-  }
-  
-  // Send bogus chksum
-  // FIXME: Send real CRC16
-  spiTransferByte(0xFF);
-  spiTransferByte(0xFF);
-  
-  // Get and check status feedback
-  uint8_t status;
-  status = spiTransferByte(0xFF);
-  
-  if ((status & 0x0F) != 0x05) {
-    SPI_SS_HIGH();
-    sdCardOK = FALSE;
-    return FALSE;
-  }
-  
-  // Wait for write finish
-  if (!sdWaitWriteFinish()) {
-    SPI_SS_HIGH();
-    sdCardOK = FALSE;
-    return FALSE;
-  }
-  
-  deselectCard();
-  
-  return TRUE;
+  return RES_OK;
 }

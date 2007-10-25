@@ -39,7 +39,7 @@
 #include <avr/pgmspace.h>
 #include <string.h>
 #include "tff.h"		/* Tiny-FatFs declarations */
-#include "diskio.h"		/* Include file for user provided disk functions */
+#include "sdcard.h"		/* Include file for user provided disk functions */
 
 
 static
@@ -846,7 +846,7 @@ FRESULT f_chdir (
 #endif
 				LD_WORD(&dir[DIR_FstClusLO]);
 			} else
-				return FR_NO_FILE;
+				return FR_NO_PATH;
 	}
 
 	return res;
