@@ -142,7 +142,7 @@ ISR(TIMER2_COMPA_vect) {
 
   if (error_blink_active) {
     blinktimer++;
-    if (blinktimer == 125) {
+    if (blinktimer == 200) {
       DIRTY_LED_PORT ^= DIRTY_LED_BIT();
       blinktimer = 0;
     }
@@ -413,9 +413,10 @@ void init_iec(void) {
   /* Count F_CPU/8 in timer 0 */
   TCCR0B = _BV(CS01);
 
-  /* Issue an interrupt every 800us with timer 2 for ATN-Acknowledge    */
-  /* The exact timing isn't critical, it just has to be faster than 1ms */
-  OCR2A = 200;
+  /* Issue an interrupt every 500us with timer 2 for ATN-Acknowledge.    */
+  /* The exact timing isn't critical, it just has to be faster than 1ms. */
+  /* Every 800us was too slow in rare situations.                        */
+  OCR2A = 125;
   TCNT2 = 0;
   /* On the mega32 both registers are the same, so OR those bits in */
   TCCR2B = 0;
