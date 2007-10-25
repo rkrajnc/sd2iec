@@ -36,6 +36,7 @@
 /  Aug 25, 2007  R0.05  Changed arguments of f_read() and f_write().
 /---------------------------------------------------------------------------*/
 
+#include <avr/pgmspace.h>
 #include <string.h>
 #include "tff.h"		/* Tiny-FatFs declarations */
 #include "diskio.h"		/* Include file for user provided disk functions */
@@ -637,10 +638,10 @@ BYTE check_fs (		/* 0:The FAT boot record, 1:Valid boot record but not an FAT, 2
 	if (LD_WORD(&fs->win[BS_55AA]) != 0xAA55)		/* Check record signature */
 		return 2;
 
-	if (!memcmp(&fs->win[BS_FilSysType], "FAT", 3))	/* Check FAT signature */
+	if (!memcmp_P(&fs->win[BS_FilSysType], PSTR("FAT"), 3))	/* Check FAT signature */
 		return 0;
 #if _FAT32
-	if (!memcmp(&fs->win[BS_FilSysType32], "FAT32", 5) && !(fs->win[BPB_ExtFlags] & 0x80))
+	if (!memcmp_P(&fs->win[BS_FilSysType32], PSTR("FAT32"), 5) && !(fs->win[BPB_ExtFlags] & 0x80))
 		return 0;
 #endif
 	return 1;
