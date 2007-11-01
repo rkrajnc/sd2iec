@@ -52,13 +52,7 @@
 uint8_t device_address;
 uint8_t secondary_address;
 
-static struct {
-  int vc20mode:1;
-  int eoi_recvd:1;
-  int command_recvd:1;
-  int jiffy_enabled:1;
-  int jiffy_active:1;
-} iecflags;
+iecflags_t iecflags;
 
 enum { BUS_IDLE = 0, BUS_ATNACTIVE, BUS_FOUNDATN, BUS_FORME, BUS_NOTFORME, BUS_ATNFINISH, BUS_ATNPROCESS, BUS_CLEANUP } bus_state;
 

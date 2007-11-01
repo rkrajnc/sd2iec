@@ -27,6 +27,17 @@
 #ifndef IEC_H
 #define IEC_H
 
+/* Some fields don't need to be public, but this way saves a bit of ram */
+typedef struct {
+  int vc20mode:1;
+  int eoi_recvd:1;
+  int command_recvd:1;
+  int jiffy_enabled:1;
+  int jiffy_active:1;
+} iecflags_t;
+
+extern iecflags_t iecflags;
+
 extern uint8_t device_number;
 
 void init_iec(void);
