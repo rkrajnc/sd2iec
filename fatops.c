@@ -35,8 +35,6 @@
 #include "uart.h"
 
 FATFS fatfs;
-// FIXME: Evtl. tff umbauen, damit es sich nur den Cluster des aktuellen Dirs merkt und relative Filenamen benutzt
-char current_path[64];
 char volumelabel[12];
 
 /* ------------------------------------------------------------------------- */
@@ -96,10 +94,13 @@ static void parse_error(FRESULT res, uint8_t readflag) {
     break;
 
   case FR_NO_FILE:
-  case FR_NO_PATH:
     set_error(ERROR_FILE_NOT_FOUND,res,0);
     break;
     
+  case FR_NO_PATH:
+    set_error(ERROR_FILE_NOT_FOUND_39,res,0);
+    break;
+
   case FR_INVALID_NAME:
     set_error(ERROR_SYNTAX_JOKER,res,0);
     break;
@@ -124,6 +125,11 @@ static void parse_error(FRESULT res, uint8_t readflag) {
     break;
     
   case FR_EXIST:
+    set_error(ERROR_FILE_EXISTS,res,0);
+    break;
+
+  case FR_DIR_NOT_EMPTY:
+    // FIXME: What do the CMD drives return when removing a non-empty directory?
     set_error(ERROR_FILE_EXISTS,res,0);
     break;
     
@@ -396,7 +402,7 @@ static void fat_load_directory(uint8_t secondary) {
     return;
   }
 
-  res = f_opendir(&buf->pvt.dh, current_path) != FR_OK;
+  res = f_opendir(&buf->pvt.dh, "");
   if (res != FR_OK) {
     parse_error(res,1);
     free_buffer(buf);
@@ -517,20 +523,49 @@ void fat_open(uint8_t secondary) {
   }
 }
 
+/* Delete a file/directory                         */
+/* Returns number of files deleted or 255 on error */
+uint8_t fat_delete(uint8_t *filename) {
+  FRESULT res;
+
+  res = f_unlink((char *)filename);
+  parse_error(res,0);
+  if (res == FR_OK)
+    return 1;
+  else if (res == FR_NO_FILE)
+    return 0;
+  else
+    return 255;
+}
+
+/* Change the current directory */
+void fat_chdir(uint8_t *dirname) {
+  FRESULT res;
+
+  res = f_chdir((char *) dirname);
+  parse_error(res,0);
+}
+
+/* Create a new directory */
+void fat_mkdir(uint8_t *dirname) {
+  FRESULT res;
+
+  res = f_mkdir((char *) dirname);
+  parse_error(res,0);
+}
+
 /* Mount the card and read its label (if any) */
 void init_fatops(void) {
   DIR dh;
   FILINFO finfo;
   uint8_t i;
 
-  memset(current_path, 0, sizeof(current_path));
   memset(volumelabel, ' ', sizeof(volumelabel));
-  current_path[0] = '/';
 
   f_mount(0, &fatfs);
 
   /* Read volume label */
-  if (f_opendir(&dh, current_path) == FR_OK) {
+  if (f_opendir(&dh, "") == FR_OK) {
     while (f_readdir(&dh, &finfo) == FR_OK) {
       if (!finfo.fname[0]) break;
       if ((finfo.fattrib & (AM_VOL|AM_SYS|AM_HID)) == AM_VOL) {

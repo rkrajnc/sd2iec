@@ -27,55 +27,229 @@
 #include <util/delay.h>
 #include <avr/wdt.h>
 #include <avr/interrupt.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include "config.h"
 #include "errormsg.h"
 #include "doscmd.h"
 #include "uart.h"
-// FIXME: Don't do that. Implement fat_delete instead.
-#include "tff.h"
+#include "fatops.h"
+#include "sdcard.h"
+#include "iec.h"
+
+#define CURSOR_RIGHT 0x1d
+
+static void (*restart_call)(void) = 0;
 
 uint8_t command_buffer[COMMAND_BUFFER_SIZE];
 uint8_t command_length;
 
+/* Parses CMD-style directory specifications in the command buffer */
+/* Returns 1 if any errors found, rewrites command_buffer          */
+/* to return a 0-terminated string of the path in it               */
+static uint8_t parse_path(uint8_t pos) {
+  uint8_t *out = command_buffer;
+
+  /* Skip partition number */
+  while (pos < command_length && isdigit(command_buffer[pos])) pos++;
+  if (pos == command_length) return 1;
+
+  /* Handle slashed path immediate after command */
+  if (command_buffer[pos] == '/') {
+    /* Copy path before colon */
+    while (command_buffer[++pos] != ':' && pos < command_length)
+      *out++ = command_buffer[pos];
+
+    /* CD doesn't require a colon */
+    if (pos == command_length) {
+      *out = 0;
+      return 0;
+    }
+
+    /* If there is a :, there must be a /: */
+    if (command_buffer[pos-1] != '/') return 1;
+  }
+
+  /* Skip the colon and abort if it's the last character */
+  if (command_buffer[pos++] != ':' || pos == command_length) return 1;
+    
+  /* Left arrow moves one directory up */
+  if (command_buffer[pos] == '_') {
+    *out++ = '.';
+    *out++ = '.';
+    *out   = 0;
+    return 0;
+  }
+
+  /* Copy remaining string */
+  while (pos < command_length)
+    *out++ = command_buffer[pos++];
+
+  *out = 0;
+
+  return 0;
+}
+
+
 void parse_doscommand() {
   uint8_t i;
 
-  /* FIXME: This parser sucks. */
+  /* Set default message: Everything ok */
+  set_error(ERROR_OK,0,0);
+
+  /* Abort if the command is too long */
   if (command_length == COMMAND_BUFFER_SIZE) {
     set_error(ERROR_SYNTAX_TOOLONG,0,0);
     return;
   }
 
-  if (command_buffer[0] == 'U' && command_buffer[1] == 'J') {
-    /* Reset the MCU via Watchdog */
-    cli();
-    wdt_enable(WDTO_15MS);
-    while (1);
-  } else if (command_buffer[0] == 'M') {
-    /* Memory-something - dump the data for later analysis */
+#ifdef COMMAND_CHANNEL_DUMP
+  /* Debugging aid: Dump the whole command via serial */
+  uart_flush();
+  uart_putc('>');
+
+  for (i=0;i<command_length;i++) {
+    uart_puthex(command_buffer[i]);
+    uart_putc(' ');
+    if ((i & 0x0f) == 0x0f) {
+      uart_putcrlf();
+      uart_putc('>');
+    }
+    uart_flush();
+  }
+  uart_putcrlf();
+#endif
+
+  /* Remove CRs at end of command */
+  while (command_length > 0 && command_buffer[command_length-1] == 0x0d)
+    command_length--;
+
+  /* Abort if there is no command */
+  if (command_length == 0) {
+    set_error(ERROR_SYNTAX_UNABLE,0,0);
+    return;
+  }
+
+  /* MD/CD/RD clash with other commands, so they're checked first */
+  if (command_length > 3 && command_buffer[1] == 'D') {
+    switch (command_buffer[0]) {
+    case 'C':
+    case 'M':
+      i = command_buffer[0];
+      if (parse_path(2)) {
+	set_error(ERROR_SYNTAX_NONAME,0,0);
+      } else {
+	if (i == 'C')
+	  fat_chdir(command_buffer);
+	else
+	  fat_mkdir(command_buffer);
+      }
+      break;
+
+    case 'R':
+      /* No deletion across subdirectories */
+      for (i=0;i<command_length;i++) {
+	if (command_buffer[i] == '/') {
+	  i = 255;
+	  break;
+	}
+      }
+      if (i == 255) {
+	set_error(ERROR_SYNTAX_NONAME,0,0);
+	break;
+      }
+	  
+      /* Skip drive number */
+      i = 2;
+      while (i < command_length && isdigit(command_buffer[i])) i++;
+      if (i == command_length || command_buffer[i] != ':') {
+	set_error(ERROR_SYNTAX_NONAME,0,0);
+      } else {
+	command_buffer[command_length] = 0;
+	i = fat_delete(command_buffer+i+1);
+	if (i != 255)
+	  set_error(ERROR_SCRATCHED,i,0);
+      }
+      break;
+      
+    default:
+      set_error(ERROR_SYNTAX_UNKNOWN,0,0);
+      break;;
+    }
+    
+    return;
+  }
+
+  switch (command_buffer[0]) {
+  case 'I':
+    /* Initialize is a no-op for now */
+    if (!sdCardOK)
+      set_error(ERROR_READ_NOSYNC,18,0);
+    break;
+
+  case 'U':
+    switch (command_buffer[1]) {
+    case 'I':
+    case '9':
+      if (command_length > 2) {
+	switch (command_buffer[2]) {
+	case '+':
+	  iecflags.vc20mode = 0;
+	  break;
+
+	case '-':
+	  iecflags.vc20mode = 1;
+	  break;
+
+	default:
+	  set_error(ERROR_SYNTAX_UNKNOWN,0,0);
+	  break;
+	}
+      } else {
+	/* Soft-reset - just return the dos version */
+	set_error(ERROR_DOSVERSION,0,0);
+      }
+      break;
+
+    case 'J':
+    case ':':
+      /* Reset - technically hard-reset */
+      cli();
+      restart_call();
+      break;
+
+    default:
+      set_error(ERROR_SYNTAX_UNKNOWN,0,0);
+      break;
+    }
+    break;
+
+  case 'M':
+    /* Memory-something - just dump for later analysis */
+    // FIXME: M-R should return data even if it's just junk
+#ifndef COMMAND_CHANNEL_DUMP
     uart_flush();
     for (i=0;i<3;i++)
       uart_putc(command_buffer[i]);
     for (i=3;i<command_length;i++) {
       uart_putc(' ');
       uart_puthex(command_buffer[i]);
-      uart_flush(); /* Be nice to people with no ram... */
+      uart_flush();
     }
     uart_putc(13);
     uart_putc(10);
-  } else if (command_buffer[0] == 'E') {
-    // Testing hack: Generate error messages
-    // FIXME: Use a custom number parser that doesn't require \0
+#endif
+    break;
+
+  case 'S':
+    /* Scratch */
     command_buffer[command_length] = 0;
-    i = atoi((char *)command_buffer+1);
-    set_error(i,1,2);
-  } else if (command_buffer[0] == 'S' && command_buffer[1] == ':') {
-    // Testing hack II: Single file scratch
-    command_buffer[command_length] = 0;
-    f_unlink((char *)command_buffer+2);
-    set_error(ERROR_SCRATCHED,1,0);
-  } else if (command_buffer[0] == 'N') {
+    i = fat_delete(command_buffer+2);
+    if (i != 255)
+      set_error(ERROR_SCRATCHED,i,0);
+    break;
+
+  case 'N':
     // FIXME: HACK! Sonst bleibt der 64'er Speed-Test mit Division by Zero stehen
     /* mkdir+chdir may be a nice substitute for FAT */
     _delay_ms(100);
@@ -83,7 +257,10 @@ void parse_doscommand() {
     _delay_ms(100);
     _delay_ms(100);
     _delay_ms(100);
-  } else {
+    break;
+
+  default:
     set_error(ERROR_SYNTAX_UNKNOWN,0,0);
+    break;
   }
 }

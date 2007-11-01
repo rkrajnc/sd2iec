@@ -146,8 +146,9 @@ typedef enum {
 	FR_NOT_ENABLED,		/* 10 */
 	FR_NO_FILESYSTEM,	/* 11 */
 	FR_INVALID_OBJECT,	/* 12 */
-	FR_IS_DIRECTORY,        /* 13 */
-	FR_IS_READONLY          /* 14 */
+	FR_IS_DIRECTORY,    /* 13 */
+	FR_IS_READONLY,     /* 14 */
+	FR_DIR_NOT_EMPTY    /* 15 */
 } FRESULT;
 
 

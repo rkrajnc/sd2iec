@@ -27,7 +27,10 @@
 #ifndef FATOPS_H
 #define FATOPS_H
 
-void init_fatops(void);
-void fat_open(uint8_t secondary);
+void    init_fatops(void);
+void    fat_open(uint8_t secondary);
+uint8_t fat_delete(uint8_t *filename);
+void    fat_chdir(uint8_t *dirname);
+void    fat_mkdir(uint8_t *dirname);
 
 #endif

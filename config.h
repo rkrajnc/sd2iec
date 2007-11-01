@@ -65,9 +65,11 @@ typedef struct
 /* Enable UART debugging here by uncommenting UART_DEBUG */
 #define UART_DEBUG
 #define UART_BAUDRATE 19200
-/* Must be a power of 2 */
+/* Must be a power of 2, don't use less than 8 */
 #define UART_BUFFER_SIZE 128
 
+/* Debugging aid: Dump all commands received in channel 15 on serial */
+#define COMMAND_CHANNEL_DUMP
 
 #ifndef LARSP_HARDWARE
 /* Default case: Configure for your own hardware    */

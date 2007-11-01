@@ -4,6 +4,9 @@
 	- object files are generated in a subdirectory
 	- bug fixes in IEC and buffer handling
 	- added project file for AVR Studio (untested)
+	- support for subdirectories
+	- support for UI+/UI- commands (faster bus for VC20)
+	- slightly improved command parser
 
 2007-10-16 - release 0.1
 	Initial release

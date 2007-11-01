@@ -1465,6 +1465,8 @@ FRESULT f_unlink (
 #endif
 		LD_WORD(&dir[DIR_FstClusLO]);
 	if (dir[DIR_Attr] & AM_DIR) {				/* It is a sub-directory */
+		if (dclust == current_dir)              /* Never delete the current directory */
+			return FR_DIR_NOT_EMPTY;
 		dirobj.clust = dclust;					/* Check if the sub-dir is empty or not */
 		dirobj.sect = clust2sect(dclust);
 		dirobj.index = 2;
@@ -1473,7 +1475,7 @@ FRESULT f_unlink (
 			sdir = &fs->win[(dirobj.index & 15) * 32];
 			if (sdir[DIR_Name] == 0) break;
 			if (sdir[DIR_Name] != 0xE5 && !(sdir[DIR_Attr] & AM_VOL))
-				return FR_DENIED;	/* The directory is not empty */
+				return FR_DIR_NOT_EMPTY;	/* The directory is not empty */
 		} while (next_dir_entry(&dirobj));
 	}
 

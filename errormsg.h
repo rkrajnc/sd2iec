@@ -51,7 +51,7 @@ void set_error(uint8_t errornum, uint8_t track, uint8_t sector);
 #define ERROR_SYNTAX_TOOLONG     32
 #define ERROR_SYNTAX_JOKER       33
 #define ERROR_SYNTAX_NONAME      34
-#define ERROR_FILE_NOT_FOUND_AS  39
+#define ERROR_FILE_NOT_FOUND_39  39
 #define ERROR_RECORD_MISSING     50
 #define ERROR_RECORD_OVERFLOW    51
 #define ERROR_FILE_TOO_LARGE     52
