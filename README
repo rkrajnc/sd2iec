@@ -1,6 +1,70 @@
 sd2iec - a controller/interface adapting SD/MMC to the CBM serial bus
+Copyright (C) 2007  Ingo Korb <ingo@akana.de>
+Parts based on code from others, see comments in main.c for details.
 
-This file needs to be expanded. A lot.
+Free software under GPL version 2 ONLY, see comments in main.c and
+COPYING for details.
+
+FIXME:This file still needs to be expanded. A lot.
+
+Introduction:
+=============
+sd2iec is a device for the Commodore serial bus that allows accessing an SD
+or MMC card - think of it as a 1541 with a modern storage medium instead of
+disks. The project was inspired by (and uses a few bits of code from)
+MMC2IEC[1] by Lars Pontoppidan and runs on the same hardware.
+
+Currently the compatibility is slightly higher than MMC2IEC 0.8, but there
+are still lots of features missing. Anything that tries execute code on the
+1541 will not work, this includes every software-fastloader.
+
+[1] Homepage: http://pontoppidan.info/lars/index.php?proj=mmc2iec
+
+Supported commands:
+===================
+- General notes:
+  Wildcards are currently not supported.
+  Filetypes and modes (e.g. ,S,W) are currently not supported.
+  Directory filters are currently not supported.
+  Any command not listed below is currently not supported.
+  Long filenames are not supported.
+
+  Subdirectory names in filenames are semi-supported, the syntax is not
+  compatible to the CMD drives. The filenames are directly passed to the
+  FAT library, so "/test/foo.bar" would access the file FOO.BAR in \TEST.
+
+- CD/MD/RD:
+  Subdirectory access is compatible to the syntax used by the CMD drives,
+  although drive/partition numbers are completely ignored.
+
+  Quick syntax overview:
+    CD:_         changes into the parent dir (_ is the left arrow on the C64)
+    CD:foo       changes into foo
+    CD/foo       changes into foo
+    CD:/foo      changes into foo
+    CD://foo     changes into \foo
+    CD//foo      changes into \foo
+    CD/foo/:bar  changes into foo\bar, / before : is required
+    CD/foo/bar   changes into foo\bar
+
+    MD uses a syntax similiar to CD and will create the directory listed
+    after the colon (:) relative to any directory listed before it.
+
+    MD/foo/:bar  creates bar in foo
+    MD//foo/:bar creates bar in \foo
+
+    RD can only remove subdirectories of the current directory.
+
+    RD:foo       deletes foo
+
+- S:
+  Only implemented in a "quick hack" version that doesn't support wildcards.
+
+- UI+/UI-
+  Switching the slightly faster bus protocol for the VC20 on and off works,
+  it hasn't been tested much though.
+
+- UI/UJ
 
 Compilation notes:
 ==================
