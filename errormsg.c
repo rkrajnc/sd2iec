@@ -99,6 +99,12 @@ static const prog_uint8_t messages[] = {
   EC(127)
 };
 
+/* Workaround for the make-challenged */
+#ifndef VERSION
+#  warning "VERSION not defined, using dummy"
+#  define VERSION "X.X"
+#endif
+
 /* Version number string, will be added to message 73 */
 static const prog_uint8_t versionstr[] = VERSION;
 
