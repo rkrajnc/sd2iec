@@ -28,32 +28,17 @@
 #include <string.h>
 #include "config.h"
 #include "buffers.h"
-#include "errormsg.h"
 
-/* One additional buffer for channel 15 */
-buffer_t buffer[BUFFER_COUNT+1];
+buffer_t buffer[BUFFER_COUNT];
 
 /* The actual data buffers */
-static uint8_t bufferdata[BUFFER_COUNT*256];
+uint8_t bufferdata[BUFFER_COUNT*1024];
 
 static uint8_t active_buffers;
 
 void init_buffers(void) {
-  uint8_t i;
-
   memset(buffer,0,sizeof(buffer));
-  for (i=0;i<BUFFER_COUNT;i++)
-    buffer[i].data = bufferdata + 256*i;
-  
-  buffer[BUFFER_COUNT].data      = error_buffer;
-  buffer[BUFFER_COUNT].secondary = 15;
-  /* This is in refill instead of cleanup because Dolphin Dos */
-  /* does not send OPEN/CLOSE for @, just DATA.               */
-  //buffer[BUFFER_COUNT].refill    = set_ok_message;
-  buffer[BUFFER_COUNT].allocated = 1;
-  buffer[BUFFER_COUNT].read      = 1;
-  buffer[BUFFER_COUNT].write     = 1;
-  buffer[BUFFER_COUNT].sendeoi   = 1;
+  buffer[0].data = bufferdata;
 }
 
 buffer_t *alloc_buffer(void) {
@@ -73,7 +58,6 @@ buffer_t *alloc_buffer(void) {
 
 void free_buffer(buffer_t *buffer) {
   if (buffer == NULL) return;
-  if (buffer->secondary == 15) return;
 
   buffer->allocated = 0;
   if (! --active_buffers)

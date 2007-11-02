@@ -54,10 +54,10 @@
 
 #include <avr/io.h>
 #include <avr/pgmspace.h>
+#include <stdio.h>
 #include "config.h"
 #include "spi.h"
 #include "sdcard.h"
-
 
 #ifndef TRUE
 #define TRUE -1
@@ -117,7 +117,7 @@ static char sdResponse(uint8_t expected)
   
   while ((spiTransferByte(0xFF) != expected) && count )
     count--;
-  
+
   // If count didn't run out, return success
   return (count != 0);  
 }
@@ -182,6 +182,7 @@ static char extendedInit(void) {
   //   CRC manually calculated, must be correct!
   i = sendCommand(SEND_IF_COND, 0b000110101010, 0x87, 0);
   if (i > 1) {
+    printf_P(PSTR("EXT1:%02X\n"),i);
     // Card returned an error, ok (MMC oder SD1.x) but not SDHC
     deselectCard();
     return TRUE;
@@ -190,6 +191,8 @@ static char extendedInit(void) {
   // No error, continue SDHC initialization
   answer = spiTransferLong(0);
   deselectCard();
+
+  printf_P(PSTR("EXT2:%08lX\n"),answer);
   
   if (((answer >> 8) & 0x0f) != 0b0001) {
     // Card didn't accept our voltage specification
@@ -208,6 +211,7 @@ static char extendedInit(void) {
     i = sendCommand(APP_CMD, 0, 0xff, 1);
     if (i > 1) {
       // Command not accepted, could be MMC
+      printf_P(PSTR("EXT:41 E%02X\n"),i);
       return TRUE;
     }
 
@@ -218,10 +222,13 @@ static char extendedInit(void) {
   } while (i == 1 && --counter > 0);
 
   // If ACMD41 fails something strange happened...
-  if (i != 0)
+  if (i != 0) {
+    printf_P(PSTR("EXT:41 TMO\n"));
     return FALSE;
-  else
+  } else {
+    printf_P(PSTR("EXT:OK\n"));
     return TRUE;
+  }
 }
 #endif
 
@@ -242,7 +249,7 @@ DSTATUS disk_initialize(BYTE drv) {
   uint8_t  i;
   uint16_t counter;
   uint32_t answer;
-  
+
 #ifdef SDCARD_WP_SETUP
   SDCARD_WP_SETUP();
 #endif
@@ -262,6 +269,7 @@ DSTATUS disk_initialize(BYTE drv) {
   // Reset card
   i = sendCommand(GO_IDLE_STATE, 0, 0x95, 1);
   if (i != 1) {
+    printf_P(PSTR("RESET TMO\n"));
     return STA_NOINIT | STA_NODISK;
   }
 
@@ -280,11 +288,15 @@ DSTATUS disk_initialize(BYTE drv) {
       // kills my Sandisk 1G which requires the retries in the first place
       // deselectCard();
     }
-  } while (i > 1 && counter > 0);
+  } while (i > 1 && counter-- > 0);
   
+  printf_P(PSTR("C58:%04X %02X\n"),counter,i);
+
   if (counter > 0) {
     answer = spiTransferLong(0);
     
+    printf_P(PSTR("C58A:%08lX\n"),answer);
+
     // See if the card likes our supply voltage
     if (!(answer & SD_SUPPLY_VOLTAGE)) {
       // The code isn't set up to completely ignore the card,
@@ -309,17 +321,20 @@ DSTATUS disk_initialize(BYTE drv) {
   } while (i != 0 && counter > 0);
   
   if (counter==0) {
+    printf_P(PSTR("OPCND:TMO\n"));
     return STA_NOINIT | STA_NODISK;
   }
   
   // Send MMC CMD16(SET_BLOCKLEN) to 512 bytes
   i = sendCommand(SET_BLOCKLEN, 512, 0xff, 1);
   if (i != 0) {
+    printf_P(PSTR("BLKLEN:%02X\n"),i);
     return FALSE;
   }
     
   // Thats it!
   sdCardOK = TRUE;
+  printf_P(PSTR("SDOK!\n"));
   return disk_status(drv);
 }
 
@@ -336,6 +351,7 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
       res = sendCommand(READ_SINGLE_BLOCK, (sector+sec) << 9, 0xff, 0);
     
     if (res != 0) {
+      printf_P(PSTR("READ:%02X\n"),res);
       SPI_SS_HIGH();
       sdCardOK = FALSE;
       return RES_ERROR;
@@ -343,6 +359,7 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
     
     // Wait for data token
     if (!sdResponse(0xFE)) {
+      printf_P(PSTR("DTOK:%02X\n"),res);
       SPI_SS_HIGH();
       sdCardOK = FALSE;
       return RES_ERROR;
@@ -375,6 +392,8 @@ DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
 #ifdef SDCARD_WP
   if (SDCARD_WP) return RES_WRPRT;
 #endif
+
+  printf_P(PSTR("WRITE?\n"));
 
   for (sec=0;sec<count;sec++) {
     if (isSDHC)

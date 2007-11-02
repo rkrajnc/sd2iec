@@ -35,8 +35,8 @@ typedef struct buffer_s {
   /* in case I ever add external ram (not XRAM) to the design (which will    */
   /* require locking =( ).                                                   */
   uint8_t *data; 
-  uint8_t length;   // Index of the last used byte -> length-1!
-  uint8_t position; // Index of the byte that will be sent next
+  uint16_t length;   // Index of the last used byte -> length-1!
+  uint16_t position; // Index of the byte that will be sent next
   uint8_t secondary;
   int     allocated:1;
   int     dirty:1;
@@ -49,12 +49,6 @@ typedef struct buffer_s {
   /* Cleanup routine that will be called after CLOSE */
   /*  Returns true if any error occured              */
   uint8_t (*cleanup)(struct buffer_s *buffer);
-
-  /* various private data structures */
-  union {
-    DIR dh; /* Directory access */
-    FIL fh; /* File access */
-  } pvt;
 } buffer_t;
 
 /* Simplifies access to the error buffer length */

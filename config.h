@@ -63,7 +63,7 @@ typedef struct
 
 
 /* Enable UART debugging here by uncommenting UART_DEBUG */
-#define UART_DEBUG
+//#define UART_DEBUG
 #define UART_BAUDRATE 19200
 /* Must be a power of 2, don't use less than 8 */
 #define UART_BUFFER_SIZE 128
@@ -187,6 +187,6 @@ typedef struct
 /* Number of sector buffers (256 byte+a bit of overhead)          */
 /*  Reading a directory from a d64 image requires two buffers.    */
 /*  In general: More buffers -> More open files at the same time  */
-#define BUFFER_COUNT 2
+#define BUFFER_COUNT 1
 
 #endif

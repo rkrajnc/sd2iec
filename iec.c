@@ -38,12 +38,10 @@
 #include <stdlib.h>
 #include "config.h"
 #include "avrcompat.h"
-#include "uart.h"
-#include "errormsg.h"
 #include "doscmd.h"
 #include "buffers.h"
-#include "fatops.h"
 #include "iec.h"
+#include "diag.h"
 
 /* ------------------------------------------------------------------------- */
 /*  Global variables                                                         */
@@ -133,14 +131,6 @@ ISR(TIMER2_COMPA_vect) {
   if (!IEC_ATN) {
     set_data(0);
   }
-
-  if (error_blink_active) {
-    blinktimer++;
-    if (blinktimer == 200) {
-      DIRTY_LED_PORT ^= DIRTY_LED_BIT();
-      blinktimer = 0;
-    }
-  }
 }
 
 /* ------------------------------------------------------------------------- */
@@ -175,8 +165,6 @@ static int16_t iec_getc(void) {
     set_data(0);                                       // E9F2
     _delay_us(73);                      // E9F5-E9F8, delay calculated from all
     set_data(1);                        //   instructions between IO accesses
-
-    uart_putc('E');
 
     do {
       if (check_atn())                                 // E9FD
@@ -299,14 +287,11 @@ static uint8_t iec_listen_handler(const uint8_t cmd) {
   buffer_t *buf;
   enum { DATA_COMMAND, DATA_BUFFER } data_state;
 
-  uart_putc('L');
-
   buf = find_buffer(cmd & 0x0f);
     
   /* Abort if there is no buffer or it's not open for writing */
   /* and it isn't an OPEN command                             */
   if ((buf == NULL || !buf->write) && (cmd & 0xf0) != 0xf0) {
-    uart_putc('c');
     bus_state = BUS_CLEANUP;
     return 1;
   }
@@ -341,8 +326,6 @@ static uint8_t iec_listen_handler(const uint8_t cmd) {
 static uint8_t iec_talk_handler(uint8_t cmd) {
   buffer_t *buf;
 
-  uart_putc('T');
-
   buf = find_buffer(cmd & 0x0f);
   if (buf == NULL)
     return 0; /* 0 because we didn't change the state here */
@@ -353,13 +336,11 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
 	  buf->position == buf->length) {
 	/* Send with EOI */
 	if (iec_putc(buf->data[buf->position],1)) {
-	  uart_putc('Q');
 	  return 1;
 	}
       } else {
 	/* Send without EOI */
 	if (iec_putc(buf->data[buf->position],0)) {
-	  uart_putc('V');
 	  return 1;
 	}
       }
@@ -378,10 +359,6 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
 	return 1;
       }
   }
-
-  /* If the error channel was read, create a new OK message */
-  if ((cmd & 0x0f) == 0x0f)
-    set_error(ERROR_OK,0,0);
 
   return 0;
 }
@@ -422,17 +399,11 @@ void init_iec(void) {
   DEV10_JUMPER_SETUP();
   _delay_ms(1);
   device_address = 8 + !!DEV9_JUMPER + 2*(!!DEV10_JUMPER);
-
-  set_error(ERROR_DOSVERSION,0,0);
 }
 
 void iec_mainloop(void) {
   int16_t cmd = 0; // make gcc happy...
   
-  uart_puts_P(PSTR("\nIn iec_mainloop listening on "));
-  uart_puthex(device_address);
-  uart_putcrlf();
-
   sei();
 
   DDRC = 0x0f;
@@ -483,15 +454,9 @@ void iec_mainloop(void) {
 
       if (cmd < 0) {
 	/* check_atn changed our state */
-	uart_putc('C');
 	break;
       }
       
-      uart_putc('A');
-      uart_puthex(cmd);
-      uart_putc(13);
-      uart_putc(10);
-
       if (cmd == 0x3f) { /* Unlisten */
 	if (device_state == DEVICE_LISTEN)
 	  device_state = DEVICE_IDLE;
@@ -578,13 +543,9 @@ void iec_mainloop(void) {
       //   0x255 -> A61C
       /* Handle commands and filenames */
       if (iecflags.command_recvd) {
-	if (secondary_address == 0x0f) {
-	  /* Command channel */
-	  parse_doscommand();
-	} else {
-	  /* Filename in command buffer */
-	  fat_open(secondary_address);
-	}
+	/* Filename in command buffer */
+	sdcard_diags(secondary_address);
+
 	command_length = 0;
 	iecflags.command_recvd = 0;
       }

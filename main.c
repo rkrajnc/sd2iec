@@ -30,12 +30,10 @@
 #include <avr/boot.h>
 #include <avr/wdt.h>
 #include "config.h"
-#include "uart.h"
 #include "spi.h"
 #include "tff.h"
 #include "iec.h"
 #include "buffers.h"
-#include "fatops.h"
 
 #ifdef __AVR_ATmega32__
 const bootloaderinfo_t bootloaderinfo BOOTLOADER_SECTION = {DEVID, SWVERSIONMAJOR << 8 | SWVERSIONMINOR, 0x0000};
@@ -63,11 +61,9 @@ int main(void) {
   MCUCR |= _BV(JTD);
   MCUCR |= _BV(JTD);
 
-  init_serial();
   init_buffers();
   init_iec();
   spiInit();
-  init_fatops();
 
   BUSY_LED_SETDDR();
   DIRTY_LED_SETDDR();

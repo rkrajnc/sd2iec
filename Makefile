@@ -86,11 +86,11 @@ FORMAT = ihex
 
 
 # Target file name (without extension).
-TARGET = $(OBJDIR)/sd2iec
+TARGET = $(OBJDIR)/carddiag
 
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = buffers.c fatops.c iec.c uart.c main.c errormsg.c doscmd.c sdcard.c spi.c tff.c
+SRC = buffers.c doscmd.c diag.c iec.c main.c sdcard.c spi.c tff.c
 
 
 # List Assembler source files here.
