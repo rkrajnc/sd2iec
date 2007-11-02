@@ -223,7 +223,7 @@ static char extendedInit(void) {
 
   // If ACMD41 fails something strange happened...
   if (i != 0) {
-    printf_P(PSTR("EXT:41 TMO\n"));
+    printf_P(PSTR("EXT:41 TMO I:%02X\n"),i);
     return FALSE;
   } else {
     printf_P(PSTR("EXT:OK\n"));
@@ -250,6 +250,8 @@ DSTATUS disk_initialize(BYTE drv) {
   uint16_t counter;
   uint32_t answer;
 
+  static uint32_t marker = 0;
+
 #ifdef SDCARD_WP_SETUP
   SDCARD_WP_SETUP();
 #endif
@@ -269,7 +271,7 @@ DSTATUS disk_initialize(BYTE drv) {
   // Reset card
   i = sendCommand(GO_IDLE_STATE, 0, 0x95, 1);
   if (i != 1) {
-    printf_P(PSTR("RESET TMO\n"));
+    printf_P(PSTR("RESET TMO I:%02X\n"),i);
     return STA_NOINIT | STA_NODISK;
   }
 
@@ -314,17 +316,18 @@ DSTATUS disk_initialize(BYTE drv) {
   }
   
   // Keep sending CMD1 (SEND_OP_COND) command until zero response
-  counter = 0xfff;
+  counter = 0xffff;
   do {
-    i = sendCommand(SEND_OP_COND, 1L<<30, 0xff, 1);
+    i = sendCommand(SEND_OP_COND, marker, 0xff, 1);
     counter--;
   } while (i != 0 && counter > 0);
-  
+
+  printf_P(PSTR("OPCND: C:%04X I:%02X M:%02X\n"),counter,i,!!marker);
+  marker ^= 1L<<30;
   if (counter==0) {
-    printf_P(PSTR("OPCND:TMO\n"));
     return STA_NOINIT | STA_NODISK;
   }
-  
+ 
   // Send MMC CMD16(SET_BLOCKLEN) to 512 bytes
   i = sendCommand(SET_BLOCKLEN, 512, 0xff, 1);
   if (i != 0) {
