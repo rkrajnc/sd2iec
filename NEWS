@@ -1,3 +1,10 @@
+2007-11-02 - release 0.2.1
+	- bugfix: Don't cause repeated entries at the end of the directory
+	- bugfix: Don't repeast the last block of a saved file (1:256 chance)
+	- bugfix: Increase all timeouts in the card initialisation
+	- Recode 0xff in filenames to ~, both characters map to the pi
+	  symbol on the C64
+
 2007-11-01 - release 0.2
 	- conditional compilation via make command line for chip type
 	  and IO pin assignment (Shadowwolf/LarsP)
