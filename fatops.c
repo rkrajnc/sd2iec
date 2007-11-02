@@ -374,7 +374,7 @@ static uint8_t fat_file_close(buffer_t *buf) {
   
   if (!buf->allocated) return 0;
 
-  if (buf->write) {
+  if (buf->write && buf->dirty) {
     /* Write the remaining data using the callback */
     DIRTY_LED_OFF(); // FIXME: Mehr als eine Schreibdatei offen?
     if (fat_file_write(buf))
@@ -482,6 +482,7 @@ static void fat_open_write(uint8_t secondary, buffer_t *buf) {
   DIRTY_LED_ON();
 
   buf->secondary = secondary;
+  buf->dirty     = 0;
   buf->read      = 0;
   buf->write     = 1;
   buf->position  = 0;
