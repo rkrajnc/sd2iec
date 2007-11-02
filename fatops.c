@@ -294,8 +294,13 @@ static uint8_t fat_dir_refill(buffer_t *buf) {
   /* Fix the buffer length */
   buf->length--;
 
-  if (!finfo.fname[0])
-    buf->refill = fat_dir_footer;
+  if (i == 0) {
+    /* Immediately generate the footer */
+    return fat_dir_footer(buf);
+  } else {
+    if (!finfo.fname[0])
+      buf->refill = fat_dir_footer;
+  }
 
   return 0;
 }
