@@ -202,7 +202,7 @@ static char extendedInit(void) {
     return TRUE;
   }
   
-  counter = 0xff;
+  counter = 0xffff;
   do {
     // Prepare for ACMD, send CMD55: APP_CMD
     i = sendCommand(APP_CMD, 0, 0xff, 1);
@@ -270,7 +270,7 @@ DSTATUS disk_initialize(BYTE drv) {
     return STA_NOINIT | STA_NODISK;
 #endif
 
-  counter = 0xff;
+  counter = 0xffff;
   // According to the spec READ_OCR should work at this point
   // without retries. One of my Sandisk-cards thinks otherwise.
   do {
@@ -280,7 +280,7 @@ DSTATUS disk_initialize(BYTE drv) {
       // kills my Sandisk 1G which requires the retries in the first place
       // deselectCard();
     }
-  } while (i > 1 && counter > 0);
+  } while (i > 1 && counter-- > 0);
   
   if (counter > 0) {
     answer = spiTransferLong(0);
@@ -302,7 +302,7 @@ DSTATUS disk_initialize(BYTE drv) {
   }
   
   // Keep sending CMD1 (SEND_OP_COND) command until zero response
-  counter = 0xfff;
+  counter = 0xffff;
   do {
     i = sendCommand(SEND_OP_COND, 1L<<30, 0xff, 1);
     counter--;
