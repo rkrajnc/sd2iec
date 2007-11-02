@@ -498,6 +498,7 @@ static void fat_open_write(uint8_t secondary, buffer_t *buf) {
 /* Open something */
 void fat_open(uint8_t secondary) {
   buffer_t *buf;
+  uint8_t i;
 
   /* Empty name? */
   if (command_length == 0) {
@@ -518,7 +519,11 @@ void fat_open(uint8_t secondary) {
     return;
   }
 
-  // FIXME: Unterverzeichnissupport - evtl. Filenamen hinter current_path kopieren
+  /* The C64 displays ~ as pi, but sends pi as 0xff */
+  for (i=0;i<command_length;i++)
+    if (command_buffer[i] == 0xff)
+      command_buffer[i] = '~';
+
   command_buffer[command_length] = 0;
 
   // FIXME: Parse filename for type+operation suffixes
