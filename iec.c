@@ -365,12 +365,8 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
       }
     } while (buf->position++ < buf->length);
 
-    /* Clean up after EOI was sent, fixes DolphinDOS problems */
-    if (buf->sendeoi) {
-      if (buf->cleanup)
-	buf->cleanup(buf);
+    if (buf->sendeoi)
       break;
-    }
 
     if (buf->refill)
       if (buf->refill(buf)) {

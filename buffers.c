@@ -47,9 +47,6 @@ void init_buffers(void) {
   
   buffer[BUFFER_COUNT].data      = error_buffer;
   buffer[BUFFER_COUNT].secondary = 15;
-  /* This is in refill instead of cleanup because Dolphin Dos */
-  /* does not send OPEN/CLOSE for @, just DATA.               */
-  //buffer[BUFFER_COUNT].refill    = set_ok_message;
   buffer[BUFFER_COUNT].allocated = 1;
   buffer[BUFFER_COUNT].read      = 1;
   buffer[BUFFER_COUNT].write     = 1;
