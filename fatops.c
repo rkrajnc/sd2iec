@@ -383,12 +383,12 @@ static uint8_t fat_file_close(buffer_t *buf) {
 
   res = f_close(&buf->pvt.fh);
   free_buffer(buf);
-  if (res != FR_OK) {
-    parse_error(res,1);
+  parse_error(res,1);
+
+  if (res != FR_OK)
     return 1;
-  }
-  set_error(ERROR_OK,0,0);
-  return 0;
+  else
+    return 0;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -499,6 +499,9 @@ static void fat_open_write(uint8_t secondary, buffer_t *buf) {
 void fat_open(uint8_t secondary) {
   buffer_t *buf;
   uint8_t i;
+
+  /* Assume everything will go well unless proven otherwise */
+  set_error(ERROR_OK,0,0);
 
   /* Empty name? */
   if (command_length == 0) {
