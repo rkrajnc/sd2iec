@@ -29,6 +29,7 @@
 #include <avr/interrupt.h>
 #include <ctype.h>
 #include <stdlib.h>
+#include <util/crc16.h>
 #include "config.h"
 #include "errormsg.h"
 #include "doscmd.h"
@@ -43,6 +44,55 @@ static void (*restart_call)(void) = 0;
 
 uint8_t command_buffer[COMMAND_BUFFER_SIZE];
 uint8_t command_length;
+
+uint16_t datacrc = 0xffff;
+
+static void handle_memexec(void) {
+  if (command_length < 5)
+    return;
+
+  uart_puts_P(PSTR("M-E at "));
+  uart_puthex(command_buffer[4]);
+  uart_puthex(command_buffer[3]);
+  uart_puts_P(PSTR(", CRC "));
+  uart_puthex(datacrc >> 8);
+  uart_puthex(datacrc & 0xff);
+  uart_putcrlf();
+
+  datacrc = 0xffff;
+}
+
+static void handle_memread(void) {
+  if (command_length < 6)
+    return;
+
+ // FIXME: M-R should return data even if it's just junk
+}
+
+static void handle_memwrite(void) {
+  uint16_t address;
+  uint8_t  length,i;
+
+  if (command_length < 6)
+    return;
+
+  address = command_buffer[3] + (command_buffer[4]<<8);
+  length  = command_buffer[5];
+
+  if (address == 0x1c06 || address == 0x1c07) {
+    /* Ignore attempts to increase the VIA timer frequency */
+    return;
+  }
+
+  for (i=0;i<command_length;i++)
+    datacrc = _crc16_update(datacrc, command_buffer[i]);
+
+  uart_puts_P(PSTR("M-W CRC result: "));
+  uart_puthex(datacrc >> 8);
+  uart_puthex(datacrc & 0xff);
+  uart_putcrlf();
+}
+
 
 /* Parses CMD-style directory specifications in the command buffer */
 /* Returns 1 if any errors found, rewrites command_buffer          */
@@ -226,7 +276,6 @@ void parse_doscommand() {
 
   case 'M':
     /* Memory-something - just dump for later analysis */
-    // FIXME: M-R should return data even if it's just junk
 #ifndef COMMAND_CHANNEL_DUMP
     uart_flush();
     for (i=0;i<3;i++)
@@ -239,6 +288,15 @@ void parse_doscommand() {
     uart_putc(13);
     uart_putc(10);
 #endif
+
+    if (command_buffer[2] == 'W')
+      handle_memwrite();
+    else if (command_buffer[2] == 'E')
+      handle_memexec();
+    else if (command_buffer[2] == 'R')
+      handle_memread();
+    else
+      set_error(ERROR_SYNTAX_UNKNOWN,0,0);
     break;
 
   case 'S':

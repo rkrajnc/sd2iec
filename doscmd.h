@@ -30,6 +30,8 @@
 extern uint8_t command_buffer[COMMAND_BUFFER_SIZE];
 extern uint8_t command_length;
 
+extern uint16_t datacrc;
+
 void parse_doscommand(void);
 
 #endif

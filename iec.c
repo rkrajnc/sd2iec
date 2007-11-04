@@ -579,6 +579,7 @@ void iec_mainloop(void) {
 	  parse_doscommand();
 	} else {
 	  /* Filename in command buffer */
+	  datacrc = 0xffff;
 	  fat_open(secondary_address);
 	}
 	command_length = 0;
