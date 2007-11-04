@@ -79,6 +79,12 @@ static void handle_memwrite(void) {
   address = command_buffer[3] + (command_buffer[4]<<8);
   length  = command_buffer[5];
 
+  if (address == 119) {
+    /* Change device address, 1541 style */
+    device_address = command_buffer[6] & 0x1f;
+    return;
+  }
+
   if (address == 0x1c06 || address == 0x1c07) {
     /* Ignore attempts to increase the VIA timer frequency */
     return;

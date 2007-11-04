@@ -38,7 +38,7 @@ typedef struct {
 
 extern iecflags_t iecflags;
 
-extern uint8_t device_number;
+extern uint8_t device_address;
 
 void init_iec(void);
 void iec_mainloop(void);
