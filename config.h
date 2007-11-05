@@ -53,14 +53,6 @@
 #define SWVERSIONMAJOR 0
 #define SWVERSIONMINOR 0
 
-typedef struct
-{
-	unsigned long dev_id;
-	unsigned short app_version;
-	unsigned short crc;
-} bootloaderinfo_t;
-/* R.Riedel - bootloader-support */
-
 
 /* Enable UART debugging here by uncommenting UART_DEBUG */
 #define UART_DEBUG

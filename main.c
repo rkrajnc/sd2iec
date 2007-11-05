@@ -38,6 +38,14 @@
 #include "fatops.h"
 
 #ifdef __AVR_ATmega32__
+typedef struct
+{
+	unsigned long dev_id;
+	unsigned short app_version;
+	unsigned short crc;
+} bootloaderinfo_t;
+/* R.Riedel - bootloader-support */
+
 const bootloaderinfo_t bootloaderinfo BOOTLOADER_SECTION = {DEVID, SWVERSIONMAJOR << 8 | SWVERSIONMINOR, 0x0000};
 #endif
 
