@@ -312,7 +312,7 @@ static uint8_t fat_file_read(buffer_t *buf) {
 
   uart_putc('#');
 
-  res = f_read(&buf->pvt.fh, buf->data, 256, &bytesread);
+  res = f_read(&buf->pvt.fh, buf->data, 254, &bytesread);
   if (res != FR_OK) {
     parse_error(res,1);
     free_buffer(buf);
@@ -328,7 +328,7 @@ static uint8_t fat_file_read(buffer_t *buf) {
 
   buf->position = 0;
   buf->length = bytesread-1;
-  if (bytesread < 256 ||
+  if (bytesread < 254 ||
       (buf->pvt.fh.fsize - buf->pvt.fh.fptr) == 0)
     buf->sendeoi = 1;
   else
