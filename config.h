@@ -121,10 +121,12 @@
 #  define IEC_DDR  DDRA
 #  define IEC_PORT PORTA
 
-#  define IEC_BIT_ATN   _BV(PA0)
-#  define IEC_BIT_DATA  _BV(PA1)
-#  define IEC_BIT_CLOCK _BV(PA2)
-#  define IEC_BIT_SRQ   _BV(PA3)
+/* Please note that you'll have to change the assembler modules if these */
+/* pins aren't defined as Px0-Px3 in this order.                         */
+#  define IEC_PIN_ATN   PA0
+#  define IEC_PIN_DATA  PA1
+#  define IEC_PIN_CLOCK PA2
+#  define IEC_PIN_SRQ   PA3
 
 #else
 /* Abridged version: LarsP hardware */
@@ -150,11 +152,17 @@
 #  define IEC_PIN               PINC
 #  define IEC_DDR               DDRC
 #  define IEC_PORT              PORTC
-#  define IEC_BIT_ATN           _BV(PC0)
-#  define IEC_BIT_DATA          _BV(PC1)
-#  define IEC_BIT_CLOCK         _BV(PC2)
-#  define IEC_BIT_SRQ           _BV(PC3)
+#  define IEC_PIN_ATN           PC0
+#  define IEC_PIN_DATA          PC1
+#  define IEC_PIN_CLOCK         PC2
+#  define IEC_PIN_SRQ           PC3
 #endif
+
+#define IEC_BIT_ATN   _BV(IEC_PIN_ATN)
+#define IEC_BIT_DATA  _BV(IEC_PIN_DATA)
+#define IEC_BIT_CLOCK _BV(IEC_PIN_CLOCK)
+#define IEC_BIT_SRQ   _BV(IEC_PIN_SRQ)
+
 
 /* SD Card supply voltage - choose the one appropiate to your board */
 /* #define SD_SUPPLY_VOLTAGE (1L<<15)  / * 2.7V - 2.8V */
