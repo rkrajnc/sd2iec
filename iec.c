@@ -149,7 +149,7 @@ ISR(TIMER2_COMPA_vect) {
 
 /* Receive a byte from the CBM serial bus - see E9C9 */
 /*   If this returns -1 the device state has changed, return to the main loop */
-static int16_t iec_getc(void) {
+static int16_t _iec_getc(void) {
   uint8_t i,val,tmp;
 
   val = 0;
@@ -226,6 +226,16 @@ static int16_t iec_getc(void) {
   return val;
 }
 
+/* Wrap cli/sei around iec_getc. The compiler inlines _iec_getc into this. */
+static int16_t iec_getc(void) {
+  int16_t val;
+
+  cli();
+  val = _iec_getc();
+  sei();
+  return val;
+}
+  
 
 /* Send a byte over the CBM serial bus - see E916 */
 /*   If this returns -1 the device state has changed, return to the main loop */
