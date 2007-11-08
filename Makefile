@@ -90,7 +90,7 @@ TARGET = $(OBJDIR)/sd2iec
 
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = buffers.c fatops.c iec.c uart.c main.c errormsg.c doscmd.c sdcard.c spi.c tff.c
+SRC = buffers.c fatops.c iec.c uart.c main.c errormsg.c doscmd.c sdcard.c spi.c tff.c crc7.c
 
 
 # List Assembler source files here.

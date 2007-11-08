@@ -178,6 +178,9 @@
 /* Support SDHC - disabling it saves ~220 bytes flash */
 #define SDHC_SUPPORT
 
+/* Number of retries if the SD communication fails */
+#define SD_AUTO_RETRIES 10
+
 /* Length of error message buffer - 1571 uses 36 bytes */
 #define ERROR_BUFFER_SIZE 36
 

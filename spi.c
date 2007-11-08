@@ -65,8 +65,11 @@ void spiInit(void)
 
   // setup SPI interface:
   //   interrupts disabled, SPI enabled, MSB first, master mode,
-  //   leading edge rising, sample on leading edge, clock = f/4, 
-  SPCR = 0b01010000;
+  //   leading edge rising, sample on leading edge, clock = f/16, 
+  SPCR = 0b01010001;
+
+  // Enable SPI double speed mode -> clock = f/8
+  SPSR = _BV(SPI2X);
   
   // clear status
   dummy = SPSR;

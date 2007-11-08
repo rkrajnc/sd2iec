@@ -54,10 +54,12 @@
 
 #include <avr/io.h>
 #include <avr/pgmspace.h>
+#include <util/crc16.h>
 #include "config.h"
 #include "spi.h"
+#include "crc7.h"
+#include "uart.h"
 #include "sdcard.h"
-
 
 #ifndef TRUE
 #define TRUE -1
@@ -102,6 +104,15 @@
 #define SD_SET_CLR_CARD_DETECT    42
 #define SD_SEND_SCR               51
 
+// R1 status bits
+#define STATUS_IN_IDLE          1
+#define STATUS_ERASE_RESET      2
+#define STATUS_ILLEGAL_COMMAND  4
+#define STATUS_CRC_ERROR        8
+#define STATUS_ERASE_SEQ_ERROR 16
+#define STATUS_ADDRESS_ERROR   32
+#define STATUS_PARAMETER_ERROR 64
+
 
 uint8_t sdCardOK = FALSE;
 #ifdef SDHC_SUPPORT
@@ -141,30 +152,54 @@ static void deselectCard(void) {
 
 // Send a command to the SD card
 // Deselect it afterwards if requested
-// FIXME: Send calculated instead of fixed CRC
 static int sendCommand(const uint8_t  command,
 		       const uint32_t parameter,
-		       const uint8_t  crc,
 		       const uint8_t  deselect) {
-  uint8_t  i;
+  union {
+    unsigned long l;
+    unsigned char c[4];
+  } long2char;
+
+  uint8_t  i,crc,errorcount;
   uint16_t counter;
 
-  // Select card
-  SPI_SS_LOW();
+  long2char.l = parameter;
+  crc = crc7update(0  , 0x40+command);
+  crc = crc7update(crc, long2char.c[3]);
+  crc = crc7update(crc, long2char.c[2]);
+  crc = crc7update(crc, long2char.c[1]);
+  crc = crc7update(crc, long2char.c[0]);
+  crc = (crc << 1) | 1;
 
-  // Transfer command
-  spiTransferByte(0x40+command);
-  spiTransferLong(parameter);
-  spiTransferByte(crc);
+  errorcount = 0;
+  while (errorcount < SD_AUTO_RETRIES) {
+    // Select card
+    SPI_SS_LOW();
+    
+    // Transfer command
+    spiTransferByte(0x40+command);
+    spiTransferLong(parameter);
+    spiTransferByte(crc);
+    
+    // Wait for a valid response
+    counter = 0;
+    do {
+      i = spiTransferByte(0xff);
+      counter++;
+    } while (i & 0x80 && counter < 0x1000);
 
-  // Wait for a valid response
-  counter = 0;
-  do {
-    i = spiTransferByte(0xff);
-    counter++;
-  } while (i & 0x80 && counter < 0x1000);
-
-  if (deselect) deselectCard();
+    // Check for CRC error
+    // can't reliably retry unless deselect is allowed
+    if (deselect && (i & STATUS_CRC_ERROR)) {
+      uart_putc('x');
+      deselectCard();
+      errorcount++;
+      continue;
+    }
+    
+    if (deselect) deselectCard();
+    break;
+  }
 
   return i;
 }
@@ -180,7 +215,7 @@ static char extendedInit(void) {
   // Send CMD8: SEND_IF_COND
   //   0b000110101010 == 2.7-3.6V supply, check pattern 0xAA
   //   CRC manually calculated, must be correct!
-  i = sendCommand(SEND_IF_COND, 0b000110101010, 0x87, 0);
+  i = sendCommand(SEND_IF_COND, 0b000110101010, 0);
   if (i > 1) {
     // Card returned an error, ok (MMC oder SD1.x) but not SDHC
     deselectCard();
@@ -205,7 +240,7 @@ static char extendedInit(void) {
   counter = 0xffff;
   do {
     // Prepare for ACMD, send CMD55: APP_CMD
-    i = sendCommand(APP_CMD, 0, 0xff, 1);
+    i = sendCommand(APP_CMD, 0, 1);
     if (i > 1) {
       // Command not accepted, could be MMC
       return TRUE;
@@ -213,7 +248,7 @@ static char extendedInit(void) {
 
     // Send ACMD41: SD_SEND_OP_COND
     //   1L<<30 == Host has High Capacity Support
-    i = sendCommand(SD_SEND_OP_COND, 1L<<30, 0xff, 1);
+    i = sendCommand(SD_SEND_OP_COND, 1L<<30, 1);
     // Repeat while card card accepts command but isn't ready
   } while (i == 1 && --counter > 0);
 
@@ -260,7 +295,7 @@ DSTATUS disk_initialize(BYTE drv) {
   }
   
   // Reset card
-  i = sendCommand(GO_IDLE_STATE, 0, 0x95, 1);
+  i = sendCommand(GO_IDLE_STATE, 0, 1);
   if (i != 1) {
     return STA_NOINIT | STA_NODISK;
   }
@@ -275,7 +310,7 @@ DSTATUS disk_initialize(BYTE drv) {
   // without retries. One of my Sandisk-cards thinks otherwise.
   do {
     // Send CMD58: READ_OCR
-    i = sendCommand(READ_OCR, 0, 0xff, 0);
+    i = sendCommand(READ_OCR, 0, 0);
     if (i > 1) {
       // kills my Sandisk 1G which requires the retries in the first place
       // deselectCard();
@@ -304,7 +339,7 @@ DSTATUS disk_initialize(BYTE drv) {
   // Keep sending CMD1 (SEND_OP_COND) command until zero response
   counter = 0xffff;
   do {
-    i = sendCommand(SEND_OP_COND, 1L<<30, 0xff, 1);
+    i = sendCommand(SEND_OP_COND, 1L<<30, 1);
     counter--;
   } while (i != 0 && counter > 0);
   
@@ -312,8 +347,17 @@ DSTATUS disk_initialize(BYTE drv) {
     return STA_NOINIT | STA_NODISK;
   }
   
+  // Enable CRC checking
+  // The SD spec says that the host "should" send CRC_ON_OFF before ACMD_SEND_OP_COND.
+  // The MMC manual I have says that CRC_ON_OFF isn't allowed before SEND_OP_COND.
+  // Let's just hope that all SD cards work with this order. =(
+  i = sendCommand(CRC_ON_OFF, 1, 1);
+  if (i > 1) {
+    return STA_NOINIT | STA_NODISK;
+  }
+
   // Send MMC CMD16(SET_BLOCKLEN) to 512 bytes
-  i = sendCommand(SET_BLOCKLEN, 512, 0xff, 1);
+  i = sendCommand(SET_BLOCKLEN, 512, 1);
   if (i != 0) {
     return FALSE;
   }
@@ -327,40 +371,56 @@ DSTATUS disk_initialize(BYTE drv) {
 
 // Reads sector to buffer
 DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {  
-  uint8_t sec,res;
+  uint8_t sec,res,tmp,errorcount;
+  uint16_t crc,recvcrc;
 
   for (sec=0;sec<count;sec++) {
-    if (isSDHC)
-      res = sendCommand(READ_SINGLE_BLOCK, sector+sec, 0xff, 0);
-    else
-      res = sendCommand(READ_SINGLE_BLOCK, (sector+sec) << 9, 0xff, 0);
-    
-    if (res != 0) {
-      SPI_SS_HIGH();
-      sdCardOK = FALSE;
-      return RES_ERROR;
-    }
-    
-    // Wait for data token
-    if (!sdResponse(0xFE)) {
-      SPI_SS_HIGH();
-      sdCardOK = FALSE;
-      return RES_ERROR;
-    }
+    errorcount = 0;
+    while (errorcount < SD_AUTO_RETRIES) {
+      if (isSDHC)
+	res = sendCommand(READ_SINGLE_BLOCK, sector+sec, 0);
+      else
+	res = sendCommand(READ_SINGLE_BLOCK, (sector+sec) << 9, 0);
+      
+      if (res != 0) {
+	SPI_SS_HIGH();
+	sdCardOK = FALSE;
+	return RES_ERROR;
+      }
+      
+      // Wait for data token
+      if (!sdResponse(0xFE)) {
+	SPI_SS_HIGH();
+	sdCardOK = FALSE;
+	return RES_ERROR;
+      }
   
-    uint16_t i;
-  
-    // Get data
-    for (i=0; i<512; i++) {
-      *(buffer++) = spiTransferByte(0xFF);
+      uint16_t i;
+      BYTE *oldbuffer = buffer;
+      
+      // Get data
+      crc = 0;
+      for (i=0; i<512; i++) {
+	tmp = spiTransferByte(0xff);
+	*(buffer++) = tmp;
+	crc = _crc_xmodem_update(crc, tmp);
+      }
+      
+      // Check CRC
+      recvcrc = (spiTransferByte(0xFF) << 8) + spiTransferByte(0xFF);
+      if (recvcrc != crc) {
+	uart_putc('X');
+	deselectCard();
+	errorcount++;
+	buffer = oldbuffer;
+	continue;
+      }
+
+      break;
     }
-    
-    // Discard chksum
-    // FIXME: Check CRC16
-    spiTransferByte(0xFF);
-    spiTransferByte(0xFF);
-    
     deselectCard();
+
+    if (errorcount >= SD_AUTO_RETRIES) return RES_ERROR;
   }
 
   return RES_OK;
@@ -370,57 +430,71 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
 
 // Writes sector to buffer
 DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) { 
-  uint8_t res,sec;
+  uint8_t res,sec,errorcount,status;
+  uint16_t crc;
 
 #ifdef SDCARD_WP
   if (SDCARD_WP) return RES_WRPRT;
 #endif
 
   for (sec=0;sec<count;sec++) {
-    if (isSDHC)
-      res = sendCommand(WRITE_BLOCK, sector+sec, 0xff, 0);
-    else
-      res = sendCommand(WRITE_BLOCK, (sector+sec)<<9, 0xff, 0);
-    
-    if (res != 0) {
-      SPI_SS_HIGH();
-      sdCardOK = FALSE;
-      return RES_ERROR;
+    errorcount = 0;
+    while (errorcount < SD_AUTO_RETRIES) {
+      if (isSDHC)
+	res = sendCommand(WRITE_BLOCK, sector+sec, 0);
+      else
+	res = sendCommand(WRITE_BLOCK, (sector+sec)<<9, 0);
+      
+      if (res != 0) {
+	SPI_SS_HIGH();
+	sdCardOK = FALSE;
+	return RES_ERROR;
+      }
+      
+      // Send data token
+      spiTransferByte(0xFE);
+      
+      uint16_t i;
+      const BYTE *oldbuffer = buffer;
+      
+      // Send data
+      crc = 0;
+      for (i=0; i<512; i++) {
+	crc = _crc_xmodem_update(crc, *buffer);
+	spiTransferByte(*(buffer++)); 
+      }
+      
+      // Send CRC
+      spiTransferByte(crc >> 8);
+      spiTransferByte(crc & 0xff);
+
+      // Get and check status feedback
+      status = spiTransferByte(0xFF);
+      
+      // Retry if neccessary
+      if ((status & 0x0F) != 0x05) {
+	uart_putc('X');
+	deselectCard();
+	errorcount++;
+	buffer = oldbuffer;
+	continue;
+      }
+      
+      // Wait for write finish
+      if (!sdWaitWriteFinish()) {
+	SPI_SS_HIGH();
+	sdCardOK = FALSE;
+	return RES_ERROR;
+      }
+      break;
     }
-  
-    // Send data token
-    spiTransferByte(0xFE);
-    
-    uint16_t i;
-    
-    // Send data
-    for (i=0; i<512; i++) {
-      spiTransferByte(*(buffer++)); 
-    }
-    
-    // Send bogus chksum
-    // FIXME: Send real CRC16
-    spiTransferByte(0xFF);
-    spiTransferByte(0xFF);
-    
-    // Get and check status feedback
-    uint8_t status;
-    status = spiTransferByte(0xFF);
-    
-    if ((status & 0x0F) != 0x05) {
-      SPI_SS_HIGH();
-      sdCardOK = FALSE;
-      return RES_ERROR;
-    }
-    
-    // Wait for write finish
-    if (!sdWaitWriteFinish()) {
-      SPI_SS_HIGH();
-      sdCardOK = FALSE;
-      return RES_ERROR;
-    }
-    
     deselectCard();
+
+    if (errorcount >= SD_AUTO_RETRIES) {
+      if (!(status & STATUS_CRC_ERROR))
+	sdCardOK = FALSE;
+      return RES_ERROR;
+    }
   }
   
   return RES_OK;
