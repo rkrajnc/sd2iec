@@ -90,7 +90,7 @@ TARGET = $(OBJDIR)/sd2iec
 
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = buffers.c fatops.c iec.c uart.c main.c errormsg.c doscmd.c sdcard.c spi.c tff.c crc7.c
+SRC = buffers.c fatops.c iec.c uart.c main.c errormsg.c doscmd.c sdcard.c spi.c tff.c crc7.c fastloader.c
 
 
 # List Assembler source files here.
@@ -100,7 +100,7 @@ SRC = buffers.c fatops.c iec.c uart.c main.c errormsg.c doscmd.c sdcard.c spi.c 
 #     Even though the DOS/Win* filesystem matches both .s and .S the same,
 #     it will preserve the spelling of the filenames, and gcc itself does
 #     care about how the name is spelled on its command-line.
-ASRC = 
+ASRC = fastloader-ll.S
 
 
 # Optimization level, can be [0, 1, 2, 3, s]. 

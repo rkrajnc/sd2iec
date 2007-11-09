@@ -36,6 +36,7 @@
 #include "uart.h"
 #include "fatops.h"
 #include "sdcard.h"
+#include "fastloader.h"
 #include "iec.h"
 
 #define CURSOR_RIGHT 0x1d
@@ -48,18 +49,28 @@ uint8_t command_length;
 uint16_t datacrc = 0xffff;
 
 static void handle_memexec(void) {
+  uint16_t address;
+
   if (command_length < 5)
     return;
 
-  uart_puts_P(PSTR("M-E at "));
-  uart_puthex(command_buffer[4]);
-  uart_puthex(command_buffer[3]);
-  uart_puts_P(PSTR(", CRC "));
-  uart_puthex(datacrc >> 8);
-  uart_puthex(datacrc & 0xff);
-  uart_putcrlf();
-
+  if (detected_loader == FL_NONE) { 
+    uart_puts_P(PSTR("M-E at "));
+    uart_puthex(command_buffer[4]);
+    uart_puthex(command_buffer[3]);
+    uart_puts_P(PSTR(", CRC "));
+    uart_puthex(datacrc >> 8);
+    uart_puthex(datacrc & 0xff);
+    uart_putcrlf();
+  }
   datacrc = 0xffff;
+
+  address = command_buffer[3] + (command_buffer[4]<<8);
+  if (detected_loader == FL_TURBODISK && address == 0x0303) {
+    /* Looks like Turbodisk */
+    detected_loader = FL_NONE;
+    load_turbodisk();
+  }
 }
 
 static void handle_memread(void) {
@@ -90,13 +101,22 @@ static void handle_memwrite(void) {
     return;
   }
 
+  /* Turbodisk sends the filename in the last M-W */
+  if (datacrc == 0xe1cb) {
+    detected_loader = FL_TURBODISK;
+  } else {
+    detected_loader = FL_NONE;
+  }
+  
   for (i=0;i<command_length;i++)
     datacrc = _crc16_update(datacrc, command_buffer[i]);
 
-  uart_puts_P(PSTR("M-W CRC result: "));
-  uart_puthex(datacrc >> 8);
-  uart_puthex(datacrc & 0xff);
-  uart_putcrlf();
+  if (detected_loader == FL_NONE) {
+    uart_puts_P(PSTR("M-W CRC result: "));
+    uart_puthex(datacrc >> 8);
+    uart_puthex(datacrc & 0xff);
+    uart_putcrlf();
+  }
 }
 
 
@@ -161,19 +181,22 @@ void parse_doscommand() {
 
 #ifdef COMMAND_CHANNEL_DUMP
   /* Debugging aid: Dump the whole command via serial */
-  uart_flush();
-  uart_putc('>');
-
-  for (i=0;i<command_length;i++) {
-    uart_puthex(command_buffer[i]);
-    uart_putc(' ');
-    if ((i & 0x0f) == 0x0f) {
-      uart_putcrlf();
-      uart_putc('>');
-    }
+  if (detected_loader == FL_NONE) {
+    /* Dump only if no loader was detected because it may ruin the timing */
     uart_flush();
+    uart_putc('>');
+    
+    for (i=0;i<command_length;i++) {
+      uart_puthex(command_buffer[i]);
+      uart_putc(' ');
+      if ((i & 0x0f) == 0x0f) {
+	uart_putcrlf();
+	uart_putc('>');
+      }
+      uart_flush();
+    }
+    uart_putcrlf();
   }
-  uart_putcrlf();
 #endif
 
   /* Remove CRs at end of command */
@@ -283,16 +306,18 @@ void parse_doscommand() {
   case 'M':
     /* Memory-something - just dump for later analysis */
 #ifndef COMMAND_CHANNEL_DUMP
-    uart_flush();
-    for (i=0;i<3;i++)
-      uart_putc(command_buffer[i]);
-    for (i=3;i<command_length;i++) {
-      uart_putc(' ');
-      uart_puthex(command_buffer[i]);
+    if (detected_loader == FL_NONE) {
       uart_flush();
+      for (i=0;i<3;i++)
+	uart_putc(command_buffer[i]);
+      for (i=3;i<command_length;i++) {
+	uart_putc(' ');
+	uart_puthex(command_buffer[i]);
+	uart_flush();
+      }
+      uart_putc(13);
+      uart_putc(10);
     }
-    uart_putc(13);
-    uart_putc(10);
 #endif
 
     if (command_buffer[2] == 'W')
