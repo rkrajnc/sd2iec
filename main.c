@@ -29,6 +29,7 @@
 #include <avr/pgmspace.h>
 #include <avr/boot.h>
 #include <avr/wdt.h>
+#include <util/delay.h>
 #include "config.h"
 #include "uart.h"
 #include "spi.h"
@@ -71,16 +72,19 @@ int main(void) {
   MCUCR |= _BV(JTD);
   MCUCR |= _BV(JTD);
 
+  BUSY_LED_SETDDR();
+  DIRTY_LED_SETDDR();
+
+  BUSY_LED_ON();
+  DIRTY_LED_OFF();
+
   init_serial();
   init_buffers();
   init_iec();
   spiInit();
   init_fatops();
 
-  BUSY_LED_SETDDR();
-  DIRTY_LED_SETDDR();
   BUSY_LED_OFF();
-  DIRTY_LED_OFF();
 
   iec_mainloop();
 
