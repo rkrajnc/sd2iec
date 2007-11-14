@@ -69,25 +69,21 @@
 
 /*** SD card signals ***/
 /* CARD_DETECT must return non-zero when card is inserted     */
-/* If no card detect signal is available, comment the defines */
 #  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
 #  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
 
 /* CARD Write Protect must return non-zero when card is write protected */
-/* If no card detect signal is available, comment the defines           */
 #  define SDCARD_WP         (PIND & _BV(PD6))
 #  define SDCARD_WP_SETUP() do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
 
 
 /*** Jumper ***/
 /* DEV9 jumper. If jumped, IEC device number is 9, otherwise 8 */
-/* If no DEV9 jumper is available, comment the defines         */
 /* R.Riedel uses PORTD.7 instead of PA2 */
 #  define DEV9_JUMPER         (!(PIND & _BV(PD7)))
 #  define DEV9_JUMPER_SETUP() do { DDRD &= ~_BV(PD7); PORTD |= _BV(PD7); } while(0)
 
 /* If DEV10_JUMPER is non-zero, IEC device number is 10, otherwise 8 */
-/* If no DEV10 jumper is available, comment the defines              */
 /* R.Riedel uses PORTD.5 instead of PA3 */
 #  define DEV10_JUMPER         (!(PIND & _BV(PD5)))
 #  define DEV10_JUMPER_SETUP() do { DDRD &= ~_BV(PD5); PORTD |= _BV(PD5); } while(0)
