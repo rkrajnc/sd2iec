@@ -24,8 +24,8 @@
 
 */
 
-#ifndef FASTLOADER_H
-#define FASTLOADER_H
+#ifndef FASTLOADERLL_H
+#define FASTLOADERLL_H
 
 void turbodisk_byte(uint8_t value);
 void turbodisk_buffer(uint8_t *data, uint8_t length);
