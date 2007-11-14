@@ -34,7 +34,7 @@
 #include "fastloader-ll.h"
 #include "fastloader.h"
 
-enum { FL_NONE = 0, FL_TURBODISK } detected_loader;
+enum fastloaders detected_loader;
 
 void load_turbodisk(void) {
   uint8_t i,len,firstsector;
