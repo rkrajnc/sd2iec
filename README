@@ -67,6 +67,16 @@ Supported commands:
 
 - UI/UJ
 
+Software fastloaders:
+=====================
+There is currently support for one software fastloader in the code. It is
+detected by the CRC of its 493 byte long floppy code and the M-E address
+0x0303. I've seen the same code under multiple names, among them
+"Turbodisk" (both 2.1 and 2.2) and "Fast-Load". Unfortunately the timing
+requirements are extremely tight and cannot be met with the internal RC
+oscillator of the AVR even if calibrated. You really need an external
+8MHz crystal or the data read by the C64 will be gibberish.
+
 Compilation notes:
 ==================
 sd2iec is set up to be compiled in multiple configurations, controlled by
