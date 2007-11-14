@@ -31,6 +31,8 @@
 #include "config.h"
 #include "avrcompat.h"
 
+#ifdef UART_DEBUG
+
 static char txbuf[UART_BUFFER_SIZE];
 static volatile uint16_t read_idx;
 static volatile uint16_t write_idx;
@@ -118,3 +120,5 @@ void init_serial(void) {
   read_idx  = 0;
   write_idx = 0;
 }
+
+#endif

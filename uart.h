@@ -27,6 +27,8 @@
 #ifndef UART_H
 #define UART_H
 
+#ifdef UART_DEBUG
+
 #include <avr/pgmspace.h>
 
 void init_serial(void);
@@ -39,5 +41,17 @@ void uart_putcrlf(void);
 
 #include <stdio.h>
 #define dprintf(str,...) printf_P(PSTR(str), ##__VA_ARGS__)
+
+#else
+
+#define init_serial()  do {} while(0)
+#define uart_getc()    0
+#define uart_putc(x)   do {} while(0)
+#define uart_puthex(x) do {} while(0)
+#define uart_flush()   do {} while(0)
+#define uart_puts_P(x) do {} while(0)
+#define uart_putcrlf() do {} while(0)
+
+#endif
 
 #endif
