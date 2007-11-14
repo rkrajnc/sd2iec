@@ -36,7 +36,7 @@ buffer_t buffer[BUFFER_COUNT+1];
 /* The actual data buffers */
 static uint8_t bufferdata[BUFFER_COUNT*256];
 
-static uint8_t active_buffers;
+uint8_t active_buffers;
 
 void init_buffers(void) {
   uint8_t i;
@@ -75,6 +75,14 @@ void free_buffer(buffer_t *buffer) {
   buffer->allocated = 0;
   if (! --active_buffers)
     BUSY_LED_OFF();
+}
+
+void free_all_buffers(void) {
+  uint8_t i;
+  
+  for (i=0;i<BUFFER_COUNT;i++)
+    if (buffer[i].allocated)
+      free_buffer(&buffer[i]);
 }
 
 buffer_t *find_buffer(uint8_t secondary) {

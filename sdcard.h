@@ -59,7 +59,11 @@ DRESULT disk_read (BYTE, BYTE*, DWORD, BYTE);
 DRESULT disk_write (BYTE, const BYTE*, DWORD, BYTE);
 #define disk_ioctl(a,b,c) RES_OK
 
-/* Will be set to FALSE if any access on the card fails */
-extern uint8_t sdCardOK;
+void init_cardchange(void);
+
+/* Will be set to CARD_ERROR if any access on the card fails */
+enum cardstates { CARD_CHANGED = 0, CARD_REMOVED, CARD_OK, CARD_ERROR };
+
+extern volatile enum cardstates card_state;
 
 #endif

@@ -43,6 +43,7 @@
 #include "doscmd.h"
 #include "buffers.h"
 #include "fatops.h"
+#include "sdcard.h"
 #include "iec-ll.h"
 #include "iec.h"
 
@@ -567,6 +568,20 @@ void iec_mainloop(void) {
       // 836B
       set_clock(1);
       set_data(1);
+
+      /* This seems to be a nice point to handle card changes */
+      if (card_state != CARD_OK && card_state != CARD_REMOVED) {
+	BUSY_LED_ON();
+	/* If the card was changed the buffer contents are useless */
+	if (card_state == CARD_CHANGED)
+	  free_all_buffers();
+	// FIXME: Preserve current directory if state was CARD_ERROR
+	init_fatops();
+	if (!active_buffers) {
+	  BUSY_LED_OFF();
+	  DIRTY_LED_OFF();
+	}
+      }
 
       //   0x255 -> A61C
       /* Handle commands and filenames */

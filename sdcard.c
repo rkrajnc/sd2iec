@@ -53,6 +53,7 @@
 */
 
 #include <avr/io.h>
+#include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include <util/crc16.h>
 #include "config.h"
@@ -114,7 +115,8 @@
 #define STATUS_PARAMETER_ERROR 64
 
 
-uint8_t sdCardOK = FALSE;
+volatile enum cardstates card_state;
+
 #ifdef SDHC_SUPPORT
 static uint8_t isSDHC;
 #else
@@ -260,9 +262,23 @@ static char extendedInit(void) {
 }
 #endif
 
+ISR(SD_CHANGE_ISR) {
+  if (SDCARD_DETECT)
+    card_state = CARD_CHANGED;
+  else
+    card_state = CARD_REMOVED;
+}
+
+
 //
 // Public functions
 //
+void init_cardchange(void) {
+  SDCARD_DETECT_SETUP();
+  SD_CHANGE_SETUP();
+}
+
+
 DSTATUS disk_status(BYTE drv) {
   if (SDCARD_DETECT)
     if (SDCARD_WP)
@@ -282,7 +298,8 @@ DSTATUS disk_initialize(BYTE drv) {
   SDCARD_WP_SETUP();
 #endif
   
-  sdCardOK = FALSE;
+  card_state = CARD_ERROR;
+
 #ifdef SDHC_SUPPORT  
   isSDHC   = FALSE;
 #endif
@@ -363,7 +380,7 @@ DSTATUS disk_initialize(BYTE drv) {
   }
     
   // Thats it!
-  sdCardOK = TRUE;
+  card_state = CARD_OK;
   return disk_status(drv);
 }
 
@@ -384,14 +401,14 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
       
       if (res != 0) {
 	SPI_SS_HIGH();
-	sdCardOK = FALSE;
+	card_state = CARD_ERROR;
 	return RES_ERROR;
       }
       
       // Wait for data token
       if (!sdResponse(0xFE)) {
 	SPI_SS_HIGH();
-	sdCardOK = FALSE;
+	card_state = CARD_ERROR;
 	return RES_ERROR;
       }
   
@@ -447,7 +464,7 @@ DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
       
       if (res != 0) {
 	SPI_SS_HIGH();
-	sdCardOK = FALSE;
+	card_state = CARD_ERROR;
 	return RES_ERROR;
       }
       
@@ -483,7 +500,7 @@ DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
       // Wait for write finish
       if (!sdWaitWriteFinish()) {
 	SPI_SS_HIGH();
-	sdCardOK = FALSE;
+	card_state = CARD_ERROR;
 	return RES_ERROR;
       }
       break;
@@ -492,7 +509,7 @@ DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
 
     if (errorcount >= SD_AUTO_RETRIES) {
       if (!(status & STATUS_CRC_ERROR))
-	sdCardOK = FALSE;
+	card_state = CARD_ERROR;
       return RES_ERROR;
     }
   }

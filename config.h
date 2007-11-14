@@ -68,9 +68,22 @@
 /* example values are for the "Shadowwolf" variant. */
 
 /*** SD card signals ***/
-/* CARD_DETECT must return non-zero when card is inserted     */
+/* CARD_DETECT must return non-zero when card is inserted */
+/* This must be a pin capable of generating interrupts.   */
 #  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
 #  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
+
+/* Set up the card detect pin to generate an interrupt on every change */
+#  if defined __AVR_ATmega32__
+#    define SD_CHANGE_SETUP()  do { MCUCR |= _BV(ISC00); GICR |= _BV(INT0); } while(0)
+#  elif defined __AVR_ATmega644__
+#    define SD_CHANGE_SETUP()  do { EICRA |= _BV(ISC00); EIMSK |= _BV(INT0); } while(0)
+#  else
+#    error Unknown chip!
+#  endif
+
+/* Name of the interrupt of the card detect pin */
+#  define SD_CHANGE_ISR INT0_vect
 
 /* CARD Write Protect must return non-zero when card is write protected */
 #  define SDCARD_WP         (PIND & _BV(PD6))
@@ -128,8 +141,11 @@
 /* Abridged version: LarsP hardware */
 #  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
 #  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
+#  define SD_CHANGE_SETUP()     do { MCUCR |= _BV(ISC00); GICR |= _BV(INT0); } while(0)
+#  define SD_CHANGE_ISR         INT0_vect
 #  define SDCARD_WP             (PIND & _BV(PD6))
 #  define SDCARD_WP_SETUP()     do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
+#  define SD_CHANGE_ICR  MCUCR
 #  define DEV9_JUMPER           (!(PINA & _BV(PA2)))
 #  define DEV9_JUMPER_SETUP()   do { DDRA &= ~_BV(PA2); PORTA |= _BV(PA2); } while(0)
 #  define DEV10_JUMPER          (!(PINA & _BV(PA3)))

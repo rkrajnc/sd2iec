@@ -37,6 +37,7 @@
 #include "iec.h"
 #include "buffers.h"
 #include "fatops.h"
+#include "sdcard.h"
 
 #ifdef __AVR_ATmega32__
 typedef struct
@@ -82,6 +83,7 @@ int main(void) {
   init_buffers();
   init_iec();
   spiInit();
+  init_cardchange();
   init_fatops();
 
   BUSY_LED_OFF();

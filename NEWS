@@ -1,6 +1,7 @@
 2007-xx-xx - release 0.3
 	- disable interrupts during iec_getc
 	- add full CRC checking in SD code with retries on errors
+	- card change detection
 
 2007-11-02 - release 0.2.1
 	- bugfix: Don't cause repeated entries at the end of the directory

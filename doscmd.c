@@ -262,7 +262,7 @@ void parse_doscommand() {
   switch (command_buffer[0]) {
   case 'I':
     /* Initialize is a no-op for now */
-    if (!sdCardOK)
+    if (card_state != CARD_OK)
       set_error(ERROR_READ_NOSYNC,18,0);
     break;
 
