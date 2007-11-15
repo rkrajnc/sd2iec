@@ -69,8 +69,8 @@ buffer_t *alloc_buffer(void);
 /* Deallocates a buffer */
 void free_buffer(buffer_t *buffer);
 
-/* Deallocates all buffers, no cleanup */
-void free_all_buffers(void);
+/* Deallocates all buffers, cleanup optional */
+uint8_t free_all_buffers(uint8_t cleanup);
 
 /* Finds the buffer corresponding to a secondary address */
 /* Returns pointer to buffer on success or NULL on failure */

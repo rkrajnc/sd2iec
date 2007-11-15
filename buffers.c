@@ -77,12 +77,19 @@ void free_buffer(buffer_t *buffer) {
     BUSY_LED_OFF();
 }
 
-void free_all_buffers(void) {
-  uint8_t i;
+uint8_t free_all_buffers(uint8_t cleanup) {
+  uint8_t i,res;
   
+  res = 0;
+
   for (i=0;i<BUFFER_COUNT;i++)
-    if (buffer[i].allocated)
+    if (buffer[i].allocated) {
+      if (buffer[i].cleanup)
+	res = res || buffer[i].cleanup(&buffer[i]);
       free_buffer(&buffer[i]);
+    }
+
+  return res;
 }
 
 buffer_t *find_buffer(uint8_t secondary) {

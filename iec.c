@@ -504,16 +504,25 @@ void iec_mainloop(void) {
 	secondary_address = cmd & 0x0f;
 	/* 1571 handles close (0xe0-0xef) here, so we do that too. */
 	if ((cmd & 0xf0) == 0xe0) {
-	  buffer_t *buf;
-	  buf = find_buffer(secondary_address);
-	  if (buf != NULL) {
-	    // FIXME: Reicht das?
-	    if (buf->cleanup)
-	      if (buf->cleanup(buf)) {
-		/* The 1571 error generator/handler always jumps to BUS_CLEANUP */
-		bus_state = BUS_CLEANUP;
-		break;
-	      }
+	  if (cmd == 0xef) {
+	    /* Close all buffers if sec. 15 is closed */
+	    if (free_all_buffers(1)) {
+	      /* The 1571 error generator/handler always jumps to BUS_CLEANUP */
+	      bus_state = BUS_CLEANUP;
+	      break;
+	    }
+	  } else {
+	    /* Close a single buffer */
+	    buffer_t *buf;
+	    buf = find_buffer(secondary_address);
+	    if (buf != NULL) {
+	      // FIXME: Reicht das?
+	      if (buf->cleanup)
+		if (buf->cleanup(buf)) {
+		  bus_state = BUS_CLEANUP;
+		  break;
+		}
+	    }
 	  }
 	  bus_state = BUS_FORME;
 	} else {
@@ -574,7 +583,7 @@ void iec_mainloop(void) {
 	BUSY_LED_ON();
 	/* If the card was changed the buffer contents are useless */
 	if (card_state == CARD_CHANGED)
-	  free_all_buffers();
+	  free_all_buffers(0);
 	// FIXME: Preserve current directory if state was CARD_ERROR
 	init_fatops();
 	if (!active_buffers) {
