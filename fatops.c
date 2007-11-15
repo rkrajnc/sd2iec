@@ -447,10 +447,10 @@ static void fat_load_directory(uint8_t secondary) {
 }
 
 /* Open a file for reading */
-static void fat_open_read(uint8_t secondary, buffer_t *buf) {
+static void fat_open_read(char *filename, uint8_t secondary, buffer_t *buf) {
   FRESULT res;
 
-  res = f_open(&buf->pvt.fh, (char *) command_buffer, FA_READ | FA_OPEN_EXISTING);
+  res = f_open(&buf->pvt.fh, (char *) filename, FA_READ | FA_OPEN_EXISTING);
   if (res != FR_OK) {
     parse_error(res,1);
     free_buffer(buf);
@@ -469,10 +469,10 @@ static void fat_open_read(uint8_t secondary, buffer_t *buf) {
 }
 
 /* Open a file for writing */
-static void fat_open_write(uint8_t secondary, buffer_t *buf) {
+static void fat_open_write(char *filename, uint8_t secondary, buffer_t *buf) {
   FRESULT res;
 
-  res = f_open(&buf->pvt.fh, (char *) command_buffer, FA_WRITE | FA_OPEN_ALWAYS);
+  res = f_open(&buf->pvt.fh, (char *) filename, FA_WRITE | FA_OPEN_ALWAYS);
   if (res != FR_OK) {
     parse_error(res,0);
     free_buffer(buf);
@@ -497,6 +497,7 @@ static void fat_open_write(uint8_t secondary, buffer_t *buf) {
 
 /* Open something */
 void fat_open(uint8_t secondary) {
+  char *fname;
   buffer_t *buf;
   uint8_t i;
 
@@ -529,11 +530,28 @@ void fat_open(uint8_t secondary) {
 
   command_buffer[command_length] = 0;
 
+  /* Parse path+drive numbers */
+  fname = strchr((char *)command_buffer, ':');
+  if (fname != NULL) {
+    if (*(fname-1) == '/') {
+      /* CMD-style path, rewrite it */
+      if (parse_path(0)) {
+	set_error(ERROR_SYNTAX_NONAME,0,0);
+	return;
+      }
+      fname = (char *) command_buffer;
+    } else {
+      /* Ignore everything before the : */
+      fname++;
+    }
+  } else
+    fname = (char *) command_buffer;
+
   // FIXME: Parse filename for type+operation suffixes
   if (secondary == 0) {
-    fat_open_read(secondary, buf);
+    fat_open_read(fname, secondary, buf);
   } else {
-    fat_open_write(secondary, buf);
+    fat_open_write(fname, secondary, buf);
   }
 }
 

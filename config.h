@@ -196,7 +196,8 @@
 /* Length of error message buffer - 1571 uses 36 bytes */
 #define ERROR_BUFFER_SIZE 36
 
-/* Length of command/filename buffer - 1571 uses 42 bytes */
+/* Length of command/filename buffer - 1571 uses 42 bytes                  */
+/* The buffer is actually 1 byte larger to allow for a terminating 0-byte. */
 #define COMMAND_BUFFER_SIZE 42
 
 /* Number of sector buffers (256 byte+a bit of overhead)          */

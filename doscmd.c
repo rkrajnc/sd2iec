@@ -43,7 +43,7 @@
 
 static void (*restart_call)(void) = 0;
 
-uint8_t command_buffer[COMMAND_BUFFER_SIZE];
+uint8_t command_buffer[COMMAND_BUFFER_SIZE+1];
 uint8_t command_length;
 
 uint16_t datacrc = 0xffff;
@@ -121,9 +121,10 @@ static void handle_memwrite(void) {
 
 
 /* Parses CMD-style directory specifications in the command buffer */
+/* pos is the start position in command_buffer                     */
 /* Returns 1 if any errors found, rewrites command_buffer          */
 /* to return a 0-terminated string of the path in it               */
-static uint8_t parse_path(uint8_t pos) {
+uint8_t parse_path(uint8_t pos) {
   uint8_t *out = command_buffer;
 
   /* Skip partition number */
