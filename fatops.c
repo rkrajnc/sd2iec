@@ -82,6 +82,8 @@ static const PROGMEM uint8_t filetypes[] = {
   'D','I','R'  // 6
 };
 
+enum open_modes { OPEN_READ, OPEN_WRITE, OPEN_APPEND, OPEN_MODIFY };
+
 /* ------------------------------------------------------------------------- */
 /*  Utility functions                                                        */
 /* ------------------------------------------------------------------------- */
@@ -447,7 +449,7 @@ static void fat_load_directory(uint8_t secondary) {
 }
 
 /* Open a file for reading */
-static void fat_open_read(char *filename, uint8_t secondary, buffer_t *buf) {
+static void fat_open_read(char *filename, buffer_t *buf) {
   FRESULT res;
 
   res = f_open(&buf->pvt.fh, (char *) filename, FA_READ | FA_OPEN_EXISTING);
@@ -457,7 +459,6 @@ static void fat_open_read(char *filename, uint8_t secondary, buffer_t *buf) {
     return;
   }
 
-  buf->secondary = secondary;
   buf->read      = 1;
   buf->write     = 0;
   buf->position  = 0;
@@ -469,10 +470,16 @@ static void fat_open_read(char *filename, uint8_t secondary, buffer_t *buf) {
 }
 
 /* Open a file for writing */
-static void fat_open_write(char *filename, uint8_t secondary, buffer_t *buf) {
+static void fat_open_write(char *filename, buffer_t *buf, uint8_t append) {
   FRESULT res;
 
-  res = f_open(&buf->pvt.fh, (char *) filename, FA_WRITE | FA_OPEN_ALWAYS);
+  if (append) {
+    res = f_open(&buf->pvt.fh, (char *) filename, FA_WRITE | FA_OPEN_EXISTING);
+    if (res == FR_OK)
+      res = f_lseek(&buf->pvt.fh, buf->pvt.fh.fsize);
+  } else
+    res = f_open(&buf->pvt.fh, (char *) filename, FA_WRITE | FA_CREATE_NEW);
+
   if (res != FR_OK) {
     parse_error(res,0);
     free_buffer(buf);
@@ -481,7 +488,6 @@ static void fat_open_write(char *filename, uint8_t secondary, buffer_t *buf) {
 
   DIRTY_LED_ON();
 
-  buf->secondary = secondary;
   buf->dirty     = 0;
   buf->read      = 0;
   buf->write     = 1;
@@ -517,12 +523,6 @@ void fat_open(uint8_t secondary) {
     return;
   }
 
-  buf = alloc_buffer();
-  if (buf == NULL) {
-    set_error(ERROR_NO_CHANNEL,0,0);
-    return;
-  }
-
   /* The C64 displays ~ as pi, but sends pi as 0xff */
   for (i=0;i<command_length;i++)
     if (command_buffer[i] == 0xff)
@@ -547,11 +547,96 @@ void fat_open(uint8_t secondary) {
   } else
     fname = (char *) command_buffer;
 
-  // FIXME: Parse filename for type+operation suffixes
-  if (secondary == 0) {
-    fat_open_read(fname, secondary, buf);
-  } else {
-    fat_open_write(fname, secondary, buf);
+  /* Parse type+mode suffixes */
+  char *ptr = fname;
+  enum open_modes mode = OPEN_READ;
+  uint8_t filetype = TYPE_DEL;
+
+  while (*ptr && (ptr = strchr(ptr, ','))) {
+    *ptr = 0;
+    ptr++;
+    switch (*ptr) {
+    case 0:
+      break;
+
+    case 'R': /* Read */
+      mode = OPEN_READ;
+      break;
+
+    case 'W': /* Write */
+      mode = OPEN_WRITE;
+      break;
+
+    case 'A': /* Append */
+      mode = OPEN_APPEND;
+      break;
+
+    case 'M': /* Modify */
+      mode = OPEN_MODIFY;
+      break;
+
+    case 'D': /* DEL */
+      filetype = TYPE_DEL;
+      break;
+
+    case 'S': /* SEQ */
+      filetype = TYPE_SEQ;
+      break;
+
+    case 'P': /* PRG */
+      filetype = TYPE_PRG;
+      break;
+
+    case 'U': /* USR */
+      filetype = TYPE_USR;
+      break;
+
+    case 'L': /* REL */
+      filetype = TYPE_REL;
+      /* FIXME: REL wird nach dem L anders geparst! */
+      break;
+    }
+  }
+
+  /* Force mode for secondaries 0/1 */
+  switch (secondary) {
+  case 0:
+    mode = OPEN_READ;
+    if (filetype == TYPE_DEL)
+      filetype = TYPE_PRG;
+    break;
+
+  case 1:
+    mode = OPEN_WRITE;
+    if (filetype == TYPE_DEL)
+      filetype = TYPE_PRG;
+    break;
+
+  default:
+    if (filetype == TYPE_DEL)
+      filetype = TYPE_SEQ;
+  }
+
+  /* Grab a buffer */
+  buf = alloc_buffer();
+  if (buf == NULL) {
+    set_error(ERROR_NO_CHANNEL,0,0);
+    return;
+  }
+  buf->secondary = secondary;
+
+  switch (mode) {
+  case OPEN_MODIFY:
+  case OPEN_READ:
+    /* Modify is the same as read, but allows reading *ed files.        */
+    /* FAT doesn't have anything equivalent, so both are mapped to READ */
+    fat_open_read(fname, buf);
+    break;
+
+  case OPEN_WRITE:
+  case OPEN_APPEND:
+    fat_open_write(fname, buf, (mode == OPEN_APPEND));
+    break;
   }
 }
 
