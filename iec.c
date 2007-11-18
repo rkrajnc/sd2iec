@@ -393,11 +393,6 @@ void init_iec(void) {
   IEC_DDR  &= ~(IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA);
   IEC_PORT &= ~(IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA);
 
-  IEC_DDR &= ~_BV(PA3);
-  IEC_PORT &= ~_BV(PA3);
-
-  AUX_LED_SETDDR();
-
   /* Count F_CPU/8 in timer 0 */
   TCCR0B = _BV(CS01);
 
