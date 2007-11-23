@@ -43,6 +43,7 @@
 #include "doscmd.h"
 #include "buffers.h"
 #include "fatops.h"
+#include "fileops.h"
 #include "sdcard.h"
 #include "iec-ll.h"
 #include "iec.h"
@@ -511,7 +512,6 @@ void iec_mainloop(void) {
 	    buffer_t *buf;
 	    buf = find_buffer(secondary_address);
 	    if (buf != NULL) {
-	      // FIXME: Reicht das?
 	      if (buf->cleanup)
 		if (buf->cleanup(buf)) {
 		  bus_state = BUS_CLEANUP;
@@ -596,7 +596,7 @@ void iec_mainloop(void) {
 	} else {
 	  /* Filename in command buffer */
 	  datacrc = 0xffff;
-	  fat_open(secondary_address);
+	  file_open(secondary_address);
 	}
 	command_length = 0;
 	iecflags.command_recvd = 0;

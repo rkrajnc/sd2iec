@@ -20,26 +20,40 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
    
-   fatops.h: Definitions for the FAT operations
+   fileops.h: Definitions for file operations
 
 */
 
-#ifndef FATOPS_H
-#define FATOPS_H
+#ifndef FILEOPS_H
+#define FILEOPS_H
 
 #include "buffers.h"
-#include "fileops.h"
 
-void     init_fatops(void);
-uint8_t  fat_delete(char *filename);
-void     fat_chdir(char *dirname);
-void     fat_mkdir(char *dirname);
-void     fat_open_read(char *filename, buffer_t *buf);
-void     fat_open_write(char *filename, buffer_t *buf, uint8_t append);
-uint8_t  fat_getlabel(char *label);
-uint8_t  fat_getid(char *id);
-uint16_t fat_freeblocks(void);
-uint8_t  fat_opendir(buffer_t *buf);
-int8_t   fat_readdir(buffer_t *buf, struct cbmdirent *dent);
+#define CBM_NAME_LENGTH 16
+
+#define TYPE_LENGTH 3
+#define TYPE_DEL 0
+#define TYPE_SEQ 1
+#define TYPE_PRG 2
+#define TYPE_USR 3
+#define TYPE_REL 4
+#define TYPE_CBM 5
+#define TYPE_DIR 6
+
+#define FLAG_RO    (1<<6)
+#define FLAG_SPLAT (1<<7)
+
+enum open_modes { OPEN_READ, OPEN_WRITE, OPEN_APPEND, OPEN_MODIFY };
+
+struct cbmdirent {
+  uint16_t blocksize;             /* file size in blocks      */
+  uint8_t  typeflags;             /* OR of filetype and flags */
+  char     name[CBM_NAME_LENGTH]; /* padded with 0xa0         */
+};
+  
+uint8_t generic_cleanup(buffer_t *buf);
+
+/* Parses a filename in command_buffer and opens that file */
+void file_open(uint8_t secondary);
 
 #endif

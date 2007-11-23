@@ -33,56 +33,11 @@
 #include "doscmd.h"
 #include "errormsg.h"
 #include "uart.h"
+#include "tff.h"
+#include "fileops.h"
+#include "fatops.h"
 
 FATFS fatfs;
-char volumelabel[12];
-
-/* ------------------------------------------------------------------------- */
-/*  Some constants used for directory generation                             */
-/* ------------------------------------------------------------------------- */
-
-static const PROGMEM uint8_t dirheader[] = {
-  1, 4, /* BASIC start address */
-  1, 1, /* next line pointer */
-  0, 0,    /* line number 0 */
-  0x12, 0x22, /* Reverse on, quote */
-  ' ',' ',' ',' ',' ',' ',' ',' ', /* 16 spaces as the disk name */
-  ' ',' ',' ',' ',' ',' ',' ',' ', /* will be overwritten if needed */
-  0x22,0x20, /* quote, space */
-  'I','K',' ','2','A', /* id IK, shift-space, dosmarker 2A */
-  00 /* line-end marker */
-};
-
-// FIXME: Evtl. nach fileops.c verschieben
-static const PROGMEM uint8_t dirfooter[] = {
-  1, 1, /* next line pointer */
-  0, 0, /* number of free blocks (to be filled later */
-  'B','L','O','C','K','S',' ','F','R','E','E','.',
-  0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, /* Filler and end marker */
-  0x20, 0x20, 0x20, 0x20, 0x20, 0x00, 0x00, 0x00
-};
-
-// FIXME: Sollte in fileops.c stehen damit d64ops darauf zugreifen kann.
-#define TYPE_LENGTH 3
-#define TYPE_DEL 0
-#define TYPE_SEQ 1
-#define TYPE_PRG 2
-#define TYPE_USR 3
-#define TYPE_REL 4
-#define TYPE_CBM 5
-#define TYPE_DIR 6
-
-static const PROGMEM uint8_t filetypes[] = {
-  'D','E','L', // 0
-  'S','E','Q', // 1
-  'P','R','G', // 2
-  'U','S','R', // 3
-  'R','E','L', // 4
-  'C','B','M', // 5
-  'D','I','R'  // 6
-};
-
-enum open_modes { OPEN_READ, OPEN_WRITE, OPEN_APPEND, OPEN_MODIFY };
 
 /* ------------------------------------------------------------------------- */
 /*  Utility functions                                                        */
@@ -151,161 +106,18 @@ static void parse_error(FRESULT res, uint8_t readflag) {
   }
 }
 
-/* Add a single directory entry in 15x1 format to the end of buf */
-static void addentry(FILINFO *finfo, buffer_t *buf) {
-  uint8_t i;
-  uint8_t *data;
-
-  data = buf->data + buf->length;
-
-  /* Next line pointer, 1571-compatible =) */
-  *data++ = 1;
-  *data++ = 1;
-  
-  if (finfo->fsize > 16255746) {
-    /* File too large -> size 63999 blocks */
-    *data++ = 255;
-    *data++ = 249;
-  } else {
-    /* File size in 254-byte-blocks as line number*/
-    finfo->fsize += 253; /* Force ceil() */
-    *data++ = (finfo->fsize/254) & 0xff;
-    *data++ = (finfo->fsize/254) >> 8;
+static void fix_name(char *str) {
+  /* The C64 displays ~ as pi, but sends pi as 0xff */
+  while (*str) {
+    if (*str == 0xff)
+      *str = '~';
+    str++;
   }
-  
-  /* Filler before file name */
-  if (finfo->fsize < 254*1000L)
-    *data++ = ' ';
-  if (finfo->fsize < 254*100)
-    *data++ = ' ';
-  if (finfo->fsize < 254*10)
-    *data++ = ' ';
-  *data++ = '"';
-
-  /* copy the filename */
-  memcpy(data, finfo->fname, strlen(finfo->fname));
-  data += strlen(finfo->fname);
-  
-  /* Filler after the name */
-  *data++ = '"';
-  for (i=strlen(finfo->fname);i<17;i++) /* One additional space */
-    *data++ = ' ';
-
-  /* File type (fixed to PRG for now) */
-  if (finfo->fattrib & AM_DIR) {
-    memcpy_P(data, filetypes + TYPE_LENGTH * TYPE_DIR, TYPE_LENGTH);
-  } else {
-    memcpy_P(data, filetypes + TYPE_LENGTH * TYPE_PRG, TYPE_LENGTH);
-  }
-  data += 3;
-
-  /* Filler at end of line */
-  if (finfo->fattrib & AM_RDO)
-    *data++ = '<';
-  else
-    *data++ = ' ';
-
-  *data++ = ' ';
-
-  /* Add the spaces we left out before */
-  if (finfo->fsize >= 254*10)
-    *data++ = ' ';
-  if (finfo->fsize >= 254*100)
-    *data++ = ' ';
-  if (finfo->fsize >= 256*1000L)
-    *data++ = ' ';
-
-  /* Line end marker */
-  *data++ = 0;
-
-  buf->length += 32;
 }
 
 /* ------------------------------------------------------------------------- */
 /*  Callbacks                                                                */
 /* ------------------------------------------------------------------------- */
-
-/* Generic cleanup-callback that just frees the buffer */
-static uint8_t fat_generic_cleanup(buffer_t *buf) {
-  free_buffer(buf);
-  buf->cleanup = NULL;
-  return 0;
-}
-
-/* Generate the final directory buffer with the BLOCKS FREE message */
-static uint8_t fat_dir_footer(buffer_t *buf) {
-  DWORD clusters;
-  FATFS *fs;
-
-  fs = &fatfs;
-
-  /* Copy the "BLOCKS FREE" message */
-  memcpy_P(buf->data, dirfooter, sizeof(dirfooter));
-
-  if (f_getfree("", &clusters, &fs) == FR_OK) {
-    if (clusters < 64000) {
-      /* Cheat here: Report free clusters instead of CBM blocks */
-      buf->data[2] = clusters & 0xff;
-      buf->data[3] = clusters >> 8;
-    } else {
-      /* 63999 Blocks free... */
-      buf->data[2] = 255;
-      buf->data[3] = 249;
-    }
-  }
-
-  buf->position = 0;
-  buf->length   = 31;
-  buf->sendeoi  = 1;
-
-  return 0;
-}
-
-/* Fill the buffer with up to 8 directory entries */
-static uint8_t fat_dir_refill(buffer_t *buf) {
-  uint8_t i;
-  FILINFO finfo;
-  FRESULT res;
-
-  uart_putc('+');
-
-  buf->position = 0;
-  buf->length   = 0;
-
-  /* Add up to eight directory entries */
-  for (i = 0; i < 8; i++) {
-    do {
-      res = f_readdir(&buf->pvt.dh, &finfo);
-      if (res != FR_OK) {
-	if (res == FR_INVALID_OBJECT)
-	  set_error(ERROR_DIR_ERROR,0,0);
-	else
-	  parse_error(res,1);
-	free_buffer(buf);
-	return 1;
-      }
-    } while (finfo.fname[0] && (finfo.fattrib & (AM_VOL|AM_SYS|AM_HID)));
-    
-    if (finfo.fname[0])
-      addentry(&finfo,buf);
-    else
-      /* Last entry, exit */
-      break;
-  }
-
-  /* Fix the buffer length */
-  buf->length--;
-
-  if (i == 0) {
-    /* Immediately generate the footer */
-    return fat_dir_footer(buf);
-  } else {
-    if (!finfo.fname[0])
-      buf->refill = fat_dir_footer;
-  }
-
-  return 0;
-}
 
 /* Read the next data block from a file into the buffer */
 static uint8_t fat_file_read(buffer_t *buf) {
@@ -397,62 +209,12 @@ static uint8_t fat_file_close(buffer_t *buf) {
 /*  Internal handlers for the various operations                             */
 /* ------------------------------------------------------------------------- */
 
-/* Prepare for directory reading and create the header */
-static void fat_load_directory(uint8_t secondary) {
-  buffer_t *buf;
-  uint8_t i;
-  FRESULT res;
-
-  buf = alloc_buffer();
-  if (buf == 0) {
-    set_error(ERROR_NO_CHANNEL,0,0);
-    return;
-  }
-
-  res = f_opendir(&buf->pvt.dh, "");
-  if (res != FR_OK) {
-    parse_error(res,1);
-    free_buffer(buf);
-    return;
-  }
-
-  buf->secondary = secondary;
-  buf->read      = 1;
-  buf->write     = 0;
-  buf->cleanup   = fat_generic_cleanup;
-  buf->position  = 0;
-  buf->length    = 31;
-  buf->sendeoi   = 0;
-
-  /* copy static header to start of buffer */
-  memcpy_P(buf->data, dirheader, sizeof(dirheader));
-
-  /* Put FAT type into ID field */
-  if (fatfs.fs_type == FS_FAT12) {
-    buf->data[26] = '1';
-    buf->data[27] = '2';
-  } else if (fatfs.fs_type == FS_FAT16) {
-    buf->data[26] = '1';
-    buf->data[27] = '6';
-  } else if (fatfs.fs_type == FS_FAT32) {
-    buf->data[26] = '3';
-    buf->data[27] = '2';
-  }
-
-  /* copy volume name */
-  memcpy(buf->data+8, volumelabel, 12);
-
-  /* Let the refill callback handly everything else */
-  buf->refill = fat_dir_refill;
-
-  return;
-}
-
 /* Open a file for reading */
-static void fat_open_read(char *filename, buffer_t *buf) {
+void fat_open_read(char *filename, buffer_t *buf) {
   FRESULT res;
 
-  res = f_open(&buf->pvt.fh, (char *) filename, FA_READ | FA_OPEN_EXISTING);
+  fix_name(filename);
+  res = f_open(&buf->pvt.fh, filename, FA_READ | FA_OPEN_EXISTING);
   if (res != FR_OK) {
     parse_error(res,1);
     free_buffer(buf);
@@ -470,15 +232,16 @@ static void fat_open_read(char *filename, buffer_t *buf) {
 }
 
 /* Open a file for writing */
-static void fat_open_write(char *filename, buffer_t *buf, uint8_t append) {
+void fat_open_write(char *filename, buffer_t *buf, uint8_t append) {
   FRESULT res;
 
+  fix_name(filename);
   if (append) {
-    res = f_open(&buf->pvt.fh, (char *) filename, FA_WRITE | FA_OPEN_EXISTING);
+    res = f_open(&buf->pvt.fh, filename, FA_WRITE | FA_OPEN_EXISTING);
     if (res == FR_OK)
       res = f_lseek(&buf->pvt.fh, buf->pvt.fh.fsize);
   } else
-    res = f_open(&buf->pvt.fh, (char *) filename, FA_WRITE | FA_CREATE_NEW);
+    res = f_open(&buf->pvt.fh, filename, FA_WRITE | FA_CREATE_NEW);
 
   if (res != FR_OK) {
     parse_error(res,0);
@@ -501,150 +264,67 @@ static void fat_open_write(char *filename, buffer_t *buf, uint8_t append) {
 /*  External interface for the various operations                            */
 /* ------------------------------------------------------------------------- */
 
-/* Open something */
-void fat_open(uint8_t secondary) {
-  char *fname;
-  buffer_t *buf;
+uint8_t fat_opendir(buffer_t *buf) {
+  FRESULT res;
+
+  res = f_opendir(&buf->pvt.dh, "");
+  if (res != FR_OK) {
+    parse_error(res,1);
+    return 1;
+  }
+  return 0;
+}
+
+/* readdir wrapper for FAT files                       */
+/* Returns 1 on error, 0 if successful, -1 if finished */
+int8_t fat_readdir(buffer_t *buf, struct cbmdirent *dent) {
+  FRESULT res;
+  FILINFO finfo;
   uint8_t i;
 
-  /* Assume everything will go well unless proven otherwise */
-  set_error(ERROR_OK,0,0);
-
-  /* Empty name? */
-  if (command_length == 0) {
-    set_error(ERROR_SYNTAX_NONAME,0,0);
-    return;
-  }
-
-  /* Load directory? */
-  if (command_buffer[0] == '$') {
-    /* FIXME: Secondary != 0? Compare D7F7-D7FF */
-    fat_load_directory(secondary);
-    return;
-  }
-
-  /* The C64 displays ~ as pi, but sends pi as 0xff */
-  for (i=0;i<command_length;i++)
-    if (command_buffer[i] == 0xff)
-      command_buffer[i] = '~';
-
-  command_buffer[command_length] = 0;
-
-  /* Parse path+drive numbers */
-  fname = strchr((char *)command_buffer, ':');
-  if (fname != NULL) {
-    if (*(fname-1) == '/') {
-      /* CMD-style path, rewrite it */
-      if (parse_path(0)) {
-	set_error(ERROR_SYNTAX_NONAME,0,0);
-	return;
-      }
-      fname = (char *) command_buffer;
-    } else {
-      /* Ignore everything before the : */
-      fname++;
+  do {
+    res = f_readdir(&buf->pvt.dh, &finfo);
+    if (res != FR_OK) {
+      if (res == FR_INVALID_OBJECT)
+	set_error(ERROR_DIR_ERROR,0,0);
+      else
+	parse_error(res,1);
+      return 1;
     }
+  } while (finfo.fname[0] && (finfo.fattrib & (AM_VOL|AM_SYS|AM_HID)));
+
+  if (finfo.fname[0]) {
+    if (finfo.fsize > 16255746)
+      /* File too large -> size 63999 blocks */
+      dent->blocksize = 63999;
+    else
+      dent->blocksize = (finfo.fsize+253) / 254;
+
+    /* Copy name */
+    memset(dent->name, 0xa0, CBM_NAME_LENGTH);
+    for (i=0; finfo.fname[i]; i++)
+      dent->name[i] = finfo.fname[i];
+
+    /* Type+Flags */
+    if (finfo.fattrib & AM_DIR)
+      dent->typeflags = TYPE_DIR;
+    else
+      dent->typeflags = TYPE_PRG;
+
+    if (finfo.fattrib & AM_RDO)
+      dent->typeflags |= FLAG_RO;
+
+    return 0;
   } else
-    fname = (char *) command_buffer;
-
-  /* Parse type+mode suffixes */
-  char *ptr = fname;
-  enum open_modes mode = OPEN_READ;
-  uint8_t filetype = TYPE_DEL;
-
-  while (*ptr && (ptr = strchr(ptr, ','))) {
-    *ptr = 0;
-    ptr++;
-    switch (*ptr) {
-    case 0:
-      break;
-
-    case 'R': /* Read */
-      mode = OPEN_READ;
-      break;
-
-    case 'W': /* Write */
-      mode = OPEN_WRITE;
-      break;
-
-    case 'A': /* Append */
-      mode = OPEN_APPEND;
-      break;
-
-    case 'M': /* Modify */
-      mode = OPEN_MODIFY;
-      break;
-
-    case 'D': /* DEL */
-      filetype = TYPE_DEL;
-      break;
-
-    case 'S': /* SEQ */
-      filetype = TYPE_SEQ;
-      break;
-
-    case 'P': /* PRG */
-      filetype = TYPE_PRG;
-      break;
-
-    case 'U': /* USR */
-      filetype = TYPE_USR;
-      break;
-
-    case 'L': /* REL */
-      filetype = TYPE_REL;
-      /* FIXME: REL wird nach dem L anders geparst! */
-      break;
-    }
-  }
-
-  /* Force mode for secondaries 0/1 */
-  switch (secondary) {
-  case 0:
-    mode = OPEN_READ;
-    if (filetype == TYPE_DEL)
-      filetype = TYPE_PRG;
-    break;
-
-  case 1:
-    mode = OPEN_WRITE;
-    if (filetype == TYPE_DEL)
-      filetype = TYPE_PRG;
-    break;
-
-  default:
-    if (filetype == TYPE_DEL)
-      filetype = TYPE_SEQ;
-  }
-
-  /* Grab a buffer */
-  buf = alloc_buffer();
-  if (buf == NULL) {
-    set_error(ERROR_NO_CHANNEL,0,0);
-    return;
-  }
-  buf->secondary = secondary;
-
-  switch (mode) {
-  case OPEN_MODIFY:
-  case OPEN_READ:
-    /* Modify is the same as read, but allows reading *ed files.        */
-    /* FAT doesn't have anything equivalent, so both are mapped to READ */
-    fat_open_read(fname, buf);
-    break;
-
-  case OPEN_WRITE:
-  case OPEN_APPEND:
-    fat_open_write(fname, buf, (mode == OPEN_APPEND));
-    break;
-  }
+    return -1;
 }
 
 /* Delete a file/directory                         */
 /* Returns number of files deleted or 255 on error */
-uint8_t fat_delete(uint8_t *filename) {
+uint8_t fat_delete(char *filename) {
   FRESULT res;
 
+  fix_name(filename);
   res = f_unlink((char *)filename);
   parse_error(res,0);
   if (res == FR_OK)
@@ -656,53 +336,116 @@ uint8_t fat_delete(uint8_t *filename) {
 }
 
 /* Change the current directory */
-void fat_chdir(uint8_t *dirname) {
+void fat_chdir(char *dirname) {
   FRESULT res;
 
-  res = f_chdir((char *) dirname);
+  fix_name(dirname);
+  res = f_chdir(dirname);
   parse_error(res,0);
 }
 
 /* Create a new directory */
-void fat_mkdir(uint8_t *dirname) {
+void fat_mkdir(char *dirname) {
   FRESULT res;
 
-  res = f_mkdir((char *) dirname);
+  fix_name(dirname);
+  res = f_mkdir(dirname);
   parse_error(res,0);
 }
 
-/* Mount the card and read its label (if any) */
-void init_fatops(void) {
+/* Get the volume label                                               */
+/* Returns 0 if successful.                                           */
+/* Will write a space-padded, 16 char long unterminated name to label */
+uint8_t fat_getlabel(char *label) {
   DIR dh;
   FILINFO finfo;
-  uint8_t i;
+  CLUST olddir;
+  FRESULT res;
+  uint8_t i,j;
 
-  memset(volumelabel, ' ', sizeof(volumelabel));
+  memset(label, ' ', 16);
 
+  /* Trade off a bit of flash and stack usage instead of */
+  /* permanently wasting two bytes for "/".              */
+  olddir = current_dir;
+  current_dir = 0;
+
+  res = f_opendir(&dh, "");
+  current_dir = olddir;
+
+  if (res != FR_OK) {
+    parse_error(res,0);
+    return 1;
+  }
+
+  while ((res = f_readdir(&dh, &finfo)) == FR_OK) {
+    if (!finfo.fname[0]) break;
+    if ((finfo.fattrib & (AM_VOL|AM_SYS|AM_HID)) == AM_VOL) {
+      i=0;
+      j=0;
+      while (finfo.fname[i]) {
+	/* Skip dots */
+	if (finfo.fname[i] == '.') {
+	  i++;
+	  continue;
+	}
+	label[j++] = finfo.fname[i++];
+      }
+    }
+  }
+
+  if (res != FR_OK) {
+    parse_error(res,0);
+    return 1;
+  } else
+    return 0;
+}
+
+/* Get the volume id (all 5 characters)                         */
+/* Returns 0 if successful.                                     */
+/* Will write a space-padded, 5 char long unterminated id to id */
+uint8_t fat_getid(char *id) {
+  switch (fatfs.fs_type) {
+  case FS_FAT12:
+    *id++ = '1';
+    *id++ = '2';
+    break;
+
+  case FS_FAT16:
+    *id++ = '1';
+    *id++ = '6';
+    break;
+
+  case FS_FAT32:
+    *id++ = '3';
+    *id++ = '2';
+    break;
+  }
+
+  *id++ = ' ';
+  *id++ = '2';
+  *id++ = 'A';
+  return 0;
+}
+
+/* Returns the number of free blocks */
+uint16_t fat_freeblocks(void) {
+  FATFS *fs = &fatfs;
+  DWORD clusters;
+
+  if (f_getfree("", &clusters, &fs) == FR_OK) {
+    if (clusters < 64000)
+      return clusters;
+    else
+      return 63999;
+  } else
+    return 0;
+}
+
+/* Mount the card */
+void init_fatops(void) {
   f_mount(0, &fatfs);
 
-  /* Read volume label */
-  if (f_opendir(&dh, "") == FR_OK) {
-    while (f_readdir(&dh, &finfo) == FR_OK) {
-      if (!finfo.fname[0]) break;
-      if ((finfo.fattrib & (AM_VOL|AM_SYS|AM_HID)) == AM_VOL) {
-	i=0;
-	while (finfo.fname[i]) {
-	  volumelabel[i] = finfo.fname[i];
-	  i++;
-	}
-      }
-    }
-  }
-
-  /* Remove dot from volume label. Assumes a single dot. */
-  for (i=0; i<sizeof(volumelabel); i++) {
-    if (volumelabel[i] == '.') {
-      while (i < sizeof(volumelabel)-1) {
-	volumelabel[i] = volumelabel[i+1];
-	i++;
-      }
-      volumelabel[sizeof(volumelabel)-1] = ' ';
-    }
-  }
+  /* Dummy operation to force the actual mounting */
+  f_chdir("");
 }

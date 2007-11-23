@@ -29,7 +29,7 @@
 #include "config.h"
 #include "iec-ll.h"
 #include "doscmd.h"
-#include "fatops.h"
+#include "fileops.h"
 #include "buffers.h"
 #include "fastloader-ll.h"
 #include "fastloader.h"
@@ -52,7 +52,7 @@ void load_turbodisk(void) {
   command_length = len;
 
   // FIXME: Rückgabewert mit Status, evtl. direkt fat_open_read nehmen
-  fat_open(0);
+  file_open(0);
   buf = find_buffer(0);
   if (!buf) {
     cli();

@@ -220,9 +220,9 @@ void parse_doscommand() {
 	set_error(ERROR_SYNTAX_NONAME,0,0);
       } else {
 	if (i == 'C')
-	  fat_chdir(command_buffer);
+	  fat_chdir((char *)command_buffer);
 	else
-	  fat_mkdir(command_buffer);
+	  fat_mkdir((char *)command_buffer);
       }
       break;
 
@@ -246,7 +246,7 @@ void parse_doscommand() {
 	set_error(ERROR_SYNTAX_NONAME,0,0);
       } else {
 	command_buffer[command_length] = 0;
-	i = fat_delete(command_buffer+i+1);
+	i = fat_delete((char *)command_buffer+i+1);
 	if (i != 255)
 	  set_error(ERROR_SCRATCHED,i,0);
       }
@@ -334,7 +334,7 @@ void parse_doscommand() {
   case 'S':
     /* Scratch */
     command_buffer[command_length] = 0;
-    i = fat_delete(command_buffer+2);
+    i = fat_delete((char *)command_buffer+2);
     if (i != 255)
       set_error(ERROR_SCRATCHED,i,0);
     break;
