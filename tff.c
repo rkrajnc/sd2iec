@@ -756,7 +756,6 @@ FRESULT auto_mount (		/* FR_OK(0): successful, !=0: any error occured */
 	}
 #endif
 #endif
-	fs->id = ++fsid;									/* File system mount ID */
 	return FR_OK;
 }
 
@@ -769,11 +768,10 @@ FRESULT auto_mount (		/* FR_OK(0): successful, !=0: any error occured */
 
 static
 FRESULT validate (		/* FR_OK(0): The id is valid, !=0: Not valid */
-	const FATFS *fs,	/* Pointer to the file system object */
-	WORD id				/* id member of the target object to be checked */
+	const FATFS *fs 	/* Pointer to the file system object */
 )
 {
-	if (!fs || fs->id != id)
+	if (!fs)
 		return FR_INVALID_OBJECT;
 	if (disk_status(0) & STA_NOINIT)
 		return FR_NOT_READY;
@@ -951,7 +949,7 @@ FRESULT f_open (
 	fp->fsize = LD_DWORD(&dir[DIR_FileSize]);	/* File size */
 	fp->fptr = 0;								/* File ptr */
 	fp->sect_clust = 1;							/* Sector counter */
-	fp->fs = fs; fp->id = fs->id;				/* Owner file system object of the file */
+	fp->fs = fs;                 				/* Owner file system object of the file */
 
 	return FR_OK;
 }
@@ -979,7 +977,7 @@ FRESULT f_read (
 
 
 	*br = 0;
-	res = validate(fs, fp->id);						/* Check validity of the object */
+	res = validate(fs);          					/* Check validity of the object */
 	if (res != FR_OK) return res;
 	if (fp->flag & FA__ERROR) return FR_RW_ERROR;	/* Check error flag */
 	if (!(fp->flag & FA_READ)) return FR_DENIED;	/* Check access mode */
@@ -1049,7 +1047,7 @@ FRESULT f_write (
 
 
 	*bw = 0;
-	res = validate(fs, fp->id);						/* Check validity of the object */
+	res = validate(fs);        						/* Check validity of the object */
 	if (res != FR_OK) return res;
 	if (fp->flag & FA__ERROR) return FR_RW_ERROR;	/* Check error flag */
 	if (!(fp->flag & FA_WRITE)) return FR_DENIED;	/* Check access mode */
@@ -1124,7 +1122,7 @@ FRESULT f_sync (
 	FATFS *fs = fp->fs;
 
 
-	res = validate(fs, fp->id);				/* Check validity of the object */
+	res = validate(fs);         			/* Check validity of the object */
 	if (res == FR_OK) {
 		if (fp->flag & FA__WRITTEN) {		/* Has the file been written? */
 			/* Update the directory entry */
@@ -1165,7 +1163,7 @@ FRESULT f_close (
 #if !_FS_READONLY
 	res = f_sync(fp);
 #else
-	res = validate(fp->fs, fp->id);
+	res = validate(fp->fs);        
 #endif
 	if (res == FR_OK)
 		fp->fs = NULL;
@@ -1193,7 +1191,7 @@ FRESULT f_lseek (
 	FATFS *fs = fp->fs;
 
 
-	res = validate(fs, fp->id);			/* Check validity of the object */
+	res = validate(fs);        			/* Check validity of the object */
 	if (res != FR_OK) return res;
 
 	if (fp->flag & FA__ERROR) return FR_RW_ERROR;
@@ -1290,7 +1288,6 @@ FRESULT f_opendir (
 				res = FR_NO_FILE;
 			}
 		}
-		dirobj->id = fs->id;
 	}
 	return res;
 }
@@ -1312,7 +1309,7 @@ FRESULT f_readdir (
 	FATFS *fs = dirobj->fs;
 
 
-	res = validate(fs, dirobj->id);			/* Check validity of the object */
+	res = validate(fs);             		/* Check validity of the object */
 	if (res != FR_OK) return res;
 
 	finfo->fname[0] = 0;
