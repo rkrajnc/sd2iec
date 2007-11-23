@@ -124,7 +124,7 @@ static void addentry(struct cbmdirent *dent, buffer_t *buf) {
   memcpy_P(data+1, filetypes + TYPE_LENGTH * (dent->typeflags & 0x07), TYPE_LENGTH);
 
   if (dent->typeflags & FLAG_RO)
-    data[5] = '<';
+    data[4] = '<';
 
   buf->length += 32;
 }
