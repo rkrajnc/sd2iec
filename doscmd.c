@@ -120,49 +120,34 @@ static void handle_memwrite(void) {
 }
 
 
-/* Parses CMD-style directory specifications in the command buffer */
-/* pos is the start position in command_buffer                     */
-/* Returns 1 if any errors found, rewrites command_buffer          */
-/* to return a 0-terminated string of the path in it               */
-uint8_t parse_path(uint8_t pos) {
-  uint8_t *out = command_buffer;
-
+/* Parses CMD-style directory specification  */
+/* Returns 1 if any errors found             */
+/* in and out may point to the same address, */
+/* the string will never increase in length  */
+/* Warning: Don't call for random filenames that don't have a : ! */
+uint8_t parse_path(char *in, char *out) {
   /* Skip partition number */
-  while (pos < command_length && isdigit(command_buffer[pos])) pos++;
-  if (pos == command_length) return 1;
+  while (*in && isdigit(*in)) in++;
+  if (!*in) return 1;
 
   /* Handle slashed path immediate after command */
-  if (command_buffer[pos] == '/') {
+  if (*in == '/') {
     /* Copy path before colon */
-    while (command_buffer[++pos] != ':' && pos < command_length)
-      *out++ = command_buffer[pos];
+    while (*++in != ':' && (*out++ = *in));
 
-    /* CD doesn't require a colon */
-    if (pos == command_length) {
-      *out = 0;
+    /* CD doesn't require a colon, let's extend that to everything */
+    if (!*in)
       return 0;
-    }
 
     /* If there is a :, there must be a /: */
-    if (command_buffer[pos-1] != '/') return 1;
+    if (*(in-1) != '/') return 1;
   }
 
   /* Skip the colon and abort if it's the last character */
-  if (command_buffer[pos++] != ':' || pos == command_length) return 1;
+  if (*in++ != ':' || *in == 0) return 1;
     
-  /* Left arrow moves one directory up */
-  if (command_buffer[pos] == '_') {
-    *out++ = '.';
-    *out++ = '.';
-    *out   = 0;
-    return 0;
-  }
-
   /* Copy remaining string */
-  while (pos < command_length)
-    *out++ = command_buffer[pos++];
-
-  *out = 0;
+  while ((*out++ = *in++));
 
   return 0;
 }
@@ -210,26 +195,35 @@ void parse_doscommand() {
     return;
   }
 
+  command_buffer[command_length] = 0;
+
   /* MD/CD/RD clash with other commands, so they're checked first */
-  if (command_length > 3 && command_buffer[1] == 'D') {
+  if (command_buffer[1] == 'D') {
     switch (command_buffer[0]) {
     case 'C':
     case 'M':
       i = command_buffer[0];
-      if (parse_path(2)) {
+      if (parse_path((char *) command_buffer+2, (char *) command_buffer)) {
 	set_error(ERROR_SYNTAX_NONAME,0,0);
       } else {
-	if (i == 'C')
+	if (i == 'C') {
+	  /* Left arrow moves one directory up */
+	  if (command_buffer[0] == '_') {
+	    command_buffer[0] = '.';
+	    command_buffer[1] = '.';
+	    command_buffer[2] = 0;
+	  }
 	  fat_chdir((char *)command_buffer);
-	else
+	} else
 	  fat_mkdir((char *)command_buffer);
       }
       break;
 
     case 'R':
       /* No deletion across subdirectories */
-      for (i=0;i<command_length;i++) {
+      for (i=0;command_buffer[i];i++) {
 	if (command_buffer[i] == '/') {
+	  /* Hack around a missing 2-level-break */
 	  i = 255;
 	  break;
 	}
@@ -241,11 +235,10 @@ void parse_doscommand() {
 	  
       /* Skip drive number */
       i = 2;
-      while (i < command_length && isdigit(command_buffer[i])) i++;
-      if (i == command_length || command_buffer[i] != ':') {
+      while (isdigit(command_buffer[i])) i++;
+      if (command_buffer[i] != ':') {
 	set_error(ERROR_SYNTAX_NONAME,0,0);
       } else {
-	command_buffer[command_length] = 0;
 	i = fat_delete((char *)command_buffer+i+1);
 	if (i != 255)
 	  set_error(ERROR_SCRATCHED,i,0);
@@ -271,23 +264,23 @@ void parse_doscommand() {
     switch (command_buffer[1]) {
     case 'I':
     case '9':
-      if (command_length > 2) {
-	switch (command_buffer[2]) {
-	case '+':
-	  iecflags.vc20mode = 0;
-	  break;
-
-	case '-':
-	  iecflags.vc20mode = 1;
-	  break;
-
-	default:
-	  set_error(ERROR_SYNTAX_UNKNOWN,0,0);
-	  break;
-	}
-      } else {
+      switch (command_buffer[2]) {
+      case 0:
 	/* Soft-reset - just return the dos version */
 	set_error(ERROR_DOSVERSION,0,0);
+	break;
+
+      case '+':
+	iecflags.vc20mode = 0;
+	break;
+	
+      case '-':
+	iecflags.vc20mode = 1;
+	break;
+	
+      default:
+	set_error(ERROR_SYNTAX_UNKNOWN,0,0);
+	break;
       }
       break;
 
@@ -333,7 +326,6 @@ void parse_doscommand() {
 
   case 'S':
     /* Scratch */
-    command_buffer[command_length] = 0;
     i = fat_delete((char *)command_buffer+2);
     if (i != 255)
       set_error(ERROR_SCRATCHED,i,0);

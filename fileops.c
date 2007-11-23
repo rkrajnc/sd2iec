@@ -259,7 +259,7 @@ void file_open(uint8_t secondary) {
   if (fname != NULL) {
     if (*(fname-1) == '/') {
       /* CMD-style path, rewrite it */
-      if (parse_path(0)) {
+      if (parse_path((char *) command_buffer,(char *) command_buffer)) {
 	set_error(ERROR_SYNTAX_NONAME,0,0);
 	return;
       }

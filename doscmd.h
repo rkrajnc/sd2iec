@@ -34,10 +34,7 @@ extern uint16_t datacrc;
 
 void parse_doscommand(void);
 
-/* Parses CMD-style directory specifications in the command buffer */
-/* pos is the start position in command_buffer                     */
-/* Returns 1 if any errors found, rewrites command_buffer          */
-/* to return a 0-terminated string of the path in it               */
-uint8_t parse_path(uint8_t pos);
+/* Parses CMD-style directory specifications */
+uint8_t parse_path(char *in, char *out);
 
 #endif
