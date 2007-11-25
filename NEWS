@@ -5,6 +5,7 @@
 	- card change detection
 	- better file name parsing
 	- directory loading supports wildcards
+	- support for file overwrite (@)
 
 2007-11-02 - release 0.2.1
 	- bugfix: Don't cause repeated entries at the end of the directory

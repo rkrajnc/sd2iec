@@ -77,6 +77,10 @@ requirements are extremely tight and cannot be met with the internal RC
 oscillator of the AVR even if calibrated. You really need an external
 8MHz crystal or the data read by the C64 will be gibberish.
 
+Other important notes:
+======================
+- File overwrite (@foo) is implemented by deleting the file first.
+
 Compilation notes:
 ==================
 sd2iec is set up to be compiled in multiple configurations, controlled by

@@ -341,7 +341,6 @@ static void load_directory(uint8_t secondary) {
 
 /* Open something */
 void file_open(uint8_t secondary) {
-  char *fname;
   buffer_t *buf;
   uint8_t i;
 
@@ -363,25 +362,8 @@ void file_open(uint8_t secondary) {
     return;
   }
 
-  /* Parse path+drive numbers */
-  fname = strchr((char *)command_buffer, ':');
-  if (fname != NULL) {
-    if (*(fname-1) == '/') {
-      /* CMD-style path, rewrite it */
-      if (parse_path((char *) command_buffer,(char *) command_buffer, 1)) {
-	set_error(ERROR_SYNTAX_NONAME,0,0);
-	return;
-      }
-      fname = (char *) command_buffer;
-    } else {
-      /* Ignore everything before the : */
-      fname++;
-    }
-  } else
-    fname = (char *) command_buffer;
-
   /* Parse type+mode suffixes */
-  char *ptr = fname;
+  char *ptr = (char *) command_buffer;
   enum open_modes mode = OPEN_READ;
   uint8_t filetype = TYPE_DEL;
 
@@ -450,6 +432,23 @@ void file_open(uint8_t secondary) {
       filetype = TYPE_SEQ;
   }
 
+  /* Parse path+drive numbers */
+  char *fname = strchr((char *)command_buffer, ':');
+  if (fname != NULL) {
+    if (*(fname-1) == '/') {
+      /* CMD-style path, rewrite it */
+      if (parse_path((char *) command_buffer,(char *) command_buffer, 1)) {
+	set_error(ERROR_SYNTAX_NONAME,0,0);
+	return;
+      }
+      fname = (char *) command_buffer;
+    } else {
+      /* Ignore everything before the : */
+      fname++;
+    }
+  } else
+    fname = (char *) command_buffer;
+
   /* Grab a buffer */
   buf = alloc_buffer();
   if (buf == NULL) {
@@ -458,6 +457,13 @@ void file_open(uint8_t secondary) {
   }
   buf->secondary = secondary;
 
+  /* Rewrite file */
+  if (mode == OPEN_WRITE && fname[0] == '@') {
+    fname++;
+    if (fat_delete(fname) == 255)
+      return;
+  }
+  
   switch (mode) {
   case OPEN_MODIFY:
   case OPEN_READ:
