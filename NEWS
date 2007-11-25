@@ -3,6 +3,8 @@
 	- add full CRC checking in SD code with retries on errors
 	- software fastloader support: Turbodisk protocol
 	- card change detection
+	- better file name parsing
+	- directory loading supports wildcards
 
 2007-11-02 - release 0.2.1
 	- bugfix: Don't cause repeated entries at the end of the directory

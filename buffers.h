@@ -52,7 +52,11 @@ typedef struct buffer_s {
 
   /* various private data structures */
   union {
-    DIR dh; /* Directory access */
+    struct {
+      DIR dh;           /* Directory handle */
+      uint8_t filetype; /* File type */
+      char *matchstr;   /* Pointer to filename pattern */
+    } dir;
     FIL fh; /* File access */
   } pvt;
 } buffer_t;

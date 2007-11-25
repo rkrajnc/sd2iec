@@ -264,10 +264,10 @@ void fat_open_write(char *filename, buffer_t *buf, uint8_t append) {
 /*  External interface for the various operations                            */
 /* ------------------------------------------------------------------------- */
 
-uint8_t fat_opendir(buffer_t *buf) {
+uint8_t fat_opendir(buffer_t *buf, char *dir) {
   FRESULT res;
 
-  res = f_opendir(&buf->pvt.dh, "");
+  res = f_opendir(&buf->pvt.dir.dh, dir);
   if (res != FR_OK) {
     parse_error(res,1);
     return 1;
@@ -283,7 +283,7 @@ int8_t fat_readdir(buffer_t *buf, struct cbmdirent *dent) {
   uint8_t i;
 
   do {
-    res = f_readdir(&buf->pvt.dh, &finfo);
+    res = f_readdir(&buf->pvt.dir.dh, &finfo);
     if (res != FR_OK) {
       if (res == FR_INVALID_OBJECT)
 	set_error(ERROR_DIR_ERROR,0,0);

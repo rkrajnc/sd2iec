@@ -48,7 +48,7 @@ enum open_modes { OPEN_READ, OPEN_WRITE, OPEN_APPEND, OPEN_MODIFY };
 struct cbmdirent {
   uint16_t blocksize;             /* file size in blocks      */
   uint8_t  typeflags;             /* OR of filetype and flags */
-  char     name[CBM_NAME_LENGTH]; /* padded with 0xa0         */
+  uint8_t  name[CBM_NAME_LENGTH]; /* padded with 0xa0         */
 };
   
 uint8_t generic_cleanup(buffer_t *buf);

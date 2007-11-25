@@ -129,6 +129,33 @@ static void addentry(struct cbmdirent *dent, buffer_t *buf) {
   buf->length += 32;
 }
 
+/* Match a pattern against a CBM-padded filename */
+/* Returns 1 if matching */
+uint8_t match_name(char *matchstr, uint8_t *filename) {
+  uint8_t i = 0;
+
+  while (filename[i] != 0xa0 && i < 16) {
+    switch (*matchstr) {
+    case '?':
+      i++;
+      matchstr++;
+      break;
+
+    case '*':
+      return 1;
+
+    default:
+      if (filename[i++] != *matchstr++)
+	return 0;
+      break;
+    }
+  }
+  if (*matchstr)
+    return 0;
+  else
+    return 1;
+}
+
 /* ------------------------------------------------------------------------- */
 /*  Callbacks                                                                */
 /* ------------------------------------------------------------------------- */
@@ -166,18 +193,29 @@ static uint8_t dir_refill(buffer_t *buf) {
   buf->position = 0;
   buf->length   = 0;
 
-  switch (fat_readdir(buf, &dent)) {
-  case 0:
-    addentry(&dent, buf);
-    buf->length--;
-    return 0;
+  while (1) {
+    switch (fat_readdir(buf, &dent)) {
+    case 0:
+      /* Skip if the type doesn't match */
+      if (buf->pvt.dir.filetype &&
+	  (dent.typeflags & 0x07) != buf->pvt.dir.filetype)
+	break;
 
-  case -1:
-    return dir_footer(buf);
+      /* Skip if the name doesn't match */
+      if (buf->pvt.dir.matchstr && !match_name(buf->pvt.dir.matchstr, dent.name))
+	break;
 
-  default:
-    free_buffer(buf);
-    return 1;
+      addentry(&dent, buf);
+      buf->length--;
+      return 0;
+      
+    case -1:
+      return dir_footer(buf);
+      
+    default:
+      free_buffer(buf);
+      return 1;
+    }
   }
 }
 
@@ -192,9 +230,80 @@ static void load_directory(uint8_t secondary) {
     return;
   }
 
-  if (fat_opendir(buf)) {
-    free_buffer(buf);
-    return;
+  if (command_length > 2) {
+    /* Parse the name pattern */
+    char *str = strchr((char *)command_buffer, ':');
+
+    if (str != NULL) {
+      if (parse_path((char *) command_buffer+1, (char *) command_buffer, 0)) {
+	set_error(ERROR_SYNTAX_NONAME,0,0);
+	free_buffer(buf);
+	return;
+      }
+
+      /* The colon may have moved, search again. */
+      str = strchr((char *)command_buffer, ':');
+      if (str != (char *)command_buffer)
+	str[-1] = 0; /* Delete slash */
+      *str++ = 0;    /* Delete colon */
+
+      if (fat_opendir(buf, (char *) command_buffer)) {
+	free_buffer(buf);
+	return;
+      }
+    } else {
+      /* No colon -> no path */
+      if (fat_opendir(buf, "")) {
+	free_buffer(buf);
+	return;
+      }
+      str = (char *) command_buffer+1;
+    }
+    buf->pvt.dir.matchstr = str;
+
+    /* Check for a filetype match */
+    str = strchr(str, '=');
+    if (str != NULL) {
+      *str++ = 0;
+      switch (*str) {
+      case 'S':
+	buf->pvt.dir.filetype = TYPE_SEQ;
+	break;
+
+      case 'P':
+	buf->pvt.dir.filetype = TYPE_PRG;
+	break;
+
+      case 'U':
+	buf->pvt.dir.filetype = TYPE_USR;
+	break;
+
+      case 'R':
+	buf->pvt.dir.filetype = TYPE_REL;
+	break;
+
+      case 'C': /* This is guessed, not verified */
+	buf->pvt.dir.filetype = TYPE_CBM;
+	break;
+
+      case 'B': /* CMD compatibility */
+      case 'D': /* Specifying DEL matches everything anyway */
+	buf->pvt.dir.filetype = TYPE_DIR;
+	break;
+
+      default:
+	buf->pvt.dir.filetype = 0;
+	break;
+      }
+    } else
+      buf->pvt.dir.filetype = 0;
+  } else {
+    if (fat_opendir(buf,"")) {
+      free_buffer(buf);
+      return;
+    }
+    buf->pvt.dir.filetype = 0;
+    buf->pvt.dir.matchstr = NULL;
   }
 
   buf->secondary = secondary;
@@ -245,6 +354,8 @@ void file_open(uint8_t secondary) {
     return;
   }
 
+  command_buffer[command_length] = 0;
+
   /* Load directory? */
   if (command_buffer[0] == '$') {
     // FIXME: Secondary != 0? Compare D7F7-D7FF
@@ -252,14 +363,12 @@ void file_open(uint8_t secondary) {
     return;
   }
 
-  command_buffer[command_length] = 0;
-
   /* Parse path+drive numbers */
   fname = strchr((char *)command_buffer, ':');
   if (fname != NULL) {
     if (*(fname-1) == '/') {
       /* CMD-style path, rewrite it */
-      if (parse_path((char *) command_buffer,(char *) command_buffer)) {
+      if (parse_path((char *) command_buffer,(char *) command_buffer, 1)) {
 	set_error(ERROR_SYNTAX_NONAME,0,0);
 	return;
       }

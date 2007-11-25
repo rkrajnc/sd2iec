@@ -39,7 +39,7 @@ void     fat_open_write(char *filename, buffer_t *buf, uint8_t append);
 uint8_t  fat_getlabel(char *label);
 uint8_t  fat_getid(char *id);
 uint16_t fat_freeblocks(void);
-uint8_t  fat_opendir(buffer_t *buf);
+uint8_t  fat_opendir(buffer_t *buf, char *dir);
 int8_t   fat_readdir(buffer_t *buf, struct cbmdirent *dent);
 
 #endif

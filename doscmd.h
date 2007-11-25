@@ -35,6 +35,6 @@ extern uint16_t datacrc;
 void parse_doscommand(void);
 
 /* Parses CMD-style directory specifications */
-uint8_t parse_path(char *in, char *out);
+uint8_t parse_path(char *in, char *out, uint8_t skipcolon);
 
 #endif

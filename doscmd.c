@@ -125,7 +125,7 @@ static void handle_memwrite(void) {
 /* in and out may point to the same address, */
 /* the string will never increase in length  */
 /* Warning: Don't call for random filenames that don't have a : ! */
-uint8_t parse_path(char *in, char *out) {
+uint8_t parse_path(char *in, char *out, uint8_t skipcolon) {
   /* Skip partition number */
   while (*in && isdigit(*in)) in++;
   if (!*in) return 1;
@@ -144,7 +144,7 @@ uint8_t parse_path(char *in, char *out) {
   }
 
   /* Skip the colon and abort if it's the last character */
-  if (*in++ != ':' || *in == 0) return 1;
+  if (skipcolon && (*in++ != ':' || *in == 0)) return 1;
     
   /* Copy remaining string */
   while ((*out++ = *in++));
@@ -203,7 +203,7 @@ void parse_doscommand() {
     case 'C':
     case 'M':
       i = command_buffer[0];
-      if (parse_path((char *) command_buffer+2, (char *) command_buffer)) {
+      if (parse_path((char *) command_buffer+2, (char *) command_buffer, 1)) {
 	set_error(ERROR_SYNTAX_NONAME,0,0);
       } else {
 	if (i == 'C') {
