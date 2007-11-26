@@ -24,15 +24,19 @@ are still lots of features missing. Anything that tries execute code on the
 Supported commands:
 ===================
 - General notes:
-  Wildcards are currently not supported.
-  Filetypes and modes (e.g. ,S,W) are currently not supported.
-  Directory filters are currently not supported.
   Any command not listed below is currently not supported.
   Long filenames are not supported.
 
   Subdirectory names in filenames are semi-supported, the syntax is not
   compatible to the CMD drives. The filenames are directly passed to the
   FAT library, so "/test/foo.bar" would access the file FOO.BAR in \TEST.
+
+- Directory filters:
+  To show only directories, both =B (CMD-compatible) and =D can be used.
+  On a real Commodore drive D matches everything.
+  To include hidden files in the directory, use *=H. On a 1541 this doesn't
+  do anything. sd2iec marks hidden files with an H after the lock mark,
+  i.e. "PRG<H" or "PRG H".
 
 - CD/MD/RD:
   Subdirectory access is compatible to the syntax used by the CMD drives,

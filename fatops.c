@@ -291,7 +291,7 @@ int8_t fat_readdir(buffer_t *buf, struct cbmdirent *dent) {
 	parse_error(res,1);
       return 1;
     }
-  } while (finfo.fname[0] && (finfo.fattrib & (AM_VOL|AM_SYS|AM_HID)));
+  } while (finfo.fname[0] && (finfo.fattrib & AM_VOL));
 
   if (finfo.fname[0]) {
     if (finfo.fsize > 16255746)
@@ -313,6 +313,9 @@ int8_t fat_readdir(buffer_t *buf, struct cbmdirent *dent) {
 
     if (finfo.fattrib & AM_RDO)
       dent->typeflags |= FLAG_RO;
+
+    if (finfo.fattrib & (AM_HID|AM_SYS))
+      dent->typeflags |= FLAG_HIDDEN;
 
     return 0;
   } else

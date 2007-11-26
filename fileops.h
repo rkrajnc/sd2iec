@@ -32,6 +32,7 @@
 #define CBM_NAME_LENGTH 16
 
 #define TYPE_LENGTH 3
+#define TYPE_MASK 7
 #define TYPE_DEL 0
 #define TYPE_SEQ 1
 #define TYPE_PRG 2
@@ -40,8 +41,10 @@
 #define TYPE_CBM 5
 #define TYPE_DIR 6
 
-#define FLAG_RO    (1<<6)
-#define FLAG_SPLAT (1<<7)
+/* Hidden is an unused bit on CBM */
+#define FLAG_HIDDEN (1<<5)
+#define FLAG_RO     (1<<6)
+#define FLAG_SPLAT  (1<<7)
 
 enum open_modes { OPEN_READ, OPEN_WRITE, OPEN_APPEND, OPEN_MODIFY };
 

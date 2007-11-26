@@ -107,24 +107,29 @@ static void addentry(struct cbmdirent *dent, buffer_t *buf) {
 
   /* copy and adjust the filename - C783 */
   memcpy(data, dent->name, CBM_NAME_LENGTH);
-  for (i=0;i<17;i++)
+  for (i=0;i<=CBM_NAME_LENGTH;i++)
     if (dent->name[i] == 0x22 || dent->name[i] == 0xa0 || i == 16) {
       data[i] = '"';
-      while (i<17)
+      while (i<=CBM_NAME_LENGTH)
 	data[i++] &= 0x7f;
     }
 
   /* Skip name and final quote */
-  data += 17;
+  data += CBM_NAME_LENGTH+1;
 
   if (dent->typeflags & FLAG_SPLAT)
     *data = '*';
 
   /* File type */
-  memcpy_P(data+1, filetypes + TYPE_LENGTH * (dent->typeflags & 0x07), TYPE_LENGTH);
+  memcpy_P(data+1, filetypes + TYPE_LENGTH * (dent->typeflags & TYPE_MASK), TYPE_LENGTH);
 
+  /* RO marker */
   if (dent->typeflags & FLAG_RO)
     data[4] = '<';
+
+  /* Extension: Hidden marker */
+  if (dent->typeflags & FLAG_HIDDEN)
+    data[5] = 'H';
 
   buf->length += 32;
 }
@@ -134,7 +139,7 @@ static void addentry(struct cbmdirent *dent, buffer_t *buf) {
 uint8_t match_name(char *matchstr, uint8_t *filename) {
   uint8_t i = 0;
 
-  while (filename[i] != 0xa0 && i < 16) {
+  while (filename[i] != 0xa0 && i < CBM_NAME_LENGTH) {
     switch (*matchstr) {
     case '?':
       i++;
@@ -197,12 +202,18 @@ static uint8_t dir_refill(buffer_t *buf) {
     switch (fat_readdir(buf, &dent)) {
     case 0:
       /* Skip if the type doesn't match */
-      if (buf->pvt.dir.filetype &&
-	  (dent.typeflags & 0x07) != buf->pvt.dir.filetype)
+      if ((buf->pvt.dir.filetype & TYPE_MASK) &&
+	  (dent.typeflags & TYPE_MASK) != (buf->pvt.dir.filetype & TYPE_MASK))
+	break;
+
+      /* Skip hidden files */
+      if ((dent.typeflags & FLAG_HIDDEN) &&
+	  !(buf->pvt.dir.filetype & FLAG_HIDDEN))
 	break;
 
       /* Skip if the name doesn't match */
-      if (buf->pvt.dir.matchstr && !match_name(buf->pvt.dir.matchstr, dent.name))
+      if (buf->pvt.dir.matchstr &&
+	  !match_name(buf->pvt.dir.matchstr, dent.name))
 	break;
 
       addentry(&dent, buf);
@@ -230,6 +241,7 @@ static void load_directory(uint8_t secondary) {
     return;
   }
 
+  buf->pvt.dir.filetype = 0;
   if (command_length > 2) {
     /* Parse the name pattern */
     char *str = strchr((char *)command_buffer, ':');
@@ -265,7 +277,7 @@ static void load_directory(uint8_t secondary) {
     str = strchr(str, '=');
     if (str != NULL) {
       *str++ = 0;
-      switch (*str) {
+      switch (*str++) {
       case 'S':
 	buf->pvt.dir.filetype = TYPE_SEQ;
 	break;
@@ -291,18 +303,20 @@ static void load_directory(uint8_t secondary) {
 	buf->pvt.dir.filetype = TYPE_DIR;
 	break;
 
+      case 'H': /* Extension: Also show hidden files */
+	buf->pvt.dir.filetype = FLAG_HIDDEN;
+	break;
+
       default:
 	buf->pvt.dir.filetype = 0;
 	break;
       }
-    } else
-      buf->pvt.dir.filetype = 0;
+    }
   } else {
     if (fat_opendir(buf,"")) {
       free_buffer(buf);
       return;
     }
-    buf->pvt.dir.filetype = 0;
     buf->pvt.dir.matchstr = NULL;
   }
 
