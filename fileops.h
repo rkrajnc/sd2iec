@@ -49,12 +49,15 @@
 enum open_modes { OPEN_READ, OPEN_WRITE, OPEN_APPEND, OPEN_MODIFY };
 
 struct cbmdirent {
-  uint16_t blocksize;             /* file size in blocks      */
-  uint8_t  typeflags;             /* OR of filetype and flags */
-  uint8_t  name[CBM_NAME_LENGTH]; /* padded with 0xa0         */
+  uint16_t blocksize;               /* file size in blocks      */
+  uint8_t  typeflags;               /* OR of filetype and flags */
+  uint8_t  name[CBM_NAME_LENGTH+1]; /* padded with 0xa0         */
 };
-  
+
 uint8_t generic_cleanup(buffer_t *buf);
+
+/* Returns the next matching dirent */
+int8_t next_match(DIR *dh, char *matchstr, uint8_t type, struct cbmdirent *dent);
 
 /* Parses a filename in command_buffer and opens that file */
 void file_open(uint8_t secondary);

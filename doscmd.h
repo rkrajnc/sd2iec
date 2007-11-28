@@ -27,7 +27,7 @@
 #ifndef DOSCMD_H
 #define DOSCMD_H
 
-extern uint8_t command_buffer[COMMAND_BUFFER_SIZE+1];
+extern uint8_t command_buffer[];
 extern uint8_t command_length;
 
 extern uint16_t datacrc;
@@ -35,6 +35,6 @@ extern uint16_t datacrc;
 void parse_doscommand(void);
 
 /* Parses CMD-style directory specifications */
-uint8_t parse_path(char *in, char *out, uint8_t skipcolon);
+uint8_t parse_path(char *in, char *out, char **name);
 
 #endif

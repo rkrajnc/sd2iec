@@ -32,6 +32,7 @@
 #include "errormsg.h"
 #include "buffers.h"
 
+uint8_t current_error;
 uint8_t error_buffer[ERROR_BUFFER_SIZE];
 volatile uint8_t error_blink_active;
 
@@ -154,6 +155,7 @@ static void appendnumber(uint8_t value) {
 
 
 void set_error(uint8_t errornum, uint8_t track, uint8_t sector) {
+  current_error = errornum;
   buffer[BUFFER_COUNT].length   = 0;
   buffer[BUFFER_COUNT].position = 0;
   memset(error_buffer,0,sizeof(error_buffer));

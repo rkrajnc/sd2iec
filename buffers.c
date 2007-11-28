@@ -27,8 +27,11 @@
 #include <stdint.h>
 #include <string.h>
 #include "config.h"
-#include "buffers.h"
 #include "errormsg.h"
+#include "tff.h"
+#include "buffers.h"
+
+DIR matchdh;
 
 /* One additional buffer for channel 15 */
 buffer_t buffer[BUFFER_COUNT+1];
@@ -65,6 +68,7 @@ buffer_t *alloc_buffer(void) {
     }
   }
 
+  set_error(ERROR_NO_CHANNEL,0,0);
   return NULL;
 }
 

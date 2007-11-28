@@ -77,6 +77,20 @@ const PROGMEM uint8_t filetypes[] = {
 /*  Utility functions                                                        */
 /* ------------------------------------------------------------------------- */
 
+/* Zero-terminate a padded commodore name */
+char *dent2str(struct cbmdirent *dent) {
+  uint8_t i;
+
+  for (i=0;i<CBM_NAME_LENGTH;i++) {
+    if (dent->name[i] == 0xa0) {
+      dent->name[i] = 0;
+      return (char *)dent->name;
+    }
+  }
+  dent->name[CBM_NAME_LENGTH] = 0;
+  return (char *)dent->name;
+}
+
 /* Add a single directory entry in 15x1 format to the end of buf */
 static void addentry(struct cbmdirent *dent, buffer_t *buf) {
   uint8_t i;
@@ -136,7 +150,7 @@ static void addentry(struct cbmdirent *dent, buffer_t *buf) {
 
 /* Match a pattern against a CBM-padded filename */
 /* Returns 1 if matching */
-uint8_t match_name(char *matchstr, uint8_t *filename) {
+static uint8_t match_name(char *matchstr, uint8_t *filename) {
   uint8_t i = 0;
 
   while (filename[i] != 0xa0 && i < CBM_NAME_LENGTH) {
@@ -159,6 +173,36 @@ uint8_t match_name(char *matchstr, uint8_t *filename) {
     return 0;
   else
     return 1;
+}
+
+/* Get next matching dirent */
+/* Return values:           */
+/*  -1: no more matches     */
+/*   0: match found         */
+/*   1: error               */
+int8_t next_match(DIR *dh, char *matchstr, uint8_t type, struct cbmdirent *dent) {
+  int8_t res;
+  while (1) {
+    res = fat_readdir(dh, dent);
+    if (res == 0) {
+      /* Skip if the type doesn't match */
+      if ((type & TYPE_MASK) &&
+	  (dent->typeflags & TYPE_MASK) != (type & TYPE_MASK))
+	continue;
+      
+      /* Skip hidden files */
+      if ((dent->typeflags & FLAG_HIDDEN) &&
+	  !(type & FLAG_HIDDEN))
+	continue;
+
+      /* Skip if the name doesn't match */
+      if (matchstr &&
+	  !match_name(matchstr, dent->name))
+	continue;
+    }
+
+    return res;
+  }
 }
 
 /* ------------------------------------------------------------------------- */
@@ -198,35 +242,19 @@ static uint8_t dir_refill(buffer_t *buf) {
   buf->position = 0;
   buf->length   = 0;
 
-  while (1) {
-    switch (fat_readdir(buf, &dent)) {
-    case 0:
-      /* Skip if the type doesn't match */
-      if ((buf->pvt.dir.filetype & TYPE_MASK) &&
-	  (dent.typeflags & TYPE_MASK) != (buf->pvt.dir.filetype & TYPE_MASK))
-	break;
-
-      /* Skip hidden files */
-      if ((dent.typeflags & FLAG_HIDDEN) &&
-	  !(buf->pvt.dir.filetype & FLAG_HIDDEN))
-	break;
-
-      /* Skip if the name doesn't match */
-      if (buf->pvt.dir.matchstr &&
-	  !match_name(buf->pvt.dir.matchstr, dent.name))
-	break;
-
-      addentry(&dent, buf);
-      buf->length--;
-      return 0;
+  switch (next_match(&buf->pvt.dir.dh, buf->pvt.dir.matchstr,
+		     buf->pvt.dir.filetype, &dent)) {
+  case 0:
+    addentry(&dent, buf);
+    buf->length--;
+    return 0;
       
-    case -1:
-      return dir_footer(buf);
-      
-    default:
-      free_buffer(buf);
-      return 1;
-    }
+  case -1:
+    return dir_footer(buf);
+    
+  default:
+    free_buffer(buf);
+    return 1;
   }
 }
 
@@ -236,48 +264,31 @@ static void load_directory(uint8_t secondary) {
   uint8_t i;
 
   buf = alloc_buffer();
-  if (buf == 0) {
-    set_error(ERROR_NO_CHANNEL,0,0);
+  if (!buf)
     return;
-  }
 
   buf->pvt.dir.filetype = 0;
   if (command_length > 2) {
     /* Parse the name pattern */
-    char *str = strchr((char *)command_buffer, ':');
-
-    if (str != NULL) {
-      if (parse_path((char *) command_buffer+1, (char *) command_buffer, 0)) {
-	set_error(ERROR_SYNTAX_NONAME,0,0);
-	free_buffer(buf);
-	return;
-      }
-
-      /* The colon may have moved, search again. */
-      str = strchr((char *)command_buffer, ':');
-      if (str != (char *)command_buffer)
-	str[-1] = 0; /* Delete slash */
-      *str++ = 0;    /* Delete colon */
-
-      if (fat_opendir(buf, (char *) command_buffer)) {
-	free_buffer(buf);
-	return;
-      }
-    } else {
-      /* No colon -> no path */
-      if (fat_opendir(buf, "")) {
-	free_buffer(buf);
-	return;
-      }
-      str = (char *) command_buffer+1;
+    char *name;
+    
+    if (parse_path((char *) command_buffer+1, (char *) command_buffer, &name)) {
+      free_buffer(buf);
+      return;
     }
-    buf->pvt.dir.matchstr = str;
+
+    if (fat_opendir(&buf->pvt.dir.dh, (char *) command_buffer)) {
+      free_buffer(buf);
+      return;
+    }
+
+    buf->pvt.dir.matchstr = name;
 
     /* Check for a filetype match */
-    str = strchr(str, '=');
-    if (str != NULL) {
-      *str++ = 0;
-      switch (*str++) {
+    name = strchr(name, '=');
+    if (name != NULL) {
+      *name++ = 0;
+      switch (*name++) {
       case 'S':
 	buf->pvt.dir.filetype = TYPE_SEQ;
 	break;
@@ -313,7 +324,7 @@ static void load_directory(uint8_t secondary) {
       }
     }
   } else {
-    if (fat_opendir(buf,"")) {
+    if (fat_opendir(&buf->pvt.dir.dh,"")) {
       free_buffer(buf);
       return;
     }
@@ -447,48 +458,68 @@ void file_open(uint8_t secondary) {
   }
 
   /* Parse path+drive numbers */
-  char *fname = strchr((char *)command_buffer, ':');
-  if (fname != NULL) {
-    if (*(fname-1) == '/') {
-      /* CMD-style path, rewrite it */
-      if (parse_path((char *) command_buffer,(char *) command_buffer, 1)) {
-	set_error(ERROR_SYNTAX_NONAME,0,0);
+  char *cbuf = (char *) command_buffer;
+  char *fname;
+  int8_t res;
+  struct cbmdirent dent;
+
+  /* Check for rewrite marker */
+  if (command_buffer[0] == '@')
+    cbuf = (char *)command_buffer+1;
+  else
+    cbuf = (char *)command_buffer;
+
+  if (parse_path(cbuf, (char *) command_buffer, &fname))
+    return;
+
+  /* Filename matching */
+  if (fat_opendir(&matchdh, (char *) command_buffer))
+    return;
+
+  res = next_match(&matchdh, fname, FLAG_HIDDEN, &dent);
+  if (res > 0)
+    return;
+
+  if (mode == OPEN_WRITE) {
+    /* Normales Schreiben: Nicht matchen (oder mit File Exists abbrechen) */
+    /* Rewrite: Matchen. Wenn gefunden loeschen, wenn nicht egal */
+    if (cbuf != (char *) command_buffer && res == 0) {
+      /* Rewrite existing file: Delete the old one */
+      /* This is safe. If there is no buffer available, delete will fail. */
+      if (fat_delete((char *) command_buffer, fname) == 255)
 	return;
-      }
-      fname = (char *) command_buffer;
     } else {
-      /* Ignore everything before the : */
-      fname++;
+      /* Normal write or non-existing rewrite */
+      /* Doesn't exist: Copy name to dent */
+      strcpy((char *)dent.name, fname);
     }
   } else
-    fname = (char *) command_buffer;
+    if (res != 0) {
+      /* File not found */
+      set_error(ERROR_FILE_NOT_FOUND,0,0);
+      return;
+    }
+
+  fname = dent2str(&dent);
 
   /* Grab a buffer */
   buf = alloc_buffer();
-  if (buf == NULL) {
-    set_error(ERROR_NO_CHANNEL,0,0);
+  if (!buf)
     return;
-  }
+
   buf->secondary = secondary;
 
-  /* Rewrite file */
-  if (mode == OPEN_WRITE && fname[0] == '@') {
-    fname++;
-    if (fat_delete(fname) == 255)
-      return;
-  }
-  
   switch (mode) {
   case OPEN_MODIFY:
   case OPEN_READ:
     /* Modify is the same as read, but allows reading *ed files.        */
     /* FAT doesn't have anything equivalent, so both are mapped to READ */
-    fat_open_read(fname, buf);
+    fat_open_read((char *) command_buffer, fname, buf);
     break;
 
   case OPEN_WRITE:
   case OPEN_APPEND:
-    fat_open_write(fname, buf, (mode == OPEN_APPEND));
+    fat_open_write((char *) command_buffer, fname, buf, (mode == OPEN_APPEND));
     break;
   }
 }

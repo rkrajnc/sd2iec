@@ -29,6 +29,7 @@
 #include <avr/interrupt.h>
 #include <ctype.h>
 #include <stdlib.h>
+#include <string.h>
 #include <util/crc16.h>
 #include "config.h"
 #include "errormsg.h"
@@ -43,7 +44,7 @@
 
 static void (*restart_call)(void) = 0;
 
-uint8_t command_buffer[COMMAND_BUFFER_SIZE+1];
+uint8_t command_buffer[COMMAND_BUFFER_SIZE+2];
 uint8_t command_length;
 
 uint16_t datacrc = 0xffff;
@@ -120,32 +121,101 @@ static void handle_memwrite(void) {
 }
 
 
-/* Parses CMD-style directory specification  */
-/* Returns 1 if any errors found             */
-/* in and out may point to the same address, */
-/* the string will never increase in length  */
-/* Warning: Don't call for random filenames that don't have a : ! */
-uint8_t parse_path(char *in, char *out, uint8_t skipcolon) {
-  /* Skip partition number */
-  while (*in && isdigit(*in)) in++;
-  if (!*in) return 1;
+/* Parses CMD-style directory specification     */
+/* Returns 1 if any errors found                */
+/* in and out can point to the same address     */
+/* The string may be lengthened by 1 character  */
+/* A 0 may be added in front if there was no :  */
+/* If specified, name will point to the first char after that */
+uint8_t parse_path(char *in, char *out, char **name) {
+  if (strchr(in, ':')) {
+    uint8_t state = 0;
 
-  /* Handle slashed path immediate after command */
-  if (*in == '/') {
-    /* Copy path before colon */
-    while (*++in != ':' && (*out++ = *in));
+    /* Skip partition number */
+    while (*in && isdigit(*in)) in++;
 
-    /* CD doesn't require a colon, let's extend that to everything */
-    if (!*in)
-      return 0;
-
-    /* If there is a :, there must be a /: */
-    if (*(in-1) != '/') return 1;
+    /* Unoptimized DFA matcher             */
+    /* I wonder if this can be simplified? */
+    while (state != 5) {
+      switch (state) {
+      case 0: /* Starting state */
+	switch (*in++) {
+	case ':':
+	  *out++ = 0;
+	  state = 5;
+	  break;
+	  
+	case '/':
+	  state = 1;
+	  break;
+	  
+	default:
+	  state = 2;
+	  break;
+	}
+	break;
+	
+      case 1: /* Initial slash found */
+	if (*in == ':') {
+	  *out++ = 0;
+	  in++;
+	  state = 5;
+	} else {
+	  *out++ = *in++;
+	  state = 3;
+	}
+	break;
+	
+      case 2: /* Initial non-slash found */
+	while (*in++ != ':');
+	state = 5;
+	break;
+	
+      case 3: /* Slash-noncolon found */
+	switch (*in) {
+	case ':':
+	  *out++ = 0;
+	  in++;
+	  state = 5;
+	  break;
+	  
+	case '/':
+	  in++;
+	  state = 4;
+	  break;
+	  
+	default:
+	  *out++ = *in++;
+	  break;
+	}
+	break;
+	
+      case 4: /* Slash-noncolon-slash found */
+	if (*in == ':') {
+	  *out++ = 0;
+	  in++;
+	  state = 5;
+	} else {
+	  *out++ = '/';
+	  *out++ = *in++;
+	  state = 3;
+	}
+	break;
+      }
+    }
+  } else {
+    /* No colon in name, add a terminator for the path */
+    if (in == out) {
+      /* Make some space for the new colon */
+      memmove(in+1,in,strlen(in)+1);
+      in++;
+    }
+    *out++ = 0;
   }
 
-  /* Skip the colon and abort if it's the last character */
-  if (skipcolon && (*in++ != ':' || *in == 0)) return 1;
-    
+  if (name)
+    *name = out;
+
   /* Copy remaining string */
   while ((*out++ = *in++));
 
@@ -199,23 +269,34 @@ void parse_doscommand() {
 
   /* MD/CD/RD clash with other commands, so they're checked first */
   if (command_buffer[1] == 'D') {
+    char *name;
     switch (command_buffer[0]) {
-    case 'C':
     case 'M':
-      i = command_buffer[0];
-      if (parse_path((char *) command_buffer+2, (char *) command_buffer, 1)) {
+      /* MD requires a colon */
+      if (!strchr((char *)command_buffer, ':')) {
 	set_error(ERROR_SYNTAX_NONAME,0,0);
-      } else {
-	if (i == 'C') {
-	  /* Left arrow moves one directory up */
-	  if (command_buffer[0] == '_') {
-	    command_buffer[0] = '.';
-	    command_buffer[1] = '.';
-	    command_buffer[2] = 0;
-	  }
-	  fat_chdir((char *)command_buffer);
+	break;
+      }
+      /* Fall-through */
+
+    case 'C':
+      i = command_buffer[0];
+      if (!parse_path((char *) command_buffer+2, (char *) command_buffer, &name)) {
+	if (strlen((char *) command_buffer) != 0) {
+	  /* Join path and name */
+	  name[-1] = '/';
+	  name = (char *) command_buffer;
 	} else
-	  fat_mkdir((char *)command_buffer);
+	  /* Yay, special case: CD/name/ means ./name   */
+	  /* Technically the terminating / is required, */
+	  /* but who'll notice if we don't check?       */
+	  if (name[0] == '/')
+	    name++;
+
+	if (i == 'C')
+	  fat_chdir(name);
+	else
+	  fat_mkdir(name);
       }
       break;
 
@@ -239,7 +320,7 @@ void parse_doscommand() {
       if (command_buffer[i] != ':') {
 	set_error(ERROR_SYNTAX_NONAME,0,0);
       } else {
-	i = fat_delete((char *)command_buffer+i+1);
+	i = fat_delete("", (char *)command_buffer+i+1);
 	if (i != 255)
 	  set_error(ERROR_SCRATCHED,i,0);
       }
@@ -326,7 +407,7 @@ void parse_doscommand() {
 
   case 'S':
     /* Scratch */
-    i = fat_delete((char *)command_buffer+2);
+    i = fat_delete("", (char *)command_buffer+2);
     if (i != 255)
       set_error(ERROR_SCRATCHED,i,0);
     break;

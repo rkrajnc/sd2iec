@@ -61,8 +61,8 @@ typedef struct buffer_s {
   } pvt;
 } buffer_t;
 
-/* Simplifies access to the error buffer length */
-extern buffer_t buffer[];
+extern DIR matchdh;       /* Directory handle used in file matching       */
+extern buffer_t buffer[]; /* Simplifies access to the error buffer length */
 
 /* Initializes the buffer structures */
 void init_buffers(void);

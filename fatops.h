@@ -31,15 +31,15 @@
 #include "fileops.h"
 
 void     init_fatops(void);
-uint8_t  fat_delete(char *filename);
+uint8_t  fat_delete(char *path, char *filename);
 void     fat_chdir(char *dirname);
 void     fat_mkdir(char *dirname);
-void     fat_open_read(char *filename, buffer_t *buf);
-void     fat_open_write(char *filename, buffer_t *buf, uint8_t append);
+void     fat_open_read(char *path, char *filename, buffer_t *buf);
+void     fat_open_write(char *path, char *filename, buffer_t *buf, uint8_t append);
 uint8_t  fat_getlabel(char *label);
 uint8_t  fat_getid(char *id);
 uint16_t fat_freeblocks(void);
-uint8_t  fat_opendir(buffer_t *buf, char *dir);
-int8_t   fat_readdir(buffer_t *buf, struct cbmdirent *dent);
+uint8_t  fat_opendir(DIR *dh, char *dir);
+int8_t   fat_readdir(DIR *dh, struct cbmdirent *dent);
 
 #endif

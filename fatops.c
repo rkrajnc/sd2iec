@@ -115,6 +115,21 @@ static void fix_name(char *str) {
   }
 }
 
+static char* build_name(char *path, char *name, buffer_t *buf) {
+  char *str;
+
+  if (strlen(path)) {
+    str = (char *) buf->data;
+    strcpy(str, path);
+    strcat_P(str, PSTR("/"));
+    strcat(str, name);
+  } else
+    str = name;
+
+  fix_name(str);
+  return str;
+}
+
 /* ------------------------------------------------------------------------- */
 /*  Callbacks                                                                */
 /* ------------------------------------------------------------------------- */
@@ -210,10 +225,10 @@ static uint8_t fat_file_close(buffer_t *buf) {
 /* ------------------------------------------------------------------------- */
 
 /* Open a file for reading */
-void fat_open_read(char *filename, buffer_t *buf) {
+void fat_open_read(char *path, char *filename, buffer_t *buf) {
   FRESULT res;
 
-  fix_name(filename);
+  filename = build_name(path, filename, buf);
   res = f_open(&buf->pvt.fh, filename, FA_READ | FA_OPEN_EXISTING);
   if (res != FR_OK) {
     parse_error(res,1);
@@ -232,10 +247,10 @@ void fat_open_read(char *filename, buffer_t *buf) {
 }
 
 /* Open a file for writing */
-void fat_open_write(char *filename, buffer_t *buf, uint8_t append) {
+void fat_open_write(char *path, char *filename, buffer_t *buf, uint8_t append) {
   FRESULT res;
 
-  fix_name(filename);
+  filename = build_name(path, filename, buf);
   if (append) {
     res = f_open(&buf->pvt.fh, filename, FA_WRITE | FA_OPEN_EXISTING);
     if (res == FR_OK)
@@ -264,10 +279,10 @@ void fat_open_write(char *filename, buffer_t *buf, uint8_t append) {
 /*  External interface for the various operations                            */
 /* ------------------------------------------------------------------------- */
 
-uint8_t fat_opendir(buffer_t *buf, char *dir) {
+uint8_t fat_opendir(DIR *dh, char *dir) {
   FRESULT res;
 
-  res = f_opendir(&buf->pvt.dir.dh, dir);
+  res = f_opendir(dh, dir);
   if (res != FR_OK) {
     parse_error(res,1);
     return 1;
@@ -277,13 +292,13 @@ uint8_t fat_opendir(buffer_t *buf, char *dir) {
 
 /* readdir wrapper for FAT files                       */
 /* Returns 1 on error, 0 if successful, -1 if finished */
-int8_t fat_readdir(buffer_t *buf, struct cbmdirent *dent) {
+int8_t fat_readdir(DIR *dh, struct cbmdirent *dent) {
   FRESULT res;
   FILINFO finfo;
   uint8_t i;
 
   do {
-    res = f_readdir(&buf->pvt.dir.dh, &finfo);
+    res = f_readdir(dh, &finfo);
     if (res != FR_OK) {
       if (res == FR_INVALID_OBJECT)
 	set_error(ERROR_DIR_ERROR,0,0);
@@ -301,7 +316,7 @@ int8_t fat_readdir(buffer_t *buf, struct cbmdirent *dent) {
       dent->blocksize = (finfo.fsize+253) / 254;
 
     /* Copy name */
-    memset(dent->name, 0xa0, CBM_NAME_LENGTH);
+    memset(dent->name, 0xa0, sizeof(dent->name));
     for (i=0; finfo.fname[i]; i++)
       dent->name[i] = finfo.fname[i];
 
@@ -324,11 +339,18 @@ int8_t fat_readdir(buffer_t *buf, struct cbmdirent *dent) {
 
 /* Delete a file/directory                         */
 /* Returns number of files deleted or 255 on error */
-uint8_t fat_delete(char *filename) {
+uint8_t fat_delete(char *path, char *filename) {
+  buffer_t *buf;
   FRESULT res;
 
-  fix_name(filename);
-  res = f_unlink((char *)filename);
+  buf = alloc_buffer();
+  if (!buf)
+    return 255;
+
+  filename = build_name(path, filename, buf);
+  res = f_unlink(filename);
+  free_buffer(buf);
+
   parse_error(res,0);
   if (res == FR_OK)
     return 1;
@@ -341,8 +363,17 @@ uint8_t fat_delete(char *filename) {
 /* Change the current directory */
 void fat_chdir(char *dirname) {
   FRESULT res;
-
-  fix_name(dirname);
+  
+  /* Left arrow moves one directory up */
+  if (!strcmp_P(dirname, PSTR("_"))) {
+    dirname[0] = '.';
+    dirname[1] = '.';
+    dirname[2] = 0;
+  } else {
+    fix_name(dirname);
+    if (dirname[strlen(dirname)-1] == '/')
+      dirname[strlen(dirname)-1] = 0;
+  }
   res = f_chdir(dirname);
   parse_error(res,0);
 }
