@@ -8,6 +8,7 @@
 	- support for file overwrite (@)
 	- option to display hidden files in directory
 	- filename matching for open
+	- filename matching for scratch
 
 2007-11-02 - release 0.2.1
 	- bugfix: Don't cause repeated entries at the end of the directory

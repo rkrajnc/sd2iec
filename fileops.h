@@ -56,6 +56,9 @@ struct cbmdirent {
 
 uint8_t generic_cleanup(buffer_t *buf);
 
+/* Zero-terminates the name in a dent and returns a pointer to it */
+char *dent2str(struct cbmdirent *dent);
+
 /* Returns the next matching dirent */
 int8_t next_match(DIR *dh, char *matchstr, uint8_t type, struct cbmdirent *dent);
 

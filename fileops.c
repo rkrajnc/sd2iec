@@ -169,7 +169,7 @@ static uint8_t match_name(char *matchstr, uint8_t *filename) {
       break;
     }
   }
-  if (*matchstr)
+  if (*matchstr && *matchstr != '*')
     return 0;
   else
     return 1;

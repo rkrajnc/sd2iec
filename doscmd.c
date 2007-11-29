@@ -224,7 +224,9 @@ void parse_path(char *in, char *out, char **name) {
 
 
 void parse_doscommand() {
-  uint8_t i;
+  uint8_t i,count;
+  char *fname;
+  struct cbmdirent dent;
 
   /* Set default message: Everything ok */
   set_error(ERROR_OK,0,0);
@@ -407,9 +409,26 @@ void parse_doscommand() {
 
   case 'S':
     /* Scratch */
-    i = fat_delete("", (char *)command_buffer+2);
+    parse_path((char *) command_buffer+1, (char *) command_buffer, &fname);
+    
+    if (fat_opendir(&matchdh, (char *) command_buffer))
+      return;
+
+    i = 255;
+    count = 0;
+    while (!next_match(&matchdh, fname, FLAG_HIDDEN, &dent)) {
+      /* Skip directories */
+      if ((dent.typeflags & TYPE_MASK) == TYPE_DIR)
+	continue;
+      i = fat_delete("", dent2str(&dent));
+      if (i != 255)
+	count += i;
+      else
+	break;
+    }
     if (i != 255)
-      set_error(ERROR_SCRATCHED,i,0);
+      set_error(ERROR_SCRATCHED,count,0);
+
     break;
 
   case 'N':
