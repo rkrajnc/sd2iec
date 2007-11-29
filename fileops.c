@@ -272,10 +272,7 @@ static void load_directory(uint8_t secondary) {
     /* Parse the name pattern */
     char *name;
     
-    if (parse_path((char *) command_buffer+1, (char *) command_buffer, &name)) {
-      free_buffer(buf);
-      return;
-    }
+    parse_path((char *) command_buffer+1, (char *) command_buffer, &name);
 
     if (fat_opendir(&buf->pvt.dir.dh, (char *) command_buffer)) {
       free_buffer(buf);
@@ -469,8 +466,7 @@ void file_open(uint8_t secondary) {
   else
     cbuf = (char *)command_buffer;
 
-  if (parse_path(cbuf, (char *) command_buffer, &fname))
-    return;
+  parse_path(cbuf, (char *) command_buffer, &fname);
 
   /* Filename matching */
   if (fat_opendir(&matchdh, (char *) command_buffer))

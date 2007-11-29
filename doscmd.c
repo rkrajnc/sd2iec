@@ -127,7 +127,7 @@ static void handle_memwrite(void) {
 /* The string may be lengthened by 1 character  */
 /* A 0 may be added in front if there was no :  */
 /* If specified, name will point to the first char after that */
-uint8_t parse_path(char *in, char *out, char **name) {
+void parse_path(char *in, char *out, char **name) {
   if (strchr(in, ':')) {
     uint8_t state = 0;
 
@@ -219,7 +219,7 @@ uint8_t parse_path(char *in, char *out, char **name) {
   /* Copy remaining string */
   while ((*out++ = *in++));
 
-  return 0;
+  return;
 }
 
 
@@ -281,23 +281,23 @@ void parse_doscommand() {
 
     case 'C':
       i = command_buffer[0];
-      if (!parse_path((char *) command_buffer+2, (char *) command_buffer, &name)) {
-	if (strlen((char *) command_buffer) != 0) {
-	  /* Join path and name */
-	  name[-1] = '/';
-	  name = (char *) command_buffer;
-	} else
-	  /* Yay, special case: CD/name/ means ./name   */
-	  /* Technically the terminating / is required, */
-	  /* but who'll notice if we don't check?       */
-	  if (name[0] == '/')
-	    name++;
+      parse_path((char *) command_buffer+2, (char *) command_buffer, &name);
+      if (strlen((char *) command_buffer) != 0) {
+	/* Join path and name */
+	name[-1] = '/';
+	name = (char *) command_buffer;
+      } else
+	/* Yay, special case: CD/name/ means ./name   */
+	/* Technically the terminating / is required, */
+	/* but who'll notice if we don't check?       */
+	if (name[0] == '/')
+	  name++;
+      
+      if (i == 'C')
+	fat_chdir(name);
+      else
+	fat_mkdir(name);
 
-	if (i == 'C')
-	  fat_chdir(name);
-	else
-	  fat_mkdir(name);
-      }
       break;
 
     case 'R':
