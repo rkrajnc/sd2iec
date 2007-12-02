@@ -32,7 +32,7 @@
 #include "buffers.h"
 #include "uart.h"
 #include "doscmd.h"
-#include "fatops.h"
+#include "wrapops.h"
 #include "fileops.h"
 
 /* ------------------------------------------------------------------------- */
@@ -72,6 +72,9 @@ const PROGMEM uint8_t filetypes[] = {
   'C','B','M', // 5
   'D','I','R'  // 6
 };
+
+/* Pointer to the currently active fileops structure */
+const fileops_t *fop;
 
 /* ------------------------------------------------------------------------- */
 /*  Utility functions                                                        */
@@ -183,7 +186,7 @@ static uint8_t match_name(char *matchstr, uint8_t *filename) {
 int8_t next_match(DIR *dh, char *matchstr, uint8_t type, struct cbmdirent *dent) {
   int8_t res;
   while (1) {
-    res = fat_readdir(dh, dent);
+    res = readdir(dh, dent);
     if (res == 0) {
       /* Skip if the type doesn't match */
       if ((type & TYPE_MASK) &&
@@ -222,7 +225,7 @@ static uint8_t dir_footer(buffer_t *buf) {
   /* Copy the "BLOCKS FREE" message */
   memcpy_P(buf->data, dirfooter, sizeof(dirfooter));
 
-  blocks = fat_freeblocks();
+  blocks = disk_free();
   buf->data[2] = blocks & 0xff;
   buf->data[3] = blocks >> 8;
 
@@ -274,7 +277,7 @@ static void load_directory(uint8_t secondary) {
     
     parse_path((char *) command_buffer+1, (char *) command_buffer, &name);
 
-    if (fat_opendir(&buf->pvt.dir.dh, (char *) command_buffer)) {
+    if (opendir(&buf->pvt.dir.dh, (char *) command_buffer)) {
       free_buffer(buf);
       return;
     }
@@ -321,7 +324,7 @@ static void load_directory(uint8_t secondary) {
       }
     }
   } else {
-    if (fat_opendir(&buf->pvt.dir.dh,"")) {
+    if (opendir(&buf->pvt.dir.dh,"")) {
       free_buffer(buf);
       return;
     }
@@ -340,13 +343,13 @@ static void load_directory(uint8_t secondary) {
   memcpy_P(buf->data, dirheader, sizeof(dirheader));
 
   /* read volume name */
-  if (fat_getlabel((char *) (buf->data+8))) {
+  if (disk_label((char *) (buf->data+8))) {
     free_buffer(buf);
     return;
   }
 
   /* read id */
-  if (fat_getid((char *) (buf->data+HEADER_OFFSET_ID))) {
+  if (disk_id((char *) (buf->data+HEADER_OFFSET_ID))) {
     free_buffer(buf);
     return;
   }
@@ -469,7 +472,7 @@ void file_open(uint8_t secondary) {
   parse_path(cbuf, (char *) command_buffer, &fname);
 
   /* Filename matching */
-  if (fat_opendir(&matchdh, (char *) command_buffer))
+  if (opendir(&matchdh, (char *) command_buffer))
     return;
 
   res = next_match(&matchdh, fname, FLAG_HIDDEN, &dent);
@@ -482,7 +485,7 @@ void file_open(uint8_t secondary) {
     if (cbuf != (char *) command_buffer && res == 0) {
       /* Rewrite existing file: Delete the old one */
       /* This is safe. If there is no buffer available, delete will fail. */
-      if (fat_delete((char *) command_buffer, fname) == 255)
+      if (file_delete((char *) command_buffer, fname) == 255)
 	return;
     } else {
       /* Normal write or non-existing rewrite */
@@ -510,12 +513,12 @@ void file_open(uint8_t secondary) {
   case OPEN_READ:
     /* Modify is the same as read, but allows reading *ed files.        */
     /* FAT doesn't have anything equivalent, so both are mapped to READ */
-    fat_open_read((char *) command_buffer, fname, buf);
+    open_read((char *) command_buffer, fname, buf);
     break;
 
   case OPEN_WRITE:
   case OPEN_APPEND:
-    fat_open_write((char *) command_buffer, fname, buf, (mode == OPEN_APPEND));
+    open_write((char *) command_buffer, fname, buf, (mode == OPEN_APPEND));
     break;
   }
 }

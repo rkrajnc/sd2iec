@@ -35,9 +35,21 @@
 #include "uart.h"
 #include "tff.h"
 #include "fileops.h"
+#include "wrapops.h"
 #include "fatops.h"
 
 FATFS fatfs;
+
+static const PROGMEM fileops_t fatops = {
+  &fat_open_read,
+  &fat_open_write,
+  &fat_delete,
+  &fat_getlabel,
+  &fat_getid,
+  &fat_freeblocks,
+  &fat_opendir,
+  &fat_readdir
+};
 
 /* ------------------------------------------------------------------------- */
 /*  Utility functions                                                        */
@@ -478,6 +490,7 @@ uint16_t fat_freeblocks(void) {
 
 /* Mount the card */
 void init_fatops(void) {
+  fop = &fatops;
   f_mount(0, &fatfs);
 
   /* Dummy operation to force the actual mounting */

@@ -36,6 +36,7 @@
 #include "doscmd.h"
 #include "uart.h"
 #include "fatops.h"
+#include "wrapops.h"
 #include "sdcard.h"
 #include "fastloader.h"
 #include "iec.h"
@@ -322,7 +323,7 @@ void parse_doscommand() {
       if (command_buffer[i] != ':') {
 	set_error(ERROR_SYNTAX_NONAME,0,0);
       } else {
-	i = fat_delete("", (char *)command_buffer+i+1);
+	i = file_delete("", (char *)command_buffer+i+1);
 	if (i != 255)
 	  set_error(ERROR_SCRATCHED,i,0);
       }
@@ -411,7 +412,7 @@ void parse_doscommand() {
     /* Scratch */
     parse_path((char *) command_buffer+1, (char *) command_buffer, &fname);
     
-    if (fat_opendir(&matchdh, (char *) command_buffer))
+    if (opendir(&matchdh, (char *) command_buffer))
       return;
 
     i = 255;
@@ -420,7 +421,7 @@ void parse_doscommand() {
       /* Skip directories */
       if ((dent.typeflags & TYPE_MASK) == TYPE_DIR)
 	continue;
-      i = fat_delete("", dent2str(&dent));
+      i = file_delete("", dent2str(&dent));
       if (i != 255)
 	count += i;
       else
