@@ -35,8 +35,9 @@
 #include "errormsg.h"
 #include "doscmd.h"
 #include "uart.h"
-#include "fatops.h"
 #include "wrapops.h"
+#include "fatops.h"
+#include "m2iops.h"
 #include "sdcard.h"
 #include "fastloader.h"
 #include "iec.h"
@@ -297,9 +298,9 @@ void parse_doscommand() {
 	  name++;
       
       if (i == 'C')
-	fat_chdir(name);
+	chdir(name);
       else
-	fat_mkdir(name);
+	mkdir(name);
 
       break;
 

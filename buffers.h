@@ -64,6 +64,8 @@ typedef struct buffer_s {
 extern dh_t matchdh;      /* Directory handle used in file matching       */
 extern buffer_t buffer[]; /* Simplifies access to the error buffer length */
 
+extern FIL imagehandle;   /* Filehandle for mounted image files */
+
 /* Initializes the buffer structures */
 void init_buffers(void);
 

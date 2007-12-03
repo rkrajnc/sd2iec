@@ -36,6 +36,7 @@
 #include "tff.h"
 #include "fileops.h"
 #include "wrapops.h"
+#include "m2iops.h"
 #include "fatops.h"
 
 FATFS fatfs;
@@ -48,7 +49,9 @@ const PROGMEM fileops_t fatops = {
   &fat_getid,
   &fat_freeblocks,
   &fat_opendir,
-  &fat_readdir
+  &fat_readdir,
+  &fat_mkdir,
+  &fat_chdir
 };
 
 /* ------------------------------------------------------------------------- */
@@ -67,6 +70,7 @@ void parse_error(FRESULT res, uint8_t readflag) {
     break;
     
   case FR_NO_PATH:
+  case FR_NOT_DIRECTORY:
     set_error(ERROR_FILE_NOT_FOUND_39,res,0);
     break;
 
@@ -387,7 +391,33 @@ void fat_chdir(char *dirname) {
       dirname[strlen(dirname)-1] = 0;
   }
   res = f_chdir(dirname);
-  parse_error(res,0);
+  if (res == FR_NOT_DIRECTORY) {
+    /* Changing into a file, could be a mount request */
+    char *ext;
+    char *fname = strrchr(dirname, '/');
+
+    if (fname)
+      *fname++ = 0;
+    else
+      fname = dirname;
+
+    ext = strrchr(fname, '.');
+    
+    if (ext && !strcmp_P(ext, PSTR(".M2I"))) {
+      /* M2I mount request */
+      if (fname != dirname) {
+	res = f_chdir(dirname);
+	if (res != FR_OK) {
+	  parse_error(res,1);
+	  return;
+	}
+      }
+      
+      m2i_mount(fname);
+      return;
+    }
+  }
+  parse_error(res,1);
 }
 
 /* Create a new directory */

@@ -62,6 +62,11 @@ Supported commands:
 
     RD:foo       deletes foo
 
+  CD is also used to mount/unmount image files. Just change into them
+  as if they were a directory and use CD:_ to leave. Please note that
+  image files are detected by file extension only and there is no reliable
+  way to see if a file is a valid image file.
+
 - S:
   Name matching is fully supported, directories are ignored.
 

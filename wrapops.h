@@ -45,6 +45,8 @@ typedef struct {
   uint16_t (*disk_free)(void);
   uint8_t  (*opendir)(dh_t *dh, char *path);
   int8_t   (*readdir)(dh_t *dh, struct cbmdirent *dent);
+  void     (*mkdir)(char *dirname);
+  void     (*chdir)(char *dirname);
 } fileops_t;
 
 /* Pointer to the current fileops struct */
@@ -62,5 +64,7 @@ extern const fileops_t *fop;
 #define disk_free() ((pgmcall(fop->disk_free))())
 #define opendir(dh,dir) ((pgmcall(fop->opendir))(dh,dir))
 #define readdir(dh,dent) ((pgmcall(fop->readdir))(dh,dent))
+#define mkdir(dir) ((pgmcall(fop->mkdir))(dir))
+#define chdir(dir) ((pgmcall(fop->chdir))(dir))
 
 #endif

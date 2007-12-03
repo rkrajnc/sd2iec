@@ -844,7 +844,7 @@ FRESULT f_chdir (
 #endif
 				LD_WORD(&dir[DIR_FstClusLO]);
 			} else
-				return FR_NO_PATH;
+				return FR_NOT_DIRECTORY;
 	}
 
 	return res;

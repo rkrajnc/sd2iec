@@ -33,6 +33,7 @@
 #include "buffers.h"
 
 dh_t matchdh;
+FIL  imagehandle;
 
 /* One additional buffer for channel 15 */
 buffer_t buffer[BUFFER_COUNT+1];
