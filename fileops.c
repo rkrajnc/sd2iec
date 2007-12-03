@@ -519,7 +519,7 @@ void file_open(uint8_t secondary) {
 
   case OPEN_WRITE:
   case OPEN_APPEND:
-    open_write((char *) command_buffer, fname, buf, (mode == OPEN_APPEND));
+    open_write((char *) command_buffer, fname, filetype, buf, (mode == OPEN_APPEND));
     break;
   }
 }

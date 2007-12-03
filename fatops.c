@@ -259,7 +259,7 @@ void fat_open_read(char *path, char *filename, buffer_t *buf) {
 }
 
 /* Open a file for writing */
-void fat_open_write(char *path, char *filename, buffer_t *buf, uint8_t append) {
+void fat_open_write(char *path, char *filename, uint8_t type, buffer_t *buf, uint8_t append) {
   FRESULT res;
 
   filename = build_name(path, filename, buf);
