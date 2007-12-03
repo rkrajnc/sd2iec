@@ -28,9 +28,10 @@
 #define FATOPS_H
 
 #include "buffers.h"
-#include "fileops.h"
+#include "wrapops.h"
 
 void     init_fatops(void);
+void     parse_error(FRESULT res, uint8_t readflag);
 uint8_t  fat_delete(char *path, char *filename);
 void     fat_chdir(char *dirname);
 void     fat_mkdir(char *dirname);
@@ -41,5 +42,7 @@ uint8_t  fat_getid(char *id);
 uint16_t fat_freeblocks(void);
 uint8_t  fat_opendir(dh_t *dh, char *dir);
 int8_t   fat_readdir(dh_t *dh, struct cbmdirent *dent);
+
+extern const fileops_t fatops;
 
 #endif

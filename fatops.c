@@ -40,7 +40,7 @@
 
 FATFS fatfs;
 
-static const PROGMEM fileops_t fatops = {
+const PROGMEM fileops_t fatops = {
   &fat_open_read,
   &fat_open_write,
   &fat_delete,
@@ -56,7 +56,7 @@ static const PROGMEM fileops_t fatops = {
 /* ------------------------------------------------------------------------- */
 
 /* Translate a tff FRESULT into a commodore error message */
-static void parse_error(FRESULT res, uint8_t readflag) {
+void parse_error(FRESULT res, uint8_t readflag) {
   switch (res) {
   case FR_OK:
     set_error(ERROR_OK,0,0);
