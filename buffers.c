@@ -27,11 +27,12 @@
 #include <stdint.h>
 #include <string.h>
 #include "config.h"
+#include "dirent.h"
 #include "errormsg.h"
 #include "tff.h"
 #include "buffers.h"
 
-DIR matchdh;
+dh_t matchdh;
 
 /* One additional buffer for channel 15 */
 buffer_t buffer[BUFFER_COUNT+1];

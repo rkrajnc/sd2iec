@@ -20,26 +20,42 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
    
-   fatops.h: Definitions for the FAT operations
+   dirent.h: Various data structures for directory browsing
 
 */
 
-#ifndef FATOPS_H
-#define FATOPS_H
+#ifndef DIRENT_H
+#define DIRENT_H
 
-#include "buffers.h"
-#include "fileops.h"
+#include "tff.h"
 
-void     init_fatops(void);
-uint8_t  fat_delete(char *path, char *filename);
-void     fat_chdir(char *dirname);
-void     fat_mkdir(char *dirname);
-void     fat_open_read(char *path, char *filename, buffer_t *buf);
-void     fat_open_write(char *path, char *filename, buffer_t *buf, uint8_t append);
-uint8_t  fat_getlabel(char *label);
-uint8_t  fat_getid(char *id);
-uint16_t fat_freeblocks(void);
-uint8_t  fat_opendir(dh_t *dh, char *dir);
-int8_t   fat_readdir(dh_t *dh, struct cbmdirent *dent);
+#define CBM_NAME_LENGTH 16
+
+#define TYPE_LENGTH 3
+#define TYPE_MASK 7
+#define TYPE_DEL 0
+#define TYPE_SEQ 1
+#define TYPE_PRG 2
+#define TYPE_USR 3
+#define TYPE_REL 4
+#define TYPE_CBM 5
+#define TYPE_DIR 6
+
+/* Hidden is an unused bit on CBM */
+#define FLAG_HIDDEN (1<<5)
+#define FLAG_RO     (1<<6)
+#define FLAG_SPLAT  (1<<7)
+
+struct cbmdirent {
+  uint16_t blocksize;               /* file size in blocks      */
+  uint8_t  typeflags;               /* OR of filetype and flags */
+  uint8_t  name[CBM_NAME_LENGTH+1]; /* padded with 0xa0         */
+};
+
+/* Generic directory handle */
+typedef union {
+  DIR fat;
+} dh_t;
 
 #endif
+

@@ -43,8 +43,8 @@ typedef struct {
   uint8_t  (*disk_label)(char *label);
   uint8_t  (*disk_id)(char *id);
   uint16_t (*disk_free)(void);
-  uint8_t  (*opendir)(DIR *dh, char *path);
-  int8_t   (*readdir)(DIR *dh, struct cbmdirent *dent);
+  uint8_t  (*opendir)(dh_t *dh, char *path);
+  int8_t   (*readdir)(dh_t *dh, struct cbmdirent *dent);
 } fileops_t;
 
 /* Pointer to the current fileops struct */

@@ -291,10 +291,10 @@ void fat_open_write(char *path, char *filename, buffer_t *buf, uint8_t append) {
 /*  External interface for the various operations                            */
 /* ------------------------------------------------------------------------- */
 
-uint8_t fat_opendir(DIR *dh, char *dir) {
+uint8_t fat_opendir(dh_t *dh, char *dir) {
   FRESULT res;
 
-  res = f_opendir(dh, dir);
+  res = f_opendir(&dh->fat, dir);
   if (res != FR_OK) {
     parse_error(res,1);
     return 1;
@@ -304,13 +304,13 @@ uint8_t fat_opendir(DIR *dh, char *dir) {
 
 /* readdir wrapper for FAT files                       */
 /* Returns 1 on error, 0 if successful, -1 if finished */
-int8_t fat_readdir(DIR *dh, struct cbmdirent *dent) {
+int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
   FRESULT res;
   FILINFO finfo;
   uint8_t i;
 
   do {
-    res = f_readdir(dh, &finfo);
+    res = f_readdir(&dh->fat, &finfo);
     if (res != FR_OK) {
       if (res == FR_INVALID_OBJECT)
 	set_error(ERROR_DIR_ERROR,0,0);

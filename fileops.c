@@ -28,6 +28,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "config.h"
+#include "dirent.h"
 #include "errormsg.h"
 #include "buffers.h"
 #include "uart.h"
@@ -183,7 +184,7 @@ static uint8_t match_name(char *matchstr, uint8_t *filename) {
 /*  -1: no more matches     */
 /*   0: match found         */
 /*   1: error               */
-int8_t next_match(DIR *dh, char *matchstr, uint8_t type, struct cbmdirent *dent) {
+int8_t next_match(dh_t *dh, char *matchstr, uint8_t type, struct cbmdirent *dent) {
   int8_t res;
   while (1) {
     res = readdir(dh, dent);

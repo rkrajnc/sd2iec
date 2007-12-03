@@ -27,32 +27,10 @@
 #ifndef FILEOPS_H
 #define FILEOPS_H
 
+#include "dirent.h"
 #include "buffers.h"
 
-#define CBM_NAME_LENGTH 16
-
-#define TYPE_LENGTH 3
-#define TYPE_MASK 7
-#define TYPE_DEL 0
-#define TYPE_SEQ 1
-#define TYPE_PRG 2
-#define TYPE_USR 3
-#define TYPE_REL 4
-#define TYPE_CBM 5
-#define TYPE_DIR 6
-
-/* Hidden is an unused bit on CBM */
-#define FLAG_HIDDEN (1<<5)
-#define FLAG_RO     (1<<6)
-#define FLAG_SPLAT  (1<<7)
-
 enum open_modes { OPEN_READ, OPEN_WRITE, OPEN_APPEND, OPEN_MODIFY };
-
-struct cbmdirent {
-  uint16_t blocksize;               /* file size in blocks      */
-  uint8_t  typeflags;               /* OR of filetype and flags */
-  uint8_t  name[CBM_NAME_LENGTH+1]; /* padded with 0xa0         */
-};
 
 uint8_t generic_cleanup(buffer_t *buf);
 
@@ -60,7 +38,7 @@ uint8_t generic_cleanup(buffer_t *buf);
 char *dent2str(struct cbmdirent *dent);
 
 /* Returns the next matching dirent */
-int8_t next_match(DIR *dh, char *matchstr, uint8_t type, struct cbmdirent *dent);
+int8_t next_match(dh_t *dh, char *matchstr, uint8_t type, struct cbmdirent *dent);
 
 /* Parses a filename in command_buffer and opens that file */
 void file_open(uint8_t secondary);

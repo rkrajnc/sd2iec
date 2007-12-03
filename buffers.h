@@ -27,7 +27,7 @@
 #define BUFFERS_H
 
 #include <stdint.h>
-#include "tff.h"
+#include "dirent.h"
 
 typedef struct buffer_s {
   /* The error channel uses the same data structure for convenience reasons, */
@@ -53,7 +53,7 @@ typedef struct buffer_s {
   /* various private data structures */
   union {
     struct {
-      DIR dh;           /* Directory handle */
+      dh_t dh;          /* Directory handle */
       uint8_t filetype; /* File type */
       char *matchstr;   /* Pointer to filename pattern */
     } dir;
@@ -61,7 +61,7 @@ typedef struct buffer_s {
   } pvt;
 } buffer_t;
 
-extern DIR matchdh;       /* Directory handle used in file matching       */
+extern dh_t matchdh;      /* Directory handle used in file matching       */
 extern buffer_t buffer[]; /* Simplifies access to the error buffer length */
 
 /* Initializes the buffer structures */
