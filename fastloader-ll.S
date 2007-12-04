@@ -65,7 +65,7 @@ turbodisk_byte:
 	eor	r24, r18	; Invert it
 
 	;; All bus lines high
-	in	r18, IEC_DDR
+	in	r18, _SFR_IO_ADDR(IEC_DDR)
 	andi	r18, ~(IEC_BIT_ATN | IEC_BIT_DATA | IEC_BIT_CLOCK | IEC_BIT_SRQ)
 	out	_SFR_IO_ADDR(IEC_DDR), r18
 	
@@ -119,7 +119,7 @@ turbodisk_buffer:
 	rjmp	turbodisk_buffer
 
 	;; All bus lines high
-	in	r18, IEC_DDR
+	in	r18, _SFR_IO_ADDR(IEC_DDR)
 	andi	r18, ~(IEC_BIT_ATN | IEC_BIT_DATA | IEC_BIT_CLOCK | IEC_BIT_SRQ)
 	out	_SFR_IO_ADDR(IEC_DDR), r18
 
