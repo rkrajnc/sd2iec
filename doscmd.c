@@ -224,8 +224,49 @@ void parse_path(char *in, char *out, char **name) {
   return;
 }
 
+static uint8_t parse_number(uint8_t *str) {
+  uint8_t res = 0;
 
-void parse_doscommand() {
+  /* Skip leading spaces */
+  while (*str == ' ') str++;
+
+  /* Parse decimal number */
+  while (isdigit(*str)) {
+    res *= 10;
+    res += (*str++) - '0';
+  }
+  
+  return res;
+}
+
+static void parse_xcommand(void) {
+  switch (command_buffer[1]) {
+  case 'J':
+    /* Jiffy enable/disable */
+    switch (command_buffer[2]) {
+    case '+':
+      iecflags.jiffy_enabled = 1;
+      break;
+      
+    case '-':
+      iecflags.jiffy_enabled = 0;
+      break;
+      
+    default:
+      set_error(ERROR_SYNTAX_UNKNOWN,0,0);
+    }
+    break;
+
+  case 'C':
+    /* Calibration */
+    OSCCAL = parse_number(command_buffer+2);
+    break;
+  }
+
+  set_error(ERROR_STATUS,0,0);
+}
+
+void parse_doscommand(void) {
   uint8_t i,count;
   char *fname;
   struct cbmdirent dent;
@@ -441,6 +482,10 @@ void parse_doscommand() {
     _delay_ms(100);
     _delay_ms(100);
     _delay_ms(100);
+    break;
+
+  case 'X':
+    parse_xcommand();
     break;
 
   default:

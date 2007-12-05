@@ -31,6 +31,7 @@
 #include "config.h"
 #include "errormsg.h"
 #include "buffers.h"
+#include "iec.h"
 
 uint8_t current_error;
 uint8_t error_buffer[ERROR_BUFFER_SIZE];
@@ -169,12 +170,23 @@ void set_error(uint8_t errornum, uint8_t track, uint8_t sector) {
   msg = appendnumber(msg,errornum);
   *msg++ = ',';
 
-  msg = appendmsg(msg,messages,errornum);
-  if (errornum == ERROR_DOSVERSION) {
-    /* Append the version string */
-    uint8_t i = 0;
-    while ((*msg++ = pgm_read_byte(versionstr+i++))) ;
-    msg--;
+  if (errornum == ERROR_STATUS) {
+    *msg++ = 'J';
+    if (iecflags.jiffy_enabled)
+      *msg++ = '+';
+    else
+      *msg++ = '-';
+    *msg++ = ':';
+    *msg++ = 'C';
+    msg = appendnumber(msg, OSCCAL);
+  } else {
+    msg = appendmsg(msg,messages,errornum);
+    if (errornum == ERROR_DOSVERSION) {
+      /* Append the version string */
+      uint8_t i = 0;
+      while ((*msg++ = pgm_read_byte(versionstr+i++))) ;
+      msg--;
+    }
   }
   *msg++ = ',';
 

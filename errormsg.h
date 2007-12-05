@@ -39,6 +39,7 @@ void set_error(uint8_t errornum, uint8_t track, uint8_t sector);
 // Commodore DOS error codes
 #define ERROR_OK                  0
 #define ERROR_SCRATCHED           1
+#define ERROR_STATUS              3
 #define ERROR_READ_NOHEADER      20
 #define ERROR_READ_NOSYNC        21
 #define ERROR_READ_NODATA        22
