@@ -46,6 +46,120 @@ delay1us:
 	ret			; 4
 
 
+	;; ====================================================================
+	;;  JiffyDOS
+	;; ====================================================================
+	;; Receives a single byte using the JiffyDOS protocol
+	.global jiffy_receive
+jiffy_receive:
+	;; Disable interrupts
+	cli
+	
+	;; Move pointer to EOF variable into Z
+	movw	r30,r24
+	
+	;; Set clock+data high
+	cbi	_SFR_IO_ADDR(IEC_DDR), IEC_PIN_CLOCK
+	cbi	_SFR_IO_ADDR(IEC_DDR), IEC_PIN_DATA
+
+	;; Wait until clock is high and emulate ATN-Ack
+0:	sbis	_SFR_IO_ADDR(IEC_PIN), IEC_PIN_ATN
+	sbi	_SFR_IO_ADDR(IEC_DDR), IEC_PIN_DATA ; Data low if ATN is low
+	sbis	_SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
+	rjmp	0b
+
+	;; Wait for 13us from clock high -> 104 cycles
+	ldi	r18,32		; 1
+	rcall	delayloop	; 102
+	nop			; 1
+	
+	;; Read bit 5+4
+	in	r0, _SFR_IO_ADDR(IEC_PIN) ; 1
+	
+	;; Move bits to the correct position
+	swap	r0		; 1
+	mov	r24, r0		; 1
+	andi	r24, 0x20	; 1 - mask swapped data bit
+	mov	r25, r0		; 1
+	andi	r25, 0x40	; 1 - mask swapped clock bit
+	lsr	r25		; 1 - shift into position
+	lsr	r25		; 1
+	or	r24, r25	; 1 - merge
+	
+	;; Wait 13us -> 104-9=95 cycles
+	ldi	r18, 29		; 1
+	rcall	delayloop	; 93
+	nop			; 1
+	
+	;; Read bit 7+6
+	in	r0, _SFR_IO_ADDR(IEC_PIN) ; 1
+
+	;; Move to corrent position and merge
+	swap	r0		; 1
+	mov	r25, r0		; 1
+	andi	r25, 0x40	; 1 - mask swapped clock bit
+	or	r24, r25	; 1 - merge
+	mov	r25, r0		; 1
+	andi	r25, 0x20	; 1 - mask swapped data bit
+	lsl	r25		; 1 - shift into position
+	lsl	r25		; 1
+	or	r24, r25	; 1 - merge
+
+	;; Wait 11us -> 88-10=78 cycles
+	ldi	r18, 23		; 1
+	rcall	delayloop	; 75
+	rjmp	1f		; 2
+1:	
+
+	;; Read bit 3+1 [sic]
+	in	r0, _SFR_IO_ADDR(IEC_PIN) ; 1
+	mov	r25, r0		; 1
+	andi	r25, 0x04	; 1 - mask clock bit
+	lsl	r25		; 1 - shift into position
+	or	r24, r25	; 1 - merge
+	mov	r25, r0		; 1
+	andi	r25, 0x02	; 1 - mask data bit
+	or	r24, r25	; 1 - merge
+
+	;; Wait 13us -> 104-8=96 cycles
+	ldi	r18, 29		; 1
+	rcall	delayloop	; 93
+	rjmp	1f		; 2
+1:	
+
+	;; Read Bit 2+0
+	in	r0, _SFR_IO_ADDR(IEC_PIN) ; 1
+	mov	r25, r0		; 1
+	andi	r25, 0x04	; 1 - mask clock bit
+	or	r24, r25	; 1 - merge
+	mov	r25, r0		; 1
+	andi	r25, 0x02	; 1 - mask data bit
+	lsr	r25		; 1 - shift into position
+	or	r24, r25	; 1
+	clr	r25		; 1 - clear high byte of return value
+
+	;; Wait 13us -> 104-9=95 cycles
+	ldi	r18, 29		; 1
+	rcall	delayloop	; 93
+	nop			; 1
+
+	;; Read EOI mark
+	in	r19, _SFR_IO_ADDR(IEC_PIN) ; 1
+
+	;; Wait 6us -> 48-1=47 cycles
+	ldi	r18, 13		; 1
+	rcall	delayloop	; 45
+
+	;; Data low
+	sbi	_SFR_IO_ADDR(IEC_DDR), IEC_PIN_DATA ; 1
+
+	;; Post-process data and store last bus state
+	ldi	r18, 0xff
+	eor	r24, r18	; invert received data
+	st	Z, r19		; store last bus state
+	sei			; enable interrupts
+	ret
+	
 	
 	;; ====================================================================
 	;;  Turbodisk

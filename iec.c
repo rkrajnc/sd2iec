@@ -46,6 +46,7 @@
 #include "fileops.h"
 #include "sdcard.h"
 #include "iec-ll.h"
+#include "fastloader-ll.h"
 #include "iec.h"
 
 /* ------------------------------------------------------------------------- */
@@ -186,14 +187,13 @@ static int16_t _iec_getc(void) {
 
 	/* If there is a delay before the last bit, the controller uses JiffyDOS */
 	if (!iecflags.jiffy_active && has_timed_out()) {
-	  if (((val>>1) & 0x0f) == device_address) {
+	  if (val < 0x60 && ((val>>1) & 0x1f) == device_address) {
 	    /* If it's for us, notify controller that we support Jiffy too */
 	    set_data(0);
 	    _delay_us(101); // nlq says 405us, but the code shows only 101
 	    set_data(1);
 	    iecflags.jiffy_active = 1;
 	  }
-	  break;
 	}
       } while (!(tmp & IEC_BIT_CLOCK));
     } else {
@@ -317,7 +317,19 @@ static uint8_t iec_listen_handler(const uint8_t cmd) {
   }
 
   while (1) {
-    c = iec_getc();
+    if (iecflags.jiffy_active) {
+      uint8_t flags;
+      set_atnack(1);
+      _delay_us(50); /* Slow down or we'll see garbage from the C64 */
+                     /* The time was guessed from bus traces.       */
+      c = jiffy_receive(&flags);
+      if (!(flags & IEC_BIT_ATN))
+	/* ATN was active at the end of the transfer */
+	c = iec_getc();
+      else
+	iecflags.eoi_recvd = !!(flags & IEC_BIT_CLOCK);
+    } else
+      c = iec_getc();
     if (c < 0) return 1;
 
     if (data_state == DATA_COMMAND) {
@@ -451,6 +463,7 @@ void iec_mainloop(void) {
       device_state = DEVICE_IDLE;
       bus_state    = BUS_ATNACTIVE;
       iecflags.eoi_recvd    = 0;
+      iecflags.jiffy_active = 0;
 
       /* Slight protocol violation:                        */
       /*   Wait until clock is low or 100us have passed    */

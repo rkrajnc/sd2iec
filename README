@@ -76,6 +76,19 @@ Supported commands:
 
 - UI/UJ
 
+- X: Extended commands. If you use JiffyDOS, you can send them by using
+  @"X..." - without quotes you'll just receive an error.
+
+  - XJ+/XJ-  Enable or disable JiffyDOS protocol support. Default state
+             is disabled for now.
+
+  - XCnum    Set oscillator calibration value to num (must be between
+             0 and 255). Default is whatever your chip defaults to.
+
+  - X        X without any following characters reports the current state
+             of all extended parameters via the error channel, similiar
+             to DolphinDOS. Example result: "03,J-:C152,00,00"
+
 Software fastloaders:
 =====================
 There is currently support for one software fastloader in the code. It is
@@ -85,6 +98,14 @@ detected by the CRC of its 493 byte long floppy code and the M-E address
 requirements are extremely tight and cannot be met with the internal RC
 oscillator of the AVR even if calibrated. You really need an external
 8MHz crystal or the data read by the C64 will be gibberish.
+
+JiffyDOS:
+=========
+The JiffyDOS protocol has very relaxed timing constraints compared to
+Turbodisk, but still not as relaxed as the standard Commodore IEC protocol.
+Jiffy seems to tolerate slightly mis-tuned RC oscillators, but you still
+shouldn't expect it to work without oscillator calibration. If the
+frequency error is too big you WILL get wrong data.
 
 Other important notes:
 ======================
