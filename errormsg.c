@@ -109,7 +109,7 @@ static const prog_uint8_t messages[] = {
 /* Version number string, will be added to message 73 */
 static const prog_uint8_t versionstr[] = VERSION;
 
-static void appendmsg(const prog_uint8_t *table, const uint8_t entry) {
+static char *appendmsg(char *msg, const prog_uint8_t *table, const uint8_t entry) {
   uint8_t i,tmp;
  
   i = 0;
@@ -121,7 +121,7 @@ static void appendmsg(const prog_uint8_t *table, const uint8_t entry) {
   
   if (tmp == EC(127)) {
     /* Unknown error */
-    error_buffer[buffer[BUFFER_COUNT].length++] = '?';
+    *msg++ = '?';
   } else {
     /* Skip over remaining error numbers */
     while (pgm_read_byte(table+i) >= EC(0)) i++;
@@ -132,52 +132,57 @@ static void appendmsg(const prog_uint8_t *table, const uint8_t entry) {
 
       if (tmp < 32) {
 	/* Abbreviation found, handle by recursion */
-	appendmsg(abbrevs,tmp);
+	msg = appendmsg(msg,abbrevs,tmp);
 	continue;
       }
 
       if (tmp < EC(0))
 	/* Don't copy error numbers */
-	error_buffer[buffer[BUFFER_COUNT].length++] = tmp;
+	*msg++ = tmp;
     } while (tmp < EC(0));
   }
+
+  return msg;
 }
 
-static void appendnumber(uint8_t value) {
+static char *appendnumber(char *msg, uint8_t value) {
   if (value >= 100) {
-    error_buffer[buffer[BUFFER_COUNT].length++] = '0' + value/100;
+    *msg++ = '0' + value/100;
     value %= 100;
   }
 
-  error_buffer[buffer[BUFFER_COUNT].length++] = '0' + value/10;
-  error_buffer[buffer[BUFFER_COUNT].length++] = '0' + value%10;
+  *msg++ = '0' + value/10;
+  *msg++ = '0' + value%10;
+
+  return msg;
 }
 
 
 void set_error(uint8_t errornum, uint8_t track, uint8_t sector) {
+  char *msg = (char *) error_buffer;
+
   current_error = errornum;
   buffer[BUFFER_COUNT].length   = 0;
   buffer[BUFFER_COUNT].position = 0;
   memset(error_buffer,0,sizeof(error_buffer));
 
-  appendnumber(errornum);
-  error_buffer[buffer[BUFFER_COUNT].length++] = ',';
+  msg = appendnumber(msg,errornum);
+  *msg++ = ',';
 
-  appendmsg(messages,errornum);
+  msg = appendmsg(msg,messages,errornum);
   if (errornum == ERROR_DOSVERSION) {
     /* Append the version string */
     uint8_t i = 0;
-    while ((error_buffer[buffer[BUFFER_COUNT].length++] = 
-	    pgm_read_byte(versionstr+i++))) ;
-    buffer[BUFFER_COUNT].length--;
+    while ((*msg++ = pgm_read_byte(versionstr+i++))) ;
+    msg--;
   }
-  error_buffer[buffer[BUFFER_COUNT].length++] = ',';
+  *msg++ = ',';
 
-  appendnumber(track);
-  error_buffer[buffer[BUFFER_COUNT].length++] = ',';
+  msg = appendnumber(msg,track);
+  *msg++ = ',';
  
-  appendnumber(sector);
-  error_buffer[buffer[BUFFER_COUNT].length] = 13;
+  msg = appendnumber(msg,sector);
+  *msg = 13;
 
   if (errornum >= 20 && errornum != ERROR_DOSVERSION) {
     // FIXME: Compare to E648
@@ -187,6 +192,7 @@ void set_error(uint8_t errornum, uint8_t track, uint8_t sector) {
     error_blink_active = 0;
     DIRTY_LED_OFF();
   }
+  buffer[BUFFER_COUNT].length = msg - (char *)error_buffer;
 }
 
 #if 0
