@@ -212,6 +212,7 @@ static int16_t _iec_getc(void) {
 
   _delay_us(5); // Test
   set_data(0);                                         // EA28
+  _delay_us(50);  /* Slow down a little bit, may or may not fix some problems */
   return val;
 }
 
