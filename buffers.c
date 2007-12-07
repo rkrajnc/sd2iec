@@ -90,7 +90,7 @@ uint8_t free_all_buffers(uint8_t cleanup) {
 
   for (i=0;i<BUFFER_COUNT;i++)
     if (buffer[i].allocated) {
-      if (buffer[i].cleanup)
+      if (cleanup && buffer[i].cleanup)
 	res = res || buffer[i].cleanup(&buffer[i]);
       free_buffer(&buffer[i]);
     }
