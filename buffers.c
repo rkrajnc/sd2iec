@@ -32,8 +32,9 @@
 #include "tff.h"
 #include "buffers.h"
 
-dh_t matchdh;
-FIL  imagehandle;
+dh_t    matchdh;
+FIL     imagehandle;
+uint8_t entrybuf[33];
 
 /* One additional buffer for channel 15 */
 buffer_t buffer[BUFFER_COUNT+1];
