@@ -107,6 +107,15 @@ Jiffy seems to tolerate slightly mis-tuned RC oscillators, but you still
 shouldn't expect it to work without oscillator calibration. If the
 frequency error is too big you WILL get wrong data.
 
+M2I files:
+==========
+M2I files are fully supported. sd2iec supports SEQ and USR files in this
+format in addition to PRG and DEL which were already implemented in MMC2IEC.
+For compatibility reasons the file type is not checked when opening files.
+Inside an M2I file the files are always shown as 0 (DEL) or 1 blocks
+because calling stat for every file was slowing down the directory listing
+too much.
+
 Other important notes:
 ======================
 - File overwrite (@foo) is implemented by deleting the file first.

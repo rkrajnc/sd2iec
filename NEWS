@@ -1,3 +1,9 @@
+2007-xx-xx - release 0.4
+	- Extended DOS commands:
+	  - Enable/Disable JiffyDOS
+	  - Set oscillator calibration
+	- Full support for M2I images
+
 2007-11-29 - release 0.3
 	- disable interrupts during iec_getc
 	- add full CRC checking in SD code with retries on errors
