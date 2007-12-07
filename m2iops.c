@@ -43,6 +43,10 @@
 #define M2I_FATNAME_OFFSET 2
 #define M2I_FATNAME_LEN    12
 
+/* ------------------------------------------------------------------------- */
+/*  Utility functions                                                        */
+/* ------------------------------------------------------------------------- */
+
 /* Changes the CBM name padding in entrybuf */
 static void name_repad(uint8_t oldchar, uint8_t newchar) {
   uint8_t i = CBM_NAME_LENGTH-1;
@@ -113,6 +117,47 @@ static uint8_t load_entry(uint16_t offset) {
 
   return 0;
 }
+
+/* Locate the file entry name
+ * Returns the offset if successful
+ *         0 if not found
+ *         1 on errors
+ */
+static uint16_t find_entry(char *name) {
+  uint16_t pos = M2I_ENTRY_OFFSET;
+  uint8_t i;
+  uint8_t *srcname, *dstname;
+
+  while (1) {
+    i = load_entry(pos);
+    pos += M2I_ENTRY_LEN;
+
+    if (i) {
+      if (i == 1)
+	return 0;
+      else
+	return 1;
+    }
+
+    /* Skip deleted entries */
+    if (entrybuf[0] == '-')
+      continue;
+
+    name_repad(' ',0);
+    srcname = (uint8_t *)name;
+    dstname = entrybuf + M2I_CBMNAME_OFFSET;
+    dstname[CBM_NAME_LENGTH] = 0;
+
+    if (strcmp((char *)srcname, (char *)dstname))
+      continue;
+
+    return pos - M2I_ENTRY_LEN;
+  }
+}
+
+/* ------------------------------------------------------------------------- */
+/*  fileops-API                                                              */
+/* ------------------------------------------------------------------------- */
 
 static uint8_t m2i_opendir(dh_t *dh, char *path) {
   dh->m2i = M2I_ENTRY_OFFSET;
@@ -215,7 +260,29 @@ static void m2i_open_write(char *path, char *name, uint8_t type, buffer_t *buf, 
 }
 
 static uint8_t m2i_delete(char *path, char *name) {
-  return 0;
+  uint16_t offset;
+  FRESULT res;
+  UINT byteswritten;
+
+  offset = find_entry(name);
+  if (offset == 1)
+    return 255;
+
+  if (offset == 0)
+    return 0;
+
+  /* Ignore the result, we'll have to delete the entry anyway */
+  fat_delete("", (char *)entrybuf+M2I_FATNAME_OFFSET);
+
+  res = f_lseek(&imagehandle, offset);
+  entrybuf[0] = '-';
+  res = f_write(&imagehandle, entrybuf, 1, &byteswritten);
+  if (res != FR_OK || byteswritten != 1)
+    return 0;
+  else {
+    f_sync(&imagehandle);
+    return 1;
+  }
 }
 
 static void m2i_chdir(char *dirname) {
