@@ -155,6 +155,50 @@ static uint16_t find_entry(char *name) {
   }
 }
 
+/* Returns the first empty file entry */
+static uint16_t find_empty_entry(void) {
+  uint16_t pos = M2I_ENTRY_OFFSET;
+  uint8_t i;
+
+  while (1) {
+    i = load_entry(pos);
+
+    if (i) {
+      if (i == 255)
+	return 1;
+      else
+	return pos;
+    }
+
+    if (entrybuf[0] == '-')
+      return pos;
+
+    pos += M2I_ENTRY_LEN;
+  }
+}
+
+/* Common code to open an existing file */
+/* Used for read and append.            */
+static void open_existing(char *name, uint8_t type, buffer_t *buf, uint8_t appendflag) {
+  uint16_t offset;
+
+  offset = find_entry(name);
+  if (offset < M2I_ENTRY_OFFSET) {
+    set_error(ERROR_FILE_NOT_FOUND,0,0);
+    return;
+  }
+
+  if (parsetype()) {
+    set_error(ERROR_FILE_NOT_FOUND,0,0);
+    return;
+  }
+
+  if (appendflag)
+    fat_open_write("", (char *)entrybuf+M2I_FATNAME_OFFSET, type, buf, 1);
+  else
+    fat_open_read("", (char *)entrybuf+M2I_FATNAME_OFFSET, buf);
+}
+
 /* ------------------------------------------------------------------------- */
 /*  fileops-API                                                              */
 /* ------------------------------------------------------------------------- */
@@ -252,11 +296,142 @@ static void m2i_umount(void) {
 }
 
 static void m2i_open_read(char *path, char *name, buffer_t *buf) {
-  return;
+  /* The type isn't checked anyway */
+  open_existing(name, TYPE_PRG, buf, 0);
 }
 
 static void m2i_open_write(char *path, char *name, uint8_t type, buffer_t *buf, uint8_t append) {
-  return;
+  uint16_t offset;
+  uint8_t *str;
+  char *nameptr;
+  uint8_t i;
+  FRESULT res;
+  UINT byteswritten;
+
+  if (append) {
+    open_existing(name, type, buf, 1);
+  } else {
+    // FIXME: Sind das alle zu verbietenden Zeichen?
+    nameptr = name;
+    while (*nameptr) {
+      if (*nameptr == '=' || *nameptr == '"' ||
+	  *nameptr == '*' || *nameptr == '?') {
+	set_error(ERROR_SYNTAX_JOKER,0,0);
+	return;
+      }
+      nameptr++;
+    }
+
+    /* See if the file already exists */
+    offset = find_entry(name);
+    if (offset == 1)
+      return;
+    
+    if (offset != 0) {
+      set_error(ERROR_FILE_EXISTS,0,0);
+      return;
+    }
+    
+    /* Find an empty entry */
+    offset = find_empty_entry();
+    if (offset < M2I_ENTRY_OFFSET)
+      return;
+    
+    memset(entrybuf, ' ', sizeof(entrybuf));
+    str = entrybuf;
+    
+    switch (type & TYPE_MASK) {
+    case TYPE_DEL:
+      *str++ = 'D';
+      break;
+      
+    case TYPE_SEQ:
+      *str++ = 'S';
+      break;
+      
+    case TYPE_PRG:
+      *str++ = 'P';
+      break;
+      
+    case TYPE_USR:
+      *str++ = 'U';
+      break;
+      
+    default:
+      /* Unknown type - play it safe, don't create a file */
+      return;
+    }
+    
+    *str++ = ':';
+    
+    /* Generate a FAT name */
+    for (i=0;i<8;i++) {
+      *str++ = '0';
+    }
+    *str = 0;
+    
+    do {
+      FILINFO finfo;
+
+      /* See if it's already there */
+      res = f_stat((char *)entrybuf+M2I_FATNAME_OFFSET, &finfo);
+      if (res == FR_OK) {
+	str = entrybuf+M2I_FATNAME_OFFSET+7;
+	/* Increment name */
+	while (1) {
+	  if (++(*str) > '9') {
+	    *str-- = '0';
+	    continue;
+	  }
+	  break;
+	}
+      }
+    } while (res == FR_OK);
+    
+    if (res != FR_NO_FILE)
+      return;
+
+    /* Copy the CBM file name */
+    nameptr = name;
+    str = entrybuf+M2I_CBMNAME_OFFSET;
+    while (*nameptr)
+      *str++ = *nameptr++;
+
+    /* Overwrite the original name */
+    strcpy(name, (char *) entrybuf+M2I_FATNAME_OFFSET);
+
+    /* Finish creating the M2I entry */
+    entrybuf[M2I_FATNAME_OFFSET+12] = ':';
+    entrybuf[M2I_CBMNAME_OFFSET+CBM_NAME_LENGTH] = 13;
+    entrybuf[M2I_CBMNAME_OFFSET+CBM_NAME_LENGTH+1] = 10;
+
+    /* Write it */
+    res = f_lseek(&imagehandle, offset);
+    if (res != FR_OK) {
+      parse_error(res,0);
+      return;
+    }
+
+    res = f_write(&imagehandle, entrybuf, M2I_ENTRY_LEN, &byteswritten);
+    if (res != FR_OK || byteswritten != M2I_ENTRY_LEN) {
+      parse_error(res,0);
+      return;
+    }
+
+    f_sync(&imagehandle);
+
+    /* Write the actual file */
+    fat_open_write("", name, type, buf, append);
+
+    /* Abort on error */
+    if (current_error) {
+      /* No error checking here. Either it works or everything has failed. */
+      f_lseek(&imagehandle, offset);
+      entrybuf[0] = '-';
+      f_write(&imagehandle, entrybuf, 1, &byteswritten);
+      f_sync(&imagehandle);
+    }
+  }
 }
 
 static uint8_t m2i_delete(char *path, char *name) {
