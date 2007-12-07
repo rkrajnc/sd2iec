@@ -55,6 +55,7 @@ struct cbmdirent {
 /* Generic directory handle */
 typedef union {
   DIR fat;
+  uint16_t m2i;
 } dh_t;
 
 #endif
