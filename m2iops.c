@@ -89,6 +89,7 @@ static uint8_t m2i_delete(char *path, char *name) {
 static void m2i_chdir(char *dirname) {
   if (!strcmp_P(dirname, PSTR("_"))) {
     /* Unmount request */
+    free_all_buffers(1);
     m2i_umount();
   }
   return;

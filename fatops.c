@@ -413,6 +413,7 @@ void fat_chdir(char *dirname) {
 	}
       }
       
+      free_all_buffers(1);
       m2i_mount(fname);
       return;
     }
