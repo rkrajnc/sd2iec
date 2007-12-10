@@ -401,6 +401,7 @@ static void m2i_open_write(char *path, char *name, uint8_t type, buffer_t *buf, 
     strcpy(name, (char *) entrybuf+M2I_FATNAME_OFFSET);
 
     /* Finish creating the M2I entry */
+    entrybuf[M2I_FATNAME_OFFSET+8]  = ' ';
     entrybuf[M2I_FATNAME_OFFSET+12] = ':';
     entrybuf[M2I_CBMNAME_OFFSET+CBM_NAME_LENGTH] = 13;
     entrybuf[M2I_CBMNAME_OFFSET+CBM_NAME_LENGTH+1] = 10;
