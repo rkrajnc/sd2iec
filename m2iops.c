@@ -210,7 +210,6 @@ static uint8_t m2i_opendir(dh_t *dh, char *path) {
 
 static int8_t m2i_readdir(dh_t *dh, struct cbmdirent *dent) {
   uint8_t i;
-  uint8_t *str;
 
   while (1) {
     i = load_entry(dh->m2i);

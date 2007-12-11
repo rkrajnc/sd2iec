@@ -116,11 +116,11 @@ static void addentry(struct cbmdirent *dent, buffer_t *buf) {
   
   /* Filler before file name */
   if (dent->blocksize < 1000)
-    *data++;
+    data++;
   if (dent->blocksize < 100)
-    *data++;
+    data++;
   if (dent->blocksize < 10)
-    *data++;
+    data++;
   *data++ = '"';
 
   /* copy and adjust the filename - C783 */
@@ -265,7 +265,6 @@ static uint8_t dir_refill(buffer_t *buf) {
 /* Prepare for directory reading and create the header */
 static void load_directory(uint8_t secondary) {
   buffer_t *buf;
-  uint8_t i;
 
   buf = alloc_buffer();
   if (!buf)
@@ -368,7 +367,6 @@ static void load_directory(uint8_t secondary) {
 /* Open something */
 void file_open(uint8_t secondary) {
   buffer_t *buf;
-  uint8_t i;
 
   /* Assume everything will go well unless proven otherwise */
   set_error(ERROR_OK,0,0);

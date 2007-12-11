@@ -44,8 +44,6 @@
 
 static
 FATFS *FatFs;			/* Pointer to the file system objects (logical drive) */
-static
-WORD fsid;				/* File system mount ID */
 
 CLUST current_dir;
 
@@ -825,7 +823,6 @@ FRESULT f_chdir (
 	BYTE *dir;
 	DIR dirobj;
 	char fn[8+3+1];
-	FATFS *fs = FatFs;
 
 
 	res = auto_mount(&path, 0);
@@ -1267,7 +1264,6 @@ FRESULT f_opendir (
 	BYTE *dir;
 	char fn[8+3+1];
 	FRESULT res;
-	FATFS *fs = FatFs;
 
 
 	res = auto_mount(&path, 0);
