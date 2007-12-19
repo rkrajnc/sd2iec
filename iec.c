@@ -258,6 +258,7 @@ static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
   }
 
   set_clock(0);                                        // E94B
+  _delay_us(60); // Yet another "looked at the bus trace and guessed until it worked" delay
   do {
     if (check_atn()) return -1;
   } while (!(iec_pin() & IEC_BIT_DATA));
