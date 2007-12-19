@@ -1,3 +1,9 @@
+2007-12-19 - release 0.4.1
+	- Bugfix: Creating a new file within an M2I image wrote
+                  a terminating zero byte into the M2I directory entry
+	- Bugfix: Another guesstimated delay in iec_putc
+	- AVR Studio project file updated
+
 2007-12-07 - release 0.4
 	- Extended DOS commands:
 	  - Enable/Disable JiffyDOS
