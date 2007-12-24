@@ -47,6 +47,8 @@ int8_t   fat_readdir(dh_t *dh, struct cbmdirent *dent);
 extern const fileops_t fatops;
 
 /* Generic helpers */
-void image_chdir(char *dirname);
+void    image_chdir(char *dirname);
+uint8_t image_read(DWORD offset, void *buffer, uint16_t bytes);
+uint8_t image_write(DWORD offset, void *buffer, uint16_t bytes);
 
 #endif

@@ -555,3 +555,61 @@ void image_chdir(char *dirname) {
   }
   return;
 }
+
+/* Seek to a specified offset in the image file and read data */
+/* Returns 0 on success                                       */
+/*         1 on partial read                                  */
+/*         2 on failure                                       */
+uint8_t image_read(DWORD offset, void *buffer, uint16_t bytes) {
+  FRESULT res;
+  UINT bytesread;
+
+  if (offset != -1) {
+    res = f_lseek(&imagehandle, offset);
+    if (res != FR_OK) {
+      parse_error(res,1);
+      return 2;
+    }
+  }
+
+  res = f_read(&imagehandle, buffer, bytes, &bytesread);
+  if (res != FR_OK) {
+    parse_error(res,1);
+    return 2;
+  }
+
+  if (bytesread != bytes)
+    return 1;
+
+  return 0;
+}
+
+/* Seek to a specified offset in the image file and write data */
+/* Returns 0 on success                                        */
+/*         1 on partial write                                  */
+/*         2 on failure                                        */
+uint8_t image_write(DWORD offset, void *buffer, uint16_t bytes) {
+  FRESULT res;
+  UINT byteswritten;
+
+  if (offset != -1) {
+    res = f_lseek(&imagehandle, offset);
+    if (res != FR_OK) {
+      parse_error(res,0);
+      return 2;
+    }
+  }
+
+  res = f_write(&imagehandle, buffer, bytes, &byteswritten);
+  if (res != FR_OK) {
+    parse_error(res,1);
+    return 2;
+  }
+
+  if (byteswritten != bytes)
+    return 1;
+
+  f_sync(&imagehandle);
+
+  return 0;
+}

@@ -90,23 +90,14 @@ static uint8_t parsetype(void) {
  *       255 on errors
  */
 static uint8_t load_entry(uint16_t offset) {
-  UINT bytesread;
-  FRESULT res;
   uint8_t i;
 
-  res = f_lseek(&imagehandle, offset);
-  if (res != FR_OK) {
-    parse_error(res,1);
-    return 255;
-  }
+  i = image_read(offset, entrybuf, M2I_ENTRY_LEN);
 
-  res = f_read(&imagehandle, entrybuf, M2I_ENTRY_LEN, &bytesread);
-  if (res != FR_OK) {
-    parse_error(res,1);
+  if (i > 1)
     return 255;
-  }
-  
-  if (bytesread != M2I_ENTRY_LEN)
+
+  if (i == 1)
     /* Incomplete entry read, assuming end of file */
     return 1;
 
@@ -268,21 +259,7 @@ static int8_t m2i_readdir(dh_t *dh, struct cbmdirent *dent) {
 }
 
 static uint8_t m2i_getlabel(char *label) {
-  FRESULT res;
-  UINT bytesread;
-
-  res = f_lseek(&imagehandle, 0);
-  if (res != FR_OK) {
-    parse_error(res,1);
-    return 1;
-  }
-
-  res = f_read(&imagehandle, label, 16, &bytesread);
-  if (res != FR_OK || bytesread != 16) {
-    parse_error(res,1);
-    return 1;
-  }
-  return 0;
+  return image_read(0, label, 16);
 }
 
 static void m2i_open_read(char *path, char *name, buffer_t *buf) {
@@ -296,7 +273,6 @@ static void m2i_open_write(char *path, char *name, uint8_t type, buffer_t *buf, 
   char *nameptr;
   uint8_t i;
   FRESULT res;
-  UINT byteswritten;
 
   if (append) {
     open_existing(name, type, buf, 1);
@@ -397,19 +373,8 @@ static void m2i_open_write(char *path, char *name, uint8_t type, buffer_t *buf, 
     entrybuf[M2I_CBMNAME_OFFSET+CBM_NAME_LENGTH+1] = 10;
 
     /* Write it */
-    res = f_lseek(&imagehandle, offset);
-    if (res != FR_OK) {
-      parse_error(res,0);
+    if (image_write(offset, entrybuf, M2I_ENTRY_LEN))
       return;
-    }
-
-    res = f_write(&imagehandle, entrybuf, M2I_ENTRY_LEN, &byteswritten);
-    if (res != FR_OK || byteswritten != M2I_ENTRY_LEN) {
-      parse_error(res,0);
-      return;
-    }
-
-    f_sync(&imagehandle);
 
     /* Write the actual file */
     fat_open_write("", name, type, buf, append);
@@ -417,18 +382,14 @@ static void m2i_open_write(char *path, char *name, uint8_t type, buffer_t *buf, 
     /* Abort on error */
     if (current_error) {
       /* No error checking here. Either it works or everything has failed. */
-      f_lseek(&imagehandle, offset);
       entrybuf[0] = '-';
-      f_write(&imagehandle, entrybuf, 1, &byteswritten);
-      f_sync(&imagehandle);
+      image_write(offset, entrybuf, 1);
     }
   }
 }
 
 static uint8_t m2i_delete(char *path, char *name) {
   uint16_t offset;
-  FRESULT res;
-  UINT byteswritten;
 
   offset = find_entry(name);
   if (offset == 1)
@@ -440,15 +401,11 @@ static uint8_t m2i_delete(char *path, char *name) {
   /* Ignore the result, we'll have to delete the entry anyway */
   fat_delete("", (char *)entrybuf+M2I_FATNAME_OFFSET);
 
-  res = f_lseek(&imagehandle, offset);
   entrybuf[0] = '-';
-  res = f_write(&imagehandle, entrybuf, 1, &byteswritten);
-  if (res != FR_OK || byteswritten != 1)
+  if (image_write(offset, entrybuf, 1))
     return 0;
-  else {
-    f_sync(&imagehandle);
+  else
     return 1;
-  }
 }
 
 const PROGMEM fileops_t m2iops = {
