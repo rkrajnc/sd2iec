@@ -37,9 +37,16 @@
 #include "fatops.h"
 #include "d64ops.h"
 
-#define DIRECTORY_TRACK 18
-#define LABEL_OFFSET    0x90
-#define ID_OFFSET       0xa2
+#define DIR_TRACK        18
+#define LABEL_OFFSET     0x90
+#define ID_OFFSET        0xa2
+#define DIR_START_SECTOR 1
+#define OFS_FILE_TYPE    2
+#define OFS_TRACK        3
+#define OFS_SECTOR       4
+#define OFS_FILE_NAME    5
+#define OFS_SIZE_LOW     0x1e
+#define OFS_SIZE_HI      0x1f
 
 /* ------------------------------------------------------------------------- */
 /*  Utility functions                                                        */
@@ -73,15 +80,49 @@ static void strnsubst(uint8_t *buffer, uint8_t len, uint8_t oldchar, uint8_t new
 /* ------------------------------------------------------------------------- */
 
 static uint8_t d64_opendir(dh_t *dh, char *path) {
+  dh->d64.track  = DIR_TRACK;
+  dh->d64.sector = DIR_START_SECTOR;
+  dh->d64.entry  = 0;
   return 0;
 }
 
 static int8_t d64_readdir(dh_t *dh, struct cbmdirent *dent) {
-  return -1;
+  do {
+    /* End of directory entries in this sector? */
+    if (dh->d64.entry == 8) {
+      /* Read link pointer */
+      if (image_read(sector_offset(dh->d64.track, dh->d64.sector), entrybuf, 2))
+	return 1;
+      
+      /* Final directory sector? */
+      if (entrybuf[0] == 0)
+	return -1;
+
+      dh->d64.track  = entrybuf[0];
+      dh->d64.sector = entrybuf[1];
+      dh->d64.entry   = 0;
+    }
+
+    if (image_read(sector_offset(dh->d64.track, dh->d64.sector)+
+		   dh->d64.entry*32, entrybuf, 32))
+      return 1;
+
+    dh->d64.entry++;
+
+    if (entrybuf[OFS_FILE_TYPE] != 0)
+      break;
+  } while (1);
+
+  dent->typeflags = entrybuf[OFS_FILE_TYPE] ^ FLAG_SPLAT;
+  dent->blocksize = entrybuf[OFS_SIZE_LOW] + 256*entrybuf[OFS_SIZE_HI];
+  memcpy(dent->name, entrybuf+OFS_FILE_NAME, CBM_NAME_LENGTH);
+  dent->name[16] = 0;
+
+  return 0;
 }
 
 static uint8_t d64_getlabel(char *label) {
-  if (image_read(sector_offset(DIRECTORY_TRACK,0) + LABEL_OFFSET, label, 16))
+  if (image_read(sector_offset(DIR_TRACK,0) + LABEL_OFFSET, label, 16))
     return 1;
   
   strnsubst((uint8_t *)label, 16, 0xa0, 0x20);
@@ -89,7 +130,7 @@ static uint8_t d64_getlabel(char *label) {
 }
 
 static uint8_t d64_getid(char *id) {
-  if (image_read(sector_offset(DIRECTORY_TRACK,0) + ID_OFFSET, id, 5))
+  if (image_read(sector_offset(DIR_TRACK,0) + ID_OFFSET, id, 5))
     return 1;
 
   strnsubst((uint8_t *)id, 5, 0xa0, 0x20);

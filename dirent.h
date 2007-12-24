@@ -52,10 +52,18 @@ struct cbmdirent {
   uint8_t  name[CBM_NAME_LENGTH+1]; /* padded with 0xa0         */
 };
 
+/* D64 directory handle */
+struct d64dh {
+  uint8_t track;
+  uint8_t sector;
+  uint8_t entry;
+};
+
 /* Generic directory handle */
 typedef union {
   DIR fat;
   uint16_t m2i;
+  struct d64dh d64;
 } dh_t;
 
 #endif
