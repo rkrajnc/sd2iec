@@ -138,7 +138,19 @@ static uint8_t d64_getid(char *id) {
 }
 
 static uint16_t d64_freeblocks(void) {
-  return 0;
+  uint16_t blocks = 0;
+  uint8_t i;
+
+  for (i=1;i<36;i++) {
+    /* Skip directory track */
+    if (i == 18)
+      continue;
+    if (image_read(sector_offset(DIR_TRACK,0) + 4*i, entrybuf, 1))
+      return 0;
+    blocks += entrybuf[0];
+  }
+  
+  return blocks;
 }
 
 const PROGMEM fileops_t d64ops = {
