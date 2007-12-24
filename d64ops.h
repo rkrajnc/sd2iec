@@ -20,15 +20,15 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
    
-   m2iops.h: Definitions for the M2I operations
+   d6ops.h: Definitions for the D64 operations
 
 */
 
-#ifndef M2IOPS_H
-#define M2IOPS_H
+#ifndef D64OPS_H
+#define D64OPS_H
 
 #include "wrapops.h"
 
-extern const fileops_t m2iops;
+extern const fileops_t d64ops;
 
 #endif

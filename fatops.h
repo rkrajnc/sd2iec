@@ -30,6 +30,7 @@
 #include "buffers.h"
 #include "wrapops.h"
 
+/* API */
 void     init_fatops(void);
 void     parse_error(FRESULT res, uint8_t readflag);
 uint8_t  fat_delete(char *path, char *filename);
@@ -44,5 +45,8 @@ uint8_t  fat_opendir(dh_t *dh, char *dir);
 int8_t   fat_readdir(dh_t *dh, struct cbmdirent *dent);
 
 extern const fileops_t fatops;
+
+/* Generic helpers */
+void image_chdir(char *dirname);
 
 #endif

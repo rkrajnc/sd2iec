@@ -285,15 +285,6 @@ static uint8_t m2i_getlabel(char *label) {
   return 0;
 }
 
-static void m2i_umount(void) {
-  FRESULT res;
-
-  fop = &fatops;
-  res = f_close(&imagehandle);
-  if (res != FR_OK)
-    parse_error(res,0);
-}
-
 static void m2i_open_read(char *path, char *name, buffer_t *buf) {
   /* The type isn't checked anyway */
   open_existing(name, TYPE_PRG, buf, 0);
@@ -460,27 +451,6 @@ static uint8_t m2i_delete(char *path, char *name) {
   }
 }
 
-static void m2i_chdir(char *dirname) {
-  if (!strcmp_P(dirname, PSTR("_"))) {
-    /* Unmount request */
-    free_all_buffers(1);
-    m2i_umount();
-  }
-  return;
-}
-
-void m2i_mount(char *filename) {
-  FRESULT res;
-
-  res = f_open(&imagehandle, filename, FA_OPEN_EXISTING|FA_READ|FA_WRITE);
-  if (res != FR_OK) {
-    parse_error(res,1);
-    return;
-  }
-
-  fop = &m2iops;
-}
-
 const PROGMEM fileops_t m2iops = {
   m2i_open_read,
   m2i_open_write,
@@ -490,6 +460,6 @@ const PROGMEM fileops_t m2iops = {
   fat_freeblocks,
   m2i_opendir,
   m2i_readdir,
-  m2i_chdir, /* Technically mkdir, but who'll notice? */
-  m2i_chdir
+  image_chdir, /* Technically mkdir, but who'll notice? */
+  image_chdir
 };

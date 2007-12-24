@@ -37,6 +37,7 @@
 #include "fileops.h"
 #include "wrapops.h"
 #include "m2iops.h"
+#include "d64ops.h"
 #include "fatops.h"
 
 FATFS fatfs;
@@ -403,8 +404,9 @@ void fat_chdir(char *dirname) {
 
     ext = strrchr(fname, '.');
     
-    if (ext && !strcmp_P(ext, PSTR(".M2I"))) {
-      /* M2I mount request */
+    if (ext && (!strcmp_P(ext, PSTR(".M2I")) ||
+		!strcmp_P(ext, PSTR(".D64")))) {
+      /* D64/M2I mount request */
       if (fname != dirname) {
 	res = f_chdir(dirname);
 	if (res != FR_OK) {
@@ -414,7 +416,18 @@ void fat_chdir(char *dirname) {
       }
       
       free_all_buffers(1);
-      m2i_mount(fname);
+      /* Open image file */
+      res = f_open(&imagehandle, fname, FA_OPEN_EXISTING|FA_READ|FA_WRITE);
+      if (res != FR_OK) {
+	parse_error(res,1);
+	return;
+      }
+
+      if (!strcmp_P(ext, PSTR(".M2I")))
+	fop = &m2iops;
+      else
+	fop = &d64ops;
+
       return;
     }
   }
@@ -526,4 +539,19 @@ void init_fatops(void) {
 
   /* Dummy operation to force the actual mounting */
   f_chdir("");
+}
+
+/* Generic chdir for unmounting an image */
+void image_chdir(char *dirname) {
+  FRESULT res;
+
+  if (!strcmp_P(dirname, PSTR("_"))) {
+    /* Unmount request */
+    free_all_buffers(1);
+    fop = &fatops;
+    res = f_close(&imagehandle);
+    if (res != FR_OK)
+      parse_error(res,0);
+  }
+  return;
 }

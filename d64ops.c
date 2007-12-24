@@ -20,15 +20,40 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
    
-   m2iops.h: Definitions for the M2I operations
+   d64ops.c: D64 operations
 
 */
 
-#ifndef M2IOPS_H
-#define M2IOPS_H
-
+#include <avr/pgmspace.h>
+#include <stdint.h>
+#include <string.h>
+#include "config.h"
+#include "dirent.h"
+#include "buffers.h"
+#include "tff.h"
+#include "buffers.h"
 #include "wrapops.h"
+#include "errormsg.h"
+#include "fatops.h"
+#include "d64ops.h"
 
-extern const fileops_t m2iops;
+/* ------------------------------------------------------------------------- */
+/*  Utility functions                                                        */
+/* ------------------------------------------------------------------------- */
 
-#endif
+/* ------------------------------------------------------------------------- */
+/*  fileops-API                                                              */
+/* ------------------------------------------------------------------------- */
+
+const PROGMEM fileops_t d64ops = {
+  NULL, // open_read,
+  NULL, // open_write,
+  NULL, // delete,
+  NULL, // getlabel,
+  NULL, // getid,
+  NULL, // freeblocks,
+  NULL, // opendir,
+  NULL, // readdir,
+  image_chdir,  // mkdir...
+  image_chdir
+};
