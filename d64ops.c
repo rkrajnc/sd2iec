@@ -86,11 +86,11 @@ static uint8_t d64_read(buffer_t *buf) {
 
   if (buf->data[0] == 0) {
     /* Final sector of the file */
-    buf->length  = buf->data[1];
-    buf->sendeoi = 1;
+    buf->lastused = buf->data[1];
+    buf->sendeoi  = 1;
   } else {
-    buf->length  = 255;
-    buf->sendeoi = 0;
+    buf->lastused = 255;
+    buf->sendeoi  = 0;
   }
 
   return 0;

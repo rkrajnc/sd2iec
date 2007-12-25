@@ -342,8 +342,8 @@ static uint8_t iec_listen_handler(const uint8_t cmd) {
 	iecflags.command_recvd = 1;
     } else {
       buf->dirty = 1;
-      buf->data[++(buf->length)] = c;
-      if (buf->length == 255 && buf->refill)
+      buf->data[++(buf->lastused)] = c;
+      if (buf->lastused == 255 && buf->refill)
 	if (buf->refill(buf))
 	  return 1;
     }
@@ -363,7 +363,7 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
   while (buf->read) {
     do {
       if (buf->sendeoi &&
-	  buf->position == buf->length) {
+	  buf->position == buf->lastused) {
 	/* Send with EOI */
 	if (iec_putc(buf->data[buf->position],1)) {
 	  uart_putc('Q');
@@ -376,7 +376,7 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
 	  return 1;
 	}
       }
-    } while (buf->position++ < buf->length);
+    } while (buf->position++ < buf->lastused);
 
     if (buf->sendeoi)
       break;

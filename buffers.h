@@ -35,7 +35,7 @@ typedef struct buffer_s {
   /* in case I ever add external ram (not XRAM) to the design (which will    */
   /* require locking =( ).                                                   */
   uint8_t *data; 
-  uint8_t length;   // Index of the last used byte -> length-1!
+  uint8_t lastused; // Index of the last used byte
   uint8_t position; // Index of the byte that will be sent next
   uint8_t secondary;
   int     allocated:1;

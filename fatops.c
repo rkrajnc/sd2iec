@@ -173,7 +173,7 @@ static uint8_t fat_file_read(buffer_t *buf) {
   }
 
   buf->position = 0;
-  buf->length = bytesread-1;
+  buf->lastused = bytesread-1;
   if (bytesread < 254 ||
       (buf->pvt.fh.fsize - buf->pvt.fh.fptr) == 0)
     buf->sendeoi = 1;
@@ -190,7 +190,7 @@ static uint8_t fat_file_write(buffer_t *buf) {
 
   uart_putc('/');
 
-  res = f_write(&buf->pvt.fh, buf->data, buf->length+1, &byteswritten);
+  res = f_write(&buf->pvt.fh, buf->data, buf->lastused+1, &byteswritten);
   if (res != FR_OK) {
     uart_putc('r');
     parse_error(res,1);
@@ -199,7 +199,7 @@ static uint8_t fat_file_write(buffer_t *buf) {
     return 1;
   }
 
-  if (byteswritten != buf->length+1) {
+  if (byteswritten != buf->lastused+1) {
     uart_putc('l');
     set_error(ERROR_DISK_FULL,0,0);
     f_close(&buf->pvt.fh);
@@ -209,7 +209,7 @@ static uint8_t fat_file_write(buffer_t *buf) {
 
   buf->dirty    = 0;
   buf->position = 0;
-  buf->length   = -1;
+  buf->lastused = -1;
 
   return 0;
 }
@@ -287,7 +287,7 @@ void fat_open_write(char *path, char *filename, uint8_t type, buffer_t *buf, uin
   buf->read      = 0;
   buf->write     = 1;
   buf->position  = 0;
-  buf->length    = -1;
+  buf->lastused  = -1;
   buf->cleanup   = fat_file_close;
   buf->refill    = fat_file_write;
 }

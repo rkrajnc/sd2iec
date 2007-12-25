@@ -85,12 +85,12 @@ void load_turbodisk(void) {
 
     if (buf->sendeoi) {
       /* Last sector is sent byte-by-byte */
-      turbodisk_byte(buf->length - buf->position + 2);
+      turbodisk_byte(buf->lastused - buf->position + 2);
 
       i = buf->position;
       do {
 	turbodisk_byte(buf->data[i]);
-      } while (i++ < buf->length);
+      } while (i++ < buf->lastused);
 
       break;
     } else {

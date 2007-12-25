@@ -100,7 +100,7 @@ static void addentry(struct cbmdirent *dent, buffer_t *buf) {
   uint8_t i;
   uint8_t *data;
 
-  data = buf->data + buf->length;
+  data = buf->data + buf->lastused;
 
   /* Clear the line */
   memset(data, ' ', 31);
@@ -149,7 +149,7 @@ static void addentry(struct cbmdirent *dent, buffer_t *buf) {
   if (dent->typeflags & FLAG_HIDDEN)
     data[5] = 'H';
 
-  buf->length += 32;
+  buf->lastused += 32;
 }
 
 /* Match a pattern against a CBM-padded filename */
@@ -231,7 +231,7 @@ static uint8_t dir_footer(buffer_t *buf) {
   buf->data[3] = blocks >> 8;
 
   buf->position = 0;
-  buf->length   = 31;
+  buf->lastused = 31;
   buf->sendeoi  = 1;
 
   return 0;
@@ -244,13 +244,13 @@ static uint8_t dir_refill(buffer_t *buf) {
   uart_putc('+');
 
   buf->position = 0;
-  buf->length   = 0;
+  buf->lastused = 0;
 
   switch (next_match(&buf->pvt.dir.dh, buf->pvt.dir.matchstr,
 		     buf->pvt.dir.filetype, &dent)) {
   case 0:
     addentry(&dent, buf);
-    buf->length--;
+    buf->lastused--;
     return 0;
       
   case -1:
@@ -336,7 +336,7 @@ static void load_directory(uint8_t secondary) {
   buf->write     = 0;
   buf->cleanup   = generic_cleanup;
   buf->position  = 0;
-  buf->length    = 31;
+  buf->lastused  = 31;
   buf->sendeoi   = 0;
 
   /* copy static header to start of buffer */
