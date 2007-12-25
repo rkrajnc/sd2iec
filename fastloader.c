@@ -76,21 +76,26 @@ void load_turbodisk(void) {
 
     if (firstsector) {
       /* Load address is transferred seperately */
-      turbodisk_byte(buf->data[0]);
-      turbodisk_byte(buf->data[1]);
-      buf->position = 2;
-      buf->length  -= 2;
-      firstsector   = 0;
+      i = buf->position;
+      turbodisk_byte(buf->data[i++]);
+      turbodisk_byte(buf->data[i++]);
+      buf->position  = i;
+      firstsector    = 0;
     }
 
     if (buf->sendeoi) {
       /* Last sector is sent byte-by-byte */
-      turbodisk_byte(buf->length+2);
-      for (i=0 ; i<=buf->length ; i++)
-	turbodisk_byte(buf->data[buf->position+i]);
+      turbodisk_byte(buf->length - buf->position + 2);
+
+      i = buf->position;
+      do {
+	turbodisk_byte(buf->data[i]);
+      } while (i++ < buf->length);
+
       break;
     } else {
-      turbodisk_buffer(buf->data + buf->position, buf->length+1);
+      /* Send the complete 254 byte buffer */
+      turbodisk_buffer(buf->data + buf->position, 254);
       if (buf->refill(buf)) {
 	/* Some error, abort */
 	turbodisk_byte(0xff);
