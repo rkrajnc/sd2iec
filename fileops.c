@@ -386,6 +386,25 @@ void file_open(uint8_t secondary) {
     return;
   }
 
+  /* Direct access? */
+  if (command_buffer[0] == '#') {
+    // FIXME: This command can specify a specific buffer number.
+    buf = alloc_buffer();
+    if (!buf)
+      return;
+
+    buf->secondary = secondary;
+    buf->read      = 1;
+    buf->write     = 1;
+    buf->position  = 1;  /* Sic! */
+    buf->lastused  = 255;
+    buf->sendeoi   = 1;
+    buf->dirty     = 0;
+    buf->cleanup   = NULL; // FIXME: free_buffer? Der erste Patch verschob die free-Pflicht zum Aufrufer
+    buf->refill    = NULL;
+    return;
+  }
+
   /* Parse type+mode suffixes */
   char *ptr = (char *) command_buffer;
   enum open_modes mode = OPEN_READ;
