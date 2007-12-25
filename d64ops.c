@@ -75,6 +75,27 @@ static void strnsubst(uint8_t *buffer, uint8_t len, uint8_t oldchar, uint8_t new
     i--;
   }
 }
+
+static uint8_t d64_read(buffer_t *buf) {
+  uint32_t sectorofs = sector_offset(buf->data[0],buf->data[1]);
+
+  if (image_read(sectorofs, buf->data, 256))
+    return 1;
+
+  buf->position = 2;
+
+  if (buf->data[0] == 0) {
+    /* Final sector of the file */
+    buf->length  = buf->data[1];
+    buf->sendeoi = 1;
+  } else {
+    buf->length  = 255;
+    buf->sendeoi = 0;
+  }
+
+  return 0;
+}
+
 /* ------------------------------------------------------------------------- */
 /*  fileops-API                                                              */
 /* ------------------------------------------------------------------------- */
@@ -153,8 +174,24 @@ static uint16_t d64_freeblocks(void) {
   return blocks;
 }
 
+static void d64_open_read(char *path, char *name, buffer_t *buf) {
+  /* WARNING: Ugly hack used here. The directory entry is still in  */
+  /*          entrybuf because of match_entry in fatops.c/file_open */
+  buf->data[0] = entrybuf[OFS_TRACK];
+  buf->data[1] = entrybuf[OFS_SECTOR];
+
+  // FIXME: Check the file type
+  
+  buf->read    = 1;
+  buf->write   = 0;
+  buf->cleanup = generic_cleanup;
+  buf->refill  = d64_read;
+
+  buf->refill(buf);
+}
+
 const PROGMEM fileops_t d64ops = {
-  NULL, // open_read,
+  d64_open_read, // open_read,
   NULL, // open_write,
   NULL, // delete,
   d64_getlabel,
