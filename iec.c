@@ -439,9 +439,6 @@ void iec_mainloop(void) {
 
   sei();
 
-  DDRC = 0x0f;
-  PORTC = 0;
-
   iecflags.jiffy_active = 0;
   iecflags.vc20mode     = 0;
 
