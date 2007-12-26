@@ -334,8 +334,13 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
 
     /* Copy name */
     memset(dent->name, 0xa0, sizeof(dent->name));
-    for (i=0; finfo.fname[i]; i++)
-      dent->name[i] = finfo.fname[i];
+
+    for (i=0; finfo.fname[i]; i++) {
+      if (finfo.fname[i] == '~')
+	dent->name[i] = 0xff;
+      else
+	dent->name[i] = finfo.fname[i];
+    }
 
     /* Type+Flags */
     if (finfo.fattrib & AM_DIR)
