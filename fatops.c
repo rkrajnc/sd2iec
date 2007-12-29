@@ -65,62 +65,62 @@ const PROGMEM fileops_t fatops = {
 void parse_error(FRESULT res, uint8_t readflag) {
   switch (res) {
   case FR_OK:
-    set_error(ERROR_OK,0,0);
+    set_error(ERROR_OK);
     break;
 
   case FR_NO_FILE:
-    set_error(ERROR_FILE_NOT_FOUND,res,0);
+    set_error_ts(ERROR_FILE_NOT_FOUND,res,0);
     break;
     
   case FR_NO_PATH:
   case FR_NOT_DIRECTORY:
-    set_error(ERROR_FILE_NOT_FOUND_39,res,0);
+    set_error_ts(ERROR_FILE_NOT_FOUND_39,res,0);
     break;
 
   case FR_INVALID_NAME:
-    set_error(ERROR_SYNTAX_JOKER,res,0);
+    set_error_ts(ERROR_SYNTAX_JOKER,res,0);
     break;
     
   case FR_NOT_READY:
   case FR_INVALID_DRIVE:
   case FR_NOT_ENABLED:
   case FR_NO_FILESYSTEM:
-    set_error(ERROR_DRIVE_NOT_READY,res,0);
+    set_error_ts(ERROR_DRIVE_NOT_READY,res,0);
     break;
     
   case FR_RW_ERROR:
     /* Just a random READ ERROR */
     if (readflag)
-      set_error(ERROR_READ_NOHEADER,res,0);
+      set_error_ts(ERROR_READ_NOHEADER,res,0);
     else
-      set_error(ERROR_WRITE_VERIFY,res,0);
+      set_error_ts(ERROR_WRITE_VERIFY,res,0);
     break;
     
   case FR_WRITE_PROTECTED:
-    set_error(ERROR_WRITE_PROTECT,res,0);
+    set_error_ts(ERROR_WRITE_PROTECT,res,0);
     break;
     
   case FR_EXIST:
-    set_error(ERROR_FILE_EXISTS,res,0);
+    set_error_ts(ERROR_FILE_EXISTS,res,0);
     break;
 
   case FR_DIR_NOT_EMPTY:
     // FIXME: What do the CMD drives return when removing a non-empty directory?
-    set_error(ERROR_FILE_EXISTS,res,0);
+    set_error_ts(ERROR_FILE_EXISTS,res,0);
     break;
     
   case FR_DENIED:
     // FIXME: Change tff to be more precise
-    set_error(ERROR_DISK_FULL,res,0);
+    set_error_ts(ERROR_DISK_FULL,res,0);
     break;
 
   case FR_IS_READONLY:
   case FR_IS_DIRECTORY:
-    set_error(ERROR_FILE_EXISTS,res,0);
+    set_error_ts(ERROR_FILE_EXISTS,res,0);
     break;
     
   default:
-    set_error(ERROR_SYNTAX_UNABLE,res,99);
+    set_error_ts(ERROR_SYNTAX_UNABLE,res,99);
     break;
   }
 }
@@ -203,7 +203,7 @@ static uint8_t fat_file_write(buffer_t *buf) {
 
   if (byteswritten != buf->lastused+1) {
     uart_putc('l');
-    set_error(ERROR_DISK_FULL,0,0);
+    set_error(ERROR_DISK_FULL);
     f_close(&buf->pvt.fh);
     free_buffer(buf);
     return 1;
@@ -320,7 +320,7 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
     res = f_readdir(&dh->fat, &finfo);
     if (res != FR_OK) {
       if (res == FR_INVALID_OBJECT)
-	set_error(ERROR_DIR_ERROR,0,0);
+	set_error(ERROR_DIR_ERROR);
       else
 	parse_error(res,1);
       return 1;
@@ -543,7 +543,7 @@ uint16_t fat_freeblocks(void) {
 /* FIXME: Read/Write a file "BOOT.BIN" in the currect directory */
 /*        (e.g. for the C128 boot sector)                       */
 void fat_sectordummy(buffer_t *buf, uint8_t track, uint8_t sector) {
-  set_error(ERROR_READ_NOHEADER,track,sector);
+  set_error_ts(ERROR_READ_NOHEADER,track,sector);
 }
 
 /* Mount the card */

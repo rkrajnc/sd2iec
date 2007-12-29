@@ -396,7 +396,7 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
 
   /* If the error channel was read, create a new OK message */
   if ((cmd & 0x0f) == 0x0f)
-    set_error(ERROR_OK,0,0);
+    set_error(ERROR_OK);
 
   return 0;
 }
@@ -433,7 +433,7 @@ void init_iec(void) {
   _delay_ms(1);
   device_address = 8 + !!DEV9_JUMPER + 2*(!!DEV10_JUMPER);
 
-  set_error(ERROR_DOSVERSION,0,0);
+  set_error(ERROR_DOSVERSION);
 }
 
 void iec_mainloop(void) {

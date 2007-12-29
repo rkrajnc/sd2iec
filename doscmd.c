@@ -290,7 +290,7 @@ static void parse_xcommand(void) {
       break;
       
     default:
-      set_error(ERROR_SYNTAX_UNKNOWN,0,0);
+      set_error(ERROR_SYNTAX_UNKNOWN);
     }
     break;
 
@@ -301,7 +301,7 @@ static void parse_xcommand(void) {
     break;
   }
 
-  set_error(ERROR_STATUS,0,0);
+  set_error(ERROR_STATUS);
 }
 
 static void parse_block(void) {
@@ -312,7 +312,7 @@ static void parse_block(void) {
 
   str = strchr((char *) command_buffer, '-');
   if (!str) {
-    set_error(ERROR_SYNTAX_UNABLE,0,0);
+    set_error(ERROR_SYNTAX_UNABLE);
     return;
   }
 
@@ -330,7 +330,7 @@ static void parse_block(void) {
     /* Does not include the bug/misfeature of the original */
     buf = find_buffer(params[0]);
     if (!buf) {
-      set_error(ERROR_NO_CHANNEL,0,0);
+      set_error(ERROR_NO_CHANNEL);
       return;
     }
     
@@ -346,14 +346,14 @@ static void parse_block(void) {
     /* Buffer-Position - CDBD */
     buf = find_buffer(params[0]);
     if (!buf) {
-      set_error(ERROR_NO_CHANNEL,0,0);
+      set_error(ERROR_NO_CHANNEL);
       return;
     }
     buf->position = params[1];
     break;
 
   default:
-    set_error(ERROR_SYNTAX_UNABLE,0,0);
+    set_error(ERROR_SYNTAX_UNABLE);
     return;
   }
 }
@@ -368,11 +368,11 @@ void parse_doscommand(void) {
   struct cbmdirent dent;
 
   /* Set default message: Everything ok */
-  set_error(ERROR_OK,0,0);
+  set_error(ERROR_OK);
 
   /* Abort if the command is too long */
   if (command_length == COMMAND_BUFFER_SIZE) {
-    set_error(ERROR_SYNTAX_TOOLONG,0,0);
+    set_error(ERROR_SYNTAX_TOOLONG);
     return;
   }
 
@@ -402,7 +402,7 @@ void parse_doscommand(void) {
 
   /* Abort if there is no command */
   if (command_length == 0) {
-    set_error(ERROR_SYNTAX_UNABLE,0,0);
+    set_error(ERROR_SYNTAX_UNABLE);
     return;
   }
 
@@ -415,7 +415,7 @@ void parse_doscommand(void) {
     case 'M':
       /* MD requires a colon */
       if (!strchr((char *)command_buffer, ':')) {
-	set_error(ERROR_SYNTAX_NONAME,0,0);
+	set_error(ERROR_SYNTAX_NONAME);
 	break;
       }
       /* Fall-through */
@@ -451,7 +451,7 @@ void parse_doscommand(void) {
 	}
       }
       if (i == 255) {
-	set_error(ERROR_SYNTAX_NONAME,0,0);
+	set_error(ERROR_SYNTAX_NONAME);
 	break;
       }
 	  
@@ -459,16 +459,16 @@ void parse_doscommand(void) {
       i = 2;
       while (isdigit(command_buffer[i])) i++;
       if (command_buffer[i] != ':') {
-	set_error(ERROR_SYNTAX_NONAME,0,0);
+	set_error(ERROR_SYNTAX_NONAME);
       } else {
 	i = file_delete("", (char *)command_buffer+i+1);
 	if (i != 255)
-	  set_error(ERROR_SCRATCHED,i,0);
+	  set_error_ts(ERROR_SCRATCHED,i,0);
       }
       break;
       
     default:
-      set_error(ERROR_SYNTAX_UNKNOWN,0,0);
+      set_error(ERROR_SYNTAX_UNKNOWN);
       break;;
     }
     
@@ -479,7 +479,7 @@ void parse_doscommand(void) {
   case 'I':
     /* Initialize is a no-op for now */
     if (card_state != CARD_OK)
-      set_error(ERROR_READ_NOSYNC,18,0);
+      set_error_ts(ERROR_READ_NOSYNC,18,0);
     break;
 
   case 'B':
@@ -512,7 +512,7 @@ void parse_doscommand(void) {
       switch (command_buffer[2]) {
       case 0:
 	/* Soft-reset - just return the dos version */
-	set_error(ERROR_DOSVERSION,0,0);
+	set_error(ERROR_DOSVERSION);
 	break;
 
       case '+':
@@ -524,7 +524,7 @@ void parse_doscommand(void) {
 	break;
 	
       default:
-	set_error(ERROR_SYNTAX_UNKNOWN,0,0);
+	set_error(ERROR_SYNTAX_UNKNOWN);
 	break;
       }
       break;
@@ -537,7 +537,7 @@ void parse_doscommand(void) {
       break;
 
     default:
-      set_error(ERROR_SYNTAX_UNKNOWN,0,0);
+      set_error(ERROR_SYNTAX_UNKNOWN);
       break;
     }
     break;
@@ -566,7 +566,7 @@ void parse_doscommand(void) {
     else if (command_buffer[2] == 'R')
       handle_memread();
     else
-      set_error(ERROR_SYNTAX_UNKNOWN,0,0);
+      set_error(ERROR_SYNTAX_UNKNOWN);
     break;
 
   case 'S':
@@ -589,7 +589,7 @@ void parse_doscommand(void) {
 	break;
     }
     if (i != 255)
-      set_error(ERROR_SCRATCHED,count,0);
+      set_error_ts(ERROR_SCRATCHED,count,0);
 
     break;
 
@@ -608,7 +608,7 @@ void parse_doscommand(void) {
     break;
 
   default:
-    set_error(ERROR_SYNTAX_UNKNOWN,0,0);
+    set_error(ERROR_SYNTAX_UNKNOWN);
     break;
   }
 }

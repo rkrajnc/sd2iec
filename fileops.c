@@ -369,11 +369,11 @@ void file_open(uint8_t secondary) {
   buffer_t *buf;
 
   /* Assume everything will go well unless proven otherwise */
-  set_error(ERROR_OK,0,0);
+  set_error(ERROR_OK);
 
   /* Empty name? */
   if (command_length == 0) {
-    set_error(ERROR_SYNTAX_NONAME,0,0);
+    set_error(ERROR_SYNTAX_NONAME);
     return;
   }
 
@@ -513,7 +513,7 @@ void file_open(uint8_t secondary) {
   } else
     if (res != 0) {
       /* File not found */
-      set_error(ERROR_FILE_NOT_FOUND,0,0);
+      set_error(ERROR_FILE_NOT_FOUND);
       return;
     }
 

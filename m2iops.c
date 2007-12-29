@@ -175,12 +175,12 @@ static void open_existing(char *name, uint8_t type, buffer_t *buf, uint8_t appen
 
   offset = find_entry(name);
   if (offset < M2I_ENTRY_OFFSET) {
-    set_error(ERROR_FILE_NOT_FOUND,0,0);
+    set_error(ERROR_FILE_NOT_FOUND);
     return;
   }
 
   if (parsetype()) {
-    set_error(ERROR_FILE_NOT_FOUND,0,0);
+    set_error(ERROR_FILE_NOT_FOUND);
     return;
   }
 
@@ -282,7 +282,7 @@ static void m2i_open_write(char *path, char *name, uint8_t type, buffer_t *buf, 
     while (*nameptr) {
       if (*nameptr == '=' || *nameptr == '"' ||
 	  *nameptr == '*' || *nameptr == '?') {
-	set_error(ERROR_SYNTAX_JOKER,0,0);
+	set_error(ERROR_SYNTAX_JOKER);
 	return;
       }
       nameptr++;
@@ -294,7 +294,7 @@ static void m2i_open_write(char *path, char *name, uint8_t type, buffer_t *buf, 
       return;
     
     if (offset != 0) {
-      set_error(ERROR_FILE_EXISTS,0,0);
+      set_error(ERROR_FILE_EXISTS);
       return;
     }
     

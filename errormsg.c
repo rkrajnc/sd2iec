@@ -159,7 +159,11 @@ static char *appendnumber(char *msg, uint8_t value) {
 }
 
 
-void set_error(uint8_t errornum, uint8_t track, uint8_t sector) {
+void set_error(uint8_t errornum) {
+  set_error_ts(errornum,0,0);
+}
+
+void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
   char *msg = (char *) error_buffer;
 
   current_error = errornum;

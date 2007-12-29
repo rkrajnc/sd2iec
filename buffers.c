@@ -71,7 +71,7 @@ buffer_t *alloc_buffer(void) {
     }
   }
 
-  set_error(ERROR_NO_CHANNEL,0,0);
+  set_error(ERROR_NO_CHANNEL);
   return NULL;
 }
 

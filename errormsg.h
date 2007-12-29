@@ -34,7 +34,8 @@ extern uint8_t error_buffer[ERROR_BUFFER_SIZE];
 extern volatile uint8_t error_blink_active;
 
 
-void set_error(uint8_t errornum, uint8_t track, uint8_t sector);
+void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector);
+void set_error(uint8_t errornum);
 
 // Commodore DOS error codes
 #define ERROR_OK                  0
