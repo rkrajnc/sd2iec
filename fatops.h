@@ -43,6 +43,7 @@ uint8_t  fat_getid(char *id);
 uint16_t fat_freeblocks(void);
 uint8_t  fat_opendir(dh_t *dh, char *dir);
 int8_t   fat_readdir(dh_t *dh, struct cbmdirent *dent);
+void     fat_sectordummy(buffer_t *buf, uint8_t track, uint8_t sector);
 
 extern const fileops_t fatops;
 

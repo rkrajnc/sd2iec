@@ -43,6 +43,8 @@ typedef struct {
   uint8_t  (*disk_label)(char *label);
   uint8_t  (*disk_id)(char *id);
   uint16_t (*disk_free)(void);
+  void     (*read_sector)(buffer_t *buf, uint8_t track, uint8_t sector);
+  void     (*write_sector)(buffer_t *buf, uint8_t track, uint8_t sector);
   uint8_t  (*opendir)(dh_t *dh, char *path);
   int8_t   (*readdir)(dh_t *dh, struct cbmdirent *dent);
   void     (*mkdir)(char *dirname);
@@ -62,6 +64,8 @@ extern const fileops_t *fop;
 #define disk_label(label) ((pgmcall(fop->disk_label))(label))
 #define disk_id(id) ((pgmcall(fop->disk_id))(id))
 #define disk_free() ((pgmcall(fop->disk_free))())
+#define read_sector(buf,t,s) ((pgmcall(fop->read_sector))(buf,t,s))
+#define write_sector(buf,t,s) ((pgmcall(fop->write_sector))(buf,t,s))
 #define opendir(dh,dir) ((pgmcall(fop->opendir))(dh,dir))
 #define readdir(dh,dent) ((pgmcall(fop->readdir))(dh,dent))
 #define mkdir(dir) ((pgmcall(fop->mkdir))(dir))

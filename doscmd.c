@@ -224,22 +224,52 @@ void parse_path(char *in, char *out, char **name) {
   return;
 }
 
-static uint8_t parse_number(uint8_t *str) {
+/* Parse a decimal number at str and return a pointer to the following char */
+static uint8_t parse_number(char **str) {
   uint8_t res = 0;
 
   /* Skip leading spaces */
-  while (*str == ' ') str++;
+  while (**str == ' ') (*str)++;
 
   /* Parse decimal number */
-  while (isdigit(*str)) {
+  while (isdigit(**str)) {
     res *= 10;
-    res += (*str++) - '0';
+    res += (*(*str)++) - '0';
   }
   
   return res;
 }
 
+/* Parse parameters of block commands in the command buffer */
+/* Returns number of parameters (up to 4) or <0 on error    */
+static int8_t parse_blockparam(uint8_t values[]) {
+  uint8_t paramcount = 0;
+  char *str;
+
+  str = strchr((char *) command_buffer, ':');
+  if (!str) {
+    if (strlen((char *) command_buffer) < 3)
+      return -1;
+    str = (char *)command_buffer + 2;
+  }
+
+  str++;
+
+  while (*str && paramcount < 4) {
+    /* Skip all spaces, cursor-rights and commas - CC7C */
+    while (*str && (*str == ' ' || *str == 0x1d || *str == ',')) str++;
+    if (!*str)
+      return -1;
+
+    values[paramcount++] = parse_number(&str);
+  }    
+
+  return paramcount;
+}
+
 static void parse_xcommand(void) {
+  char *str;
+
   switch (command_buffer[1]) {
   case 'J':
     /* Jiffy enable/disable */
@@ -259,11 +289,66 @@ static void parse_xcommand(void) {
 
   case 'C':
     /* Calibration */
-    OSCCAL = parse_number(command_buffer+2);
+    str = (char *)command_buffer+2;
+    OSCCAL = parse_number(&str);
     break;
   }
 
   set_error(ERROR_STATUS,0,0);
+}
+
+static void parse_block(void) {
+  char *str;
+  buffer_t *buf;
+  uint8_t params[4];
+  int8_t  pcount;
+
+  str = strchr((char *) command_buffer, '-');
+  if (!str) {
+    set_error(ERROR_SYNTAX_UNABLE,0,0);
+    return;
+  }
+
+  memset(params,0,sizeof(params));
+  pcount = parse_blockparam(params);
+  if (pcount < 0)
+    return;
+
+  str++;
+  switch (*str) {
+  case 'R':
+  case 'W':
+    /* Block-Read  - CD56 */
+    /* Block-Write - CD73 */
+    /* Does not include the bug/misfeature of the original */
+    buf = find_buffer(params[0]);
+    if (!buf) {
+      set_error(ERROR_NO_CHANNEL,0,0);
+      return;
+    }
+    
+    if (*str == 'R') {
+      read_sector(buf,params[2],params[3]);
+      buf->position = 0;
+    } else {
+      write_sector(buf,params[2],params[3]);
+    }
+    break;
+
+  case 'P':
+    /* Buffer-Position - CDBD */
+    buf = find_buffer(params[0]);
+    if (!buf) {
+      set_error(ERROR_NO_CHANNEL,0,0);
+      return;
+    }
+    buf->position = params[1];
+    break;
+
+  default:
+    set_error(ERROR_SYNTAX_UNABLE,0,0);
+    return;
+  }
 }
 
 void parse_doscommand(void) {
@@ -386,8 +471,31 @@ void parse_doscommand(void) {
       set_error(ERROR_READ_NOSYNC,18,0);
     break;
 
+  case 'B':
+    /* Block-Something */
+    parse_block();
+    break;
+
   case 'U':
     switch (command_buffer[1]) {
+    case 'A':
+    case '1':
+      /* Tiny little hack: Rewrite as (B)-R and call that                */
+      /* This will always work because there is either a : in the string */
+      /* or the drive will start parsing at buf[3].                      */
+      command_buffer[0] = '-';
+      command_buffer[1] = 'R';
+      parse_block();
+      break;
+
+    case 'B':
+    case '2':
+      /* Tiny little hack: see above case for rationale */
+      command_buffer[0] = '-';
+      command_buffer[1] = 'W';
+      parse_block();
+      break;
+
     case 'I':
     case '9':
       switch (command_buffer[2]) {

@@ -415,6 +415,8 @@ const PROGMEM fileops_t m2iops = {
   m2i_getlabel,
   fat_getid,
   fat_freeblocks,
+  fat_sectordummy,
+  fat_sectordummy,
   m2i_opendir,
   m2i_readdir,
   image_chdir, /* Technically mkdir, but who'll notice? */
