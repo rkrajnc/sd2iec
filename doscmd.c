@@ -51,77 +51,9 @@ uint8_t command_length;
 
 uint16_t datacrc = 0xffff;
 
-static void handle_memexec(void) {
-  uint16_t address;
-
-  if (command_length < 5)
-    return;
-
-  if (detected_loader == FL_NONE) { 
-    uart_puts_P(PSTR("M-E at "));
-    uart_puthex(command_buffer[4]);
-    uart_puthex(command_buffer[3]);
-    uart_puts_P(PSTR(", CRC "));
-    uart_puthex(datacrc >> 8);
-    uart_puthex(datacrc & 0xff);
-    uart_putcrlf();
-  }
-  datacrc = 0xffff;
-
-  address = command_buffer[3] + (command_buffer[4]<<8);
-  if (detected_loader == FL_TURBODISK && address == 0x0303) {
-    /* Looks like Turbodisk */
-    detected_loader = FL_NONE;
-    load_turbodisk();
-  }
-}
-
-static void handle_memread(void) {
-  if (command_length < 6)
-    return;
-
- // FIXME: M-R should return data even if it's just junk
-}
-
-static void handle_memwrite(void) {
-  uint16_t address;
-  uint8_t  length,i;
-
-  if (command_length < 6)
-    return;
-
-  address = command_buffer[3] + (command_buffer[4]<<8);
-  length  = command_buffer[5];
-
-  if (address == 119) {
-    /* Change device address, 1541 style */
-    device_address = command_buffer[6] & 0x1f;
-    return;
-  }
-
-  if (address == 0x1c06 || address == 0x1c07) {
-    /* Ignore attempts to increase the VIA timer frequency */
-    return;
-  }
-
-  /* Turbodisk sends the filename in the last M-W */
-  if (datacrc == 0xe1cb) {
-    detected_loader = FL_TURBODISK;
-  } else {
-    detected_loader = FL_NONE;
-  }
-  
-  for (i=0;i<command_length;i++)
-    datacrc = _crc16_update(datacrc, command_buffer[i]);
-
-  if (detected_loader == FL_NONE) {
-    uart_puts_P(PSTR("M-W CRC result: "));
-    uart_puthex(datacrc >> 8);
-    uart_puthex(datacrc & 0xff);
-    uart_putcrlf();
-  }
-}
-
+/* ------------------------------------------------------------------------- */
+/*  Parsing helpers                                                          */
+/* ------------------------------------------------------------------------- */
 
 /* Parses CMD-style directory specification     */
 /* Returns 1 if any errors found                */
@@ -267,6 +199,81 @@ static int8_t parse_blockparam(uint8_t values[]) {
   return paramcount;
 }
 
+/* ------------------------------------------------------------------------- */
+/*  Command handlers                                                         */
+/* ------------------------------------------------------------------------- */
+
+static void handle_memexec(void) {
+  uint16_t address;
+
+  if (command_length < 5)
+    return;
+
+  if (detected_loader == FL_NONE) { 
+    uart_puts_P(PSTR("M-E at "));
+    uart_puthex(command_buffer[4]);
+    uart_puthex(command_buffer[3]);
+    uart_puts_P(PSTR(", CRC "));
+    uart_puthex(datacrc >> 8);
+    uart_puthex(datacrc & 0xff);
+    uart_putcrlf();
+  }
+  datacrc = 0xffff;
+
+  address = command_buffer[3] + (command_buffer[4]<<8);
+  if (detected_loader == FL_TURBODISK && address == 0x0303) {
+    /* Looks like Turbodisk */
+    detected_loader = FL_NONE;
+    load_turbodisk();
+  }
+}
+
+static void handle_memread(void) {
+  if (command_length < 6)
+    return;
+
+ // FIXME: M-R should return data even if it's just junk
+}
+
+static void handle_memwrite(void) {
+  uint16_t address;
+  uint8_t  length,i;
+
+  if (command_length < 6)
+    return;
+
+  address = command_buffer[3] + (command_buffer[4]<<8);
+  length  = command_buffer[5];
+
+  if (address == 119) {
+    /* Change device address, 1541 style */
+    device_address = command_buffer[6] & 0x1f;
+    return;
+  }
+
+  if (address == 0x1c06 || address == 0x1c07) {
+    /* Ignore attempts to increase the VIA timer frequency */
+    return;
+  }
+
+  /* Turbodisk sends the filename in the last M-W */
+  if (datacrc == 0xe1cb) {
+    detected_loader = FL_TURBODISK;
+  } else {
+    detected_loader = FL_NONE;
+  }
+  
+  for (i=0;i<command_length;i++)
+    datacrc = _crc16_update(datacrc, command_buffer[i]);
+
+  if (detected_loader == FL_NONE) {
+    uart_puts_P(PSTR("M-W CRC result: "));
+    uart_puthex(datacrc >> 8);
+    uart_puthex(datacrc & 0xff);
+    uart_putcrlf();
+  }
+}
+
 static void parse_xcommand(void) {
   char *str;
 
@@ -350,6 +357,10 @@ static void parse_block(void) {
     return;
   }
 }
+
+/* ------------------------------------------------------------------------- */
+/*  Main command parser function                                             */
+/* ------------------------------------------------------------------------- */
 
 void parse_doscommand(void) {
   uint8_t i,count;
