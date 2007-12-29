@@ -23,8 +23,7 @@
  *   THE SOFTWARE.
  */
 
-/**
- * \file stdout
+/*
  * Functions and types for CRC checks.
  *
  * Generated on Thu Nov  8 13:52:05 2007,
@@ -37,18 +36,19 @@
  *    XorOut       = 0x00
  *    ReflectOut   = False
  *    Algorithm    = bit-by-bit-fast
- *****************************************************************************/
+ */
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
 
-/**
- * \brief          Update the crc value with new data.
- * \param crc      The current crc value.
- * \param data     Pointer to a buffer of \a data_len bytes.
- * \param data_len Number of bytes in the \a data buffer.
- * \return         The updated crc value.
- *****************************************************************************/
+/*
+ * Update the crc value with new data.
+ * crc      The current crc value.
+ * data     Pointer to a buffer of data_len bytes.
+ * data_len Number of bytes in the data buffer.
+ *
+ * returns the updated crc value
+ */
 uint8_t crc7update(uint8_t crc, const uint8_t data) {
     uint8_t i;
     bool bit;
