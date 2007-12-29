@@ -342,8 +342,14 @@ static uint8_t iec_listen_handler(const uint8_t cmd) {
 	iecflags.command_recvd = 1;
     } else {
       buf->dirty = 1;
-      buf->data[++(buf->lastused)] = c;
-      if (buf->lastused == 255 && buf->refill)
+      buf->data[buf->position] = c;
+
+      if (buf->lastused < buf->position)
+	buf->lastused = buf->position;
+      buf->position++;
+
+      /* Check if the position has wrapped */
+      if (buf->position == 0 && buf->refill)
 	if (buf->refill(buf))
 	  return 1;
     }
@@ -524,11 +530,15 @@ void iec_mainloop(void) {
 	    buffer_t *buf;
 	    buf = find_buffer(secondary_address);
 	    if (buf != NULL) {
-	      if (buf->cleanup)
+	      if (buf->cleanup) {
 		if (buf->cleanup(buf)) {
 		  bus_state = BUS_CLEANUP;
 		  break;
 		}
+	      } else
+		/* No cleanup: Free the buffer here */
+		// FIXME: Kann man das free_buffer überall rausziehen?
+		free_buffer(buf);
 	    }
 	  }
 	  bus_state = BUS_FORME;

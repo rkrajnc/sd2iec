@@ -49,6 +49,8 @@ const PROGMEM fileops_t fatops = {
   &fat_getlabel,
   &fat_getid,
   &fat_freeblocks,
+  &fat_sectordummy,
+  &fat_sectordummy,
   &fat_opendir,
   &fat_readdir,
   &fat_mkdir,
@@ -535,6 +537,13 @@ uint16_t fat_freeblocks(void) {
       return 63999;
   } else
     return 0;
+}
+
+/* Dummy function for direct sector access */
+/* FIXME: Read/Write a file "BOOT.BIN" in the currect directory */
+/*        (e.g. for the C128 boot sector)                       */
+void fat_sectordummy(buffer_t *buf, uint8_t track, uint8_t sector) {
+  set_error(ERROR_READ_NOHEADER,track,sector);
 }
 
 /* Mount the card */

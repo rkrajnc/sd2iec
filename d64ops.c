@@ -190,6 +190,14 @@ static void d64_open_read(char *path, char *name, buffer_t *buf) {
   buf->refill(buf);
 }
 
+static void d64_read_sector(buffer_t *buf, uint8_t track, uint8_t sector) {
+  image_read(sector_offset(track,sector), buf->data, 256);
+}
+
+static void d64_write_sector(buffer_t *buf, uint8_t track, uint8_t sector) {
+  image_write(sector_offset(track,sector), buf->data, 256);
+}
+
 const PROGMEM fileops_t d64ops = {
   d64_open_read, // open_read,
   NULL, // open_write,
@@ -197,6 +205,8 @@ const PROGMEM fileops_t d64ops = {
   d64_getlabel,
   d64_getid,
   d64_freeblocks,
+  d64_read_sector,
+  d64_write_sector,
   d64_opendir,
   d64_readdir,
   image_chdir, // mkdir...
