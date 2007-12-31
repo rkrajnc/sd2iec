@@ -47,6 +47,7 @@
 #include "sdcard.h"
 #include "iec-ll.h"
 #include "fastloader-ll.h"
+#include "diskchange.h"
 #include "iec.h"
 
 /* ------------------------------------------------------------------------- */
@@ -130,6 +131,13 @@ ISR(TIMER2_COMPA_vect) {
       DIRTY_LED_PORT ^= DIRTY_LED_BIT();
       blinktimer = 0;
     }
+  }
+
+  if (!(DISKCHANGE_PIN & DISKCHANGE_BIT)) {
+    if (keycounter < DISKCHANGE_MAX)
+      keycounter++;
+  } else {
+    keycounter = 0;
   }
 }
 
@@ -426,12 +434,16 @@ void init_iec(void) {
   TCCR2B = 0;
   TCCR2A |= _BV(WGM21); // CTC mode
   TCCR2B |= _BV(CS20) | _BV(CS21); // prescaler /32
-  
+
   /* We're device 8 by default */
   DEV9_JUMPER_SETUP();
   DEV10_JUMPER_SETUP();
   _delay_ms(1);
   device_address = 8 + !!DEV9_JUMPER + 2*(!!DEV10_JUMPER);
+
+  /* Set up disk change key */
+  DISKCHANGE_DDR  &= ~DISKCHANGE_BIT;
+  DISKCHANGE_PORT |=  DISKCHANGE_BIT;
 
   set_error(ERROR_DOSVERSION);
 }
@@ -454,7 +466,12 @@ void iec_mainloop(void) {
     switch (bus_state) {
     case BUS_IDLE:  // EBFF
       /* Wait for ATN */
-      while (IEC_ATN) ;
+      set_atnack(1);
+      while (IEC_ATN) {
+	if (keycounter == DISKCHANGE_MAX) {
+	  change_disk();
+	}
+      }
       
       bus_state = BUS_FOUNDATN;
       break;
@@ -599,8 +616,10 @@ void iec_mainloop(void) {
       if (card_state != CARD_OK && card_state != CARD_REMOVED) {
 	BUSY_LED_ON();
 	/* If the card was changed the buffer contents are useless */
-	if (card_state == CARD_CHANGED)
+	if (card_state == CARD_CHANGED) {
 	  free_all_buffers(0);
+	  init_change();
+	}
 	// FIXME: Preserve current directory if state was CARD_ERROR
 	init_fatops();
 	if (!active_buffers) {

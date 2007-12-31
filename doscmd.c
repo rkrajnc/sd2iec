@@ -41,6 +41,7 @@
 #include "sdcard.h"
 #include "fastloader.h"
 #include "iec.h"
+#include "diskchange.h"
 
 #define CURSOR_RIGHT 0x1d
 
@@ -292,16 +293,21 @@ static void parse_xcommand(void) {
     default:
       set_error(ERROR_SYNTAX_UNKNOWN);
     }
+    set_error(ERROR_STATUS);
     break;
 
   case 'C':
     /* Calibration */
     str = (char *)command_buffer+2;
     OSCCAL = parse_number(&str);
+    set_error(ERROR_STATUS);
+    break;
+
+  case 'S':
+    /* Swaplist */
+    set_changelist((char *)command_buffer+3);
     break;
   }
-
-  set_error(ERROR_STATUS);
 }
 
 static void parse_block(void) {

@@ -78,6 +78,7 @@ buffer_t *alloc_buffer(void) {
 void free_buffer(buffer_t *buffer) {
   if (buffer == NULL) return;
   if (buffer->secondary == 15) return;
+  if (!buffer->allocated) return;
 
   buffer->allocated = 0;
   if (! --active_buffers)

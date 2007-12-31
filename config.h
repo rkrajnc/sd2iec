@@ -118,9 +118,9 @@
 #  define DIRTY_LED_BIT()    _BV(PC1)
 
 /* Auxiliary LED for debugging */
-#  define AUX_LED_SETDDR()   DDRD  |= _BV(PC2)
-#  define AUX_LED_ON()       PORTD |= _BV(PC2)
-#  define AUX_LED_OFF()      PORTD &= ~_BV(PC2)
+#  define AUX_LED_SETDDR()   DDRC  |= _BV(PC2)
+#  define AUX_LED_ON()       PORTC |= _BV(PC2)
+#  define AUX_LED_OFF()      PORTC &= ~_BV(PC2)
 
 
 /*** IEC signals ***/
@@ -136,6 +136,16 @@
 #  define IEC_PIN_DATA  PA1
 #  define IEC_PIN_CLOCK PA2
 #  define IEC_PIN_SRQ   PA3
+
+
+/*** User interface ***/
+/* Disk image change key */
+#  define DISKCHANGE_PIN  PINC
+#  define DISKCHANGE_DDR  DDRC
+#  define DISKCHANGE_PORT PORTC
+#  define DISKCHANGE_BIT  _BV(PC4)
+/* Target value of the debounce counter */
+#  define DISKCHANGE_MAX  128
 
 #else
 /* Abridged version: LarsP hardware */
@@ -168,6 +178,11 @@
 #  define IEC_PIN_DATA          PC1
 #  define IEC_PIN_CLOCK         PC2
 #  define IEC_PIN_SRQ           PC3
+#  define DISKCHANGE_PIN        PINA
+#  define DISKCHANGE_DDR        DDRA
+#  define DISKCHANGE_PORT       PORTA
+#  define DISKCHANGE_BIT        _BV(PA4)
+#  define DISKCHANGE_MAX        128
 #endif
 
 #define IEC_BIT_ATN   _BV(IEC_PIN_ATN)

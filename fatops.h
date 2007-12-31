@@ -48,6 +48,7 @@ void     fat_sectordummy(buffer_t *buf, uint8_t track, uint8_t sector);
 extern const fileops_t fatops;
 
 /* Generic helpers */
+void    image_unmount(void);
 void    image_chdir(char *dirname);
 uint8_t image_read(DWORD offset, void *buffer, uint16_t bytes);
 uint8_t image_write(DWORD offset, void *buffer, uint16_t bytes);

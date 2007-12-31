@@ -38,6 +38,7 @@
 #include "buffers.h"
 #include "fatops.h"
 #include "sdcard.h"
+#include "diskchange.h"
 
 #ifdef __AVR_ATmega32__
 typedef struct
@@ -85,6 +86,8 @@ int main(void) {
   spiInit();
   init_cardchange();
   init_fatops();
+
+  init_change();
 
   BUSY_LED_OFF();
 

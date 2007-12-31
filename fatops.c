@@ -555,17 +555,22 @@ void init_fatops(void) {
   f_chdir("");
 }
 
-/* Generic chdir for unmounting an image */
-void image_chdir(char *dirname) {
+/* Generic image unmounting */
+void image_unmount(void) {
   FRESULT res;
 
+  free_all_buffers(1);
+  fop = &fatops;
+  res = f_close(&imagehandle);
+  if (res != FR_OK)
+    parse_error(res,0);
+}
+
+/* Generic chdir for unmounting an image */
+void image_chdir(char *dirname) {
   if (!strcmp_P(dirname, PSTR("_"))) {
     /* Unmount request */
-    free_all_buffers(1);
-    fop = &fatops;
-    res = f_close(&imagehandle);
-    if (res != FR_OK)
-      parse_error(res,0);
+    image_unmount();
   }
   return;
 }
