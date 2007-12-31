@@ -307,6 +307,11 @@ static void parse_xcommand(void) {
     /* Swaplist */
     set_changelist((char *)command_buffer+3);
     break;
+
+  default:
+    /* Unknown command, just show the status */
+    set_error(ERROR_STATUS);
+    break;
   }
 }
 
