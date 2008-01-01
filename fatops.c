@@ -211,7 +211,7 @@ static uint8_t fat_file_write(buffer_t *buf) {
 
   buf->dirty    = 0;
   buf->position = 0;
-  buf->lastused = -1;
+  buf->lastused = 0;
 
   return 0;
 }
@@ -289,7 +289,7 @@ void fat_open_write(char *path, char *filename, uint8_t type, buffer_t *buf, uin
   buf->read      = 0;
   buf->write     = 1;
   buf->position  = 0;
-  buf->lastused  = -1;
+  buf->lastused  = 0;
   buf->cleanup   = fat_file_close;
   buf->refill    = fat_file_write;
 }
