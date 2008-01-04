@@ -34,6 +34,7 @@
 #include "uart.h"
 #include "doscmd.h"
 #include "wrapops.h"
+#include "m2iops.h"
 #include "fileops.h"
 
 /* ------------------------------------------------------------------------- */
@@ -488,6 +489,13 @@ void file_open(uint8_t secondary) {
     cbuf = (char *)command_buffer;
 
   parse_path(cbuf, (char *) command_buffer, &fname);
+
+  /* For M2I only: Remove trailing spaces from name */
+  if (fop == &m2iops) {
+    res = strlen(fname);
+    while (--res && fname[res] == ' ')
+      fname[res] = 0;
+  }
 
   /* Filename matching */
   if (opendir(&matchdh, (char *) command_buffer))
