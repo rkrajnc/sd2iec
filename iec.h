@@ -34,6 +34,7 @@ typedef struct {
   int command_recvd:1;
   int jiffy_enabled:1;
   int jiffy_active:1;
+  int jiffy_load:1;
 } iecflags_t;
 
 extern iecflags_t iecflags;

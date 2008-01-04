@@ -195,7 +195,7 @@ static int16_t _iec_getc(void) {
 
 	/* If there is a delay before the last bit, the controller uses JiffyDOS */
 	if (!iecflags.jiffy_active && has_timed_out()) {
-	  if (val < 0x60 && ((val>>1) & 0x1f) == device_address) {
+	  if ((val>>1) < 0x60 && ((val>>1) & 0x1f) == device_address) {
 	    /* If it's for us, notify controller that we support Jiffy too */
 	    set_data(0);
 	    _delay_us(101); // nlq says 405us, but the code shows only 101
@@ -239,6 +239,15 @@ static int16_t iec_getc(void) {
 /*   If this returns -1 the device state has changed, return to the main loop */
 static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
   uint8_t i;
+
+  if (iecflags.jiffy_active) {
+    /* This is the non-load Jiffy case */
+    if (jiffy_send(data, with_eoi, 0)) {
+      check_atn();
+      return -1;
+    }
+    return 0;
+  }
 
   if (check_atn()) return -1;                          // E916
   i = iec_pin();
@@ -373,21 +382,71 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
   buf = find_buffer(cmd & 0x0f);
   if (buf == NULL)
     return 0; /* 0 because we didn't change the state here */
+
+  if (iecflags.jiffy_enabled)
+    /* wait 360us (J1541 E781) to make sure the C64 is at fbb7/fb0c */
+    _delay_ms(0.36);
     
+  if (iecflags.jiffy_load) {
+    /* See if the C64 has passed fb06 or if we should abort */
+    do {                /* J1541 FF30 - wait until DATA inactive/high */
+      if (check_atn()) return -1;
+    } while (!IEC_DATA);
+    /* The LOAD path is only used after the first two bytes have beed */
+    /* read. Reset the buffer position because there is a chance that */
+    /* the third byte has slipped through.                            */
+    buf->position = 4;
+  }
+
   while (buf->read) {
+    if (iecflags.jiffy_load) {
+      /* Signal to the C64 that we're ready to send the next block */
+      set_data(0);
+      set_clock(1);
+      /* FFA0 - this delay is required so the C64 can see data low even */
+      /*        if it hits a badline at the worst possible moment       */
+      _delay_us(55);
+    }
+
     do {
-      if (buf->sendeoi &&
-	  buf->position == buf->lastused) {
-	/* Send with EOI */
-	if (iec_putc(buf->data[buf->position],1)) {
-	  uart_putc('Q');
-	  return 1;
+      uint8_t finalbyte = (buf->position == buf->lastused);
+      if (iecflags.jiffy_load) {
+	/* Send a byte using the LOAD protocol variant */
+	/* The final byte in the buffer must be sent with Clock low   */
+	/* to signal that the next transfer will take some time.      */
+	/* The C64 samples this just after it has set Data Low before */
+	/* the first bitpair. If this marker is not set the time      */
+	/* between two bytes outside the assembler function must not  */
+	/* exceed ~38 C64 cycles (estimated) or the computer may      */
+	/* see a previous data bit as the marker.                     */
+	if (jiffy_send(buf->data[buf->position],0,128 | !finalbyte)) {
+	  /* Abort if ATN was seen */
+	  check_atn();
+	  return -1;
+	}
+
+	if (finalbyte && buf->sendeoi) {
+	  /* Send EOI marker */
+	  _delay_us(100);
+	  set_clock(1);
+	  _delay_us(100);
+	  set_clock(0);
+	  _delay_us(100);
+	  set_clock(1);
 	}
       } else {
-	/* Send without EOI */
-	if (iec_putc(buf->data[buf->position],0)) {
-	  uart_putc('V');
-	  return 1;
+	if (finalbyte && buf->sendeoi) {
+	  /* Send with EOI */
+	  if (iec_putc(buf->data[buf->position],1)) {
+	    uart_putc('Q');
+	    return 1;
+	  }
+	} else {
+	  /* Send without EOI */
+	  if (iec_putc(buf->data[buf->position],0)) {
+	    uart_putc('V');
+	    return 1;
+	  }
 	}
       }
     } while (buf->position++ < buf->lastused);
@@ -457,8 +516,9 @@ void iec_mainloop(void) {
 
   sei();
 
-  iecflags.jiffy_active = 0;
-  iecflags.vc20mode     = 0;
+  iecflags.jiffy_active  = 0;
+  iecflags.jiffy_enabled = 1;
+  iecflags.vc20mode      = 0;
 
   bus_state = BUS_IDLE;
 
@@ -486,6 +546,7 @@ void iec_mainloop(void) {
       bus_state    = BUS_ATNACTIVE;
       iecflags.eoi_recvd    = 0;
       iecflags.jiffy_active = 0;
+      iecflags.jiffy_load   = 0;
 
       /* Slight protocol violation:                        */
       /*   Wait until clock is low or 100us have passed    */
@@ -514,8 +575,7 @@ void iec_mainloop(void) {
       
       uart_putc('A');
       uart_puthex(cmd);
-      uart_putc(13);
-      uart_putc(10);
+      uart_putcrlf();
 
       if (cmd == 0x3f) { /* Unlisten */
 	if (device_state == DEVICE_LISTEN)
@@ -532,6 +592,19 @@ void iec_mainloop(void) {
 	device_state = DEVICE_LISTEN;
 	bus_state = BUS_FORME;
       } else if ((cmd & 0x60) == 0x60) {
+	/* Check for OPEN/CLOSE/DATA */
+	/* JiffyDOS uses a slightly modified protocol for LOAD that */
+	/* is activated by using 0x61 instead of 0x60 in the TALK   */
+	/* state. The original floppy code has additional checks    */
+	/* that force the non-load Jiffy protocol for file types    */
+	/* other than SEQ and PRG.                                  */
+	/* Please note that $ is special-cased in the kernal so it  */
+	/* will never trigger this.                                 */
+	if (cmd == 0x61 && device_state == DEVICE_TALK) {
+	  cmd = 0x60;
+	  iecflags.jiffy_load = 1;
+	}
+
 	secondary_address = cmd & 0x0f;
 	/* 1571 handles close (0xe0-0xef) here, so we do that too. */
 	if ((cmd & 0xf0) == 0xe0) {

@@ -1,5 +1,6 @@
 /* sd2iec - SD/MMC to Commodore serial bus interface/controller
    Copyright (C) 2007,2008  Ingo Korb <ingo@akana.de>
+   Copyright (C) 2007,2008  M.Kiesel <mayne@users.sourceforge.net>
 
    Inspiration and low-level SD/MMC access based on code from MMC2IEC
      by Lars Pontoppidan et al., see sdcard.c|h and config.h.
@@ -19,14 +20,24 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-   
-   fastloader.S: Low level fastloader transfer routines
+
+   fastloader.S: Low level fastloader transfer routines.
+
+   Thanks to Jochen Adler for his Jiffy docs at http://www.nlq.de/
 
 */
 
+
 #include "config.h"
 #include <avr/io.h>
-	
+
+/* Timing offsets for JiffyDos read/write */
+/* These values are added to the delayloop counter before the first      */
+/* bitpair read/write. They were determined experimentally to center the */
+/* range of working OSCCAL values around the default value.              */
+#define JIFFY_OFFSET_WRITE 10
+#define JIFFY_OFFSET_READ  18
+
 	.section .text
 
 	;; ===================================================================
@@ -49,7 +60,11 @@ delay1us:
 	;; ====================================================================
 	;;  JiffyDOS
 	;; ====================================================================
+
+	;;
 	;; Receives a single byte using the JiffyDOS protocol
+	;; return uint8_t reveicedbyte (r24)
+	;;
 	.global jiffy_receive
 jiffy_receive:
 	;; Disable interrupts
@@ -69,7 +84,8 @@ jiffy_receive:
 	rjmp	0b
 
 	;; Wait for 13us from clock high -> 104 cycles
-	ldi	r18,32		; 1
+	ldi	r18,32+JIFFY_OFFSET_READ
+				; 1 - see comments at offset definition
 	rcall	delayloop	; 102
 	nop			; 1
 	
@@ -155,12 +171,148 @@ jiffy_receive:
 
 	;; Post-process data and store last bus state
 	ldi	r18, 0xff
-	eor	r24, r18	; invert received data
+	eor	r24, r18	; invert received data (result)
 	st	Z, r19		; store last bus state
 	sei			; enable interrupts
 	ret
+
+
+
+	;; Shifts the lowest two bytes from r0 to r19
+	;; and sends then on the bus at cycle 10
+	;; Needs 14 cycles including the rcall
+jiffy_sendbits:
+	clr	r19		; 1 - clear output register
+	lsr	r0		; 1
+	rol	r19		; 1
+	lsr	r0		; 1
+	rol	r19		; 1
+	lsl	r19		; 1
+	out	_SFR_IO_ADDR(IEC_DDR), r19 ; 1 - output the bit pair
+	ret			; 4
+
+	;;
+	;; Sends a single byte using the Jiffy protocol
+	;; uint8_t value (r24), uint8_t eoi (r22), uint8_t loadflags (r20)
+	;; return uint8_t atnactive (r24)
+	;;
+	;; eoi should always be 0 for LOAD because the eoi marker is
+	;; transmitted in a different way there (see C code).
+	;;
+	;; Loadflags has a dual purpose:
+	;;  - if it's != 0, the start condition will be modified for Jiffy-LOAD
+	;;  - bit 7 will be cleared after that
+	;;  - if it's still != 0, the function will exit after sending
+	;;    the last bitpair - required for all but the final byte of a block
+	;;    during LOAD
+	.global jiffy_send
+jiffy_send:
+	cli			; Disable interrupts
+
+	;; Calculate bus wait condition based on current state
+	;; The loop below will spin while ATN and Clock are high and
+	;; - Data is low  (single-byte transfer)
+	;; - Data is high (LOAD)
+		; Read bus (in case something is connected to the "free" bits)
+	in	r21, _SFR_IO_ADDR(IEC_PIN)
+		; Set Clock+ATN bits
+	ori	r21, (IEC_BIT_CLOCK|IEC_BIT_ATN)
+		; Clear data bit
+	andi	r21, ~IEC_BIT_DATA
+	tst	r20		; loadflag set?
+	breq	0f		; Yes, skip
+		; No: Set data bit
+	ori	r21, IEC_BIT_DATA
+
+0:	andi	r20, 0x7f	; Clear bit 7 of loadflags
+
+	;; Calculate bus state for EOI/not-EOI mark
+	tst	r22		; EOI flag set?
+	breq	0f		; No, branch
+
+	ldi	r22, IEC_BIT_DATA  ; Data low, Clock hi on EOI
+	rjmp	1f
+
+0:	ldi	r22, IEC_BIT_CLOCK ; Data hi, Clock low on non-EOI
+
+1:
+	;; Set clock and data high/inactive - FFB5
+	cbi	_SFR_IO_ADDR(IEC_DDR), IEC_PIN_DATA
+		; this is the actual ready signal for the C64
+	cbi	_SFR_IO_ADDR(IEC_DDR), IEC_PIN_CLOCK
+
+	;; Wait 1us to allow the bus to settle (J1541 needs 4us here)
+	rcall	delay1us
+
+	;; Set up a few registers
+	mov	r0, r24		; move data byte to r0
+	ldi	r23, 0xff	; constant for inverting bytes
+	eor	r0, r23		; invert data byte
+
+	;; Wait for start condition (calculated above) from C64 - FFB8
+0:	in	r24, _SFR_IO_ADDR(IEC_PIN)
+	cp	r24, r21	; 1
+	breq	0b		; 1
+
+	;; Check for ATN (J1541 doesn't do this, but I'm paranoid)
+	;; Doesn't work, further analysis required
+	andi	r24, IEC_BIT_ATN ; 1
+	breq	js_finish	 ; 1 - jump if ATN is low
+
+	;; Output the first bitpair 6us (48 cycles) after the start
+	;; 6us is the best-case time from bus check to transmission in J1541
+	ldi	r18,8+JIFFY_OFFSET_WRITE
+				; 1 - see comments at offset definition
+	rcall	delayloop	; ((8-1)*3+6 + 3 = 30 = 48-17-1 (NOP omitted)
+	rcall	jiffy_sendbits	; 10+4 - [FFBD]
+
+	;; Output the second bitpair 10us (80 cycles) after the first
+	ldi	r18,19		; 1
+	rcall	delayloop	; ((19-1)*3+6) + 3 = 63 = 80-15-2
+	rjmp	0f		; 2
+0:	rcall	jiffy_sendbits	; 10+4 - [FFC4]
+
+	;; Output the third bitpair 11us (88 cycles) after the second
+	ldi	r18,22		; 1
+	rcall	delayloop	; ((22-1)*3+6) + 3 = 72 = 88-15-1
+	nop			; 1
+	rcall	jiffy_sendbits	; 10+4 - [FFCC]
+
+	;; Output the fourth bitpair 10us (80 cycles) after the third
+	ldi	r18,19		; 1
+	rcall	delayloop	; ((19-1)*3+6) + 3 = 63 = 80-15-2
+	rjmp	0f		; 2
+0:	rcall	jiffy_sendbits	; 10+4 - [FFD3]
+
+	;; Skip sending EOI for LOAD code path
+	tst	r20		; 1
+	brne	js_finish	; 1
 	
+	;; Output EOI marker 11us (88 cycles) after the last bitpair
+	ldi	r18,24		; 1
+	rcall	delayloop	; ((24-1)*3+6) + 3 = 78 = 88-8-2
+	rjmp	0f		; 2
+0:	out	_SFR_IO_ADDR(IEC_DDR), r22 ; 1 - output EOI marker [FFDB]
+
+	;; Wait 1us to allow the bus to settle (J1541 needs 4us here)
+	rcall	delay1us
 	
+	;; Wait until data is low, check ATN [FFDE]
+	;; This loop won't wait when EOI is signalled.
+0:	in	r24, _SFR_IO_ADDR(IEC_PIN) ; Read bus
+	sbrs	r24, IEC_PIN_ATN           ; Skip if ATN is high
+	rjmp	js_finish	           ; ATN low, exit loop
+	sbrc	r24, IEC_PIN_DATA          ; Skip if Data is low
+	rjmp	0b		           ; No Data, no ATN -> loop
+
+js_finish:
+	eor	r24, r23	 ; invert port state (ATN low returns true)
+	andi	r24, IEC_BIT_ATN ; single out ATN bit
+
+	sei			; re-enable interrupts
+	ret
+
+
 	;; ====================================================================
 	;;  Turbodisk
 	;; ====================================================================
@@ -249,7 +401,8 @@ turbodisk_buffer:
 	;; Initial delay of 4 us
 	ldi	r18,8		; 1
 	rcall	delayloop	; 30
-	
+
+	;; 287 AVR cycles from here to first LDA $DD00 on C64 side ($F822)
 tdbyteloop:
 	ld	r0, Z+		; 2 - load byte
 	ldi	r20, 4		; 1 - bitpair counter

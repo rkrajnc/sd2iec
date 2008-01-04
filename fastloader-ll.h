@@ -31,5 +31,6 @@ void turbodisk_byte(uint8_t value);
 void turbodisk_buffer(uint8_t *data, uint8_t length);
 
 uint8_t jiffy_receive(uint8_t *busstate);
+uint8_t jiffy_send(uint8_t value, uint8_t eoi, uint8_t loadflags);
 
 #endif
