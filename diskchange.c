@@ -25,13 +25,17 @@
 */
 
 #include <avr/io.h>
+#include <avr/pgmspace.h>
 #include <string.h>
 #include "config.h"
 #include "buffers.h"
 #include "tff.h"
 #include "fatops.h"
 #include "errormsg.h"
+#include "iec.h"
 #include "diskchange.h"
+
+static const char PROGMEM autoswap_name[] = "AUTOSWAP.LST";
 
 volatile uint8_t keycounter;
 
@@ -132,6 +136,9 @@ static void mount_line(void) {
 void set_changelist(char *filename) {
   FRESULT res;
 
+  /* Assume this isn't the auto-swap list */
+  iecflags.autoswap_active = 0;
+
   /* Remove the old swaplist */
   if (linenum != 255) {
     f_close(&swaplist);
@@ -152,9 +159,24 @@ void set_changelist(char *filename) {
   
 
 void change_disk(void) {
-  if (linenum == 255)
-    return;
+  if (linenum == 255) {
+    /* No swaplist active, try using AUTOSWAP.LST */
+    /* change_disk is called from the IEC idle loop, so entrybuf is free */
+    strcpy_P((char *)entrybuf, autoswap_name);
+    set_changelist((char *)entrybuf);
+    if (linenum == 255) {
+      /* No swap list found, clear error and exit */
+      set_error(ERROR_OK);
+      return;
+    } else {
+      /* Autoswaplist found, mark it as active                */
+      /* and exit because the first image is already mounted. */
+      iecflags.autoswap_active = 1;
+      return;
+    }
+  }
 
+  /* Mount the next image in the list */
   linenum++;
   mount_line();
 }
@@ -165,5 +187,5 @@ void init_change(void) {
 
   memset(&swaplist,0,sizeof(swaplist));
   linenum = 255;
+  iecflags.autoswap_active = 0;
 }
-

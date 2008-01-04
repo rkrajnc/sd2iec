@@ -417,7 +417,9 @@ void parse_doscommand(void) {
     return;
   }
 
-  command_buffer[command_length] = 0;
+  command_buffer[command_length]   = 0;
+  /* Requires less space than checks in the parsers */
+  command_buffer[command_length+1] = 0;
 
   /* MD/CD/RD clash with other commands, so they're checked first */
   if (command_buffer[1] == 'D') {
@@ -444,6 +446,9 @@ void parse_doscommand(void) {
 	/* but who'll notice if we don't check?       */
 	if (name[0] == '/')
 	  name++;
+
+      if (iecflags.autoswap_active)
+	set_changelist("");
       
       if (i == 'C')
 	chdir(name);

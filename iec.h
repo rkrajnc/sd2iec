@@ -29,12 +29,13 @@
 
 /* Some fields don't need to be public, but this way saves a bit of ram */
 typedef struct {
-  int vc20mode:1;
-  int eoi_recvd:1;
-  int command_recvd:1;
-  int jiffy_enabled:1;
-  int jiffy_active:1;
-  int jiffy_load:1;
+  int vc20mode:1;        /* Use VC20 timing on IEC bus   */
+  int eoi_recvd:1;       /* Received EOI                 */
+  int command_recvd:1;   /* Command or filename received */
+  int jiffy_enabled:1;   /* JiffyDOS support enabled     */
+  int jiffy_active:1;    /* JiffyDOS detected            */
+  int jiffy_load:1;      /* JiffyDOS LOAD detected       */
+  int autoswap_active:1; /* autoswap.lst in use          */
 } iecflags_t;
 
 extern iecflags_t iecflags;

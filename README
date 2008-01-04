@@ -91,6 +91,7 @@ Supported commands:
              to DolphinDOS. Example result: "03,J-:C152,00,00"
 
   - XS:name  Set up a swap list - see "Changing Disk Images" below.
+    XS       Disable swap list
 
 Software fastloaders:
 =====================
@@ -146,6 +147,13 @@ Due to the way this feature is implemented you are not limited to a
 swap list containing just D64 images, M2I and even FAT directories
 will work too.
 
+If you press the button when no list has been set before or when the
+previous list was cleared by sending XS the software will look for a
+file called AUTOSWAP.LST in the current (FAT-)directory and use this
+as the current swap list until you deactivate it or manually change
+the directory (otherwise an AUTOSWAP.LST in the new directory would be
+ignored until you send XS, killing the nice "it just works" feeling).
+
 Other important notes:
 ======================
 - File overwrite (@foo) is implemented by deleting the file first.
@@ -161,7 +169,7 @@ variables supplied to the make command line.
 The target chip must always be supplied by using either "make CHIP=m32"
 for the ATmega32 or "make CHIP=m644" for the ATmega644.
 
-By default the codes is configured for the I/O pin usage of the "Shadowwolf"
+By default the codes is configured for the I/O pin usage of the "Shadowolf"
 variant of the MMC2IEC board. If your circuit uses the original LarsP
 circuit instead, add "LARSP=yes" to the make command line to change the
 defaults. If you use a variant that is not covered by either of those options,
