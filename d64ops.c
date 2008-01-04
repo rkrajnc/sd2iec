@@ -67,13 +67,12 @@ static uint32_t sector_offset(uint8_t track, const uint8_t sector) {
 
 /* Replace oldchar with newchar in the first len bytes of buffer */
 static void strnsubst(uint8_t *buffer, uint8_t len, uint8_t oldchar, uint8_t newchar) {
-  uint8_t i = len-1;
+  uint8_t i=len-1;
 
-  while (i > 0) {
+  do {
     if (buffer[i] == oldchar)
       buffer[i] = newchar;
-    i--;
-  }
+  } while (i--);
 }
 
 static uint8_t d64_read(buffer_t *buf) {
