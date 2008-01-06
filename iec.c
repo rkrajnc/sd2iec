@@ -164,7 +164,7 @@ static int16_t _iec_getc(void) {
   start_timeout(TIMEOUT_US(256));
   
   do {
-    if (check_atn()) return -2;                        // E9DF
+    if (check_atn()) return -1;                        // E9DF
     tmp = has_timed_out();                             // E9EE
   } while ((iec_pin() & IEC_BIT_CLOCK) && !tmp);
 
@@ -178,7 +178,7 @@ static int16_t _iec_getc(void) {
 
     do {
       if (check_atn())                                 // E9FD
-	return -3;
+	return -1;
     } while (iec_pin() & IEC_BIT_CLOCK);
     
     iecflags.eoi_recvd = 1;                            // EA07
@@ -214,7 +214,7 @@ static int16_t _iec_getc(void) {
     val = (val >> 1) | (!!(tmp & IEC_BIT_DATA) << 7);  // EA18
 
     do {                                               // EA1A
-      if (check_atn()) return -4;
+      if (check_atn()) return -1;
     } while (iec_pin() & IEC_BIT_CLOCK);
   }
 
