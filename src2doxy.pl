@@ -32,6 +32,10 @@ while (<>) {
     chomp;
     s/\r$//;
     s/\s+$//;
+
+    # doxygen is too stupid to understand after-the-variable comments
+    # without external help. WARNING: Will substitute within strings!
+    s!([^ \t]\s+)/// !$1///< !;
     
     $incomment = 1 if m!^/\*!;
     if (m!^/\*\*$!) {
