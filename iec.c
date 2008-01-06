@@ -67,19 +67,30 @@ enum { DEVICE_IDLE = 0, DEVICE_LISTEN, DEVICE_TALK } device_state;
 /*  Utility stuff                                                            */
 /* ------------------------------------------------------------------------- */
 
-/* Calculate timer start value for given timeout in microseconds   */
+/// Calculate timer start value for given timeout in microseconds
 #define TIMEOUT_US(x) (256-((float)F_CPU/8.0*(x/1000000.0)))
 
-/* Set timer0 count to startval and clear overflow flag                    */
-/*   Use in conjunction with the above macro to set up overflow after      */
-/*   a specified amount of time. Calculating this directly in the function */
-/*   would pull in floating point routines -> big and slow.                */
+/**
+ * start_timeout - start a timeout using timer0
+ * @startval: starting value for timer
+ *
+ * This function sets timer 0 to the specified value and clears its overflow
+ * flag. Use in conjunction with TIMEOUT_US to cause a timer overflow after
+ * a specified number of microseconds. DON'T use a variable as a parameter to
+ * the TIMEOUT_US macro because that would require run-time float calculations.
+ */
 static void start_timeout(uint8_t startval) {
   TCNT0 = startval;
   TIFR0 |= _BV(TOV0);
 }
 
-/* Returns true if timer0 has overflown */
+/**
+ * has_timed_out - returns true if timeout was reached
+ *
+ * This function returns true if the overflow flag of timer 0 is set which
+ * (together with start_timeout and TIMEOUT_US) will happen when the
+ * specified time has elapsed.
+ */
 static uint8_t has_timed_out(void) {
   return TIFR0 & _BV(TOV0);
 }
@@ -89,7 +100,7 @@ static uint8_t has_timed_out(void) {
 /*  Very low-level bus handling                                              */
 /* ------------------------------------------------------------------------- */
 
-/* Debounce IEC input - see E9C0 */
+/// Debounce IEC input - see E9C0
 static uint8_t iec_pin(void) {
   uint8_t tmp;
   
@@ -100,7 +111,7 @@ static uint8_t iec_pin(void) {
   return tmp;
 }
 
-/* Checks if ATN has changed and changes state to match - see EA59 */
+/// Checks if ATN has changed and changes state to match (EA59)
 static uint8_t check_atn(void) {
   if (bus_state == BUS_ATNACTIVE)
     if (IEC_ATN) {
@@ -116,8 +127,8 @@ static uint8_t check_atn(void) {
       return 0;
 }
 
-/* Interrupt routine that simulates the hardware-auto-acknowledge of ATN */
-/*   This has to run faster than once per millisecond =(                 */
+/// Interrupt routine that simulates the hardware-auto-acknowledge of ATN
+/* This currently runs once every 500 microseconds, keep small! */
 ISR(TIMER2_COMPA_vect) {
   static uint8_t blinktimer;
 
@@ -145,8 +156,13 @@ ISR(TIMER2_COMPA_vect) {
 /*  Byte transfer routines                                                   */
 /* ------------------------------------------------------------------------- */
 
-/* Receive a byte from the CBM serial bus - see E9C9 */
-/*   If this returns -1 the device state has changed, return to the main loop */
+/**
+ * _iec_getc - receive one byte from the CBM serial bus (E9C9)
+ *
+ * This function tries receives one byte from the serial bus and returns it
+ * if successful. Returns -1 instead if the device state has changed, the
+ * caller should return to the main loop immediately in that case.
+ */
 static int16_t _iec_getc(void) {
   uint8_t i,val,tmp;
 
@@ -224,7 +240,13 @@ static int16_t _iec_getc(void) {
   return val;
 }
 
-/* Wrap cli/sei around iec_getc. The compiler inlines _iec_getc into this. */
+/**
+ * iec_getc - wrapper around _iec_getc to disable interrupts
+ *
+ * This function wraps iec_getc to disable interrupts there and is completely
+ * inlined by the compiler. It could be inlined in the C code too, but is kept
+ * seperately for clarity.
+ */
 static int16_t iec_getc(void) {
   int16_t val;
 
@@ -235,8 +257,15 @@ static int16_t iec_getc(void) {
 }
   
 
-/* Send a byte over the CBM serial bus - see E916 */
-/*   If this returns -1 the device state has changed, return to the main loop */
+/**
+ * iec_putc - send a byte over the serial bus (E916)
+ * @data    : byte to be sent
+ * @with_eoi: Flags if the byte should be send with an EOI condition
+ *
+ * This function sends the byte data over the serial bus, optionally including
+ * a marker for the EOI condition. Returns 0 normally or -1 if the bus state has
+ * changed, the caller should return to the main loop in that case.
+ */
 static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
   uint8_t i;
 
@@ -311,7 +340,12 @@ static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
 /*  Listen+Talk-Handling                                                     */
 /* ------------------------------------------------------------------------- */
 
-/* Handle an incoming LISTEN request - see EA2E */
+/**
+ * iec_listen_handler - handle an incoming LISTEN request (EA2E)
+ * @cmd: command byte received from the bus
+ *
+ * This function handles a listen request from the computer.
+ */
 static uint8_t iec_listen_handler(const uint8_t cmd) {
   int16_t c;
   buffer_t *buf;
@@ -373,7 +407,12 @@ static uint8_t iec_listen_handler(const uint8_t cmd) {
   }    
 }
 
-/* Handle an incoming TALK request - see E909 */
+/**
+ * iec_talk_handler - handle an incoming TALK request (E909)
+ * @cmd: command byte received from the bus
+ *
+ * This function handles a talk request from the computer.
+ */
 static uint8_t iec_talk_handler(uint8_t cmd) {
   buffer_t *buf;
 

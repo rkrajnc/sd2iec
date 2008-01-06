@@ -361,11 +361,12 @@ copy2card:
 
 
 # Doxygen output:
-doxygen: dox
-
-dox:
-	doxygen.exe $(TARGET).conf
-
+doxygen:
+	-rm -rf doxyinput
+	mkdir doxyinput
+	cp *.h *.c doxyinput
+	src2doxy.pl doxyinput/*.h doxyinput/*.c
+	doxygen doxygen.conf
 
 # Display size of file.
 HEXSIZE = $(SIZE) --target=$(FORMAT) $(TARGET).hex
@@ -492,9 +493,9 @@ clean_list :
 	$(REMOVE) $(SRC:.c=.s)
 	$(REMOVE) $(SRC:.c=.d)
 	$(REMOVE) .dep/*
+	$(REMOVE) -rf codedoc
+	$(REMOVE) -rf doxyinput
 	-rmdir $(OBJDIR)
-
-
 
 # Include the dependency files.
 -include $(shell mkdir .dep 2>/dev/null) $(wildcard .dep/*)
@@ -503,5 +504,5 @@ clean_list :
 # Listing of phony targets.
 .PHONY : all begin finish end sizebefore sizeafter gccversion \
 build elf hex eep lss sym coff extcoff \
-clean clean_list program debug gdb-config
+clean clean_list program debug gdb-config doxygen
 

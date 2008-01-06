@@ -21,6 +21,10 @@
  *   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *   THE SOFTWARE.
+ *
+ *
+ * crc7.c: Calculate CRC7 for SD card commands
+ *
  */
 
 /*
@@ -41,13 +45,12 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-/*
- * Update the crc value with new data.
- * crc      The current crc value.
- * data     Pointer to a buffer of data_len bytes.
- * data_len Number of bytes in the data buffer.
+/**
+ * crc7update - Update the crc value with a new data byte.
+ * @crc : The current crc value.
+ * @data: The data byte to be added into crc.
  *
- * returns the updated crc value
+ * Adds data into crc and returns the updated crc value.
  */
 uint8_t crc7update(uint8_t crc, const uint8_t data) {
     uint8_t i;

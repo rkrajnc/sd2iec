@@ -47,7 +47,15 @@
 /*  Utility functions                                                        */
 /* ------------------------------------------------------------------------- */
 
-/* Changes the CBM name padding in entrybuf */
+/**
+ * name_repad - changes CBM name padding in entrybuf
+ * @oldchar: char to be substituted
+ * @newchar: char to be substituded with
+ *
+ * This function changes the padding of the CBM name in entrybuf from oldchar
+ * to newchar. Please note that strnsubst is not a straigt replacement for
+ * this function.
+ */
 static void name_repad(uint8_t oldchar, uint8_t newchar) {
   uint8_t i = CBM_NAME_LENGTH-1;
   uint8_t *str;
@@ -57,9 +65,12 @@ static void name_repad(uint8_t oldchar, uint8_t newchar) {
     str[i--] = newchar;
 }
 
-/* Changes the type letter in entrybuf to a CBM type
- * Returns 1 if deleted or unknown entry
- *         0 otherwise
+/**
+ * parsetype - change type letter to CBM filetype in entrybuf
+ *
+ * This function replaces the type letter in the M2I line in entrybuf
+ * with a CBM file type. Returns 1 for deleted or unknown type letters,
+ * 0 otherwise.
  */
 static uint8_t parsetype(void) {
   switch (entrybuf[0] | 0x20) { /* Lowercase the letter */
@@ -84,10 +95,13 @@ static uint8_t parsetype(void) {
   }
 }
 
-/* Load the M2I entry at offset
- * Returns 0 if successful
- *         1 if end-of-file
- *       255 on errors
+/**
+ * load_entry - load M2I entry at offset into entrybuf
+ * @offset: offset in M2I file to be loaded
+ *
+ * This function loads the M2I line at offset into entrybuf and zero-
+ * terminates the FAT name within.  Returns 0 if successful, 1 at
+ * end of file or 255 on error.
  */
 static uint8_t load_entry(uint16_t offset) {
   uint8_t i;
@@ -109,10 +123,13 @@ static uint8_t load_entry(uint16_t offset) {
   return 0;
 }
 
-/* Locate the file entry name
- * Returns the offset if successful
- *         0 if not found
- *         1 on errors
+/**
+ * find_entry - locate a CBM file name in an M2I file
+ * @name: name to be located
+ *
+ * This function searches for a given CBM file name in the currently
+ * mounted M2I File. Returns 0 if not found, 1 on errors or the
+ * offset of the M2I line if found.
  */
 static uint16_t find_entry(char *name) {
   uint16_t pos = M2I_ENTRY_OFFSET;
@@ -146,7 +163,14 @@ static uint16_t find_entry(char *name) {
   }
 }
 
-/* Returns the first empty file entry */
+/**
+ * find_empty_entry - returns the offset of the first empty M2I entry
+ *
+ * This function looks for a deleted entry in an M2I file and returns
+ * it offset. Returns 1 on error or an offset if successful. The
+ * offset may point to a position beyond the end of file if there
+ * were no free entries available.
+ */
 static uint16_t find_empty_entry(void) {
   uint16_t pos = M2I_ENTRY_OFFSET;
   uint8_t i;
@@ -168,8 +192,17 @@ static uint16_t find_empty_entry(void) {
   }
 }
 
-/* Common code to open an existing file */
-/* Used for read and append.            */
+/**
+ * open_existing - open an existing file
+ * @name      : name of the file
+ * @type      : type of the file (not checked)
+ * @buf       : buffer to be used
+ * @appendflag: Flags if the file should be opened for appending
+ *
+ * This function searches the file name in an M2I file and opens it
+ * either in read or append mode according to appendflag by calling
+ * the appropiate fat_* functions.
+ */
 static void open_existing(char *name, uint8_t type, buffer_t *buf, uint8_t appendflag) {
   uint16_t offset;
 

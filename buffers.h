@@ -29,43 +29,57 @@
 #include <stdint.h>
 #include "dirent.h"
 
+/**
+ * struct buffer_s - buffer handling structire
+ * @data     : Pointer to the data area of the buffer
+ * @lastused : Index to the last used byted
+ * @position : Index of the byte that will be read/written next
+ * @seconday : Secondary address the buffer is associated with
+ * @allocated: Flags if the buffer is allocated or not
+ * @dirty    : Flags if the data needs to be saved
+ * @read     : Flags if the buffer was opened for reading
+ * @write    : Flags if the buffer was opened for writing
+ * @sendeoi  : Flags if the last byte should be sent with EOI
+ * @refill   : Callback to refill/write out the buffer, returns true on error
+ * @cleanup  : Callback to clean up and save remaining data, returns true on error
+ * 
+ * Most allocated buffers point into the same bufferdata array, but
+ * the error channel uses the same structure to avoid special-casing it
+ * everywhere.
+ */
 typedef struct buffer_s {
   /* The error channel uses the same data structure for convenience reasons, */
   /* so data must be a pointer. It also allows swapping the buffers around   */
   /* in case I ever add external ram (not XRAM) to the design (which will    */
   /* require locking =( ).                                                   */
   uint8_t *data; 
-  uint8_t lastused; // Index of the last used byte
-  uint8_t position; // Index of the byte that will be sent next
+  uint8_t lastused;
+  uint8_t position;
   uint8_t secondary;
   int     allocated:1;
   int     dirty:1;
   int     read:1;
   int     write:1;
   int     sendeoi:1;
-  /* Callback routine to refill the buffer after its end has been reached. */
-  /*  Returns true if any error occured                                    */
   uint8_t (*refill)(struct buffer_s *buffer);
-  /* Cleanup routine that will be called after CLOSE */
-  /*  Returns true if any error occured              */
   uint8_t (*cleanup)(struct buffer_s *buffer);
 
-  /* various private data structures */
+  /* private: */
   union {
     struct {
       dh_t dh;          /* Directory handle */
       uint8_t filetype; /* File type */
       char *matchstr;   /* Pointer to filename pattern */
     } dir;
-    FIL fh; /* File access */
+    FIL fh;             /* File access */
   } pvt;
 } buffer_t;
 
-extern dh_t matchdh;      /* Directory handle used in file matching       */
-extern buffer_t buffer[]; /* Simplifies access to the error buffer length */
+extern dh_t matchdh;         /// Directory handle used in file matching
+extern buffer_t buffer[];    /// Simplifies access to the error buffer length
 
-extern FIL imagehandle;      /* Filehandle for mounted image files        */
-extern uint8_t entrybuf[33]; /* Buffer for directory entries to be parsed */
+extern FIL imagehandle;      /// Filehandle for mounted image files
+extern uint8_t entrybuf[33]; /// Buffer for directory entries to be parsed
 
 /* Initializes the buffer structures */
 void init_buffers(void);

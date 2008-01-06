@@ -36,6 +36,26 @@
 #include "fileops.h"
 #include "tff.h"
 
+/**
+ * struct fileops_t - function pointers to file operations
+ * @open_read   : open a file for reading
+ * @open_write  : open a file for writing/appending
+ * @file_delete : delete a file
+ * @disk_label  : read disk label
+ * @disk_id     : read disk id
+ * @disk_free   : read free space of disk
+ * @read_sector : read a sector from the disk
+ * @write_sector: write a sector to the disk
+ * @opendir     : open a directory
+ * @readdir     : read an entry from a directory
+ * @mkdir       : create a directory
+ * @chdir       : change current directory
+ *
+ * This structure holds function pointers for the various
+ * abstracted operations on the supported file systems/images.
+ * Instances of this structure must always be allocated in flash
+ * and no field may be set to NULL.
+ */
 typedef struct {
   void     (*open_read)(char *path, char *name, buffer_t *buf);
   void     (*open_write)(char *path, char *name, uint8_t type, buffer_t *buf, uint8_t append);

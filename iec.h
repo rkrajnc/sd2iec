@@ -27,15 +27,28 @@
 #ifndef IEC_H
 #define IEC_H
 
-/* Some fields don't need to be public, but this way saves a bit of ram */
+/**
+ * struct iecflags_t - Bitfield of various flags, mostly IEC-related
+ * @vc20mode       : Use VC20 timing on IEC bus
+ * @eoi_recvd      : Received EOI with the last byte read
+ * @command_recvd  : Command or filename received
+ * @jiffy_enabled  : JiffyDOS support enabled
+ * @jiffy_active   : JiffyDOS-capable master detected
+ * @jiffy_load     : JiffyDOS LOAD operation detected
+ * @autoswap_active: autoswap.lst in use
+ *
+ * This is a bitfield for a number of boolean variables used around the code.
+ * autoswap_active is the only one not related to IEC stuff, but is still
+ * included in here because it saves one byte of ram.
+ */
 typedef struct {
-  int vc20mode:1;        /* Use VC20 timing on IEC bus   */
-  int eoi_recvd:1;       /* Received EOI                 */
-  int command_recvd:1;   /* Command or filename received */
-  int jiffy_enabled:1;   /* JiffyDOS support enabled     */
-  int jiffy_active:1;    /* JiffyDOS detected            */
-  int jiffy_load:1;      /* JiffyDOS LOAD detected       */
-  int autoswap_active:1; /* autoswap.lst in use          */
+  int vc20mode:1;
+  int eoi_recvd:1;
+  int command_recvd:1;
+  int jiffy_enabled:1;
+  int jiffy_active:1;
+  int jiffy_load:1;
+  int autoswap_active:1;
 } iecflags_t;
 
 extern iecflags_t iecflags;

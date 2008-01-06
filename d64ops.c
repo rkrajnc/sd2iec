@@ -52,8 +52,14 @@
 /*  Utility functions                                                        */
 /* ------------------------------------------------------------------------- */
 
-/* Transform a track/sector pair into a D64 offset   */
-/* I wonder if the code size can be reduced further? */
+/**
+ * sector_offset - Transform a track/sector pair into a D64 offset
+ * @track : Track number
+ * @sector: Sector number
+ *
+ * Calculates an offset into a D64 file from a track and sector number.
+ */
+/* This version used the least code of all tested variants. */
 static uint32_t sector_offset(uint8_t track, const uint8_t sector) {
   track--; /* Track numbers are 1-based */
   if (track < 17)
@@ -65,7 +71,17 @@ static uint32_t sector_offset(uint8_t track, const uint8_t sector) {
   return 256L * (17*21 + 7*19 + 6*18 + (track-30)*17 + sector);
 }
 
-/* Replace oldchar with newchar in the first len bytes of buffer */
+/**
+ * strnsubst - substitute one character with another in a buffer
+ * @buffer : pointer to the buffer
+ * @len    : length of buffer
+ * @oldchar: character to be replaced
+ * @newchar: character to be used as a replacement
+ *
+ * This functions changes all occurences of oldchar in the first len
+ * byte of buffer with newchar. Although it is named str*, it doesn't
+ * care about zero bytes in any way.
+ */
 static void strnsubst(uint8_t *buffer, uint8_t len, uint8_t oldchar, uint8_t newchar) {
   uint8_t i=len-1;
 

@@ -36,12 +36,13 @@ dh_t    matchdh;
 FIL     imagehandle;
 uint8_t entrybuf[33];
 
-/* One additional buffer for channel 15 */
+/// One additional buffer structure for channel 15
 buffer_t buffer[BUFFER_COUNT+1];
 
-/* The actual data buffers */
+/// The actual data buffers
 static uint8_t bufferdata[BUFFER_COUNT*256];
 
+/// Number of active data buffers
 uint8_t active_buffers;
 
 void init_buffers(void) {

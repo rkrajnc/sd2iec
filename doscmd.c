@@ -56,12 +56,18 @@ uint16_t datacrc = 0xffff;
 /*  Parsing helpers                                                          */
 /* ------------------------------------------------------------------------- */
 
-/* Parses CMD-style directory specification     */
-/* Returns 1 if any errors found                */
-/* in and out can point to the same address     */
-/* The string may be lengthened by 1 character  */
-/* A 0 may be added in front if there was no :  */
-/* If specified, name will point to the first char after that */
+/**
+ * parse_path - parse CMD style directory specification
+ * @in  : input buffer
+ * @out : output buffer
+ * @name: pointer to pointer to filename (may be NULL)
+ *
+ * This function parses a CMD style directory specification in a file name
+ * and copies both path and filename to the output buffer, seperated by \0.
+ * Both buffers may point to the same address, but must be able to hold one
+ * character more than strlen(in)+1. If non-NULL, *name will point to the
+ * beginning of the filename in the output buffer.
+ */
 void parse_path(char *in, char *out, char **name) {
   if (strchr(in, ':')) {
     uint8_t state = 0;
@@ -257,7 +263,7 @@ static void handle_memwrite(void) {
     return;
   }
 
-  /* Turbodisk sends the filename in the last M-W */
+  /* Turbodisk sends the filename in the last M-W, check the previous CRC */
   if (datacrc == 0xe1cb) {
     detected_loader = FL_TURBODISK;
   } else {

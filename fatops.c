@@ -61,7 +61,15 @@ const PROGMEM fileops_t fatops = {
 /*  Utility functions                                                        */
 /* ------------------------------------------------------------------------- */
 
-/* Translate a tff FRESULT into a commodore error message */
+/**
+ * parse_error - translates a tff FRESULT into a commodore error message
+ * @res     : FRESULT to be translated
+ * @readflag: Flags if it was a read operation
+ *
+ * This function sets the error channel according to the problem given in
+ * res. readflag specifies if a READ ERROR or WRITE ERROR should be used
+ * if the error is FR_RW_ERROR.
+ */
 void parse_error(FRESULT res, uint8_t readflag) {
   switch (res) {
   case FR_OK:
@@ -153,7 +161,13 @@ static char* build_name(char *path, char *name, buffer_t *buf) {
 /*  Callbacks                                                                */
 /* ------------------------------------------------------------------------- */
 
-/* Read the next data block from a file into the buffer */
+/**
+ * fat_file_read - read the next data block into the buffer
+ * @buf: buffer to be worked on
+ *
+ * This function reads the next block of data from the associated file into
+ * the given buffer. Used as a refill-callback when reading files
+ */
 static uint8_t fat_file_read(buffer_t *buf) {
   FRESULT res;
   UINT bytesread;
@@ -185,7 +199,13 @@ static uint8_t fat_file_read(buffer_t *buf) {
   return 0;
 }
 
-/* Writes the data block to a file */
+/**
+ * fat_file_write - write the current buffer data
+ * @buf: buffer to be worked on
+ *
+ * This function writes the current contents of the given buffer into its
+ * associated file. Used as a refill-callback when writing files.
+ */
 static uint8_t fat_file_write(buffer_t *buf) {
   FRESULT res;
   UINT byteswritten;
@@ -216,7 +236,15 @@ static uint8_t fat_file_write(buffer_t *buf) {
   return 0;
 }
 
-/* Close the file corresponding to the buffer, writing remaining data if any */
+/**
+ * fat_file_close - close the file associated with a buffer
+ * @buf: buffer to be worked on
+ *
+ * This function closes the file associated with the given buffer. If the buffer
+ * was opened for writing the data contents will be stored if required.
+ * Additionally the buffer will be marked as free.
+ * Used as a cleanup-callback for reading and writing.
+ */
 static uint8_t fat_file_close(buffer_t *buf) {
   FRESULT res;
   
@@ -243,7 +271,15 @@ static uint8_t fat_file_close(buffer_t *buf) {
 /*  Internal handlers for the various operations                             */
 /* ------------------------------------------------------------------------- */
 
-/* Open a file for reading */
+/**
+ * fat_open_read - opens a file for reading
+ * @path    : path of the file
+ * @filename: name of the file
+ * @buf     : buffer to be used
+ *
+ * This functions opens a file in the FAT filesystem for reading and sets up
+ * buf to access it.
+ */
 void fat_open_read(char *path, char *filename, buffer_t *buf) {
   FRESULT res;
 
@@ -264,7 +300,18 @@ void fat_open_read(char *path, char *filename, buffer_t *buf) {
   buf->refill(buf);
 }
 
-/* Open a file for writing */
+/**
+ * fat_open_write - opens a file for writing
+ * @path    : path of the file
+ * @filename: name of the file
+ * @type    : type of the file
+ * @buf     : buffer to be used
+ * @append  : Flags if the new data should be appended to the end of file
+ *
+ * This function opens a file in the FAT filesystem for writing and sets up
+ * buf to access it. type is ignored here because FAT has no equivalent of
+ * file types.
+ */
 void fat_open_write(char *path, char *filename, uint8_t type, buffer_t *buf, uint8_t append) {
   FRESULT res;
 
@@ -308,8 +355,15 @@ uint8_t fat_opendir(dh_t *dh, char *dir) {
   return 0;
 }
 
-/* readdir wrapper for FAT files                       */
-/* Returns 1 on error, 0 if successful, -1 if finished */
+/**
+ * fat_readdir - readdir wrapper for FAT
+ * @dh  : directory handle as set up by opendir
+ * @dent: CBM directory entry for returning data
+ *
+ * This function reads the next directory entry into dent.
+ * Returns 1 if an error occured, -1 if there are no more
+ * directory entries and 0 if successful.
+ */
 int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
   FRESULT res;
   FILINFO finfo;
@@ -360,8 +414,14 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
     return -1;
 }
 
-/* Delete a file/directory                         */
-/* Returns number of files deleted or 255 on error */
+/**
+ * fat_delete - Delete a file/directory on FAT
+ * @path    : path to the file/directory
+ * @filename: name of the file/directory to be deleted
+ *
+ * This function deletes the file filename in path and returns
+ * 0 if not found, 1 if deleted or 255 if an error occured.
+ */
 uint8_t fat_delete(char *path, char *filename) {
   buffer_t *buf;
   FRESULT res;
@@ -383,7 +443,15 @@ uint8_t fat_delete(char *path, char *filename) {
     return 255;
 }
 
-/* Change the current directory */
+/**
+ * fat_chdir - change directory in FAT and/or mount image
+ * @dirname: Name of the directory/image to be changed into
+ *
+ * This function changes the current FAT directory to dirname.
+ * If dirname specifies a file with a known extension (e.g. M2I or D64), the
+ * current directory will be changed to the directory of the file and
+ * it will be mounted as an image file.
+ */
 void fat_chdir(char *dirname) {
   FRESULT res;
   
@@ -449,9 +517,14 @@ void fat_mkdir(char *dirname) {
   parse_error(res,0);
 }
 
-/* Get the volume label                                               */
-/* Returns 0 if successful.                                           */
-/* Will write a space-padded, 16 char long unterminated name to label */
+/**
+ * fat_getlabel - Get the volume label
+ * @label: pointer to the buffer for the label (16 characters)
+ *
+ * This function reads the FAT volume label and stores it space-padded
+ * in the first 16 bytes of label. Returns 0 if successfull, != 0 if
+ * an error occured.
+ */
 uint8_t fat_getlabel(char *label) {
   DIR dh;
   FILINFO finfo;
@@ -497,9 +570,14 @@ uint8_t fat_getlabel(char *label) {
     return 0;
 }
 
-/* Get the volume id (all 5 characters)                         */
-/* Returns 0 if successful.                                     */
-/* Will write a space-padded, 5 char long unterminated id to id */
+/**
+ * fat_getid - Create a disk id
+ * @id: pointer to the buffer for the id (5 characters)
+ *
+ * This function creates a disk ID from the FAT type (12/16/32)
+ * and the usual " 2A" of a 1541 in the first 5 bytes of id.
+ * Always returns 0 for success.
+ */
 uint8_t fat_getid(char *id) {
   switch (fatfs.fs_type) {
   case FS_FAT12:
@@ -545,7 +623,13 @@ void fat_sectordummy(buffer_t *buf, uint8_t track, uint8_t sector) {
   set_error_ts(ERROR_READ_NOHEADER,track,sector);
 }
 
-/* Mount the card */
+/**
+ * init_fatops - Initialize fatops module
+ *
+ * This function will initialize the fatops module and force
+ * mounting of the card. It can safely be called again if re-mounting
+ * is required.
+ */
 void init_fatops(void) {
   fop = &fatops;
   f_mount(0, &fatfs);
@@ -554,7 +638,13 @@ void init_fatops(void) {
   f_chdir("");
 }
 
-/* Generic image unmounting */
+/**
+ * image_unmount - generic unmounting function for images
+ *
+ * This function will clear all buffers, close the image file and
+ * restore file operations to fatops. It can be used for unmounting
+ * any image file types that don't require special cleanups.
+ */
 void image_unmount(void) {
   FRESULT res;
 
@@ -565,7 +655,15 @@ void image_unmount(void) {
     parse_error(res,0);
 }
 
-/* Generic chdir for unmounting an image */
+/**
+ * image_chdir - generic chdir for image files
+ * @dirname: directory to be changed into
+ *
+ * This function will ignore any dirnames except _ (left arrow)
+ * and unmount the image if that is found. It can be used as
+ * chdir/mkdir for all image types that don't support subdirectories
+ * themselves.
+ */
 void image_chdir(char *dirname) {
   if (!strcmp_P(dirname, PSTR("_"))) {
     /* Unmount request */
@@ -574,10 +672,16 @@ void image_chdir(char *dirname) {
   return;
 }
 
-/* Seek to a specified offset in the image file and read data */
-/* Returns 0 on success                                       */
-/*         1 on partial read                                  */
-/*         2 on failure                                       */
+/**
+ * image_read - Seek to a specified image offset and read data
+ * @offset: offset to be seeked to
+ * @buffer: pointer to where the data should be read to
+ * @bytes : number of bytes to read from the image file
+ *
+ * This function seeks to offset in the image file and reads bytes
+ * byte into buffer. It returns 0 on success, 1 if less than
+ * bytes byte could be read and 2 on failure.
+ */
 uint8_t image_read(DWORD offset, void *buffer, uint16_t bytes) {
   FRESULT res;
   UINT bytesread;
@@ -602,10 +706,16 @@ uint8_t image_read(DWORD offset, void *buffer, uint16_t bytes) {
   return 0;
 }
 
-/* Seek to a specified offset in the image file and write data */
-/* Returns 0 on success                                        */
-/*         1 on partial write                                  */
-/*         2 on failure                                        */
+/**
+ * image_write - Seek to a specified image offset and write data
+ * @offset: offset to be seeked to
+ * @buffer: pointer to the data to be written
+ * @bytes : number of bytes to read from the image file
+ *
+ * This function seeks to offset in the image file and writes bytes
+ * byte into buffer. It returns 0 on success, 1 if less than
+ * bytes byte could be written and 2 on failure.
+ */
 uint8_t image_write(DWORD offset, void *buffer, uint16_t bytes) {
   FRESULT res;
   UINT byteswritten;

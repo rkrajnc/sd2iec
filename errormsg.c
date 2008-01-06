@@ -39,7 +39,7 @@ volatile uint8_t error_blink_active;
 
 #define EC(x) x+0x80
 
-/* Abbreviations used in the main error strings */
+/// Abbreviations used in the main error strings
 static const prog_uint8_t abbrevs[] = {
   EC(0), 'F','I','L','E',
   EC(1), 'R','E','A','D',
@@ -52,7 +52,7 @@ static const prog_uint8_t abbrevs[] = {
   EC(127)
 };
 
-/* Error string table */
+/// Error string table
 static const prog_uint8_t messages[] = {
   EC(00),
     ' ','O','K',
@@ -107,7 +107,7 @@ static const prog_uint8_t messages[] = {
 #  define VERSION "X.X"
 #endif
 
-/* Version number string, will be added to message 73 */
+/// Version number string, will be added to message 73
 static const prog_uint8_t versionstr[] = VERSION;
 
 static char *appendmsg(char *msg, const prog_uint8_t *table, const uint8_t entry) {

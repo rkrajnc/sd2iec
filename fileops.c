@@ -75,14 +75,20 @@ const PROGMEM uint8_t filetypes[] = {
   'D','I','R'  // 6
 };
 
-/* Pointer to the currently active fileops structure */
+/// Pointer to the currently active fileops structure
 const fileops_t *fop;
 
 /* ------------------------------------------------------------------------- */
 /*  Utility functions                                                        */
 /* ------------------------------------------------------------------------- */
 
-/* Zero-terminate a padded commodore name */
+/**
+ * dent2str - zero terminate the commodore name in dent
+ * @dent: dent containing the name to be terminated
+ *
+ * This function zero-terminates the file name in dent and returns a
+ * pointer to that name.
+ */
 char *dent2str(struct cbmdirent *dent) {
   uint8_t i;
 
@@ -96,7 +102,14 @@ char *dent2str(struct cbmdirent *dent) {
   return (char *)dent->name;
 }
 
-/* Add a single directory entry in 15x1 format to the end of buf */
+/**
+ * addentry - add a single directory entry to the end of buf
+ * @dent: directory entry to be added
+ * @buf : buffer to be added to
+ *
+ * This function adds a directory entry for dent in 15x1 compatible format
+ * to the end of buf.
+ */
 static void addentry(struct cbmdirent *dent, buffer_t *buf) {
   uint8_t i;
   uint8_t *data;
@@ -153,8 +166,13 @@ static void addentry(struct cbmdirent *dent, buffer_t *buf) {
   buf->lastused += 32;
 }
 
-/* Match a pattern against a CBM-padded filename */
-/* Returns 1 if matching */
+/**
+ * match_name - Match a pattern against a file name
+ * @matchstr: pattern to be matched
+ * @dent    : pointer to the directory entry to be matched against
+ *
+ * This function tests if matchstr matches name in dent.
+ */
 static uint8_t match_name(char *matchstr, struct cbmdirent *dent) {
   uint8_t *filename = dent->name;
   uint8_t i = 0;
@@ -181,11 +199,18 @@ static uint8_t match_name(char *matchstr, struct cbmdirent *dent) {
     return 1;
 }
 
-/* Get next matching dirent */
-/* Return values:           */
-/*  -1: no more matches     */
-/*   0: match found         */
-/*   1: error               */
+/**
+ * next_match - get next matching directory entry
+ * @dh      : directory handle
+ * @matchstr: pattern to be matched
+ * @type    : required file type (0 for any)
+ * @dent    : pointer to a directory entry for returning the match
+ *
+ * This function looks for the next directory entry matching matchstr and
+ * type (if != 0) and returns it in dent. Return values of the function are
+ * -1 if no match could be found, 1 if an error occured or 0 if a match was
+ * found.
+ */
 int8_t next_match(dh_t *dh, char *matchstr, uint8_t type, struct cbmdirent *dent) {
   int8_t res;
   while (1) {
@@ -215,13 +240,26 @@ int8_t next_match(dh_t *dh, char *matchstr, uint8_t type, struct cbmdirent *dent
 /*  Callbacks                                                                */
 /* ------------------------------------------------------------------------- */
 
-/* Generic cleanup-callback that just frees the buffer */
+/**
+ * generic_cleanup - generic cleanup-callback that just frees the buffer
+ * @buf: buffer to be used
+ *
+ * This function just frees the given buffer and returns 0 for success.
+ * It can be used if no special cleanup for a buffer is required.
+ */
 uint8_t generic_cleanup(buffer_t *buf) {
   free_buffer(buf);
   return 0;
 }
 
-/* Generate the final directory buffer with the BLOCKS FREE message */
+/**
+ * dir_footer - generate the directory footer
+ * @buf: buffer to be used
+ *
+ * This is the final callback used during directory generation. It generates
+ * the "BLOCKS FREE" message and indicates that this is the final buffer to
+ * be sent. Always returns 0 for success.
+ */
 static uint8_t dir_footer(buffer_t *buf) {
   uint16_t blocks;
 
@@ -239,7 +277,14 @@ static uint8_t dir_footer(buffer_t *buf) {
   return 0;
 }
 
-/* Fill the buffer with one new directory entry */
+/**
+ * dir_refill - generate the next directory entry
+ * @buf: buffer to be used
+ *
+ * This function generates a single directory entry with the next matching
+ * file. If there is no more matching file the footer will be generated
+ * instead. Used as a callback during directory generation.
+ */
 static uint8_t dir_refill(buffer_t *buf) {
   struct cbmdirent dent;
 
@@ -264,7 +309,17 @@ static uint8_t dir_refill(buffer_t *buf) {
   }
 }
 
-/* Prepare for directory reading and create the header */
+/**
+ * load_directory - Prepare directory generation and create header
+ * @secondary: secondary address used for reading the directory
+ *
+ * This function prepeares directory reading and fills the buffer
+ * with the header line of the directory listing.
+ * BUG: There is a not-well-known feature in the 1541/1571 disk
+ * drives (and possibly others) that returns unparsed directory
+ * sectors if $ is opened with a secondary address != 0. This
+ * is not emulated here.
+ */
 static void load_directory(uint8_t secondary) {
   buffer_t *buf;
 
@@ -366,7 +421,14 @@ static void load_directory(uint8_t secondary) {
 /*  External interface for the various operations                            */
 /* ------------------------------------------------------------------------- */
 
-/* Open something */
+/**
+ * file_open - open a file on given secondary
+ * @secondary: secondary address used in OPEN call
+ *
+ * This function opens the file named in command_buffer on the given
+ * secondary address. All special names and prefixes/suffixed are handled
+ * here, e.g. $/#/@/,S,W
+ */
 void file_open(uint8_t secondary) {
   buffer_t *buf;
 

@@ -41,26 +41,54 @@
 #define TYPE_CBM 5
 #define TYPE_DIR 6
 
-/* Hidden is an unused bit on CBM */
+/// Hidden is an unused bit on CBM
 #define FLAG_HIDDEN (1<<5)
 #define FLAG_RO     (1<<6)
 #define FLAG_SPLAT  (1<<7)
 
+/**
+ * struct cbmdirent - directory entry for CBM names
+ * @blocksize: Size in blocks of 254 bytes
+ * @typeflags: OR of file type and flags
+ * @name     : 0xa0-padded commodore file name
+ *
+ * This structure holds a CBM filename, its type and its size. The typeflags
+ * are almost compatible to the file type byte in a D64 image, but the splat
+ * bit is inverted. The name is padded with 0xa0, but holds an extra byte
+ * in case it has to be converted to a zero-terminated C string.
+ */
 struct cbmdirent {
-  uint16_t blocksize;               /* file size in blocks      */
-  uint8_t  typeflags;               /* OR of filetype and flags */
-  uint8_t  name[CBM_NAME_LENGTH+1]; /* padded with 0xa0         */
+  uint16_t blocksize;
+  uint8_t  typeflags;
+  uint8_t  name[CBM_NAME_LENGTH+1];
 };
 
-/* D64 directory handle */
+/**
+ * struct d64dh - D64 directory handle
+ * @track : track of the current directory sector
+ * @sector: sector of the current directory sector
+ * @entry : number of the current directory entry in its sector
+ *
+ * This structure addresses an entry in a D64 directory by its track,
+ * sector and entry (8 entries per sector).
+ */
 struct d64dh {
   uint8_t track;
   uint8_t sector;
   uint8_t entry;
 };
 
-/* Generic directory handle */
-typedef union {
+/**
+ * union dh_t - union of all directory handles
+ * @fat: tff directory handle
+ * @m2i: m2i directory handle (offset of entry in the file)
+ * @d64: d64 directory handle
+ *
+ * This is a union of directory handles for all supported file types
+ * which is used as an opaque type to be passed between openddir and
+ * readdir.
+ */
+typedef union dh_u {
   DIR fat;
   uint16_t m2i;
   struct d64dh d64;

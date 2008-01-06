@@ -20,7 +20,7 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
    
-   main.c: Lots of calls init calls for the submodules
+   main.c: Lots of init calls for the submodules
 
 */
 
@@ -52,9 +52,9 @@ typedef struct
 const bootloaderinfo_t bootloaderinfo BOOTLOADER_SECTION = {DEVID, SWVERSIONMAJOR << 8 | SWVERSIONMINOR, 0x0000};
 #endif
 
-/* Make sure the watchdog is disabled as soon as possible */
+/* Make sure the watchdog is disabled as soon as possible    */
 /* Copy this code to your bootloader if you use one and your */
-/* MCU doesn't disable the WDT after reset! */
+/* MCU doesn't disable the WDT after reset!                  */
 void get_mcusr(void) \
       __attribute__((naked)) \
       __attribute__((section(".init3")));

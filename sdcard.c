@@ -152,8 +152,16 @@ static void deselectCard(void) {
   spiTransferByte(0xff);
 }
 
-// Send a command to the SD card
-// Deselect it afterwards if requested
+/**
+ * sendCommand - send a command to the SD card
+ * @command  : command to be sent
+ * @parameter: parameter to be sent
+ * @deselect : Flags if the card should be deselected afterwards
+ *
+ * This function calculates the correct CRC7 for the command and
+ * parameter and transmits all of it to the SD card. If requested
+ * the card will be deselected afterwards.
+ */
 static int sendCommand(const uint8_t  command,
 		       const uint32_t parameter,
 		       const uint8_t  deselect) {
@@ -385,8 +393,20 @@ DSTATUS disk_initialize(BYTE drv) {
 }
 
 
-
-// Reads sector to buffer
+/**
+ * disk_read - reads sectors from the SD card to buffer
+ * @drv   : drive (unused)
+ * @buffer: pointer to the buffer
+ * @sector: first sector to be read
+ * @count : number of sectors to be read
+ *
+ * This function reads count sectors from the SD card starting
+ * at sector to buffer. Returns RES_ERROR if an error occured or
+ * RES_OK if successful. Up to SD_AUTO_RETRIES will be made if
+ * the calculated data CRC does not match the one sent by the
+ * card. If there were errors during the command transmission
+ * card_state will be set to CARD_ERROR and no retries are made.
+ */
 DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {  
   uint8_t sec,res,tmp,errorcount;
   uint16_t crc,recvcrc;
@@ -445,7 +465,21 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
 
 
 
-// Writes sector to buffer
+/**
+ * disk_write - writes sectors from buffer to the SD card
+ * @drv   : drive (unused)
+ * @buffer: pointer to the buffer
+ * @sector: first sector to be written
+ * @count : number of sectors to be written
+ *
+ * This function writes count sectors from buffer to the SD card
+ * starting at sector. Returns RES_ERROR if an error occured,
+ * RES_WPRT if the card is currently write-protected or RES_OK
+ * if successful. Up to SD_AUTO_RETRIES will be made if the card
+ * signals a CRC error. If there were errors during the command
+ * transmission card_state will be set to CARD_ERROR and no retries
+ * are made.
+ */
 DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) { 
   uint8_t res,sec,errorcount,status;
   uint16_t crc;

@@ -8,3 +8,5 @@
 *.hex
 *.map
 *.elf
+codedoc
+doxyinput
