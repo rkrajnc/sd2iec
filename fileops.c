@@ -155,7 +155,8 @@ static void addentry(struct cbmdirent *dent, buffer_t *buf) {
 
 /* Match a pattern against a CBM-padded filename */
 /* Returns 1 if matching */
-static uint8_t match_name(char *matchstr, uint8_t *filename) {
+static uint8_t match_name(char *matchstr, struct cbmdirent *dent) {
+  uint8_t *filename = dent->name;
   uint8_t i = 0;
 
   while (filename[i] != 0xa0 && i < CBM_NAME_LENGTH) {
@@ -202,7 +203,7 @@ int8_t next_match(dh_t *dh, char *matchstr, uint8_t type, struct cbmdirent *dent
 
       /* Skip if the name doesn't match */
       if (matchstr &&
-	  !match_name(matchstr, dent->name))
+	  !match_name(matchstr, dent))
 	continue;
     }
 
