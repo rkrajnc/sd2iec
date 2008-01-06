@@ -206,7 +206,10 @@ void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
     error_blink_active = 1;
   } else {
     error_blink_active = 0;
-    DIRTY_LED_OFF();
+    if (active_buffers & 0xf0)
+      DIRTY_LED_ON();
+    else
+      DIRTY_LED_OFF();
   }
   buffer[BUFFER_COUNT].lastused = msg - (char *)error_buffer;
 }

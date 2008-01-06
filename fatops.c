@@ -252,7 +252,6 @@ static uint8_t fat_file_close(buffer_t *buf) {
 
   if (buf->write && buf->dirty) {
     /* Write the remaining data using the callback */
-    DIRTY_LED_OFF(); // FIXME: Mehr als eine Schreibdatei offen?
     if (fat_file_write(buf))
       return 1;
   }
@@ -329,6 +328,7 @@ void fat_open_write(char *path, char *filename, uint8_t type, buffer_t *buf, uin
     return;
   }
 
+  active_buffers += 16;
   DIRTY_LED_ON();
 
   buf->dirty     = 0;

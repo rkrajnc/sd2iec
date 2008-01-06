@@ -97,7 +97,7 @@ uint8_t free_all_buffers(uint8_t cleanup);
 /* Returns pointer to buffer on success or NULL on failure */
 buffer_t *find_buffer(uint8_t secondary);
 
-/* Number of currently allocated buffers */
+/* Number of currently allocated buffers + 16 * number of write buffers */
 uint8_t active_buffers;
 
 #endif

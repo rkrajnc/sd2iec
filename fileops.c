@@ -466,6 +466,8 @@ void file_open(uint8_t secondary) {
     buf->dirty     = 0;
     buf->cleanup   = NULL; // FIXME: free_buffer? Der erste Patch verschob die free-Pflicht zum Aufrufer
     buf->refill    = NULL;
+    active_buffers += 16;
+    DIRTY_LED_ON();
     return;
   }
 

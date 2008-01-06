@@ -42,9 +42,14 @@ buffer_t buffer[BUFFER_COUNT+1];
 /// The actual data buffers
 static uint8_t bufferdata[BUFFER_COUNT*256];
 
-/// Number of active data buffers
+/// Number of active data buffers + 16 * number of write buffers
 uint8_t active_buffers;
 
+/**
+ * init_buffers - initializes the buffer data structures
+ *
+ * This function initialized all the buffer-related data structures.
+ */
 void init_buffers(void) {
   uint8_t i;
 
@@ -60,6 +65,13 @@ void init_buffers(void) {
   buffer[BUFFER_COUNT].sendeoi   = 1;
 }
 
+/**
+ * alloc_buffer - allocates a buffer
+ *
+ * This function allocates a buffer and marks it as used. It will also
+ * turn on the busy LED to notify the user. Returns a pointer to the
+ * buffer structure or NULL if no buffer is free.
+ */
 buffer_t *alloc_buffer(void) {
   uint8_t i;
 
@@ -76,16 +88,41 @@ buffer_t *alloc_buffer(void) {
   return NULL;
 }
 
+/**
+ * free_buffer - deallocate a buffer
+ * @buffer: pointer to the buffer structure to mark as free
+ *
+ * This function deallocates the given buffer. If the pointer is NULL,
+ * the buffer is already freed or the buffer is assigned to secondary
+ * address 15 nothing will happen. This function will also update the
+ * two LEDs accordings to the remaining number of open and writeable
+ * buffers.
+ */
 void free_buffer(buffer_t *buffer) {
   if (buffer == NULL) return;
   if (buffer->secondary == 15) return;
   if (!buffer->allocated) return;
 
   buffer->allocated = 0;
+
+  if (buffer->write)
+    active_buffers -= 16;
+  if (!(active_buffers & 0xf0))
+    DIRTY_LED_OFF();
+
   if (! --active_buffers)
     BUSY_LED_OFF();
 }
 
+/**
+ * free_all_buffers - deallocates all buffers
+ * @cleanup: Flags if the cleanup callback should be called
+ *
+ * This function calls free_buffer on all allocated buffers, optionally
+ * calling the cleanup callback if desired. Returns 0 if all cleanup
+ * calls were successful (or no cleanup call was performed), non-zero
+ * otherwise.
+ */
 uint8_t free_all_buffers(uint8_t cleanup) {
   uint8_t i,res;
   
@@ -102,6 +139,14 @@ uint8_t free_all_buffers(uint8_t cleanup) {
   return res;
 }
 
+/**
+ * find_buffer - find the buffer corresponding to a secondary address
+ * @secondary: secondary address to look for
+ *
+ * This function returns a pointer to the first buffer structure whose
+ * secondary address is the same as the one given. Returns NULL if
+ * no matching buffer was found.
+ */
 buffer_t *find_buffer(uint8_t secondary) {
   uint8_t i;
 
