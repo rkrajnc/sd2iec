@@ -39,6 +39,7 @@
 #include "fatops.h"
 #include "sdcard.h"
 #include "diskchange.h"
+#include "eeprom.h"
 
 #ifdef __AVR_ATmega32__
 typedef struct
@@ -88,6 +89,8 @@ int main(void) {
   init_fatops();
 
   init_change();
+
+  read_configuration();
 
   BUSY_LED_OFF();
 

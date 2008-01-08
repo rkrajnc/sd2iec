@@ -80,11 +80,13 @@ Supported commands:
 - X: Extended commands. If you use JiffyDOS, you can send them by using
   @"X..." - without quotes you'll just receive an error.
 
-  - XJ+/XJ-  Enable or disable JiffyDOS protocol support. Default state
-             is disabled for now.
+  - XJ+/XJ-  Set or reset the JiffyDOS protocol support flag. Default state
+             is enabled for device address 8+9, disabled for device address
+             10+11. This flag can be saved in the EEPROM using XW.
 
   - XCnum    Set oscillator calibration value to num (must be between
-             0 and 255). Default is whatever your chip defaults to.
+             0 and 255). Default is whatever your chip defaults to. This
+             value can be saved in the EEPROM using XW.
 
   - X        X without any following characters reports the current state
              of all extended parameters via the error channel, similiar
@@ -92,6 +94,13 @@ Supported commands:
 
   - XS:name  Set up a swap list - see "Changing Disk Images" below.
     XS       Disable swap list
+
+  - XW       Store configuration to EEPROM
+             This commands stores the current configuration in the EEPROM.
+             It will automatically be read when the AVR is reset, so
+             any changes you made will persist even after turning off
+             the hardware. Currently the only things saved are the
+             oscillator calibration and the JiffyDOS protocol support flag.
 
 Software fastloaders:
 =====================

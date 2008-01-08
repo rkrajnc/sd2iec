@@ -3,6 +3,7 @@
 	- Bugfix: Fastloaders now work on LarsP-style hardware too
 	- Disk change key support
 	- Full JiffyDos support
+	- EEPROM configuration storage
 
 2007-12-25 - release 0.4.2
 	- Bugfix: LarsP-style hardware actually works now

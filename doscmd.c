@@ -42,6 +42,7 @@
 #include "fastloader.h"
 #include "iec.h"
 #include "diskchange.h"
+#include "eeprom.h"
 
 #define CURSOR_RIGHT 0x1d
 
@@ -306,6 +307,12 @@ static void parse_xcommand(void) {
     /* Calibration */
     str = (char *)command_buffer+2;
     OSCCAL = parse_number(&str);
+    set_error(ERROR_STATUS);
+    break;
+
+  case 'W':
+    /* Write configuration */
+    write_configuration();
     set_error(ERROR_STATUS);
     break;
 
