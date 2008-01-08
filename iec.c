@@ -543,6 +543,9 @@ void init_iec(void) {
   DISKCHANGE_DDR  &= ~DISKCHANGE_BIT;
   DISKCHANGE_PORT |=  DISKCHANGE_BIT;
 
+  /* Enable Jiffy for 8+9, disable for 10+11 */
+  iecflags.jiffy_enabled = !DEV10_JUMPER;
+
   set_error(ERROR_DOSVERSION);
 }
 
@@ -556,7 +559,6 @@ void iec_mainloop(void) {
   sei();
 
   iecflags.jiffy_active  = 0;
-  iecflags.jiffy_enabled = 1;
   iecflags.vc20mode      = 0;
 
   bus_state = BUS_IDLE;
