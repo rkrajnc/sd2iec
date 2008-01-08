@@ -35,7 +35,7 @@ Supported commands:
 - Directory filters:
   To show only directories, both =B (CMD-compatible) and =D can be used.
   On a real Commodore drive D matches everything.
-  To include hidden files in the directory, use *=H. On a 1541 this doesn't
+  To include hidden files in the directory, use *=H - on a 1541 this doesn't
   do anything. sd2iec marks hidden files with an H after the lock mark,
   i.e. "PRG<H" or "PRG H".
 
@@ -71,11 +71,20 @@ Supported commands:
 - S:
   Name matching is fully supported, directories are ignored.
 
+- U1/U2/B-R/B-W
+  Block reading and writing is fully supported while a D64 image is mounted.
+
+- B-P
+  Supported, not checked against the original rom at all.
+
 - UI+/UI-
   Switching the slightly faster bus protocol for the VC20 on and off works,
   it hasn't been tested much though.
 
 - UI/UJ
+  Soft/Hard reset - UI just sets the "73,SD2IEC..." message on the
+  error channel, UJ causes a restart of the AVR processor (skipping
+  the bootloader if installed).
 
 - X: Extended commands. If you use JiffyDOS, you can send them by using
   @"X..." - without quotes you'll just receive an error.
@@ -118,7 +127,9 @@ The JiffyDOS protocol has very relaxed timing constraints compared to
 Turbodisk, but still not as relaxed as the standard Commodore IEC protocol.
 Jiffy seems to tolerate slightly mis-tuned RC oscillators, but you still
 shouldn't expect it to work without oscillator calibration. If the
-frequency error is too big you WILL get wrong data.
+frequency error is too big you WILL get wrong data which usually manifests
+as a FILE NOT FOUND error because the name the drive received was already
+garbled.
 
 M2I files:
 ==========
