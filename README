@@ -180,6 +180,11 @@ Other important notes:
 - File sizes in the directory are in blocks (of 254 bytes), but
   the blocks free message actually reports free clusters. It is
   a compromise of compatibility, accuracy and code size.
+- If known, the low byte of the next line link pointer of the directory
+  listing will be set to (filesize MOD 254)+2, so you can calculate the
+  true size of the file if required. The 2 is added so it can never be
+  mistaken for an end marker (0) or for the default value (1, used by at
+  least the 1541 and 1571 disk drives).
 
 Compilation notes:
 ==================

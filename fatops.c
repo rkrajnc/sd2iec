@@ -387,6 +387,8 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
     else
       dent->blocksize = (finfo.fsize+253) / 254;
 
+    dent->remainder = finfo.fsize % 254;
+
     /* Copy name */
     memset(dent->name, 0xa0, sizeof(dent->name));
 

@@ -122,7 +122,12 @@ static void addentry(struct cbmdirent *dent, buffer_t *buf) {
   data[31] = 0;
 
   /* Next line pointer, 1571-compatible =) */
-  *data++ = 1;
+  if (dent->remainder != 0xff)
+    /* store remainder in low byte of link pointer          */
+    /* +2 so it is never 0 (end-marker) or 1 (normal value) */
+    *data++ = dent->remainder+2;
+  else
+    *data++ = 1;
   *data++ = 1;
   
   *data++ = dent->blocksize & 0xff;

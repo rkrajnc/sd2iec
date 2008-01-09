@@ -265,6 +265,7 @@ static int8_t m2i_readdir(dh_t *dh, struct cbmdirent *dent) {
       /* between the M2I file and the directory for every single     */
       /* file -> slooooow (<1 file/s for an M2I with 500 entries)    */
       dent->blocksize = 1;
+      dent->remainder = 0xff;
 #if 0
       FILINFO finfo;
 
@@ -283,6 +284,8 @@ static int8_t m2i_readdir(dh_t *dh, struct cbmdirent *dent) {
 	dent->blocksize = 63999;
       else
 	dent->blocksize = (finfo.fsize+253) / 254;
+
+      dent->remainder = finfo.fsize % 254;
 #endif
     } else
       dent->blocksize = 0;

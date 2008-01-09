@@ -49,6 +49,7 @@
 /**
  * struct cbmdirent - directory entry for CBM names
  * @blocksize: Size in blocks of 254 bytes
+ * @remainder: (filesize MOD 254) or 0xff if unknown
  * @typeflags: OR of file type and flags
  * @name     : 0xa0-padded commodore file name
  *
@@ -59,6 +60,7 @@
  */
 struct cbmdirent {
   uint16_t blocksize;
+  uint8_t  remainder;
   uint8_t  typeflags;
   uint8_t  name[CBM_NAME_LENGTH+1];
 };
