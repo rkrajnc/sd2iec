@@ -229,9 +229,9 @@ static uint8_t fat_file_write(buffer_t *buf) {
     return 1;
   }
 
-  buf->dirty    = 0;
-  buf->position = 0;
-  buf->lastused = 0;
+  buf->mustflush = 0;
+  buf->position  = 0;
+  buf->lastused  = 0;
 
   return 0;
 }
@@ -250,7 +250,7 @@ static uint8_t fat_file_close(buffer_t *buf) {
   
   if (!buf->allocated) return 0;
 
-  if (buf->write && buf->dirty) {
+  if (buf->write) {
     /* Write the remaining data using the callback */
     if (fat_file_write(buf))
       return 1;
@@ -331,7 +331,7 @@ void fat_open_write(char *path, char *filename, uint8_t type, buffer_t *buf, uin
   active_buffers += 16;
   DIRTY_LED_ON();
 
-  buf->dirty     = 0;
+  buf->mustflush = 0;
   buf->read      = 0;
   buf->write     = 1;
   buf->position  = 0;

@@ -36,7 +36,7 @@
  * @position : Index of the byte that will be read/written next
  * @seconday : Secondary address the buffer is associated with
  * @allocated: Flags if the buffer is allocated or not
- * @dirty    : Flags if the data needs to be saved
+ * @mustflush: Flags if the buffer must be flushed before adding characters
  * @read     : Flags if the buffer was opened for reading
  * @write    : Flags if the buffer was opened for writing
  * @sendeoi  : Flags if the last byte should be sent with EOI
@@ -57,7 +57,7 @@ typedef struct buffer_s {
   uint8_t position;
   uint8_t secondary;
   int     allocated:1;
-  int     dirty:1;
+  int     mustflush:1;
   int     read:1;
   int     write:1;
   int     sendeoi:1;

@@ -392,17 +392,20 @@ static uint8_t iec_listen_handler(const uint8_t cmd) {
 	// Filenames are just a special type of command =)
 	iecflags.command_recvd = 1;
     } else {
-      buf->dirty = 1;
+      /* Flush buffer if full */
+      if (buf->mustflush && buf->refill)
+	if (buf->refill(buf))
+	  return 1;
+
       buf->data[buf->position] = c;
 
       if (buf->lastused < buf->position)
 	buf->lastused = buf->position;
       buf->position++;
 
-      /* Check if the position has wrapped */
-      if (buf->position == 0 && buf->refill)
-	if (buf->refill(buf))
-	  return 1;
+      /* Mark buffer for flushing if position wrapped */
+      if (buf->position == 0)
+	buf->mustflush = 1;
     }
   }    
 }

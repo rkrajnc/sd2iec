@@ -468,7 +468,7 @@ void file_open(uint8_t secondary) {
     buf->position  = 1;  /* Sic! */
     buf->lastused  = 255;
     buf->sendeoi   = 1;
-    buf->dirty     = 0;
+    buf->mustflush = 0;
     buf->cleanup   = NULL; // FIXME: free_buffer? Der erste Patch verschob die free-Pflicht zum Aufrufer
     buf->refill    = NULL;
     active_buffers += 16;
