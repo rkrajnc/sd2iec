@@ -19,7 +19,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-   
+
    sdcard.h: Definitions for the SD/MMC access routines
 
    Based on diskio.h from TinyFatFS by ChaN, see tff.c for

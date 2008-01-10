@@ -19,7 +19,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-   
+
    iec.c: IEC handling code, stateful version
 
    This code is a close reimplementation of the bus handling in a 1571
@@ -103,7 +103,7 @@ static uint8_t has_timed_out(void) {
 /// Debounce IEC input - see E9C0
 static uint8_t iec_pin(void) {
   uint8_t tmp;
-  
+
   do {
     tmp = IEC_PIN;
     _delay_us(2); /* 1571 uses LDA/CMP/BNE, approximate by waiting 2us */
@@ -178,7 +178,7 @@ static int16_t _iec_getc(void) {
 
   /* Timer for EOI detection */
   start_timeout(TIMEOUT_US(256));
-  
+
   do {
     if (check_atn()) return -1;                        // E9DF
     tmp = has_timed_out();                             // E9EE
@@ -196,7 +196,7 @@ static int16_t _iec_getc(void) {
       if (check_atn())                                 // E9FD
 	return -1;
     } while (iec_pin() & IEC_BIT_CLOCK);
-    
+
     iecflags.eoi_recvd = 1;                            // EA07
   }
 
@@ -205,7 +205,7 @@ static int16_t _iec_getc(void) {
     /*   Source: http://home.arcor.de/jochen.adler/ajnjil-t.htm */
     if (bus_state == BUS_ATNACTIVE && iecflags.jiffy_enabled && i == 7) {
       start_timeout(TIMEOUT_US(218));
-      
+
       do {
 	tmp = IEC_PIN;
 
@@ -255,7 +255,7 @@ static int16_t iec_getc(void) {
   sei();
   return val;
 }
-  
+
 
 /**
  * iec_putc - send a byte over the serial bus (E916)
@@ -297,7 +297,7 @@ static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
     do {
       if (check_atn()) return -1;                      // E937
     } while (!(iec_pin() & IEC_BIT_DATA));
-  
+
     do {
       if (check_atn()) return -1;                      // E941
     } while (iec_pin() & IEC_BIT_DATA);
@@ -354,7 +354,7 @@ static uint8_t iec_listen_handler(const uint8_t cmd) {
   uart_putc('L');
 
   buf = find_buffer(cmd & 0x0f);
-    
+
   /* Abort if there is no buffer or it's not open for writing */
   /* and it isn't an OPEN command                             */
   if ((buf == NULL || !buf->write) && (cmd & 0xf0) != 0xf0) {
@@ -407,7 +407,7 @@ static uint8_t iec_listen_handler(const uint8_t cmd) {
       if (buf->position == 0)
 	buf->mustflush = 1;
     }
-  }    
+  }
 }
 
 /**
@@ -428,7 +428,7 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
   if (iecflags.jiffy_enabled)
     /* wait 360us (J1541 E781) to make sure the C64 is at fbb7/fb0c */
     _delay_ms(0.36);
-    
+
   if (iecflags.jiffy_load) {
     /* See if the C64 has passed fb06 or if we should abort */
     do {                /* J1541 FF30 - wait until DATA inactive/high */
@@ -554,7 +554,7 @@ void init_iec(void) {
 
 void iec_mainloop(void) {
   int16_t cmd = 0; // make gcc happy...
-  
+
   uart_puts_P(PSTR("\nIn iec_mainloop listening on "));
   uart_puthex(device_address);
   uart_putcrlf();
@@ -576,7 +576,7 @@ void iec_mainloop(void) {
 	  change_disk();
 	}
       }
-      
+
       bus_state = BUS_FOUNDATN;
       break;
 
@@ -616,7 +616,7 @@ void iec_mainloop(void) {
 	uart_putc('C');
 	break;
       }
-      
+
       uart_putc('A');
       uart_puthex(cmd);
       uart_putcrlf();
@@ -706,7 +706,7 @@ void iec_mainloop(void) {
 
     case BUS_ATNPROCESS: // E8D7
       set_atnack(1);
-      
+
       if (device_state == DEVICE_LISTEN) {
 	if (iec_listen_handler(cmd))
 	  break;
@@ -759,7 +759,7 @@ void iec_mainloop(void) {
 	command_length = 0;
 	iecflags.command_recvd = 0;
       }
-      
+
       bus_state = BUS_IDLE;
       break;
     }

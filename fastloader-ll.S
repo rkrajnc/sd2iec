@@ -43,7 +43,7 @@
 	;; ===================================================================
 	;;  Utility routines
 	;; ===================================================================
-	
+
 	;; Counts r18 down to zero
 	;; Takes (r18-1)*3 + 6 cycles, not including the rcall
 delayloop:
@@ -69,10 +69,10 @@ delay1us:
 jiffy_receive:
 	;; Disable interrupts
 	cli
-	
+
 	;; Move pointer to EOF variable into Z
 	movw	r30,r24
-	
+
 	;; Set clock+data high
 	cbi	_SFR_IO_ADDR(IEC_DDR), IEC_PIN_CLOCK
 	cbi	_SFR_IO_ADDR(IEC_DDR), IEC_PIN_DATA
@@ -88,10 +88,10 @@ jiffy_receive:
 				; 1 - see comments at offset definition
 	rcall	delayloop	; 102
 	nop			; 1
-	
+
 	;; Read bit 5+4
 	in	r0, _SFR_IO_ADDR(IEC_PIN) ; 1
-	
+
 	;; Move bits to the correct position
 	swap	r0		; 1
 	mov	r24, r0		; 1
@@ -101,12 +101,12 @@ jiffy_receive:
 	lsr	r25		; 1 - shift into position
 	lsr	r25		; 1
 	or	r24, r25	; 1 - merge
-	
+
 	;; Wait 13us -> 104-9=95 cycles
 	ldi	r18, 29		; 1
 	rcall	delayloop	; 93
 	nop			; 1
-	
+
 	;; Read bit 7+6
 	in	r0, _SFR_IO_ADDR(IEC_PIN) ; 1
 
@@ -125,7 +125,7 @@ jiffy_receive:
 	ldi	r18, 23		; 1
 	rcall	delayloop	; 75
 	rjmp	1f		; 2
-1:	
+1:
 
 	;; Read bit 3+1 [sic]
 	in	r0, _SFR_IO_ADDR(IEC_PIN) ; 1
@@ -141,7 +141,7 @@ jiffy_receive:
 	ldi	r18, 29		; 1
 	rcall	delayloop	; 93
 	rjmp	1f		; 2
-1:	
+1:
 
 	;; Read Bit 2+0
 	in	r0, _SFR_IO_ADDR(IEC_PIN) ; 1
@@ -287,7 +287,7 @@ jiffy_send:
 	;; Skip sending EOI for LOAD code path
 	tst	r20		; 1
 	brne	js_finish	; 1
-	
+
 	;; Output EOI marker 11us (88 cycles) after the last bitpair
 	ldi	r18,24		; 1
 	rcall	delayloop	; ((24-1)*3+6) + 3 = 78 = 88-8-2
@@ -296,7 +296,7 @@ jiffy_send:
 
 	;; Wait 1us to allow the bus to settle (J1541 needs 4us here)
 	rcall	delay1us
-	
+
 	;; Wait until data is low, check ATN [FFDE]
 	;; This loop won't wait when EOI is signalled.
 0:	in	r24, _SFR_IO_ADDR(IEC_PIN) ; Read bus
@@ -317,9 +317,9 @@ js_finish:
 	;;  Turbodisk
 	;; ====================================================================
 
-	;; 
+	;;
 	;; Sends a single byte in r24 using the Turbodisk protocol
-	;; 
+	;;
 	.global turbodisk_byte
 turbodisk_byte:
 	;; Wait until data is low
@@ -334,31 +334,31 @@ turbodisk_byte:
 	in	r18, _SFR_IO_ADDR(IEC_DDR)
 	andi	r18, ~(IEC_BIT_ATN | IEC_BIT_DATA | IEC_BIT_CLOCK | IEC_BIT_SRQ)
 	out	_SFR_IO_ADDR(IEC_DDR), r18
-	
+
 	;; Wait until data is high
 0:	sbis	_SFR_IO_ADDR(IEC_PIN), IEC_PIN_DATA ; 2
 	rjmp	0b
 
 	rcall	delay1us	; Move the timing window slightly
-		
+
 	ldi	r20, 4		; 1 - Bitpair counter
 
-tdbitloop:	
+tdbitloop:
 	clr	r19		; 1 - Output register
 	lsl	r24		; 1 - grab top bit
 	rol	r19		; 1 - move to bottom
 	lsl	r24		; 1 - grab top bit
 	rol	r19		; 1 - move to bottom
 	lsl	r19		; 1 - move pair to correct position
-	
+
 	;; Wait for 28us from data high -> 224-8=216 cycles
 	ldi	r18,69		; 1
 	rcall	delayloop	; 213
 
 	nop			; 1
-	
+
 	out	_SFR_IO_ADDR(IEC_DDR), r19	; 1 - output the bit pair
-	
+
 	rcall	delay1us	; 8 - additional us for loops 2-4
 
 	dec	r20		; 1 - Decrement bitpair counter
@@ -372,12 +372,12 @@ tdbitloop:
 	cbi	_SFR_IO_ADDR(IEC_DDR), IEC_PIN_DATA
 	sbi	_SFR_IO_ADDR(IEC_DDR), IEC_PIN_CLOCK
 
-	ret 
-	
+	ret
 
-	;; 
+
+	;;
 	;; Sends a complete buffer of r22 bytes at r24/r25 using the Turbodisk protocol
-	;; 
+	;;
 	.global turbodisk_buffer
 turbodisk_buffer:
 	;; Wait until data is low
@@ -391,13 +391,13 @@ turbodisk_buffer:
 
 	movw	r30,r24		; output pointer
 	ldi	r21, 0xff	; constant for inverting bytes
-		
+
 	;; Wait until data is high
 0:	sbis	_SFR_IO_ADDR(IEC_PIN), IEC_PIN_DATA ; 2
 	rjmp	0b
 
 	rcall	delay1us	; Move the timing window slightly
-				
+
 	;; Initial delay of 4 us
 	ldi	r18,8		; 1
 	rcall	delayloop	; 30
@@ -412,15 +412,15 @@ tdbyteloop:
 	ldi	r18,28		; 1
 	rcall	delayloop	; 90
 	nop			; 1
-	
-tdbitloop2:	
+
+tdbitloop2:
 	clr	r19		; 1 - clear output register
 	lsl	r0		; 1 - grab top bit
 	rol	r19		; 1 - move to bottom
 	lsl	r0		; 1 - grab top bit
 	rol	r19		; 1 - move to bottom
 	lsl	r19		; 1 - move pair to correct position
-	
+
 	;; Wait another 24 us -> 192-7=185 cycles
 	ldi	r18,59		; 1
 	rcall	delayloop	; 183
@@ -430,7 +430,7 @@ tdbitloop2:
 	;; 5 us -> 40-3=37 cycles
 	ldi	r18,10		; 1
 	rcall	delayloop	; 36
-		
+
 	dec	r20		; 1 - Decrement bitpair counter
 	brne	tdbitloop2	; 2/1 - loop until done
 
@@ -438,19 +438,19 @@ tdbitloop2:
 	ldi	r18,23		; 1
 	rcall	delayloop	; 75
 	rjmp	1f		; 2
-1:	
+1:
 
 	dec	r22		; 1 - Decrement byte counter
 	brne	tdbyteloop	; 2/1 - loop until done
-	
+
 	;; Final delay:	11 us -> 88-2+1=87 cycles
 	ldi	r18,27		; 1
 	rcall	delayloop	; 87
-	
+
 	;; Data high, Clock low
 	cbi	_SFR_IO_ADDR(IEC_DDR), IEC_PIN_DATA
 	sbi	_SFR_IO_ADDR(IEC_DDR), IEC_PIN_CLOCK
 
-	ret 
+	ret
 
 	.end

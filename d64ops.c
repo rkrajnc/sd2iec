@@ -19,7 +19,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-   
+
    d64ops.c: D64 operations
 
 */
@@ -129,7 +129,7 @@ static int8_t d64_readdir(dh_t *dh, struct cbmdirent *dent) {
       /* Read link pointer */
       if (image_read(sector_offset(dh->d64.track, dh->d64.sector), entrybuf, 2))
 	return 1;
-      
+
       /* Final directory sector? */
       if (entrybuf[0] == 0)
 	return -1;
@@ -161,7 +161,7 @@ static int8_t d64_readdir(dh_t *dh, struct cbmdirent *dent) {
 static uint8_t d64_getlabel(char *label) {
   if (image_read(sector_offset(DIR_TRACK,0) + LABEL_OFFSET, label, 16))
     return 1;
-  
+
   strnsubst((uint8_t *)label, 16, 0xa0, 0x20);
   return 0;
 }
@@ -186,7 +186,7 @@ static uint16_t d64_freeblocks(void) {
       return 0;
     blocks += entrybuf[0];
   }
-  
+
   return blocks;
 }
 
@@ -197,7 +197,7 @@ static void d64_open_read(char *path, char *name, buffer_t *buf) {
   buf->data[1] = entrybuf[OFS_SECTOR];
 
   // FIXME: Check the file type
-  
+
   buf->read    = 1;
   buf->write   = 0;
   buf->cleanup = generic_cleanup;

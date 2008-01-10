@@ -19,7 +19,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-   
+
    wrapops.h: Lots of ugly defines to allow switchable file operations
 
    The structure-of-pgmspace-function-pointers access scheme used here

@@ -19,7 +19,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-   
+
    fatops.c: FAT operations
 
 */
@@ -79,7 +79,7 @@ void parse_error(FRESULT res, uint8_t readflag) {
   case FR_NO_FILE:
     set_error_ts(ERROR_FILE_NOT_FOUND,res,0);
     break;
-    
+
   case FR_NO_PATH:
   case FR_NOT_DIRECTORY:
     set_error_ts(ERROR_FILE_NOT_FOUND_39,res,0);
@@ -88,14 +88,14 @@ void parse_error(FRESULT res, uint8_t readflag) {
   case FR_INVALID_NAME:
     set_error_ts(ERROR_SYNTAX_JOKER,res,0);
     break;
-    
+
   case FR_NOT_READY:
   case FR_INVALID_DRIVE:
   case FR_NOT_ENABLED:
   case FR_NO_FILESYSTEM:
     set_error_ts(ERROR_DRIVE_NOT_READY,res,0);
     break;
-    
+
   case FR_RW_ERROR:
     /* Just a random READ ERROR */
     if (readflag)
@@ -103,11 +103,11 @@ void parse_error(FRESULT res, uint8_t readflag) {
     else
       set_error_ts(ERROR_WRITE_VERIFY,res,0);
     break;
-    
+
   case FR_WRITE_PROTECTED:
     set_error_ts(ERROR_WRITE_PROTECT,res,0);
     break;
-    
+
   case FR_EXIST:
     set_error_ts(ERROR_FILE_EXISTS,res,0);
     break;
@@ -116,7 +116,7 @@ void parse_error(FRESULT res, uint8_t readflag) {
     // FIXME: What do the CMD drives return when removing a non-empty directory?
     set_error_ts(ERROR_FILE_EXISTS,res,0);
     break;
-    
+
   case FR_DENIED:
     // FIXME: Change tff to be more precise
     set_error_ts(ERROR_DISK_FULL,res,0);
@@ -126,7 +126,7 @@ void parse_error(FRESULT res, uint8_t readflag) {
   case FR_IS_DIRECTORY:
     set_error_ts(ERROR_FILE_EXISTS,res,0);
     break;
-    
+
   default:
     set_error_ts(ERROR_SYNTAX_UNABLE,res,99);
     break;
@@ -247,7 +247,7 @@ static uint8_t fat_file_write(buffer_t *buf) {
  */
 static uint8_t fat_file_close(buffer_t *buf) {
   FRESULT res;
-  
+
   if (!buf->allocated) return 0;
 
   if (buf->write) {
@@ -294,7 +294,7 @@ void fat_open_read(char *path, char *filename, buffer_t *buf) {
   buf->write     = 0;
   buf->cleanup   = fat_file_close;
   buf->refill    = fat_file_read;
-  
+
   /* Call the refill once for the first block of data */
   buf->refill(buf);
 }
@@ -456,7 +456,7 @@ uint8_t fat_delete(char *path, char *filename) {
  */
 void fat_chdir(char *dirname) {
   FRESULT res;
-  
+
   /* Left arrow moves one directory up */
   if (!strcmp_P(dirname, PSTR("_"))) {
     dirname[0] = '.';
@@ -479,7 +479,7 @@ void fat_chdir(char *dirname) {
       fname = dirname;
 
     ext = strrchr(fname, '.');
-    
+
     if (ext && (!strcmp_P(ext, PSTR(".M2I")) ||
 		!strcmp_P(ext, PSTR(".D64")))) {
       /* D64/M2I mount request */
@@ -490,7 +490,7 @@ void fat_chdir(char *dirname) {
 	  return;
 	}
       }
-      
+
       free_all_buffers(1);
       /* Open image file */
       res = f_open(&imagehandle, fname, FA_OPEN_EXISTING|FA_READ|FA_WRITE);

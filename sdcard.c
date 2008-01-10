@@ -19,7 +19,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-   
+
    sdcard.c: SD/MMC access routines
 
    Extended, optimized and cleaned version of code from MMC2IEC,
@@ -33,11 +33,11 @@
 // Target MCU   : Atmel AVR Series
 //
 // CREDITS:
-// This module is developed as part of a project at the technical univerisity of 
+// This module is developed as part of a project at the technical univerisity of
 // Denmark, DTU.
 //
 // DESCRIPTION:
-// This SD card driver implements the fundamental communication with a SD card. 
+// This SD card driver implements the fundamental communication with a SD card.
 // The driver is confirmed working on 8 MHz and 14.7456 MHz AtMega32 and has
 // been tested successfully with a large number of different SD and MMC cards.
 //
@@ -127,23 +127,23 @@ static uint8_t isSDHC;
 static char sdResponse(uint8_t expected)
 {
   unsigned short count = 0x0FFF;
-  
+
   while ((spiTransferByte(0xFF) != expected) && count )
     count--;
-  
+
   // If count didn't run out, return success
-  return (count != 0);  
+  return (count != 0);
 }
 
 static char sdWaitWriteFinish(void)
 {
   unsigned short count = 0xFFFF; // wait for quite some time
-  
+
   while ((spiTransferByte(0xFF) == 0) && count )
     count--;
-  
+
   // If count didn't run out, return success
-  return (count != 0);  
+  return (count != 0);
 }
 
 static void deselectCard(void) {
@@ -185,12 +185,12 @@ static int sendCommand(const uint8_t  command,
   while (errorcount < SD_AUTO_RETRIES) {
     // Select card
     SPI_SS_LOW();
-    
+
     // Transfer command
     spiTransferByte(0x40+command);
     spiTransferLong(parameter);
     spiTransferByte(crc);
-    
+
     // Wait for a valid response
     counter = 0;
     do {
@@ -206,7 +206,7 @@ static int sendCommand(const uint8_t  command,
       errorcount++;
       continue;
     }
-    
+
     if (deselect) deselectCard();
     break;
   }
@@ -235,18 +235,18 @@ static char extendedInit(void) {
   // No error, continue SDHC initialization
   answer = spiTransferLong(0);
   deselectCard();
-  
+
   if (((answer >> 8) & 0x0f) != 0b0001) {
     // Card didn't accept our voltage specification
     return FALSE;
   }
-  
+
   // Verify echo-back of check pattern
   if ((answer & 0xff) != 0b10101010) {
     // Check pattern mismatch, working but not SD2.0 compliant
     return TRUE;
   }
-  
+
   counter = 0xffff;
   do {
     // Prepare for ACMD, send CMD55: APP_CMD
@@ -301,24 +301,24 @@ DSTATUS disk_initialize(BYTE drv) {
   uint8_t  i;
   uint16_t counter;
   uint32_t answer;
-  
+
 #ifdef SDCARD_WP_SETUP
   SDCARD_WP_SETUP();
 #endif
-  
+
   card_state = CARD_ERROR;
 
-#ifdef SDHC_SUPPORT  
+#ifdef SDHC_SUPPORT
   isSDHC   = FALSE;
 #endif
-  
+
   SPI_SS_HIGH();
 
   // Send 80 clks
   for (i=0; i<10; i++) {
     spiTransferByte(0xFF);
   }
-  
+
   // Reset card
   i = sendCommand(GO_IDLE_STATE, 0, 1);
   if (i != 1) {
@@ -341,10 +341,10 @@ DSTATUS disk_initialize(BYTE drv) {
       // deselectCard();
     }
   } while (i > 1 && counter-- > 0);
-  
+
   if (counter > 0) {
     answer = spiTransferLong(0);
-    
+
     // See if the card likes our supply voltage
     if (!(answer & SD_SUPPLY_VOLTAGE)) {
       // The code isn't set up to completely ignore the card,
@@ -352,7 +352,7 @@ DSTATUS disk_initialize(BYTE drv) {
       deselectCard();
       return STA_NOINIT | STA_NODISK;
     }
-    
+
 #ifdef SDHC_SUPPORT
     // See what card we've got
     if (answer & 0x40000000) {
@@ -360,18 +360,18 @@ DSTATUS disk_initialize(BYTE drv) {
     }
 #endif
   }
-  
+
   // Keep sending CMD1 (SEND_OP_COND) command until zero response
   counter = 0xffff;
   do {
     i = sendCommand(SEND_OP_COND, 1L<<30, 1);
     counter--;
   } while (i != 0 && counter > 0);
-  
+
   if (counter==0) {
     return STA_NOINIT | STA_NODISK;
   }
-  
+
   // Enable CRC checking
   // The SD spec says that the host "should" send CRC_ON_OFF before ACMD_SEND_OP_COND.
   // The MMC manual I have says that CRC_ON_OFF isn't allowed before SEND_OP_COND.
@@ -386,7 +386,7 @@ DSTATUS disk_initialize(BYTE drv) {
   if (i != 0) {
     return FALSE;
   }
-    
+
   // Thats it!
   card_state = CARD_OK;
   return disk_status(drv);
@@ -407,7 +407,7 @@ DSTATUS disk_initialize(BYTE drv) {
  * card. If there were errors during the command transmission
  * card_state will be set to CARD_ERROR and no retries are made.
  */
-DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {  
+DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
   uint8_t sec,res,tmp,errorcount;
   uint16_t crc,recvcrc;
 
@@ -418,23 +418,23 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
 	res = sendCommand(READ_SINGLE_BLOCK, sector+sec, 0);
       else
 	res = sendCommand(READ_SINGLE_BLOCK, (sector+sec) << 9, 0);
-      
+
       if (res != 0) {
 	SPI_SS_HIGH();
 	card_state = CARD_ERROR;
 	return RES_ERROR;
       }
-      
+
       // Wait for data token
       if (!sdResponse(0xFE)) {
 	SPI_SS_HIGH();
 	card_state = CARD_ERROR;
 	return RES_ERROR;
       }
-  
+
       uint16_t i;
       BYTE *oldbuffer = buffer;
-      
+
       // Get data
       crc = 0;
       for (i=0; i<512; i++) {
@@ -442,7 +442,7 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
 	*(buffer++) = tmp;
 	crc = _crc_xmodem_update(crc, tmp);
       }
-      
+
       // Check CRC
       recvcrc = (spiTransferByte(0xFF) << 8) + spiTransferByte(0xFF);
       if (recvcrc != crc) {
@@ -480,7 +480,7 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
  * transmission card_state will be set to CARD_ERROR and no retries
  * are made.
  */
-DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) { 
+DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
   uint8_t res,sec,errorcount,status;
   uint16_t crc;
 
@@ -495,33 +495,33 @@ DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
 	res = sendCommand(WRITE_BLOCK, sector+sec, 0);
       else
 	res = sendCommand(WRITE_BLOCK, (sector+sec)<<9, 0);
-      
+
       if (res != 0) {
 	SPI_SS_HIGH();
 	card_state = CARD_ERROR;
 	return RES_ERROR;
       }
-      
+
       // Send data token
       spiTransferByte(0xFE);
-      
+
       uint16_t i;
       const BYTE *oldbuffer = buffer;
-      
+
       // Send data
       crc = 0;
       for (i=0; i<512; i++) {
 	crc = _crc_xmodem_update(crc, *buffer);
-	spiTransferByte(*(buffer++)); 
+	spiTransferByte(*(buffer++));
       }
-      
+
       // Send CRC
       spiTransferByte(crc >> 8);
       spiTransferByte(crc & 0xff);
 
       // Get and check status feedback
       status = spiTransferByte(0xFF);
-      
+
       // Retry if neccessary
       if ((status & 0x0F) != 0x05) {
 	uart_putc('X');
@@ -530,7 +530,7 @@ DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
 	buffer = oldbuffer;
 	continue;
       }
-      
+
       // Wait for write finish
       if (!sdWaitWriteFinish()) {
 	SPI_SS_HIGH();
@@ -547,6 +547,6 @@ DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
       return RES_ERROR;
     }
   }
-  
+
   return RES_OK;
 }

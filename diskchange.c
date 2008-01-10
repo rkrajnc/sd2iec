@@ -19,7 +19,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-   
+
    diskchange.c: Disk image changer
 
 */
@@ -82,7 +82,7 @@ static void mount_line(void) {
       free_buffer(buf);
       return;
     }
-    
+
     /* Terminate string in buffer */
     if (bytesread < 256)
       str[bytesread] = 0;
@@ -97,7 +97,7 @@ static void mount_line(void) {
 
     /* Skip name */
     while (*str != '\r' && *str != '\n') str++;
-    
+
     strend = str;
 
     /* Skip line terminator */
@@ -156,7 +156,7 @@ void set_changelist(char *filename) {
   linenum = 0;
   mount_line();
 }
-  
+
 
 void change_disk(void) {
   if (linenum == 255) {

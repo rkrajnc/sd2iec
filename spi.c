@@ -19,7 +19,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-   
+
    spi.c: Low level SPI access
 
    Extended, optimized and cleaned version of code from MMC2IEC,
@@ -56,7 +56,7 @@
 void spiInit(void)
 {
   char dummy;
-  
+
   // setup SPI I/O pins
   PORTB |=  _BV(PB7) | _BV(PB4) | _BV(PB6); // set SCK+SS hi (no chip select),
                                             //  pullup on MISO
@@ -65,15 +65,15 @@ void spiInit(void)
 
   // setup SPI interface:
   //   interrupts disabled, SPI enabled, MSB first, master mode,
-  //   leading edge rising, sample on leading edge, clock = f/16, 
+  //   leading edge rising, sample on leading edge, clock = f/16,
   SPCR = 0b01010001;
 
   // Enable SPI double speed mode -> clock = f/8
   SPSR = _BV(SPI2X);
-  
+
   // clear status
   dummy = SPSR;
-  
+
   // clear recieve buffer
   dummy = SPDR;
 }
@@ -89,7 +89,7 @@ uint8_t spiTransferByte(uint8_t data)
   // *** reading of the SPSR and SPDR are crucial
   // *** to the clearing of the SPIF flag
   // *** in non-interrupt mode
-  
+
   // return the received data
   return SPDR;
 }
@@ -97,7 +97,7 @@ uint8_t spiTransferByte(uint8_t data)
 
 uint32_t spiTransferLong(const uint32_t data)
 {
-  // It seems to be necessary to use the union in order to get efficient 
+  // It seems to be necessary to use the union in order to get efficient
   // assembler code.
   // Beware, endian unsafe union
   union {
@@ -127,6 +127,6 @@ uint32_t spiTransferLong(const uint32_t data)
   // wait for transfer to complete
   loop_until_bit_is_set(SPSR, SPIF);
   long2char.c[0] = SPDR;
-  
+
   return long2char.l;
 }

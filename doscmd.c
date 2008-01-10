@@ -19,7 +19,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-   
+
    doscmd.c: Command channel parser
 
 */
@@ -86,17 +86,17 @@ void parse_path(char *in, char *out, char **name) {
 	  *out++ = 0;
 	  state = 5;
 	  break;
-	  
+
 	case '/':
 	  state = 1;
 	  break;
-	  
+
 	default:
 	  state = 2;
 	  break;
 	}
 	break;
-	
+
       case 1: /* Initial slash found */
 	if (*in == ':') {
 	  *out++ = 0;
@@ -107,12 +107,12 @@ void parse_path(char *in, char *out, char **name) {
 	  state = 3;
 	}
 	break;
-	
+
       case 2: /* Initial non-slash found */
 	while (*in++ != ':');
 	state = 5;
 	break;
-	
+
       case 3: /* Slash-noncolon found */
 	switch (*in) {
 	case ':':
@@ -120,18 +120,18 @@ void parse_path(char *in, char *out, char **name) {
 	  in++;
 	  state = 5;
 	  break;
-	  
+
 	case '/':
 	  in++;
 	  state = 4;
 	  break;
-	  
+
 	default:
 	  *out++ = *in++;
 	  break;
 	}
 	break;
-	
+
       case 4: /* Slash-noncolon-slash found */
 	if (*in == ':') {
 	  *out++ = 0;
@@ -176,7 +176,7 @@ static uint8_t parse_number(char **str) {
     res *= 10;
     res += (*(*str)++) - '0';
   }
-  
+
   return res;
 }
 
@@ -202,7 +202,7 @@ static int8_t parse_blockparam(uint8_t values[]) {
       return -1;
 
     values[paramcount++] = parse_number(&str);
-  }    
+  }
 
   return paramcount;
 }
@@ -217,7 +217,7 @@ static void handle_memexec(void) {
   if (command_length < 5)
     return;
 
-  if (detected_loader == FL_NONE) { 
+  if (detected_loader == FL_NONE) {
     uart_puts_P(PSTR("M-E at "));
     uart_puthex(command_buffer[4]);
     uart_puthex(command_buffer[3]);
@@ -270,7 +270,7 @@ static void handle_memwrite(void) {
   } else {
     detected_loader = FL_NONE;
   }
-  
+
   for (i=0;i<command_length;i++)
     datacrc = _crc16_update(datacrc, command_buffer[i]);
 
@@ -292,11 +292,11 @@ static void parse_xcommand(void) {
     case '+':
       iecflags.jiffy_enabled = 1;
       break;
-      
+
     case '-':
       iecflags.jiffy_enabled = 0;
       break;
-      
+
     default:
       set_error(ERROR_SYNTAX_UNKNOWN);
     }
@@ -357,7 +357,7 @@ static void parse_block(void) {
       set_error(ERROR_NO_CHANNEL);
       return;
     }
-    
+
     if (*str == 'R') {
       read_sector(buf,params[2],params[3]);
       buf->position = 0;
@@ -406,7 +406,7 @@ void parse_doscommand(void) {
     /* Dump only if no loader was detected because it may ruin the timing */
     uart_flush();
     uart_putc('>');
-    
+
     for (i=0;i<command_length;i++) {
       uart_puthex(command_buffer[i]);
       uart_putc(' ');
@@ -462,7 +462,7 @@ void parse_doscommand(void) {
 
       if (iecflags.autoswap_active)
 	set_changelist("");
-      
+
       if (i == 'C')
 	chdir(name);
       else
@@ -483,7 +483,7 @@ void parse_doscommand(void) {
 	set_error(ERROR_SYNTAX_NONAME);
 	break;
       }
-	  
+
       /* Skip drive number */
       i = 2;
       while (isdigit(command_buffer[i])) i++;
@@ -495,12 +495,12 @@ void parse_doscommand(void) {
 	  set_error_ts(ERROR_SCRATCHED,i,0);
       }
       break;
-      
+
     default:
       set_error(ERROR_SYNTAX_UNKNOWN);
       break;;
     }
-    
+
     return;
   }
 
@@ -547,11 +547,11 @@ void parse_doscommand(void) {
       case '+':
 	iecflags.vc20mode = 0;
 	break;
-	
+
       case '-':
 	iecflags.vc20mode = 1;
 	break;
-	
+
       default:
 	set_error(ERROR_SYNTAX_UNKNOWN);
 	break;
@@ -601,7 +601,7 @@ void parse_doscommand(void) {
   case 'S':
     /* Scratch */
     parse_path((char *) command_buffer+1, (char *) command_buffer, &fname);
-    
+
     if (opendir(&matchdh, (char *) command_buffer))
       return;
 

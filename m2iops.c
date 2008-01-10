@@ -19,7 +19,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-   
+
    m2iops.c: M2I operations
 
 */
@@ -77,15 +77,15 @@ static uint8_t parsetype(void) {
   case 'd':
     entrybuf[0] = TYPE_DEL;
     return 0;
-    
+
   case 's':
     entrybuf[0] = TYPE_SEQ;
     return 0;
-    
+
   case 'p':
     entrybuf[0] = TYPE_PRG;
     return 0;
-    
+
   case 'u':
     entrybuf[0] = TYPE_USR;
     return 0;
@@ -328,40 +328,40 @@ static void m2i_open_write(char *path, char *name, uint8_t type, buffer_t *buf, 
     offset = find_empty_entry();
     if (offset < M2I_ENTRY_OFFSET)
       return;
-    
+
     memset(entrybuf, ' ', sizeof(entrybuf));
     str = entrybuf;
-    
+
     switch (type & TYPE_MASK) {
     case TYPE_DEL:
       *str++ = 'D';
       break;
-      
+
     case TYPE_SEQ:
       *str++ = 'S';
       break;
-      
+
     case TYPE_PRG:
       *str++ = 'P';
       break;
-      
+
     case TYPE_USR:
       *str++ = 'U';
       break;
-      
+
     default:
       /* Unknown type - play it safe, don't create a file */
       return;
     }
-    
+
     *str++ = ':';
-    
+
     /* Generate a FAT name */
     for (i=0;i<8;i++) {
       *str++ = '0';
     }
     *str = 0;
-    
+
     do {
       FILINFO finfo;
 
@@ -379,7 +379,7 @@ static void m2i_open_write(char *path, char *name, uint8_t type, buffer_t *buf, 
 	}
       }
     } while (res == FR_OK);
-    
+
     if (res != FR_NO_FILE)
       return;
 

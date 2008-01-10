@@ -19,7 +19,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-   
+
    config.h: User-configurable options to simplify hardware changes and/or
              reduce the code/ram requirements of the code.
 
@@ -28,7 +28,7 @@
 
 //
 // Title        : MMC2IEC - Configuration
-// Author       : Lars Pontoppidan 
+// Author       : Lars Pontoppidan
 // Date         : Jan. 2007
 // Version      : 0.7
 // Target MCU   : AtMega32(L) at 8 MHz

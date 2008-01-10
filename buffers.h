@@ -19,7 +19,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-   
+
    buffers.h: Data structures for the internal buffers
 */
 
@@ -42,7 +42,7 @@
  * @sendeoi  : Flags if the last byte should be sent with EOI
  * @refill   : Callback to refill/write out the buffer, returns true on error
  * @cleanup  : Callback to clean up and save remaining data, returns true on error
- * 
+ *
  * Most allocated buffers point into the same bufferdata array, but
  * the error channel uses the same structure to avoid special-casing it
  * everywhere.
@@ -52,7 +52,7 @@ typedef struct buffer_s {
   /* so data must be a pointer. It also allows swapping the buffers around   */
   /* in case I ever add external ram (not XRAM) to the design (which will    */
   /* require locking =( ).                                                   */
-  uint8_t *data; 
+  uint8_t *data;
   uint8_t lastused;
   uint8_t position;
   uint8_t secondary;

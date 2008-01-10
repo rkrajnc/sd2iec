@@ -198,7 +198,7 @@ BOOL put_cluster (		/* TRUE: successful, FALSE: failed */
 		p = &fs->win[bc % 512];
 		*p = (clust & 1) ? ((*p & 0x0F) | ((BYTE)val << 4)) : (BYTE)val;
 		bc++;
-		fs->winflag = 1; 
+		fs->winflag = 1;
 		if (!move_window(fatsect + bc / 512)) return FALSE;
 		p = &fs->win[bc % 512];
 		*p = (clust & 1) ? (BYTE)(val >> 4) : ((*p & 0xF0) | ((BYTE)(val >> 8) & 0x0F));
@@ -451,7 +451,7 @@ char make_dirfile (			/* 1: error - detected an invalid format, '\0'or'/': next 
 			}
 			break;
 		}
-		if (_USE_SJIS && 
+		if (_USE_SJIS &&
 			((c >= 0x81 && c <= 0x9F) ||		/* Accept S-JIS code */
 		    (c >= 0xE0 && c <= 0xFC))) {
 			if (n == 0 && c == 0xE5)		/* Change heading \xE5 to \x05 */
@@ -1160,7 +1160,7 @@ FRESULT f_close (
 #if !_FS_READONLY
 	res = f_sync(fp);
 #else
-	res = validate(fp->fs);        
+	res = validate(fp->fs);
 #endif
 	if (res == FR_OK)
 		fp->fs = NULL;

@@ -19,7 +19,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-   
+
    errormsg.c: Generates Commodore-compatible error messages
 
 */
@@ -112,14 +112,14 @@ static const prog_uint8_t versionstr[] = VERSION;
 
 static char *appendmsg(char *msg, const prog_uint8_t *table, const uint8_t entry) {
   uint8_t i,tmp;
- 
+
   i = 0;
   do {
     tmp = pgm_read_byte(table+i++);
     if (tmp == EC(entry) || tmp == EC(127))
       break;
   } while (1);
-  
+
   if (tmp == EC(127)) {
     /* Unknown error */
     *msg++ = '?';
@@ -196,7 +196,7 @@ void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
 
   msg = appendnumber(msg,track);
   *msg++ = ',';
- 
+
   msg = appendnumber(msg,sector);
   *msg = 13;
 

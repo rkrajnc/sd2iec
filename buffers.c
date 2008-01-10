@@ -19,7 +19,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-   
+
    buffers.c: Internal buffer management
 */
 
@@ -56,7 +56,7 @@ void init_buffers(void) {
   memset(buffer,0,sizeof(buffer));
   for (i=0;i<BUFFER_COUNT;i++)
     buffer[i].data = bufferdata + 256*i;
-  
+
   buffer[BUFFER_COUNT].data      = error_buffer;
   buffer[BUFFER_COUNT].secondary = 15;
   buffer[BUFFER_COUNT].allocated = 1;
@@ -125,7 +125,7 @@ void free_buffer(buffer_t *buffer) {
  */
 uint8_t free_all_buffers(uint8_t cleanup) {
   uint8_t i,res;
-  
+
   res = 0;
 
   for (i=0;i<BUFFER_COUNT;i++)

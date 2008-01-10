@@ -19,7 +19,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-   
+
    fileops.c: Generic file operations
 
 */
@@ -41,7 +41,7 @@
 /*  Some constants used for directory generation                             */
 /* ------------------------------------------------------------------------- */
 
-#define HEADER_OFFSET_NAME 
+#define HEADER_OFFSET_NAME
 #define HEADER_OFFSET_ID   26
 
 /* NOTE: I wonder if RLE-packing would save space in flash? */
@@ -129,10 +129,10 @@ static void addentry(struct cbmdirent *dent, buffer_t *buf) {
   else
     *data++ = 1;
   *data++ = 1;
-  
+
   *data++ = dent->blocksize & 0xff;
   *data++ = dent->blocksize >> 8;
-  
+
   /* Filler before file name */
   if (dent->blocksize < 1000)
     data++;
@@ -225,7 +225,7 @@ int8_t next_match(dh_t *dh, char *matchstr, uint8_t type, struct cbmdirent *dent
       if ((type & TYPE_MASK) &&
 	  (dent->typeflags & TYPE_MASK) != (type & TYPE_MASK))
 	continue;
-      
+
       /* Skip hidden files */
       if ((dent->typeflags & FLAG_HIDDEN) &&
 	  !(type & FLAG_HIDDEN))
@@ -304,10 +304,10 @@ static uint8_t dir_refill(buffer_t *buf) {
     addentry(&dent, buf);
     buf->lastused--;
     return 0;
-      
+
   case -1:
     return dir_footer(buf);
-    
+
   default:
     free_buffer(buf);
     return 1;
@@ -336,7 +336,7 @@ static void load_directory(uint8_t secondary) {
   if (command_length > 2) {
     /* Parse the name pattern */
     char *name;
-    
+
     parse_path((char *) command_buffer+1, (char *) command_buffer, &name);
 
     if (opendir(&buf->pvt.dir.dh, (char *) command_buffer)) {
