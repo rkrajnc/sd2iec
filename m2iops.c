@@ -324,16 +324,6 @@ static void m2i_open_write(char *path, char *name, uint8_t type, buffer_t *buf, 
       nameptr++;
     }
 
-    /* See if the file already exists */
-    offset = find_entry(name);
-    if (offset == 1)
-      return;
-    
-    if (offset != 0) {
-      set_error(ERROR_FILE_EXISTS);
-      return;
-    }
-    
     /* Find an empty entry */
     offset = find_empty_entry();
     if (offset < M2I_ENTRY_OFFSET)

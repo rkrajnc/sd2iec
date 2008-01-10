@@ -576,13 +576,18 @@ void file_open(uint8_t secondary) {
     return;
 
   if (mode == OPEN_WRITE) {
-    /* Normales Schreiben: Nicht matchen (oder mit File Exists abbrechen) */
-    /* Rewrite: Matchen. Wenn gefunden loeschen, wenn nicht egal */
-    if (cbuf != (char *) command_buffer && res == 0) {
-      /* Rewrite existing file: Delete the old one */
-      /* This is safe. If there is no buffer available, delete will fail. */
-      if (file_delete((char *) command_buffer, fname) == 255)
+    if (res == 0) {
+      /* Match found */
+      if (cbuf != (char *) command_buffer) {
+	/* Rewrite existing file: Delete the old one */
+	/* This is safe. If there is no buffer available, delete will fail. */
+	if (file_delete((char *) command_buffer, fname) == 255)
+	  return;
+      } else {
+	/* Write existing file without replacement: Raise error */
+	set_error(ERROR_FILE_EXISTS);
 	return;
+      }
     } else {
       /* Normal write or non-existing rewrite */
       /* Doesn't exist: Copy name to dent */
