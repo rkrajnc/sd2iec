@@ -520,8 +520,8 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
 void init_iec(void) {
   /* Pullups would be nice, but AVR can't switch from */
   /* low output to hi-z input directly                */
-  IEC_DDR  &= ~(IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA);
-  IEC_PORT &= ~(IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA);
+  IEC_DDR  = 0;
+  IEC_PORT = ~(IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA);
 
   /* Count F_CPU/8 in timer 0 */
   TCCR0B = _BV(CS01);
