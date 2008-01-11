@@ -37,7 +37,7 @@ FIL     imagehandle;
 uint8_t entrybuf[33];
 
 /// One additional buffer structure for channel 15
-buffer_t buffer[BUFFER_COUNT+1];
+buffer_t buffers[BUFFER_COUNT+1];
 
 /// The actual data buffers
 static uint8_t bufferdata[BUFFER_COUNT*256];
@@ -53,16 +53,16 @@ uint8_t active_buffers;
 void init_buffers(void) {
   uint8_t i;
 
-  memset(buffer,0,sizeof(buffer));
+  memset(buffers,0,sizeof(buffers));
   for (i=0;i<BUFFER_COUNT;i++)
-    buffer[i].data = bufferdata + 256*i;
+    buffers[i].data = bufferdata + 256*i;
 
-  buffer[BUFFER_COUNT].data      = error_buffer;
-  buffer[BUFFER_COUNT].secondary = 15;
-  buffer[BUFFER_COUNT].allocated = 1;
-  buffer[BUFFER_COUNT].read      = 1;
-  buffer[BUFFER_COUNT].write     = 1;
-  buffer[BUFFER_COUNT].sendeoi   = 1;
+  buffers[BUFFER_COUNT].data      = error_buffer;
+  buffers[BUFFER_COUNT].secondary = 15;
+  buffers[BUFFER_COUNT].allocated = 1;
+  buffers[BUFFER_COUNT].read      = 1;
+  buffers[BUFFER_COUNT].write     = 1;
+  buffers[BUFFER_COUNT].sendeoi   = 1;
 }
 
 /**
@@ -76,11 +76,11 @@ buffer_t *alloc_buffer(void) {
   uint8_t i;
 
   for (i=0;i<BUFFER_COUNT;i++) {
-    if (!buffer[i].allocated) {
-      buffer[i].allocated = 1;
+    if (!buffers[i].allocated) {
+      buffers[i].allocated = 1;
       active_buffers++;
       BUSY_LED_ON();
-      return &buffer[i];
+      return &buffers[i];
     }
   }
 
@@ -129,11 +129,11 @@ uint8_t free_all_buffers(uint8_t cleanup) {
   res = 0;
 
   for (i=0;i<BUFFER_COUNT;i++)
-    if (buffer[i].allocated) {
-      if (cleanup && buffer[i].cleanup)
-	res = res || buffer[i].cleanup(&buffer[i]);
-      if (buffer[i].allocated)
-	free_buffer(&buffer[i]);
+    if (buffers[i].allocated) {
+      if (cleanup && buffers[i].cleanup)
+	res = res || buffers[i].cleanup(&buffers[i]);
+      if (buffers[i].allocated)
+	free_buffer(&buffers[i]);
     }
 
   return res;
@@ -151,8 +151,8 @@ buffer_t *find_buffer(uint8_t secondary) {
   uint8_t i;
 
   for (i=0;i<BUFFER_COUNT+1;i++) {
-    if (buffer[i].allocated && buffer[i].secondary == secondary)
-      return &buffer[i];
+    if (buffers[i].allocated && buffers[i].secondary == secondary)
+      return &buffers[i];
   }
   return NULL;
 }

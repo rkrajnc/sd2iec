@@ -167,8 +167,8 @@ void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
   char *msg = (char *) error_buffer;
 
   current_error = errornum;
-  buffer[BUFFER_COUNT].lastused = 0;
-  buffer[BUFFER_COUNT].position = 0;
+  buffers[BUFFER_COUNT].lastused = 0;
+  buffers[BUFFER_COUNT].position = 0;
   memset(error_buffer,0,sizeof(error_buffer));
 
   msg = appendnumber(msg,errornum);
@@ -211,7 +211,7 @@ void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
     else
       DIRTY_LED_OFF();
   }
-  buffer[BUFFER_COUNT].lastused = msg - (char *)error_buffer;
+  buffers[BUFFER_COUNT].lastused = msg - (char *)error_buffer;
 }
 
 #if 0
