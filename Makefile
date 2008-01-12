@@ -2,8 +2,8 @@
 
 # Define version number
 MAJOR = 0
-MINOR = 4
-PATCHLEVEL = 2
+MINOR = 5
+PATCHLEVEL =
 
 
 #----------------------------------------------------------------------------

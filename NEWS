@@ -1,9 +1,10 @@
-2008-xx-xx - release 0.5
+2008-01-12 - release 0.5
 	- Bugfix: Recode ~/pi in both directions
 	- Bugfix: Fastloaders now work on LarsP-style hardware too
 	- Disk change key support
 	- Full JiffyDos support
 	- EEPROM configuration storage
+	- Full support for D64, read/write/sector access
 
 2007-12-25 - release 0.4.2
 	- Bugfix: LarsP-style hardware actually works now
