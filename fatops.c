@@ -713,12 +713,13 @@ uint8_t image_read(DWORD offset, void *buffer, uint16_t bytes) {
  * @offset: offset to be seeked to
  * @buffer: pointer to the data to be written
  * @bytes : number of bytes to read from the image file
+ * @flush : Flags if written data should be flushed to disk immediately
  *
  * This function seeks to offset in the image file and writes bytes
  * byte into buffer. It returns 0 on success, 1 if less than
  * bytes byte could be written and 2 on failure.
  */
-uint8_t image_write(DWORD offset, void *buffer, uint16_t bytes) {
+uint8_t image_write(DWORD offset, void *buffer, uint16_t bytes, uint8_t flush) {
   FRESULT res;
   UINT byteswritten;
 
@@ -739,7 +740,8 @@ uint8_t image_write(DWORD offset, void *buffer, uint16_t bytes) {
   if (byteswritten != bytes)
     return 1;
 
-  f_sync(&imagehandle);
+  if (flush)
+    f_sync(&imagehandle);
 
   return 0;
 }

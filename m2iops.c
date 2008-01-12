@@ -399,7 +399,7 @@ static void m2i_open_write(char *path, char *name, uint8_t type, buffer_t *buf, 
     entrybuf[M2I_CBMNAME_OFFSET+CBM_NAME_LENGTH+1] = 10;
 
     /* Write it */
-    if (image_write(offset, entrybuf, M2I_ENTRY_LEN))
+    if (image_write(offset, entrybuf, M2I_ENTRY_LEN, 1))
       return;
 
     /* Write the actual file */
@@ -409,7 +409,7 @@ static void m2i_open_write(char *path, char *name, uint8_t type, buffer_t *buf, 
     if (current_error) {
       /* No error checking here. Either it works or everything has failed. */
       entrybuf[0] = '-';
-      image_write(offset, entrybuf, 1);
+      image_write(offset, entrybuf, 1, 1);
     }
   }
 }
@@ -428,7 +428,7 @@ static uint8_t m2i_delete(char *path, char *name) {
   fat_delete("", (char *)entrybuf+M2I_FATNAME_OFFSET);
 
   entrybuf[0] = '-';
-  if (image_write(offset, entrybuf, 1))
+  if (image_write(offset, entrybuf, 1, 1))
     return 0;
   else
     return 1;

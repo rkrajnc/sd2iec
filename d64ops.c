@@ -211,7 +211,7 @@ static void d64_read_sector(buffer_t *buf, uint8_t track, uint8_t sector) {
 }
 
 static void d64_write_sector(buffer_t *buf, uint8_t track, uint8_t sector) {
-  image_write(sector_offset(track,sector), buf->data, 256);
+  image_write(sector_offset(track,sector), buf->data, 256, 1);
 }
 
 const PROGMEM fileops_t d64ops = {
