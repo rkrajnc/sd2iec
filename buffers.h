@@ -71,7 +71,8 @@ typedef struct buffer_s {
       uint8_t filetype; /* File type */
       char *matchstr;   /* Pointer to filename pattern */
     } dir;
-    FIL fh;             /* File access */
+    FIL fh;             /* File access via FAT */
+    d64fh_t d64;        /* File access on D64  */
   } pvt;
 } buffer_t;
 

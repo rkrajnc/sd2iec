@@ -81,6 +81,23 @@ struct d64dh {
 };
 
 /**
+ * struct d64fh - D64 file handle
+ * @dh    : d64dh pointing to the directory entry
+ * @track : current track
+ * @sector: current sector
+ * @blocks: number of sectors allocated before the current
+ *
+ * This structure holds the information required to write to a file
+ * in a D64 image and update its directory entry upon close.
+ */
+typedef struct d64fh {
+  struct d64dh dh;
+  uint8_t track;
+  uint8_t sector;
+  uint16_t blocks;
+} d64fh_t;
+
+/**
  * union dh_t - union of all directory handles
  * @fat: tff directory handle
  * @m2i: m2i directory handle (offset of entry in the file)
