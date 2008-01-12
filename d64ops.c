@@ -703,6 +703,44 @@ static void d64_open_write(char *path, char *name, uint8_t type, buffer_t *buf, 
   active_buffers += 16;
 }
 
+static uint8_t d64_delete(char *path, char *name) {
+  /* At this point entrybuf will contain the directory entry and    */
+  /* matchdh will almost point to it (entry incremented in readdir) */
+  buffer_t *buf;
+  uint8_t linkbuf[2];
+
+  /* Read BAM */
+  buf = read_bam();
+  if (!buf)
+    return 255;
+
+  /* Free the sector chain in the BAM */
+  linkbuf[0] = entrybuf[OFS_TRACK];
+  linkbuf[1] = entrybuf[OFS_SECTOR];
+  do {
+    free_sector(linkbuf[0], linkbuf[1], buf);
+
+    if (image_read(sector_offset(linkbuf[0],linkbuf[1]), linkbuf, 2)) {
+      free_buffer(buf);
+      return 255;
+    }
+  } while (linkbuf[0]);
+
+  /* Clear directory entry */
+  entrybuf[OFS_FILE_TYPE] = 0;
+  if (image_write(sector_offset(matchdh.d64.track,matchdh.d64.sector)
+                 +32*(matchdh.d64.entry-1), entrybuf, 32, 1)) {
+    free_buffer(buf);
+    return 255;
+  }
+
+  /* Write new BAM */
+  if (write_bam(buf))
+    return 255;
+  else
+    return 1;
+}
+
 static void d64_read_sector(buffer_t *buf, uint8_t track, uint8_t sector) {
   image_read(sector_offset(track,sector), buf->data, 256);
 }
@@ -714,7 +752,7 @@ static void d64_write_sector(buffer_t *buf, uint8_t track, uint8_t sector) {
 const PROGMEM fileops_t d64ops = {
   d64_open_read,
   d64_open_write,
-  NULL, // delete,
+  d64_delete,
   d64_getlabel,
   d64_getid,
   d64_freeblocks,
