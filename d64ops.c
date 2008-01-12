@@ -374,6 +374,10 @@ static int8_t nextdirentry(dh_t *dh) {
 static uint8_t d64_read(buffer_t *buf) {
   uint32_t sectorofs = sector_offset(buf->data[0],buf->data[1]);
 
+  /* Store the current sector, used for append */
+  buf->pvt.d64.track  = buf->data[0];
+  buf->pvt.d64.sector = buf->data[1];
+
   if (image_read(sectorofs, buf->data, 256))
     return 1;
 
@@ -390,6 +394,103 @@ static uint8_t d64_read(buffer_t *buf) {
 
   return 0;
 }
+
+static uint8_t d64_write(buffer_t *buf) {
+  uint8_t t,s,savederror;
+  buffer_t *bambuf;
+
+  savederror = 0;
+  t = buf->pvt.d64.track;
+  s = buf->pvt.d64.sector;
+
+  buf->pvt.d64.blocks++;
+
+  /* Mark as last sector in case something below fails */
+  buf->data[0] = 0;
+  buf->data[1] = buf->lastused;
+
+  /* Read BAM */
+  /* Yes, this means writing can suddenly fail with NO CHANNEL. */
+  bambuf = read_bam();
+  if (!bambuf) {
+    savederror = current_error;
+    goto storedata;
+  }
+
+  /* Find another free sector */
+  if (get_next_sector(&t, &s, bambuf)) {
+    t = 0;
+    savederror = current_error;
+    goto storedata;
+  }
+
+  buf->data[0] = t;
+  buf->data[1] = s;
+
+  /* Allocate it */
+  allocate_sector(t,s,bambuf);
+  if (write_bam(bambuf))
+    return 1;
+
+ storedata:
+  /* Free BAM buffer - free will accept an already-freed buffer */
+  free_buffer(bambuf);
+
+  /* Store data in the already-reserved sector */
+  if (image_write(sector_offset(buf->pvt.d64.track,buf->pvt.d64.sector),
+		  buf->data, 256, 1))
+    return 1;
+
+  buf->pvt.d64.track  = t;
+  buf->pvt.d64.sector = s;
+  buf->position  = 2;
+  buf->lastused  = 1;
+  buf->mustflush = 0;
+
+  if (savederror) {
+    set_error(savederror);
+    return 1;
+  } else
+    return 0;
+}
+
+static uint8_t d64_write_cleanup(buffer_t *buf) {
+  uint8_t t,s;
+
+  buf->data[0] = 0;
+  buf->data[1] = buf->lastused;
+
+  t = buf->pvt.d64.track;
+  s = buf->pvt.d64.sector;
+  buf->pvt.d64.blocks++;
+
+  /* Track=0 means that there was an error somewhere earlier */
+  if (t == 0)
+    return 1;
+
+  /* Store data */
+  if (image_write(sector_offset(t,s), buf->data, 256, 1))
+    return 1;
+
+  /* Update directory entry */
+  t = buf->pvt.d64.dh.track;
+  s = buf->pvt.d64.dh.sector;
+  if (image_read(sector_offset(t,s)+32*buf->pvt.d64.dh.entry, entrybuf, 32))
+    return 1;
+
+  entrybuf[OFS_FILE_TYPE] |= FLAG_SPLAT;
+  entrybuf[OFS_SIZE_LOW]   = buf->pvt.d64.blocks & 0xff;
+  entrybuf[OFS_SIZE_HI]    = buf->pvt.d64.blocks >> 8;
+
+  if (image_write(sector_offset(t,s)+32*buf->pvt.d64.dh.entry, entrybuf, 32, 1))
+    return 1;
+
+  buf->cleanup = NULL;
+  free_buffer(buf);
+
+  return 0;
+}
+
 
 /* ------------------------------------------------------------------------- */
 /*  fileops-API                                                              */
@@ -471,6 +572,137 @@ static void d64_open_read(char *path, char *name, buffer_t *buf) {
   buf->refill(buf);
 }
 
+static void d64_open_write(char *path, char *name, uint8_t type, buffer_t *buf, uint8_t append) {
+  dh_t dh;
+  int8_t res;
+  uint8_t t,s;
+  uint8_t *ptr;
+  buffer_t *bambuf;
+
+  if (append) {
+    /* Append case: Open the file and read the last sector */
+    d64_open_read(path,name,buf);
+    while (!current_error && buf->data[0])
+      buf->refill(buf);
+
+    if (current_error)
+      return;
+
+    /* Modify the buffer for writing */
+    buf->pvt.d64.dh.track  = matchdh.d64.track;
+    buf->pvt.d64.dh.sector = matchdh.d64.sector;
+    buf->pvt.d64.dh.entry  = matchdh.d64.entry-1;
+    buf->pvt.d64.blocks    = entrybuf[OFS_SIZE_LOW] + 256*entrybuf[OFS_SIZE_HI]-1;
+    buf->read       = 0;
+    buf->write      = 1;
+    buf->position   = buf->lastused+1;
+    if (buf->position == 0)
+      buf->mustflush = 1;
+    else
+      buf->mustflush = 0;
+    buf->refill     = d64_write;
+    buf->cleanup    = d64_write_cleanup;
+
+    active_buffers += 16;
+    DIRTY_LED_ON();
+    return;
+  }
+
+  /* Non-append case */
+
+  /* Search for an empty directotry entry */
+  d64_opendir(&dh,NULL);
+  do {
+    res = nextdirentry(&dh);
+    if (res > 0)
+      return;
+  } while (res == 0 && entrybuf[OFS_FILE_TYPE] != 0);
+
+  /* Load the BAM */
+  bambuf = read_bam();
+  if (!bambuf)
+    return;
+
+  /* Allocate a new directory sector if no empty entries were found */
+  if (res < 0) {
+    t = dh.d64.track;
+    s = dh.d64.sector;
+
+    if (get_next_sector(&dh.d64.track, &dh.d64.sector, bambuf)) {
+      free_buffer(bambuf);
+      return;
+    }
+
+    /* Link the old sector to the new */
+    entrybuf[0] = dh.d64.track;
+    entrybuf[1] = dh.d64.sector;
+    if (image_write(sector_offset(t,s), entrybuf, 2, 0)) {
+      free_buffer(bambuf);
+      return;
+    }
+
+    allocate_sector(dh.d64.track, dh.d64.sector, bambuf);
+
+    /* Clear the new directory sector */
+    memset(entrybuf, 0, 32);
+    entrybuf[1] = 0xff;
+    for (uint8_t i=0;i<256/32;i++) {
+      if (image_write(sector_offset(dh.d64.track, dh.d64.sector)+32*i,
+		      entrybuf, 32, 0)) {
+	free_buffer(bambuf);
+	return;
+      }
+      entrybuf[1] = 0;
+    }
+
+    /* Mark full sector as used */
+    entrybuf[1] = 0xff;
+    dh.d64.entry = 0;
+  } else {
+    /* nextdirentry has already incremented this variable, undo it */
+    dh.d64.entry--;
+  }
+
+  /* Create directory entry in entrybuf */
+  memset(entrybuf+2, 0, sizeof(entrybuf)-2);  /* Don't overwrite the link pointer! */
+  memset(entrybuf+OFS_FILE_NAME, 0xa0, CBM_NAME_LENGTH);
+  ptr = entrybuf+OFS_FILE_NAME;
+  while (*name) *ptr++ = *name++;
+  entrybuf[OFS_FILE_TYPE] = type;
+
+  /* Find a free sector and allocate it */
+  if (get_first_sector(&t,&s,bambuf)) {
+    free_buffer(bambuf);
+    return;
+  }
+  entrybuf[OFS_TRACK]  = t;
+  entrybuf[OFS_SECTOR] = s;
+  allocate_sector(t,s,bambuf);
+  if (write_bam(bambuf))
+    return;
+
+  /* Write the directory entry */
+  if (image_write(sector_offset(dh.d64.track,dh.d64.sector)+
+		  dh.d64.entry*32, entrybuf, 32, 1))
+    return;
+
+  /* Prepare the data buffer */
+  buf->read           = 0;
+  buf->write          = 1;
+  buf->mustflush      = 0;
+  buf->position       = 2;
+  buf->lastused       = 2;
+  buf->cleanup        = d64_write_cleanup;
+  buf->refill         = d64_write;
+  buf->data[2]        = 13; /* Verified on VICE */
+  buf->pvt.d64.dh     = dh.d64;
+  buf->pvt.d64.track  = t;
+  buf->pvt.d64.sector = s;
+  buf->pvt.d64.blocks = 0;
+  DIRTY_LED_ON();
+  active_buffers += 16;
+}
+
 static void d64_read_sector(buffer_t *buf, uint8_t track, uint8_t sector) {
   image_read(sector_offset(track,sector), buf->data, 256);
 }
@@ -480,8 +712,8 @@ static void d64_write_sector(buffer_t *buf, uint8_t track, uint8_t sector) {
 }
 
 const PROGMEM fileops_t d64ops = {
-  d64_open_read, // open_read,
-  NULL, // open_write,
+  d64_open_read,
+  d64_open_write,
   NULL, // delete,
   d64_getlabel,
   d64_getid,
