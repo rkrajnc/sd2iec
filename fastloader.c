@@ -105,6 +105,7 @@ void load_turbodisk(void) {
   }
   sei();
   buf->cleanup(buf);
+  free_buffer(buf);
 
   set_clock(1);
 }

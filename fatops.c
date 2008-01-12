@@ -257,7 +257,6 @@ static uint8_t fat_file_close(buffer_t *buf) {
   }
 
   res = f_close(&buf->pvt.fh);
-  free_buffer(buf);
   parse_error(res,1);
 
   if (res != FR_OK)

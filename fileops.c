@@ -246,18 +246,6 @@ int8_t next_match(dh_t *dh, char *matchstr, uint8_t type, struct cbmdirent *dent
 /* ------------------------------------------------------------------------- */
 
 /**
- * generic_cleanup - generic cleanup-callback that just frees the buffer
- * @buf: buffer to be used
- *
- * This function just frees the given buffer and returns 0 for success.
- * It can be used if no special cleanup for a buffer is required.
- */
-uint8_t generic_cleanup(buffer_t *buf) {
-  free_buffer(buf);
-  return 0;
-}
-
-/**
  * dir_footer - generate the directory footer
  * @buf: buffer to be used
  *
@@ -396,7 +384,7 @@ static void load_directory(uint8_t secondary) {
   buf->secondary = secondary;
   buf->read      = 1;
   buf->write     = 0;
-  buf->cleanup   = generic_cleanup;
+  buf->cleanup   = NULL;
   buf->position  = 0;
   buf->lastused  = 31;
   buf->sendeoi   = 0;
@@ -469,7 +457,7 @@ void file_open(uint8_t secondary) {
     buf->lastused  = 255;
     buf->sendeoi   = 1;
     buf->mustflush = 0;
-    buf->cleanup   = NULL; // FIXME: free_buffer? Der erste Patch verschob die free-Pflicht zum Aufrufer
+    buf->cleanup   = NULL;
     buf->refill    = NULL;
     active_buffers += 16;
     DIRTY_LED_ON();

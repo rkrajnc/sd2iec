@@ -200,7 +200,7 @@ static void d64_open_read(char *path, char *name, buffer_t *buf) {
 
   buf->read    = 1;
   buf->write   = 0;
-  buf->cleanup = generic_cleanup;
+  buf->cleanup = NULL;
   buf->refill  = d64_read;
 
   buf->refill(buf);

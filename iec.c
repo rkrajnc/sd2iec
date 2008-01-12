@@ -664,15 +664,13 @@ void iec_mainloop(void) {
 	    buffer_t *buf;
 	    buf = find_buffer(secondary_address);
 	    if (buf != NULL) {
-	      if (buf->cleanup) {
-		if (buf->cleanup(buf)) {
-		  bus_state = BUS_CLEANUP;
-		  break;
-		}
-	      } else
-		/* No cleanup: Free the buffer here */
-		// FIXME: Kann man das free_buffer überall rausziehen?
+	      if (buf->cleanup && buf->cleanup(buf)) {
 		free_buffer(buf);
+		bus_state = BUS_CLEANUP;
+		break;
+	      }
+	      /* Free the buffer */
+	      free_buffer(buf);
 	    }
 	  }
 	  bus_state = BUS_FORME;

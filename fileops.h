@@ -32,8 +32,6 @@
 
 enum open_modes { OPEN_READ, OPEN_WRITE, OPEN_APPEND, OPEN_MODIFY };
 
-uint8_t generic_cleanup(buffer_t *buf);
-
 /* Zero-terminates the name in a dent and returns a pointer to it */
 char *dent2str(struct cbmdirent *dent);
 
