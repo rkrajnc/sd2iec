@@ -72,8 +72,27 @@ int main(void) {
   CLKPR = 1;
 #endif
 
-  MCUCR |= _BV(JTD);
-  MCUCR |= _BV(JTD);
+#ifdef __AVR_ATmega644__
+  asm volatile("in  r24, %0\n"
+	       "ori r24, 0x80\n"
+	       "out %0, r24\n"
+	       "out %0, r24\n"
+	       :
+	       : "I" (_SFR_IO_ADDR(MCUCR))
+	       : "r24"
+	       );
+#elif defined __AVR_ATmega32__
+  asm volatile ("in  r24, %0\n"
+		"ori r24, 0x80\n"
+		"out %0, r24\n"
+		"out %0, r24\n"
+		:
+		: "I" (_SFR_IO_ADDR(MCUCSR))
+		: "r24"
+		);
+#else
+#  error Unknown chip!
+#endif
 
   BUSY_LED_SETDDR();
   DIRTY_LED_SETDDR();
