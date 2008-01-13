@@ -3,7 +3,7 @@
 # Define version number
 MAJOR = 0
 MINOR = 5
-PATCHLEVEL =
+PATCHLEVEL = 1
 
 
 #----------------------------------------------------------------------------
