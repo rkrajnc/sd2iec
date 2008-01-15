@@ -67,12 +67,6 @@ void get_mcusr(void)
 
 int main(void) {
 #ifdef __AVR_ATmega644__
-  // My test board uses a 16MHz xtal
-  CLKPR = _BV(CLKPCE);
-  CLKPR = 1;
-#endif
-
-#ifdef __AVR_ATmega644__
   asm volatile("in  r24, %0\n"
 	       "ori r24, 0x80\n"
 	       "out %0, r24\n"
