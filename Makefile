@@ -49,8 +49,10 @@ PATCHLEVEL = 1
 # MCU name
 ifeq ($(CHIP),m32)
 MCU = atmega32
+SIGNATUREADDRESS = 0x77f8
 else ifeq ($(CHIP),m644)
 MCU = atmega644
+SIGNATUREADDRESS = 0xf7f8
 else
 .PHONY: nochip
 nochip:
@@ -227,7 +229,7 @@ EXTMEMOPTS =
 #  -Wl,...:     tell GCC to pass this to linker.
 #    -Map:      create map file
 #    --cref:    add cross reference to  map file
-LDFLAGS = -Wl,-Map=$(TARGET).map,--cref,-section-start=.bootloader=0x77f8
+LDFLAGS = -Wl,-Map=$(TARGET).map,--cref,-section-start=.bootloader=$(SIGNATUREADDRESS)
 LDFLAGS += $(EXTMEMOPTS)
 LDFLAGS += $(PRINTF_LIB) $(SCANF_LIB) $(MATH_LIB)
 
