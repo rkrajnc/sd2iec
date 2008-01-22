@@ -506,9 +506,11 @@ void parse_doscommand(void) {
 
   switch (command_buffer[0]) {
   case 'I':
-    /* Initialize is a no-op for now */
+    /* Initialize */
     if (card_state != CARD_OK)
       set_error_ts(ERROR_READ_NOSYNC,18,0);
+    else
+      free_all_buffers(1);
     break;
 
   case 'B':
