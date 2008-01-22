@@ -724,8 +724,8 @@ FRESULT auto_mount (		/* FR_OK(0): successful, !=0: any error occured */
 		) / fs->sects_clust + 2;
 
 	fmt = FS_FAT12;										/* Determine the FAT sub type */
-	if (maxclust > 0xFF7) fmt = FS_FAT16;
-	if (maxclust > 0xFFF7)
+	if (maxclust >= 0xFF7) fmt = FS_FAT16;
+	if (maxclust >= 0xFFF7)
 #if !_FAT32
 		return FR_NO_FILESYSTEM;
 #else
@@ -979,7 +979,7 @@ FRESULT f_read (
 	if (fp->flag & FA__ERROR) return FR_RW_ERROR;	/* Check error flag */
 	if (!(fp->flag & FA_READ)) return FR_DENIED;	/* Check access mode */
 	remain = fp->fsize - fp->fptr;
-	if (btr > remain) btr = (WORD)remain;			/* Truncate read count by number of bytes left */
+	if (btr > remain) btr = (UINT)remain;			/* Truncate read count by number of bytes left */
 
 	for ( ;  btr;									/* Repeat until all data transferred */
 		rbuff += rcnt, fp->fptr += rcnt, *br += rcnt, btr -= rcnt) {
