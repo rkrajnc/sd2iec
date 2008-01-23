@@ -360,8 +360,10 @@ static void parse_block(void) {
 
     if (*str == 'R') {
       read_sector(buf,params[2],params[3]);
-      buf->position = 0;
+      buf->position = 1;
+      buf->lastused = buf->data[0];
     } else {
+      buf->data[0] = buf->position-1; // FIXME: Untested, verify!
       write_sector(buf,params[2],params[3]);
     }
     break;
