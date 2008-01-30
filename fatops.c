@@ -529,19 +529,15 @@ void fat_mkdir(char *dirname) {
 uint8_t fat_getlabel(char *label) {
   DIR dh;
   FILINFO finfo;
-  CLUST olddir;
   FRESULT res;
   uint8_t i,j;
+  char rootdir[2];
 
   memset(label, ' ', 16);
 
-  /* Trade off a bit of flash and stack usage instead of */
-  /* permanently wasting two bytes for "/".              */
-  olddir = current_dir;
-  current_dir = 0;
-
-  res = f_opendir(&dh, "");
-  current_dir = olddir;
+  rootdir[0] = '/';
+  rootdir[1] = 0;
+  res = f_opendir(&dh, rootdir);
 
   if (res != FR_OK) {
     parse_error(res,0);
