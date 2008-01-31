@@ -185,7 +185,7 @@ static uint8_t fat_file_read(buffer_t *buf) {
   if (bytesread == 0) {
     bytesread = 1;
     /* Experimental data suggests that this may be correct */
-    buf->data[0] = 13;
+    buf->data[2] = 13;
   }
 
   buf->position = 2;
