@@ -312,7 +312,7 @@ js_finish:
 	sei			; re-enable interrupts
 	ret
 
-
+#ifdef CONFIG_TURBODISK
 	;; ====================================================================
 	;;  Turbodisk
 	;; ====================================================================
@@ -452,5 +452,6 @@ tdbitloop2:
 	sbi	_SFR_IO_ADDR(IEC_DDR), IEC_PIN_CLOCK
 
 	ret
+#endif  
 
 	.end

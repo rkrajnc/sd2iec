@@ -36,6 +36,7 @@
 
 enum fastloaders detected_loader;
 
+#ifdef CONFIG_TURBODISK
 void load_turbodisk(void) {
   uint8_t i,len,firstsector;
   buffer_t *buf;
@@ -109,3 +110,4 @@ void load_turbodisk(void) {
 
   set_clock(1);
 }
+#endif

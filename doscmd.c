@@ -229,11 +229,13 @@ static void handle_memexec(void) {
   datacrc = 0xffff;
 
   address = command_buffer[3] + (command_buffer[4]<<8);
+#ifdef CONFIG_TURBODISK
   if (detected_loader == FL_TURBODISK && address == 0x0303) {
     /* Looks like Turbodisk */
     detected_loader = FL_NONE;
     load_turbodisk();
   }
+#endif
 }
 
 static void handle_memread(void) {
@@ -264,12 +266,14 @@ static void handle_memwrite(void) {
     return;
   }
 
+#ifdef CONFIG_TURBODISK
   /* Turbodisk sends the filename in the last M-W, check the previous CRC */
   if (datacrc == 0xe1cb) {
     detected_loader = FL_TURBODISK;
-  } else {
+  } else
+#endif
     detected_loader = FL_NONE;
-  }
+
 
   for (i=0;i<command_length;i++)
     datacrc = _crc16_update(datacrc, command_buffer[i]);

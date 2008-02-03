@@ -63,6 +63,9 @@
 /* Debugging aid: Dump all commands received in channel 15 on serial */
 #define COMMAND_CHANNEL_DUMP
 
+/* Enable Turbodisk soft fastloader support - requires a crystal oscillator! */
+#define CONFIG_TURBODISK
+
 #ifndef LARSP_HARDWARE
 /* Default case: Configure for your own hardware    */
 /* example values are for the "Shadowwolf" variant. */

@@ -27,7 +27,12 @@
 #ifndef FASTLOADER_H
 #define FASTLOADER_H
 
-enum fastloaders { FL_NONE = 0, FL_TURBODISK };
+enum fastloaders {
+  FL_NONE = 0,
+#ifdef CONFIG_TURBODISK
+  FL_TURBODISK,
+#endif
+};
 extern enum fastloaders detected_loader;
 
 void load_turbodisk(void);
