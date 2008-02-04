@@ -66,9 +66,9 @@
 /* Enable Turbodisk soft fastloader support - requires a crystal oscillator! */
 #define CONFIG_TURBODISK
 
-#ifndef LARSP_HARDWARE
-/* Default case: Configure for your own hardware    */
-/* example values are for the "Shadowwolf" variant. */
+#if defined CONFIG_HARDWARE_CUSTOM
+/* Configure for your own hardware                   */
+/* Example values are for the "Shadowolf 1" variant. */
 
 /*** SD card signals ***/
 /* CARD_DETECT must return non-zero when card is inserted */
@@ -91,6 +91,17 @@
 /* CARD Write Protect must return non-zero when card is write protected */
 #  define SDCARD_WP         (PIND & _BV(PD6))
 #  define SDCARD_WP_SETUP() do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
+
+/* SD Card supply voltage - choose the one appropiate to your board */
+/* #  define SD_SUPPLY_VOLTAGE (1L<<15)  / * 2.7V - 2.8V */
+/* #  define SD_SUPPLY_VOLTAGE (1L<<16)  / * 2.8V - 2.9V */
+/* #  define SD_SUPPLY_VOLTAGE (1L<<17)  / * 2.9V - 3.0V */
+#  define SD_SUPPLY_VOLTAGE (1L<<18)  /* 3.0V - 3.1V */
+/* #  define SD_SUPPLY_VOLTAGE (1L<<19)  / * 3.1V - 3.2V */
+/* #  define SD_SUPPLY_VOLTAGE (1L<<20)  / * 3.2V - 3.3V */
+/* #  define SD_SUPPLY_VOLTAGE (1L<<21)  / * 3.3V - 3.4V */
+/* #  define SD_SUPPLY_VOLTAGE (1L<<22)  / * 3.4V - 3.5V */
+/* #  define SD_SUPPLY_VOLTAGE (1L<<23)  / * 3.5V - 3.6V */
 
 
 /*** Jumper ***/
@@ -150,15 +161,63 @@
 /* Target value of the debounce counter */
 #  define DISKCHANGE_MAX  128
 
-#else
-/* Abridged version: LarsP hardware */
+
+
+/* Pre-configurated hardware variants */
+
+#elif defined CONFIG_HARDWARE_SW1
+/* Hardware configuration: Shadowolf 1 */
+#  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
+#  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
+#  if defined __AVR_ATmega32__
+#    define SD_CHANGE_SETUP()   do { MCUCR |= _BV(ISC00); GICR |= _BV(INT0); } while(0)
+#  elif defined __AVR_ATmega644__
+#    define SD_CHANGE_SETUP()   do { EICRA |= _BV(ISC00); EIMSK |= _BV(INT0); } while(0)
+#  else
+#    error Unknown chip!
+#  endif
+#  define SD_CHANGE_ISR         INT0_vect
+#  define SDCARD_WP             (PIND & _BV(PD6))
+#  define SDCARD_WP_SETUP()     do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
+#  define SD_SUPPLY_VOLTAGE     (1L<<18)
+#  define DEV9_JUMPER           (!(PIND & _BV(PD7)))
+#  define DEV9_JUMPER_SETUP()   do { DDRD &= ~_BV(PD7); PORTD |= _BV(PD7); } while(0)
+#  define DEV10_JUMPER          (!(PIND & _BV(PD5)))
+#  define DEV10_JUMPER_SETUP()  do { DDRD &= ~_BV(PD5); PORTD |= _BV(PD5); } while(0)
+#  define BUSY_LED_SETDDR()     DDRC  |= _BV(PC0)
+#  define BUSY_LED_ON()         PORTC |= _BV(PC0)
+#  define BUSY_LED_OFF()        PORTC &= ~_BV(PC0)
+#  define DIRTY_LED_SETDDR()    DDRC  |= _BV(PC1)
+#  define DIRTY_LED_ON()        PORTC |= _BV(PC1)
+#  define DIRTY_LED_OFF()       PORTC &= ~_BV(PC1)
+#  define DIRTY_LED_PORT        PORTC
+#  define DIRTY_LED_BIT()       _BV(PC1)
+#  define AUX_LED_SETDDR()      DDRC  |= _BV(PC2)
+#  define AUX_LED_ON()          PORTC |= _BV(PC2)
+#  define AUX_LED_OFF()         PORTC &= ~_BV(PC2)
+#  define IEC_PIN               PINA
+#  define IEC_DDR               DDRA
+#  define IEC_PORT              PORTA
+#  define IEC_PIN_ATN           PA0
+#  define IEC_PIN_DATA          PA1
+#  define IEC_PIN_CLOCK         PA2
+#  define IEC_PIN_SRQ           PA3
+#  define DISKCHANGE_PIN        PINC
+#  define DISKCHANGE_DDR        DDRC
+#  define DISKCHANGE_PORT       PORTC
+#  define DISKCHANGE_BIT        _BV(PC4)
+#  define DISKCHANGE_MAX        128
+
+#elif defined CONFIG_HARDWARE_LARSP 
+/* Hardware configuration: LarsP */
 #  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
 #  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
 #  define SD_CHANGE_SETUP()     do { MCUCR |= _BV(ISC00); GICR |= _BV(INT0); } while(0)
 #  define SD_CHANGE_ISR         INT0_vect
 #  define SDCARD_WP             (PIND & _BV(PD6))
 #  define SDCARD_WP_SETUP()     do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
-#  define SD_CHANGE_ICR  MCUCR
+#  define SD_CHANGE_ICR         MCUCR
+#  define SD_SUPPLY_VOLTAGE     (1L<<21)
 #  define DEV9_JUMPER           (!(PINA & _BV(PA2)))
 #  define DEV9_JUMPER_SETUP()   do { DDRA &= ~_BV(PA2); PORTA |= _BV(PA2); } while(0)
 #  define DEV10_JUMPER          (!(PINA & _BV(PA3)))
@@ -186,6 +245,8 @@
 #  define DISKCHANGE_PORT       PORTA
 #  define DISKCHANGE_BIT        _BV(PA4)
 #  define DISKCHANGE_MAX        128
+#else
+#  error "You did not select any CONFIG_HARDWARE option."
 #endif
 
 #define IEC_BIT_ATN   _BV(IEC_PIN_ATN)
@@ -193,17 +254,6 @@
 #define IEC_BIT_CLOCK _BV(IEC_PIN_CLOCK)
 #define IEC_BIT_SRQ   _BV(IEC_PIN_SRQ)
 
-
-/* SD Card supply voltage - choose the one appropiate to your board */
-/* #define SD_SUPPLY_VOLTAGE (1L<<15)  / * 2.7V - 2.8V */
-/* #define SD_SUPPLY_VOLTAGE (1L<<16)  / * 2.8V - 2.9V */
-/* #define SD_SUPPLY_VOLTAGE (1L<<17)  / * 2.9V - 3.0V */
-#define SD_SUPPLY_VOLTAGE (1L<<18)  /* 3.0V - 3.1V */
-/* #define SD_SUPPLY_VOLTAGE (1L<<19)  / * 3.1V - 3.2V */
-/* #define SD_SUPPLY_VOLTAGE (1L<<20)  / * 3.2V - 3.3V */
-/* #define SD_SUPPLY_VOLTAGE (1L<<21)  / * 3.3V - 3.4V */
-/* #define SD_SUPPLY_VOLTAGE (1L<<22)  / * 3.4V - 3.5V */
-/* #define SD_SUPPLY_VOLTAGE (1L<<23)  / * 3.5V - 3.6V */
 
 /* Support SDHC - disabling it saves ~220 bytes flash */
 #define SDHC_SUPPORT
@@ -222,5 +272,12 @@
 /*  Reading a directory from a d64 image requires two buffers.    */
 /*  In general: More buffers -> More open files at the same time  */
 #define BUFFER_COUNT 3
+
+/* ---------------- End of user-configurable options ---------------- */
+
+/* Disable COMMAND_CHANNEL_DUMP if UART_DEBUG is disabled */
+#ifndef UART_DEBUG
+#  undef COMMAND_CHANNEL_DUMP
+#endif
 
 #endif

@@ -138,7 +138,9 @@ CSTANDARD = -std=gnu99
 CDEFS = -DF_CPU=$(F_CPU)UL
 
 ifdef LARSP
-CDEFS += -DLARSP_HARDWARE
+CDEFS += -DCONFIG_HARDWARE_LARSP
+else
+CDEFS += -DCONFIG_HARDWARE_SW1
 endif
 
 # Create a version number define
