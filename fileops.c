@@ -28,13 +28,13 @@
 #include <stdint.h>
 #include <string.h>
 #include "config.h"
-#include "dirent.h"
-#include "errormsg.h"
 #include "buffers.h"
-#include "uart.h"
+#include "dirent.h"
 #include "doscmd.h"
-#include "wrapops.h"
+#include "errormsg.h"
 #include "m2iops.h"
+#include "uart.h"
+#include "wrapops.h"
 #include "fileops.h"
 
 /* ------------------------------------------------------------------------- */

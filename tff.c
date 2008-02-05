@@ -38,8 +38,8 @@
 
 #include <avr/pgmspace.h>
 #include <string.h>
-#include "tff.h"		/* Tiny-FatFs declarations */
 #include "sdcard.h"		/* Include file for user provided disk functions */
+#include "tff.h"		/* Tiny-FatFs declarations */
 
 
 static

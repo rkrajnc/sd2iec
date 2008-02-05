@@ -28,16 +28,15 @@
 #include <string.h>
 #include <stdint.h>
 #include "config.h"
-#include "tff.h"
 #include "buffers.h"
+#include "d64ops.h"
 #include "doscmd.h"
 #include "errormsg.h"
-#include "uart.h"
-#include "tff.h"
 #include "fileops.h"
-#include "wrapops.h"
 #include "m2iops.h"
-#include "d64ops.h"
+#include "tff.h"
+#include "uart.h"
+#include "wrapops.h"
 #include "fatops.h"
 
 FATFS fatfs;

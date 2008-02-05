@@ -29,10 +29,10 @@
 #include <string.h>
 #include "config.h"
 #include "buffers.h"
-#include "tff.h"
-#include "fatops.h"
 #include "errormsg.h"
+#include "fatops.h"
 #include "iec.h"
+#include "tff.h"
 #include "diskchange.h"
 
 static const char PROGMEM autoswap_name[] = "AUTOSWAP.LST";

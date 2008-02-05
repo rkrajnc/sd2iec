@@ -32,17 +32,17 @@
 #include <string.h>
 #include <util/crc16.h>
 #include "config.h"
-#include "errormsg.h"
-#include "doscmd.h"
-#include "uart.h"
-#include "wrapops.h"
-#include "fatops.h"
-#include "m2iops.h"
-#include "sdcard.h"
-#include "fastloader.h"
-#include "iec.h"
 #include "diskchange.h"
 #include "eeprom.h"
+#include "errormsg.h"
+#include "fastloader.h"
+#include "fatops.h"
+#include "iec.h"
+#include "m2iops.h"
+#include "sdcard.h"
+#include "uart.h"
+#include "wrapops.h"
+#include "doscmd.h"
 
 #define CURSOR_RIGHT 0x1d
 

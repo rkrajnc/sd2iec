@@ -29,9 +29,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "config.h"
-#include "errormsg.h"
 #include "buffers.h"
 #include "iec.h"
+#include "errormsg.h"
 
 uint8_t current_error;
 uint8_t error_buffer[CONFIG_ERROR_BUFFER_SIZE];

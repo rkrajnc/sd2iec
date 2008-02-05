@@ -27,10 +27,10 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include "config.h"
-#include "iec-ll.h"
+#include "buffers.h"
 #include "doscmd.h"
 #include "fileops.h"
-#include "buffers.h"
+#include "iec-ll.h"
 #include "fastloader-ll.h"
 #include "fastloader.h"
 

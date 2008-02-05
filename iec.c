@@ -38,16 +38,16 @@
 #include <stdlib.h>
 #include "config.h"
 #include "avrcompat.h"
-#include "uart.h"
-#include "errormsg.h"
-#include "doscmd.h"
 #include "buffers.h"
+#include "diskchange.h"
+#include "doscmd.h"
+#include "errormsg.h"
+#include "fastloader-ll.h"
 #include "fatops.h"
 #include "fileops.h"
-#include "sdcard.h"
 #include "iec-ll.h"
-#include "fastloader-ll.h"
-#include "diskchange.h"
+#include "sdcard.h"
+#include "uart.h"
 #include "iec.h"
 
 /* ------------------------------------------------------------------------- */

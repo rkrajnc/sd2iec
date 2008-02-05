@@ -28,13 +28,12 @@
 #include <stdint.h>
 #include <string.h>
 #include "config.h"
+#include "buffers.h"
 #include "dirent.h"
-#include "buffers.h"
-#include "tff.h"
-#include "buffers.h"
-#include "wrapops.h"
 #include "errormsg.h"
 #include "fatops.h"
+#include "tff.h"
+#include "wrapops.h"
 #include "m2iops.h"
 
 #define M2I_ENTRY_LEN      33

@@ -31,15 +31,15 @@
 #include <avr/wdt.h>
 #include <util/delay.h>
 #include "config.h"
-#include "uart.h"
-#include "spi.h"
-#include "tff.h"
-#include "iec.h"
 #include "buffers.h"
-#include "fatops.h"
-#include "sdcard.h"
 #include "diskchange.h"
 #include "eeprom.h"
+#include "fatops.h"
+#include "iec.h"
+#include "sdcard.h"
+#include "spi.h"
+#include "tff.h"
+#include "uart.h"
 
 #ifdef CONFIG_BOOTLOADER
 typedef struct

@@ -28,13 +28,12 @@
 #include <stdint.h>
 #include <string.h>
 #include "config.h"
+#include "buffers.h"
 #include "dirent.h"
-#include "buffers.h"
-#include "tff.h"
-#include "buffers.h"
-#include "wrapops.h"
 #include "errormsg.h"
 #include "fatops.h"
+#include "tff.h"
+#include "wrapops.h"
 #include "d64ops.h"
 
 #define DIR_TRACK        18
