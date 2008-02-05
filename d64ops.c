@@ -659,6 +659,8 @@ static void d64_open_write(char *path, char *name, uint8_t type, buffer_t *buf, 
     entrybuf[1] = 0xff;
     dh.d64.entry = 0;
   } else {
+    /* Fix gcc 4.2 "uninitialized" warning */
+    s = t = 0;
     /* nextdirentry has already incremented this variable, undo it */
     dh.d64.entry--;
   }
