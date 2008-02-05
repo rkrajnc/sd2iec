@@ -41,6 +41,7 @@
 #include "diskchange.h"
 #include "eeprom.h"
 
+#ifdef CONFIG_BOOTLOADER
 typedef struct
 {
 	unsigned long dev_id;
@@ -49,7 +50,8 @@ typedef struct
 } bootloaderinfo_t;
 /* R.Riedel - bootloader-support */
 
-const bootloaderinfo_t bootloaderinfo BOOTLOADER_SECTION = {DEVID, SWVERSIONMAJOR << 8 | SWVERSIONMINOR, 0x0000};
+const bootloaderinfo_t bootloaderinfo BOOTLOADER_SECTION = {CONFIG_BOOT_DEVID, CONFIG_BOOT_MAJOR << 8 | CONFIG_BOOT_MINOR, 0x0000};
+#endif
 
 /* Make sure the watchdog is disabled as soon as possible    */
 /* Copy this code to your bootloader if you use one and your */

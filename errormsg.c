@@ -34,7 +34,7 @@
 #include "iec.h"
 
 uint8_t current_error;
-uint8_t error_buffer[ERROR_BUFFER_SIZE];
+uint8_t error_buffer[CONFIG_ERROR_BUFFER_SIZE];
 volatile uint8_t error_blink_active;
 
 #define EC(x) x+0x80
@@ -167,8 +167,8 @@ void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
   char *msg = (char *) error_buffer;
 
   current_error = errornum;
-  buffers[BUFFER_COUNT].lastused = 0;
-  buffers[BUFFER_COUNT].position = 0;
+  buffers[CONFIG_BUFFER_COUNT].lastused = 0;
+  buffers[CONFIG_BUFFER_COUNT].position = 0;
   memset(error_buffer,0,sizeof(error_buffer));
 
   msg = appendnumber(msg,errornum);
@@ -211,7 +211,7 @@ void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
     else
       DIRTY_LED_OFF();
   }
-  buffers[BUFFER_COUNT].lastused = msg - (char *)error_buffer;
+  buffers[CONFIG_BUFFER_COUNT].lastused = msg - (char *)error_buffer;
 }
 
 #if 0

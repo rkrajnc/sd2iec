@@ -27,7 +27,7 @@
 #ifndef UART_H
 #define UART_H
 
-#ifdef UART_DEBUG
+#ifdef CONFIG_UART_DEBUG
 
 #include <avr/pgmspace.h>
 

@@ -20,68 +20,47 @@ PATCHLEVEL = 1
 # Sander Pool
 # Frederik Rouleau
 #
-#----------------------------------------------------------------------------
-# On command line:
 #
-# make all = Make software.
-#
-# make clean = Clean out built project files.
-#
-# make coff = Convert ELF to AVR COFF.
-#
-# make extcoff = Convert ELF to AVR Extended COFF.
-#
-# make program = Download the hex file to the device, using avrdude.
-#                Please customize the avrdude settings below first!
-#
-# make debug = Start either simulavr or avarice as specified for debugging, 
-#              with avr-gdb or avr-insight as the front end for debugging.
-#
-# make filename.s = Just compile filename.c into the assembler code only.
-#
-# make filename.i = Create a preprocessed source file for use in submitting
-#                   bug reports to the GCC project.
+# Extensively modified for sd2iec by Ingo Korb
 #
 # To rebuild project do "make clean" then "make all".
 #----------------------------------------------------------------------------
 
-
-# MCU name
-ifeq ($(CHIP),m32)
-MCU = atmega32
-SIGNATUREADDRESS = 0x77f8
-else ifeq ($(CHIP),m644)
-MCU = atmega644
-SIGNATUREADDRESS = 0xf7f8
+# Read configuration file
+ifdef CONFIG
+ CONFIGSUFFIX = $(CONFIG:config%=%)
 else
+ CONFIG = config
+ CONFIGSUFFIX =
+endif
+
+# Include the configuration file
+include $(CONFIG)
+
+# Set MCU name and bootloader signature address
+MCU := $(CONFIG_MCU)
+ifeq ($(CONFIG_BOOTLOADER),y)
+  ifeq ($(MCU),atmega32)
+    SIGNATUREADDRESS = 0x77f8
+  else ifeq ($(MCU),atmega644)
+    SIGNATUREADDRESS = 0xf7f8
+  else
 .PHONY: nochip
 nochip:
 	@echo '=============================================================='
-	@echo 'No known target chip specified. To specify a target chip, use:'
+	@echo 'No known target chip specified.'
 	@echo
-	@echo '    $(MAKE) CHIP=chiptype'
-	@echo
-	@echo 'Currently known chip types:'
-	@echo '  m32   - ATmega32'
-	@echo '  m644  - ATmega644'
-	@echo '=============================================================='
+	@echo 'Please disable CONFIG_BOOTLOADER or add the address for the'
+	@echo 'bootloader signature to the Makefile.'
 	@exit 1
-
-# Catch a common use case
-clean: nochip
+  endif
 endif
 
 # Directory for all generated files
-OBJDIR := obj-$(CHIP)
+OBJDIR := obj-$(CONFIG_MCU:atmega%=m%)$(CONFIGSUFFIX)
 
-# Processor frequency.
-#     This will define a symbol, F_CPU, in all source code files equal to the 
-#     processor frequency. You can then use this symbol in your source code to 
-#     calculate timings. Do NOT tack on a 'UL' at the end, this will be done
-#     automatically to create a 32-bit value in your source code.
-#F_CPU = 7600000
-F_CPU = 8000000
-
+# CPU clock
+F_CPU := $(CONFIG_MCU_FREQ)
 
 # Output format. (can be srec, ihex, binary)
 FORMAT = ihex
@@ -90,10 +69,12 @@ FORMAT = ihex
 # Target file name (without extension).
 TARGET = $(OBJDIR)/sd2iec
 
-
 # List C source files here. (C dependencies are automatically generated.)
-SRC = buffers.c fatops.c fileops.c iec.c uart.c main.c errormsg.c doscmd.c sdcard.c spi.c tff.c crc7.c fastloader.c m2iops.c d64ops.c diskchange.c eeprom.c
+SRC = buffers.c fatops.c fileops.c iec.c main.c errormsg.c doscmd.c sdcard.c spi.c tff.c crc7.c fastloader.c m2iops.c d64ops.c diskchange.c eeprom.c
 
+ifeq ($(CONFIG_UART_DEBUG),y)
+  SRC += uart.c
+endif
 
 # List Assembler source files here.
 #     Make them always end in a capital .S.  Files ending in a lowercase .s
@@ -137,11 +118,6 @@ CSTANDARD = -std=gnu99
 # Place -D or -U options here
 CDEFS = -DF_CPU=$(F_CPU)UL
 
-ifdef LARSP
-CDEFS += -DCONFIG_HARDWARE_LARSP
-else
-CDEFS += -DCONFIG_HARDWARE_SW1
-endif
 
 # Create a version number define
 ifdef PATCHLEVEL
@@ -170,6 +146,7 @@ CFLAGS += -O$(OPT)
 CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 CFLAGS += -Wall -Wstrict-prototypes -Werror
 CFLAGS += -Wa,-adhlns=$(OBJDIR)/$(<:.c=.lst)
+CFLAGS += -I$(OBJDIR)
 CFLAGS += $(patsubst %,-I%,$(EXTRAINCDIRS))
 CFLAGS += $(CSTANDARD)
 
@@ -181,7 +158,7 @@ CFLAGS += $(CSTANDARD)
 #             for use in COFF files, additional information about filenames
 #             and function names needs to be present in the assembler source
 #             files -- see avr-libc docs [FIXME: not yet described there]
-ASFLAGS = -Wa,-adhlns=$(OBJDIR)/$(<:.S=.lst),-gstabs 
+ASFLAGS = -Wa,-adhlns=$(OBJDIR)/$(<:.S=.lst),-gstabs -I$(OBJDIR)
 
 
 #---------------- Library Options ----------------
@@ -231,49 +208,16 @@ EXTMEMOPTS =
 #  -Wl,...:     tell GCC to pass this to linker.
 #    -Map:      create map file
 #    --cref:    add cross reference to  map file
-LDFLAGS = -Wl,-Map=$(TARGET).map,--cref,-section-start=.bootloader=$(SIGNATUREADDRESS)
+LDFLAGS = -Wl,-Map=$(TARGET).map,--cref
 LDFLAGS += $(EXTMEMOPTS)
 LDFLAGS += $(PRINTF_LIB) $(SCANF_LIB) $(MATH_LIB)
+ifeq ($(CONFIG_LINKER_RELAX),y)
+  LDFLAGS += -Wl,-O9,-relax
+endif
 
-
-
-#---------------- Programming Options (avrdude) ----------------
-
-# Programming hardware: alf avr910 avrisp bascom bsd 
-# dt006 pavr picoweb pony-stk200 sp12 stk200 stk500 stk500v2
-#
-# Type: avrdude -c ?
-# to get a full listing.
-#
-AVRDUDE_PROGRAMMER = stk500v2
-
-# com1 = serial port. Use lpt1 to connect to parallel port.
-AVRDUDE_PORT = com1    # programmer connected to serial device
-
-AVRDUDE_WRITE_FLASH = -U flash:w:$(TARGET).hex
-# AVRDUDE_WRITE_EEPROM = -U eeprom:w:$(TARGET).eep
-
-
-# Uncomment the following if you want avrdude's erase cycle counter.
-# Note that this counter needs to be initialized first using -Yn,
-# see avrdude manual.
-#AVRDUDE_ERASE_COUNTER = -y
-
-# Uncomment the following if you do /not/ wish a verification to be
-# performed after programming the device.
-#AVRDUDE_NO_VERIFY = -V
-
-# Increase verbosity level.  Please use this when submitting bug
-# reports about avrdude. See <http://savannah.nongnu.org/projects/avrdude> 
-# to submit bug reports.
-AVRDUDE_VERBOSE = -v -v
-
-AVRDUDE_FLAGS = -p $(MCU) -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER)
-AVRDUDE_FLAGS += $(AVRDUDE_NO_VERIFY)
-AVRDUDE_FLAGS += $(AVRDUDE_VERBOSE)
-AVRDUDE_FLAGS += $(AVRDUDE_ERASE_COUNTER)
-
-
+ifeq ($(CONFIG_BOOTLOADER),y)
+  LDFLAGS += -Wl,-section-start=.bootloader=$(SIGNATUREADDRESS)
+endif
 
 #---------------- Debugging Options ----------------
 
@@ -377,9 +321,6 @@ HEXSIZE = $(SIZE) --target=$(FORMAT) $(TARGET).hex
 ELFSIZE = $(SIZE) -A $(TARGET).elf
 AVRMEM = avr-mem.sh $(TARGET).elf $(MCU)
 
-# Program the device.  
-program: $(TARGET).hex $(TARGET).eep
-	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH)  $(AVRDUDE_WRITE_EEPROM)
 
 
 # Generate avr-gdb config/init file which does the following:
@@ -429,6 +370,10 @@ extcoff: $(TARGET).elf
 	$(COFFCONVERT) -O coff-ext-avr $< $(TARGET).cof
 
 
+# Generate autoconf.h from config
+.PRECIOUS : $(OBJDIR)/autoconf.h
+$(OBJDIR)/autoconf.h: $(CONFIG) | $(OBJDIR)
+	gawk -f conf2h.awk $(CONFIG) > $(OBJDIR)/autoconf.h
 
 # Create final output files (.hex, .eep) from ELF output file.
 $(OBJDIR)/%.bin: $(OBJDIR)/%.elf
@@ -459,21 +404,21 @@ $(OBJDIR)/%.elf: $(OBJ)
 
 
 # Compile: create object files from C source files.
-$(OBJDIR)/%.o : %.c | $(OBJDIR)
+$(OBJDIR)/%.o : %.c | $(OBJDIR) $(OBJDIR)/autoconf.h
 	$(CC) -c $(ALL_CFLAGS) $< -o $@ 
 
 
 # Compile: create assembler files from C source files.
-$(OBJDIR)/%.s : %.c | $(OBJDIR)
+$(OBJDIR)/%.s : %.c | $(OBJDIR) $(OBJDIR)/autoconf.h
 	$(CC) -S $(ALL_CFLAGS) $< -o $@
 
 
 # Assemble: create object files from assembler source files.
-$(OBJDIR)/%.o : %.S | $(OBJDIR)
+$(OBJDIR)/%.o : %.S | $(OBJDIR) $(OBJDIR)/autoconf.h
 	$(CC) -c $(ALL_ASFLAGS) $< -o $@
 
 # Create preprocessed source for use in sending a bug report.
-$(OBJDIR)/%.i : %.c | $(OBJDIR)
+$(OBJDIR)/%.i : %.c | $(OBJDIR) $(OBJDIR)/autoconf.h
 	$(CC) -E -mmcu=$(MCU) -I. $(CFLAGS) $< -o $@ 
 
 # Create the output directory
@@ -493,6 +438,7 @@ clean_list :
 	$(REMOVE) $(TARGET).sym
 	$(REMOVE) $(TARGET).lss
 	$(REMOVE) $(OBJ)
+	$(REMOVE) $(OBJDIR)/autoconf.h
 	$(REMOVE) $(LST)
 	$(REMOVE) $(SRC:.c=.s)
 	$(REMOVE) $(SRC:.c=.d)

@@ -182,7 +182,7 @@ static int sendCommand(const uint8_t  command,
   crc = (crc << 1) | 1;
 
   errorcount = 0;
-  while (errorcount < SD_AUTO_RETRIES) {
+  while (errorcount < CONFIG_SD_AUTO_RETRIES) {
     // Select card
     SPI_SS_LOW();
 
@@ -413,7 +413,7 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
 
   for (sec=0;sec<count;sec++) {
     errorcount = 0;
-    while (errorcount < SD_AUTO_RETRIES) {
+    while (errorcount < CONFIG_SD_AUTO_RETRIES) {
       if (isSDHC)
 	res = sendCommand(READ_SINGLE_BLOCK, sector+sec, 0);
       else
@@ -457,7 +457,7 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
     }
     deselectCard();
 
-    if (errorcount >= SD_AUTO_RETRIES) return RES_ERROR;
+    if (errorcount >= CONFIG_SD_AUTO_RETRIES) return RES_ERROR;
   }
 
   return RES_OK;
@@ -490,7 +490,7 @@ DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
 
   for (sec=0;sec<count;sec++) {
     errorcount = 0;
-    while (errorcount < SD_AUTO_RETRIES) {
+    while (errorcount < CONFIG_SD_AUTO_RETRIES) {
       if (isSDHC)
 	res = sendCommand(WRITE_BLOCK, sector+sec, 0);
       else
@@ -541,7 +541,7 @@ DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
     }
     deselectCard();
 
-    if (errorcount >= SD_AUTO_RETRIES) {
+    if (errorcount >= CONFIG_SD_AUTO_RETRIES) {
       if (!(status & STATUS_CRC_ERROR))
 	card_state = CARD_ERROR;
       return RES_ERROR;

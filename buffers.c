@@ -37,10 +37,10 @@ FIL     imagehandle;
 uint8_t entrybuf[33];
 
 /// One additional buffer structure for channel 15
-buffer_t buffers[BUFFER_COUNT+1];
+buffer_t buffers[CONFIG_BUFFER_COUNT+1];
 
 /// The actual data buffers
-static uint8_t bufferdata[BUFFER_COUNT*256];
+static uint8_t bufferdata[CONFIG_BUFFER_COUNT*256];
 
 /// Number of active data buffers + 16 * number of write buffers
 uint8_t active_buffers;
@@ -54,15 +54,15 @@ void init_buffers(void) {
   uint8_t i;
 
   memset(buffers,0,sizeof(buffers));
-  for (i=0;i<BUFFER_COUNT;i++)
+  for (i=0;i<CONFIG_BUFFER_COUNT;i++)
     buffers[i].data = bufferdata + 256*i;
 
-  buffers[BUFFER_COUNT].data      = error_buffer;
-  buffers[BUFFER_COUNT].secondary = 15;
-  buffers[BUFFER_COUNT].allocated = 1;
-  buffers[BUFFER_COUNT].read      = 1;
-  buffers[BUFFER_COUNT].write     = 1;
-  buffers[BUFFER_COUNT].sendeoi   = 1;
+  buffers[CONFIG_BUFFER_COUNT].data      = error_buffer;
+  buffers[CONFIG_BUFFER_COUNT].secondary = 15;
+  buffers[CONFIG_BUFFER_COUNT].allocated = 1;
+  buffers[CONFIG_BUFFER_COUNT].read      = 1;
+  buffers[CONFIG_BUFFER_COUNT].write     = 1;
+  buffers[CONFIG_BUFFER_COUNT].sendeoi   = 1;
 }
 
 /**
@@ -75,7 +75,7 @@ void init_buffers(void) {
 buffer_t *alloc_buffer(void) {
   uint8_t i;
 
-  for (i=0;i<BUFFER_COUNT;i++) {
+  for (i=0;i<CONFIG_BUFFER_COUNT;i++) {
     if (!buffers[i].allocated) {
       buffers[i].allocated = 1;
       active_buffers++;
@@ -128,7 +128,7 @@ uint8_t free_all_buffers(uint8_t cleanup) {
 
   res = 0;
 
-  for (i=0;i<BUFFER_COUNT;i++)
+  for (i=0;i<CONFIG_BUFFER_COUNT;i++)
     if (buffers[i].allocated) {
       if (cleanup && buffers[i].cleanup)
 	res = res || buffers[i].cleanup(&buffers[i]);
@@ -149,7 +149,7 @@ uint8_t free_all_buffers(uint8_t cleanup) {
 buffer_t *find_buffer(uint8_t secondary) {
   uint8_t i;
 
-  for (i=0;i<BUFFER_COUNT+1;i++) {
+  for (i=0;i<CONFIG_BUFFER_COUNT+1;i++) {
     if (buffers[i].allocated && buffers[i].secondary == secondary)
       return &buffers[i];
   }

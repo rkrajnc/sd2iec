@@ -48,7 +48,7 @@
 
 static void (*restart_call)(void) = 0;
 
-uint8_t command_buffer[COMMAND_BUFFER_SIZE+2];
+uint8_t command_buffer[CONFIG_COMMAND_BUFFER_SIZE+2];
 uint8_t command_length;
 
 uint16_t datacrc = 0xffff;
@@ -401,12 +401,12 @@ void parse_doscommand(void) {
   set_error(ERROR_OK);
 
   /* Abort if the command is too long */
-  if (command_length == COMMAND_BUFFER_SIZE) {
+  if (command_length == CONFIG_COMMAND_BUFFER_SIZE) {
     set_error(ERROR_SYNTAX_TOOLONG);
     return;
   }
 
-#ifdef COMMAND_CHANNEL_DUMP
+#ifdef CONFIG_COMMAND_CHANNEL_DUMP
   /* Debugging aid: Dump the whole command via serial */
   if (detected_loader == FL_NONE) {
     /* Dump only if no loader was detected because it may ruin the timing */

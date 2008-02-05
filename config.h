@@ -48,27 +48,11 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-/* R.Riedel - bootloader-support */
-#define DEVID 0x49454321
-#define SWVERSIONMAJOR 0
-#define SWVERSIONMINOR 0
+#include "autoconf.h"
 
-
-/* Enable UART debugging here by uncommenting UART_DEBUG */
-#define UART_DEBUG
-#define UART_BAUDRATE 19200
-/* Must be a power of 2, don't use less than 8 */
-#define UART_BUFFER_SIZE 64
-
-/* Debugging aid: Dump all commands received in channel 15 on serial */
-#define COMMAND_CHANNEL_DUMP
-
-/* Enable Turbodisk soft fastloader support - requires a crystal oscillator! */
-#define CONFIG_TURBODISK
-
-#if defined CONFIG_HARDWARE_CUSTOM
-/* Configure for your own hardware                   */
-/* Example values are for the "Shadowolf 1" variant. */
+#if CONFIG_HARDWARE_VARIANT==1
+/* Configure for your own hardware                     */
+/* Example values are for the "Shadowolf 1.x" variant. */
 
 /*** SD card signals ***/
 /* CARD_DETECT must return non-zero when card is inserted */
@@ -165,7 +149,7 @@
 
 /* Pre-configurated hardware variants */
 
-#elif defined CONFIG_HARDWARE_SW1
+#elif CONFIG_HARDWARE_VARIANT==2
 /* Hardware configuration: Shadowolf 1 */
 #  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
 #  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
@@ -208,7 +192,7 @@
 #  define DISKCHANGE_BIT        _BV(PC4)
 #  define DISKCHANGE_MAX        128
 
-#elif defined CONFIG_HARDWARE_LARSP 
+#elif CONFIG_HARDWARE_VARIANT == 3
 /* Hardware configuration: LarsP */
 #  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
 #  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
@@ -246,7 +230,7 @@
 #  define DISKCHANGE_BIT        _BV(PA4)
 #  define DISKCHANGE_MAX        128
 #else
-#  error "You did not select any CONFIG_HARDWARE option."
+#  error "CONFIG_HARDWARE_VARIANT is unset or set to an unknown value."
 #endif
 
 #define IEC_BIT_ATN   _BV(IEC_PIN_ATN)
@@ -255,29 +239,11 @@
 #define IEC_BIT_SRQ   _BV(IEC_PIN_SRQ)
 
 
-/* Support SDHC - disabling it saves ~220 bytes flash */
-#define SDHC_SUPPORT
-
-/* Number of retries if the SD communication fails */
-#define SD_AUTO_RETRIES 10
-
-/* Length of error message buffer - 1571 uses 36 bytes */
-#define ERROR_BUFFER_SIZE 36
-
-/* Length of command/filename buffer - 1571 uses 42 bytes     */
-/* The buffer is actually 2 bytes larger to simplify parsing. */
-#define COMMAND_BUFFER_SIZE 42
-
-/* Number of sector buffers (256 byte+a bit of overhead)          */
-/*  Reading a directory from a d64 image requires two buffers.    */
-/*  In general: More buffers -> More open files at the same time  */
-#define BUFFER_COUNT 3
-
 /* ---------------- End of user-configurable options ---------------- */
 
 /* Disable COMMAND_CHANNEL_DUMP if UART_DEBUG is disabled */
-#ifndef UART_DEBUG
-#  undef COMMAND_CHANNEL_DUMP
+#ifndef CONFIG_UART_DEBUG
+#  undef CONFIG_COMMAND_CHANNEL_DUMP
 #endif
 
 #endif

@@ -189,15 +189,14 @@ Other important notes:
 Compilation notes:
 ==================
 sd2iec is set up to be compiled in multiple configurations, controlled by
-variables supplied to the make command line.
+configuration files. By default the Makefile looks for a file named
+'config', but you can override it by providing the name on the make
+command line with "make CONFIG=filename". If you are using *BSD you
+may have to edit the Makefile to use another awk implementation
+instead of gawk - unfortunately WinAVR compatibility requires
+using gawk in there.
 
-The target chip must always be supplied by using either "make CHIP=m32"
-for the ATmega32 or "make CHIP=m644" for the ATmega644.
-
-By default the codes is configured for the I/O pin usage of the "Shadowolf"
-variant of the MMC2IEC board. If your circuit uses the original LarsP
-circuit instead, add "LARSP=yes" to the make command line to change the
-defaults. If you use a variant that is not covered by either of those options,
-edit config.h yourself - the commented section is the one used by default.
-
-
+An example configuration file named "config-example" is provided with
+the source code, as well as abridged files corresponding to the
+release binaries. If you want to compile sd2iec for a custom hardware
+you may have to edit config.h too to change the port definitions.

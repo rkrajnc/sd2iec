@@ -30,7 +30,7 @@
 #include <stdint.h>
 
 extern uint8_t current_error;
-extern uint8_t error_buffer[ERROR_BUFFER_SIZE];
+extern uint8_t error_buffer[CONFIG_ERROR_BUFFER_SIZE];
 extern volatile uint8_t error_blink_active;
 
 

@@ -31,9 +31,7 @@
 #include "config.h"
 #include "avrcompat.h"
 
-#ifdef UART_DEBUG
-
-static char txbuf[UART_BUFFER_SIZE];
+static char txbuf[1 << CONFIG_UART_BUF_SHIFT];
 static volatile uint16_t read_idx;
 static volatile uint16_t write_idx;
 
@@ -101,8 +99,8 @@ static FILE mystdout = FDEV_SETUP_STREAM(ioputc, NULL, _FDEV_SETUP_WRITE);
 void init_serial(void) {
   /* Seriellen Port konfigurieren */
 
-  UBRRH = (int)((double)F_CPU/(16.0*UART_BAUDRATE)-1) >> 8;
-  UBRRL = (int)((double)F_CPU/(16.0*UART_BAUDRATE)-1) & 0xff;
+  UBRRH = (int)((double)F_CPU/(16.0*CONFIG_UART_BAUDRATE)-1) >> 8;
+  UBRRL = (int)((double)F_CPU/(16.0*CONFIG_UART_BAUDRATE)-1) & 0xff;
 
   UCSRB = _BV(RXEN) | _BV(TXEN);
   // I really don't like random #ifdefs in the code =(
@@ -120,5 +118,3 @@ void init_serial(void) {
   read_idx  = 0;
   write_idx = 0;
 }
-
-#endif

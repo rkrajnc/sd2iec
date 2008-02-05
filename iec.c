@@ -386,7 +386,7 @@ static uint8_t iec_listen_handler(const uint8_t cmd) {
     if (c < 0) return 1;
 
     if (data_state == DATA_COMMAND) {
-      if (command_length < COMMAND_BUFFER_SIZE)
+      if (command_length < CONFIG_COMMAND_BUFFER_SIZE)
 	command_buffer[command_length++] = c;
       if (iecflags.eoi_recvd)
 	// Filenames are just a special type of command =)

@@ -1,6 +1,7 @@
 2008-xx-xx - release x.x
 	- Bugfix: Properly emulate B-R/B-W (fixes Pirates!)
 	- Bugfix: Close buffers on I (fixes Drazpaint)
+	- reworked source configuration system
 
 2008-01-13 - release 0.5.1
 	- Bugfix: Really disable JTAG - fixes very slow access on some
