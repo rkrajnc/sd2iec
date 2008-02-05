@@ -456,7 +456,7 @@ void fat_chdir(char *dirname) {
   FRESULT res;
 
   /* Left arrow moves one directory up */
-  if (!strcmp_P(dirname, PSTR("_"))) {
+  if (dirname[0] == '_' && dirname[1] == 0) {
     dirname[0] = '.';
     dirname[1] = '.';
     dirname[2] = 0;
@@ -661,7 +661,7 @@ void image_unmount(void) {
  * themselves.
  */
 void image_chdir(char *dirname) {
-  if (!strcmp_P(dirname, PSTR("_"))) {
+  if (dirname[0] == '_' && dirname[1] == 0) {
     /* Unmount request */
     image_unmount();
   }
