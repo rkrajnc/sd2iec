@@ -217,9 +217,9 @@ static void open_existing(char *name, uint8_t type, buffer_t *buf, uint8_t appen
   }
 
   if (appendflag)
-    fat_open_write("", (char *)entrybuf+M2I_FATNAME_OFFSET, type, buf, 1);
+    fat_open_write(NULL, (char *)entrybuf+M2I_FATNAME_OFFSET, type, buf, 1);
   else
-    fat_open_read("", (char *)entrybuf+M2I_FATNAME_OFFSET, buf);
+    fat_open_read(NULL, (char *)entrybuf+M2I_FATNAME_OFFSET, buf);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -402,7 +402,7 @@ static void m2i_open_write(char *path, char *name, uint8_t type, buffer_t *buf, 
       return;
 
     /* Write the actual file */
-    fat_open_write("", name, type, buf, append);
+    fat_open_write(NULL, name, type, buf, append);
 
     /* Abort on error */
     if (current_error) {
@@ -424,7 +424,7 @@ static uint8_t m2i_delete(char *path, char *name) {
     return 0;
 
   /* Ignore the result, we'll have to delete the entry anyway */
-  fat_delete("", (char *)entrybuf+M2I_FATNAME_OFFSET);
+  fat_delete(NULL, (char *)entrybuf+M2I_FATNAME_OFFSET);
 
   entrybuf[0] = '-';
   if (image_write(offset, entrybuf, 1, 1))

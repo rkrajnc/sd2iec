@@ -101,4 +101,7 @@ buffer_t *find_buffer(uint8_t secondary);
 /* Number of currently allocated buffers + 16 * number of write buffers */
 uint8_t active_buffers;
 
+/* AVR-specific hack: Address 1 is r1 which is always zero in C code */
+#define NULLSTRING ((char *)1)
+
 #endif

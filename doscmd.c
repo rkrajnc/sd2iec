@@ -467,7 +467,7 @@ void parse_doscommand(void) {
 	  name++;
 
       if (iecflags.autoswap_active)
-	set_changelist("");
+	set_changelist(NULLSTRING);
 
       if (i == 'C')
 	chdir(name);
@@ -496,7 +496,7 @@ void parse_doscommand(void) {
       if (command_buffer[i] != ':') {
 	set_error(ERROR_SYNTAX_NONAME);
       } else {
-	i = file_delete("", (char *)command_buffer+i+1);
+	i = file_delete(NULL, (char *)command_buffer+i+1);
 	if (i != 255)
 	  set_error_ts(ERROR_SCRATCHED,i,0);
       }
@@ -619,7 +619,7 @@ void parse_doscommand(void) {
       /* Skip directories */
       if ((dent.typeflags & TYPE_MASK) == TYPE_DIR)
 	continue;
-      i = file_delete("", dent2str(&dent));
+      i = file_delete(NULL, dent2str(&dent));
       if (i != 255)
 	count += i;
       else

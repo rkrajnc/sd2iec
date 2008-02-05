@@ -144,7 +144,7 @@ static void fix_name(char *str) {
 static char* build_name(char *path, char *name, buffer_t *buf) {
   char *str;
 
-  if (strlen(path)) {
+  if (path && strlen(path)) {
     str = (char *) buf->data;
     strcpy(str, path);
     strcat_P(str, PSTR("/"));
@@ -603,7 +603,7 @@ uint16_t fat_freeblocks(void) {
   FATFS *fs = &fatfs;
   DWORD clusters;
 
-  if (f_getfree("", &clusters, &fs) == FR_OK) {
+  if (f_getfree(NULLSTRING, &clusters, &fs) == FR_OK) {
     if (clusters < 64000)
       return clusters;
     else
@@ -631,7 +631,7 @@ void init_fatops(void) {
   f_mount(0, &fatfs);
 
   /* Dummy operation to force the actual mounting */
-  f_chdir("");
+  f_chdir(NULLSTRING);
 }
 
 /**

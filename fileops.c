@@ -374,7 +374,7 @@ static void load_directory(uint8_t secondary) {
       }
     }
   } else {
-    if (opendir(&buf->pvt.dir.dh,"")) {
+    if (opendir(&buf->pvt.dir.dh,NULLSTRING)) {
       free_buffer(buf);
       return;
     }
