@@ -34,7 +34,7 @@
 #include <avr/pgmspace.h>
 #include "buffers.h"
 #include "fileops.h"
-#include "tff.h"
+#include "ff.h"
 
 /**
  * struct fileops_t - function pointers to file operations

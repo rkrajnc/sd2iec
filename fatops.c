@@ -1,5 +1,6 @@
 /* sd2iec - SD/MMC to Commodore serial bus interface/controller
    Copyright (C) 2007,2008  Ingo Korb <ingo@akana.de>
+   ASCII/PET conversion Copyright (C) 2008 Jim Brain <brain@jbrain.com>
 
    Inspiration and low-level SD/MMC access based on code from MMC2IEC
      by Lars Pontoppidan et al., see sdcard.c|h and config.h.
@@ -34,7 +35,7 @@
 #include "errormsg.h"
 #include "fileops.h"
 #include "m2iops.h"
-#include "tff.h"
+#include "ff.h"
 #include "uart.h"
 #include "wrapops.h"
 #include "fatops.h"
@@ -132,12 +133,51 @@ void parse_error(FRESULT res, uint8_t readflag) {
   }
 }
 
-static void fix_name(char *str) {
-  /* The C64 displays ~ as pi, but sends pi as 0xff */
-  while (*str) {
-    if (*str == 0xff)
-      *str = '~';
-    str++;
+/**
+ * asc2pet - convert string from ASCII to PETSCII
+ * @buf - pointer to the string to be converted
+ *
+ * This function converts the string in the given buffer from ASCII to
+ * PETSCII in-place.
+ */
+static void asc2pet(char *buf) {
+  uint8_t ch;
+  while (*buf) {
+    ch = *(uint8_t *)buf;
+    if (ch > 64 && ch < 91)
+      ch += 128;
+    else if (ch > 96 && ch < 123)
+      ch -= 32;
+    else if (ch > 192 && ch < 219)
+      ch -= 128;
+    else if (ch == '~')
+      ch = 255;
+    *buf = ch;
+    buf++;
+  }
+}
+
+/**
+ * pet2asc - convert string from PETSCII to ASCII
+ * @buf - pointer to the string to be converted
+ *
+ * This function converts the string in the given buffer from PETSCII to
+ * ASCII in-place.
+ */
+static void pet2asc(char *buf) {
+  uint8_t ch;
+  while (*buf) {
+    ch = *(uint8_t *)buf;
+    if (ch > (128+64) && ch < (128+91))
+      ch -= 128;
+    else if (ch > (96-32) && ch < (123-32))
+      ch += 32;
+    else if (ch > (192-128) && ch < (219-128))
+      ch += 128;
+    else if (ch == 255)
+      ch = '~';
+    *buf = ch;
+    buf++;
   }
 }
 
@@ -152,7 +192,7 @@ static char* build_name(char *path, char *name, buffer_t *buf) {
   } else
     str = name;
 
-  fix_name(str);
+  pet2asc(str);
   return str;
 }
 
@@ -365,7 +405,9 @@ uint8_t fat_opendir(dh_t *dh, char *dir) {
 int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
   FRESULT res;
   FILINFO finfo;
-  uint8_t i;
+  uint8_t *ptr;
+
+  finfo.lfn = entrybuf;
 
   do {
     res = f_readdir(&dh->fat, &finfo);
@@ -390,12 +432,19 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
     /* Copy name */
     memset(dent->name, 0xa0, sizeof(dent->name));
 
-    for (i=0; finfo.fname[i]; i++) {
-      if (finfo.fname[i] == '~')
-	dent->name[i] = 0xff;
-      else
-	dent->name[i] = finfo.fname[i];
-    }
+    if (!finfo.lfn[0]) {
+      ptr = finfo.lfn = (unsigned char *)finfo.fname;
+      while (*ptr) {
+	if (*ptr == '~') *ptr = 0xff;
+	ptr++;
+      }
+    } else
+      /* Convert only LFNs to PETSCII, 8.3 are always upper-case */
+      asc2pet((char *)finfo.lfn);
+
+    ptr = dent->name;
+    while (*finfo.lfn)
+      *ptr++ = *finfo.lfn++;
 
     /* Type+Flags */
     if (finfo.fattrib & AM_DIR)
@@ -461,7 +510,7 @@ void fat_chdir(char *dirname) {
     dirname[1] = '.';
     dirname[2] = 0;
   } else {
-    fix_name(dirname);
+    pet2asc(dirname);
     if (dirname[strlen(dirname)-1] == '/')
       dirname[strlen(dirname)-1] = 0;
   }
@@ -512,7 +561,7 @@ void fat_chdir(char *dirname) {
 void fat_mkdir(char *dirname) {
   FRESULT res;
 
-  fix_name(dirname);
+  pet2asc(dirname);
   res = f_mkdir(dirname);
   parse_error(res,0);
 }

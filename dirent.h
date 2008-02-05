@@ -27,7 +27,7 @@
 #ifndef DIRENT_H
 #define DIRENT_H
 
-#include "tff.h"
+#include "ff.h"
 
 #define CBM_NAME_LENGTH 16
 

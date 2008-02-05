@@ -29,7 +29,7 @@
 #include "config.h"
 #include "dirent.h"
 #include "errormsg.h"
-#include "tff.h"
+#include "ff.h"
 #include "buffers.h"
 
 dh_t    matchdh;

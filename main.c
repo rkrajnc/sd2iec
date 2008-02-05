@@ -37,7 +37,7 @@
 #include "fatops.h"
 #include "iec.h"
 #include "sdcard.h"
-#include "tff.h"
+#include "ff.h"
 #include "uart.h"
 
 #ifdef CONFIG_BOOTLOADER

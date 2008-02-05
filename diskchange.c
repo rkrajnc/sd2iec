@@ -32,7 +32,7 @@
 #include "errormsg.h"
 #include "fatops.h"
 #include "iec.h"
-#include "tff.h"
+#include "ff.h"
 #include "diskchange.h"
 
 static const char PROGMEM autoswap_name[] = "AUTOSWAP.LST";

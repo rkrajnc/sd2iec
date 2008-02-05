@@ -32,7 +32,7 @@
 #include "dirent.h"
 #include "errormsg.h"
 #include "fatops.h"
-#include "tff.h"
+#include "ff.h"
 #include "wrapops.h"
 #include "d64ops.h"
 
