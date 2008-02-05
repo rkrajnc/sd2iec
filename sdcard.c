@@ -280,7 +280,8 @@ ISR(SD_CHANGE_ISR) {
 //
 // Public functions
 //
-void init_cardchange(void) {
+void init_sdcard(void) {
+  spiInit();
   SDCARD_DETECT_SETUP();
   SD_CHANGE_SETUP();
 }

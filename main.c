@@ -37,7 +37,6 @@
 #include "fatops.h"
 #include "iec.h"
 #include "sdcard.h"
-#include "spi.h"
 #include "tff.h"
 #include "uart.h"
 
@@ -97,8 +96,7 @@ int main(void) {
   init_serial();
   init_buffers();
   init_iec();
-  spiInit();
-  init_cardchange();
+  init_sdcard();
   init_fatops();
 
   init_change();
