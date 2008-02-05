@@ -85,6 +85,8 @@ CONFIG_SDHC_SUPPORT=y
 # Number of retries if the SD communication fails
 CONFIG_SD_AUTO_RETRIES=10
 
+# Use CRC checks for all SD data transmissions?
+CONFIG_SD_DATACRC=y
 
 # Length of error message buffer - 1571 uses 36 bytes
 CONFIG_ERROR_BUFFER_SIZE=36

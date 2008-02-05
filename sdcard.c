@@ -224,7 +224,6 @@ static char extendedInit(void) {
 
   // Send CMD8: SEND_IF_COND
   //   0b000110101010 == 2.7-3.6V supply, check pattern 0xAA
-  //   CRC manually calculated, must be correct!
   i = sendCommand(SEND_IF_COND, 0b000110101010, 0);
   if (i > 1) {
     // Card returned an error, ok (MMC oder SD1.x) but not SDHC
@@ -372,6 +371,7 @@ DSTATUS disk_initialize(BYTE drv) {
     return STA_NOINIT | STA_NODISK;
   }
 
+#ifdef CONFIG_SD_DATACRC
   // Enable CRC checking
   // The SD spec says that the host "should" send CRC_ON_OFF before ACMD_SEND_OP_COND.
   // The MMC manual I have says that CRC_ON_OFF isn't allowed before SEND_OP_COND.
@@ -380,6 +380,7 @@ DSTATUS disk_initialize(BYTE drv) {
   if (i > 1) {
     return STA_NOINIT | STA_NODISK;
   }
+#endif
 
   // Send MMC CMD16(SET_BLOCKLEN) to 512 bytes
   i = sendCommand(SET_BLOCKLEN, 512, 1);
@@ -433,18 +434,23 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
       }
 
       uint16_t i;
+#ifdef CONFIG_SD_DATACRC
       BYTE *oldbuffer = buffer;
+#endif
 
       // Get data
       crc = 0;
       for (i=0; i<512; i++) {
 	tmp = spiTransferByte(0xff);
 	*(buffer++) = tmp;
+#ifdef CONFIG_SD_DATACRC
 	crc = _crc_xmodem_update(crc, tmp);
+#endif
       }
 
       // Check CRC
       recvcrc = (spiTransferByte(0xFF) << 8) + spiTransferByte(0xFF);
+#ifdef CONFIG_SD_DATACRC
       if (recvcrc != crc) {
 	uart_putc('X');
 	deselectCard();
@@ -452,6 +458,7 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
 	buffer = oldbuffer;
 	continue;
       }
+#endif
 
       break;
     }
@@ -511,7 +518,9 @@ DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
       // Send data
       crc = 0;
       for (i=0; i<512; i++) {
+#ifdef CONFIG_SD_DATACRC
 	crc = _crc_xmodem_update(crc, *buffer);
+#endif
 	spiTransferByte(*(buffer++));
       }
 
