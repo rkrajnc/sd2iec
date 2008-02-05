@@ -214,9 +214,9 @@
 #  define DIRTY_LED_OFF()       PORTA |= _BV(PA1)
 #  define DIRTY_LED_PORT        PORTA
 #  define DIRTY_LED_BIT()       _BV(PA1)
-#  define AUX_LED_SETDDR()      do {}  while (0)
-#  define AUX_LED_ON()          do {}  while (0)
-#  define AUX_LED_OFF()         do {}  while (0)
+#  define AUX_LED_SETDDR()      do {} while (0)
+#  define AUX_LED_ON()          do {} while (0)
+#  define AUX_LED_OFF()         do {} while (0)
 #  define IEC_PIN               PINC
 #  define IEC_DDR               DDRC
 #  define IEC_PORT              PORTC
@@ -229,6 +229,48 @@
 #  define DISKCHANGE_PORT       PORTA
 #  define DISKCHANGE_BIT        _BV(PA4)
 #  define DISKCHANGE_MAX        128
+
+#elif CONFIG_HARDWARE_VARIANT == 4
+/* Hardware configuration: uIEC (incomplete) */
+/* Faked SD definition so the code can at lease be compile-tested */
+#  define SDCARD_DETECT         1
+#  define SDCARD_DETECT_SETUP() do {} while (0)
+#  define SD_CHANGE_SETUP()     do {} while (0)
+#  define SD_CHANGE_ISR         INT0_vect
+#  define SDCARD_WP             0
+#  define SDCARD_WP_SETUP()     do {} while (0)
+#  define SD_SUPPLY_VOLTAGE     (1L<<21)
+/* No device jumpers on uIEC */
+#  define DEV9_JUMPER           0
+#  define DEV9_JUMPER_SETUP()   do {} while (0)
+#  define DEV10_JUMPER          0
+#  define DEV10_JUMPER_SETUP()  do {} while (0)
+#  define BUSY_LED_SETDDR()     DDRG  |= _BV(PG4)
+#  define BUSY_LED_ON()         PORTG |= _BV(PG4)
+#  define BUSY_LED_OFF()        PORTG &= ~_BV(PG4)
+#  define DIRTY_LED_SETDDR()    DDRG  |= _BV(PG3)
+#  define DIRTY_LED_ON()        PORTG |= _BV(PG3)
+#  define DIRTY_LED_OFF()       PORTG &= ~_BV(PG3)
+#  define DIRTY_LED_PORT        PORTG
+#  define DIRTY_LED_BIT()       _BV(PG3)
+#  define AUX_LED_SETDDR()      DDRG  |= _BV(PG2)
+#  define AUX_LED_ON()          PORTG |= _BV(PG2)
+#  define AUX_LED_OFF()         PORTG &= ~_BV(PG2)
+#  define IEC_PIN               PINE
+#  define IEC_DDR               DDRE
+#  define IEC_PORT              PORTE
+/* JLB - I'm debating whether to just punt and rearrange the wires or rewrite the code to compensate */
+#  define IEC_PIN_ATN           PE6
+#  define IEC_PIN_DATA          PE4
+#  define IEC_PIN_CLOCK         PE5
+#  define IEC_PIN_SRQ           PE2
+/* This should really be on a INT pin, but I need to find one.  Use G1 for now. */
+#  define DISKCHANGE_PIN        PING
+#  define DISKCHANGE_DDR        DDRG
+#  define DISKCHANGE_PORT       PORTG
+#  define DISKCHANGE_BIT        _BV(PG1)
+#  define DISKCHANGE_MAX        128
+
 #else
 #  error "CONFIG_HARDWARE_VARIANT is unset or set to an unknown value."
 #endif
