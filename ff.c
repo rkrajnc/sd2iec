@@ -1671,7 +1671,7 @@ FRESULT f_lseek (
   if (res != FR_OK) return res;
   if (fp->flag & FA__ERROR) return FR_RW_ERROR;
 #if !_FS_READONLY
-  if(move_fp_window(fp,0)) goto fk_error;
+  if (!move_fp_window(fp,0)) goto fk_error;
   //if (FPBUF.dirty) {      /* Write-back dirty buffer if needed */
   //  if (disk_write(fs->drive, FPBUF.data, fp->curr_sect, 1) != RES_OK)
   //    goto fk_error;
