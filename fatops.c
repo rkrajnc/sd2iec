@@ -430,7 +430,7 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
     dent->remainder = finfo.fsize % 254;
 
     /* Copy name */
-    memset(dent->name, 0xa0, sizeof(dent->name));
+    memset(dent->name, 0, sizeof(dent->name));
 
     if (!finfo.lfn[0]) {
       ptr = finfo.lfn = (unsigned char *)finfo.fname;
@@ -442,9 +442,7 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
       /* Convert only LFNs to PETSCII, 8.3 are always upper-case */
       asc2pet((char *)finfo.lfn);
 
-    ptr = dent->name;
-    while (*finfo.lfn)
-      *ptr++ = *finfo.lfn++;
+    strcpy((char *)dent->name, (char *)finfo.lfn);
 
     /* Type+Flags */
     if (finfo.fattrib & AM_DIR)

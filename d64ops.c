@@ -518,6 +518,7 @@ static int8_t d64_readdir(dh_t *dh, struct cbmdirent *dent) {
   dent->blocksize = entrybuf[OFS_SIZE_LOW] + 256*entrybuf[OFS_SIZE_HI];
   dent->remainder = 0xff;
   memcpy(dent->name, entrybuf+OFS_FILE_NAME, CBM_NAME_LENGTH);
+  strnsubst(dent->name, 16, 0xa0, 0);
   dent->name[16] = 0;
 
   return 0;

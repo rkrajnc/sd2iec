@@ -83,26 +83,6 @@ const fileops_t *fop;
 /* ------------------------------------------------------------------------- */
 
 /**
- * dent2str - zero terminate the commodore name in dent
- * @dent: dent containing the name to be terminated
- *
- * This function zero-terminates the file name in dent and returns a
- * pointer to that name.
- */
-char *dent2str(struct cbmdirent *dent) {
-  uint8_t i;
-
-  for (i=0;i<CBM_NAME_LENGTH;i++) {
-    if (dent->name[i] == 0xa0) {
-      dent->name[i] = 0;
-      return (char *)dent->name;
-    }
-  }
-  dent->name[CBM_NAME_LENGTH] = 0;
-  return (char *)dent->name;
-}
-
-/**
  * addentry - add a single directory entry to the end of buf
  * @dent: directory entry to be added
  * @buf : buffer to be added to
@@ -145,10 +125,15 @@ static void addentry(struct cbmdirent *dent, buffer_t *buf) {
   /* copy and adjust the filename - C783 */
   memcpy(data, dent->name, CBM_NAME_LENGTH);
   for (i=0;i<=CBM_NAME_LENGTH;i++)
-    if (dent->name[i] == 0x22 || dent->name[i] == 0xa0 || i == 16) {
+    if (dent->name[i] == 0x22 || dent->name[i] == 0 || i == 16) {
       data[i] = '"';
-      while (i<=CBM_NAME_LENGTH)
-	data[i++] &= 0x7f;
+      while (i<=CBM_NAME_LENGTH) {
+	if (data[i] == 0)
+	  data[i] = ' ';
+	else
+	  data[i] &= 0x7f;
+	i++;
+      }
     }
 
   /* Skip name and final quote */
@@ -182,7 +167,7 @@ static uint8_t match_name(char *matchstr, struct cbmdirent *dent) {
   uint8_t *filename = dent->name;
   uint8_t i = 0;
 
-  while (filename[i] != 0xa0 && i < CBM_NAME_LENGTH) {
+  while (filename[i] && i < CBM_NAME_LENGTH) {
     switch (*matchstr) {
     case '?':
       i++;
@@ -588,7 +573,7 @@ void file_open(uint8_t secondary) {
       return;
     }
 
-  fname = dent2str(&dent);
+  fname = (char *)dent.name;
 
   /* Grab a buffer */
   buf = alloc_buffer();

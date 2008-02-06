@@ -51,12 +51,14 @@
  * @blocksize: Size in blocks of 254 bytes
  * @remainder: (filesize MOD 254) or 0xff if unknown
  * @typeflags: OR of file type and flags
- * @name     : 0xa0-padded commodore file name
+ * @name     : 0-padded commodore file name
  *
  * This structure holds a CBM filename, its type and its size. The typeflags
  * are almost compatible to the file type byte in a D64 image, but the splat
- * bit is inverted. The name is padded with 0xa0, but holds an extra byte
- * in case it has to be converted to a zero-terminated C string.
+ * bit is inverted. The name is padded with 0-bytes and will always be
+ * zero-terminated. If it was read from a D64 file, it may contain valid
+ * characters beyond the first 0-byte which should be displayed in the
+ * directory, but ignored for name matching purposes.
  */
 struct cbmdirent {
   uint16_t blocksize;

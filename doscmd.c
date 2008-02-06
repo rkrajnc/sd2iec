@@ -619,7 +619,7 @@ void parse_doscommand(void) {
       /* Skip directories */
       if ((dent.typeflags & TYPE_MASK) == TYPE_DIR)
 	continue;
-      i = file_delete(NULL, dent2str(&dent));
+      i = file_delete(NULL, (char *)dent.name);
       if (i != 255)
 	count += i;
       else

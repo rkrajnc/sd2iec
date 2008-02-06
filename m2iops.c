@@ -252,8 +252,8 @@ static int8_t m2i_readdir(dh_t *dh, struct cbmdirent *dent) {
     dent->typeflags = entrybuf[0];
 
     /* Copy CBM file name */
-    name_repad(' ', 0xa0);
-    memset(dent->name, 0xa0, sizeof(dent->name));
+    name_repad(' ', 0);
+    memset(dent->name, 0, sizeof(dent->name));
     memcpy(dent->name, entrybuf+M2I_CBMNAME_OFFSET, CBM_NAME_LENGTH);
 
     /* Get file size */
