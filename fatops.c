@@ -527,8 +527,8 @@ void fat_chdir(char *dirname) {
 
     ext = strrchr(fname, '.');
 
-    if (ext && (!strcmp_P(ext, PSTR(".M2I")) ||
-		!strcmp_P(ext, PSTR(".D64")))) {
+    if (ext && (!strcmp_P(ext, PSTR(".m2i")) ||
+		!strcmp_P(ext, PSTR(".d64")))) {
       /* D64/M2I mount request */
       if (fname != dirname) {
 	res = f_chdir(dirname);
@@ -546,7 +546,7 @@ void fat_chdir(char *dirname) {
 	return;
       }
 
-      if (!strcmp_P(ext, PSTR(".M2I")))
+      if (!strcmp_P(ext, PSTR(".m2i")))
 	fop = &m2iops;
       else
 	fop = &d64ops;
