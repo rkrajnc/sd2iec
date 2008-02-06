@@ -46,7 +46,7 @@
 #include "fatops.h"
 #include "fileops.h"
 #include "iec-ll.h"
-#include "sdcard.h"
+#include "diskio.h"
 #include "uart.h"
 #include "iec.h"
 
@@ -724,14 +724,14 @@ void iec_mainloop(void) {
       set_data(1);
 
       /* This seems to be a nice point to handle card changes */
-      if (card_state != CARD_OK && card_state != CARD_REMOVED) {
+      if (disk_state != DISK_OK && disk_state != DISK_REMOVED) {
 	BUSY_LED_ON();
-	/* If the card was changed the buffer contents are useless */
-	if (card_state == CARD_CHANGED) {
+	/* If the disk was changed the buffer contents are useless */
+	if (disk_state == DISK_CHANGED) {
 	  free_all_buffers(0);
 	  init_change();
 	}
-	// FIXME: Preserve current directory if state was CARD_ERROR
+	// FIXME: Preserve current directory if state was DISK_ERROR
 	init_fatops();
 	if (!active_buffers) {
 	  BUSY_LED_OFF();

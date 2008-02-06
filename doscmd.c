@@ -513,7 +513,7 @@ void parse_doscommand(void) {
   switch (command_buffer[0]) {
   case 'I':
     /* Initialize */
-    if (card_state != CARD_OK)
+    if (disk_state != DISK_OK)
       set_error_ts(ERROR_READ_NOSYNC,18,0);
     else
       free_all_buffers(1);

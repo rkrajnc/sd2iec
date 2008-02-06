@@ -36,7 +36,7 @@
 #include "eeprom.h"
 #include "fatops.h"
 #include "iec.h"
-#include "sdcard.h"
+#include "diskio.h"
 #include "ff.h"
 #include "uart.h"
 
@@ -98,7 +98,7 @@ int main(void) {
   init_serial();
   init_buffers();
   init_iec();
-  init_sdcard();
+  init_disk();
   init_fatops();
 
   init_change();

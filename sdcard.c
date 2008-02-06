@@ -115,7 +115,7 @@
 #define STATUS_PARAMETER_ERROR 64
 
 
-volatile enum cardstates card_state;
+volatile enum diskstates disk_state;
 
 #ifdef SDHC_SUPPORT
 static uint8_t isSDHC;
@@ -271,16 +271,16 @@ static char extendedInit(void) {
 
 ISR(SD_CHANGE_ISR) {
   if (SDCARD_DETECT)
-    card_state = CARD_CHANGED;
+    disk_state = DISK_CHANGED;
   else
-    card_state = CARD_REMOVED;
+    disk_state = DISK_REMOVED;
 }
 
 
 //
 // Public functions
 //
-void init_sdcard(void) {
+void init_disk(void) {
   spiInit();
   SDCARD_DETECT_SETUP();
   SD_CHANGE_SETUP();
@@ -306,7 +306,7 @@ DSTATUS disk_initialize(BYTE drv) {
   SDCARD_WP_SETUP();
 #endif
 
-  card_state = CARD_ERROR;
+  disk_state = DISK_ERROR;
 
 #ifdef SDHC_SUPPORT
   isSDHC   = FALSE;
@@ -390,7 +390,7 @@ DSTATUS disk_initialize(BYTE drv) {
   }
 
   // Thats it!
-  card_state = CARD_OK;
+  disk_state = DISK_OK;
   return disk_status(drv);
 }
 
@@ -407,7 +407,7 @@ DSTATUS disk_initialize(BYTE drv) {
  * RES_OK if successful. Up to SD_AUTO_RETRIES will be made if
  * the calculated data CRC does not match the one sent by the
  * card. If there were errors during the command transmission
- * card_state will be set to CARD_ERROR and no retries are made.
+ * disk_state will be set to DISK_ERROR and no retries are made.
  */
 DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
   uint8_t sec,res,tmp,errorcount;
@@ -423,14 +423,14 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
 
       if (res != 0) {
 	SPI_SS_HIGH();
-	card_state = CARD_ERROR;
+	disk_state = DISK_ERROR;
 	return RES_ERROR;
       }
 
       // Wait for data token
       if (!sdResponse(0xFE)) {
 	SPI_SS_HIGH();
-	card_state = CARD_ERROR;
+	disk_state = DISK_ERROR;
 	return RES_ERROR;
       }
 
@@ -485,7 +485,7 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
  * RES_WPRT if the card is currently write-protected or RES_OK
  * if successful. Up to SD_AUTO_RETRIES will be made if the card
  * signals a CRC error. If there were errors during the command
- * transmission card_state will be set to CARD_ERROR and no retries
+ * transmission disk_state will be set to DISK_ERROR and no retries
  * are made.
  */
 DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
@@ -506,7 +506,7 @@ DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
 
       if (res != 0) {
 	SPI_SS_HIGH();
-	card_state = CARD_ERROR;
+	disk_state = DISK_ERROR;
 	return RES_ERROR;
       }
 
@@ -544,7 +544,7 @@ DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
       // Wait for write finish
       if (!sdWaitWriteFinish()) {
 	SPI_SS_HIGH();
-	card_state = CARD_ERROR;
+	disk_state = DISK_ERROR;
 	return RES_ERROR;
       }
       break;
@@ -553,7 +553,7 @@ DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
 
     if (errorcount >= CONFIG_SD_AUTO_RETRIES) {
       if (!(status & STATUS_CRC_ERROR))
-	card_state = CARD_ERROR;
+	disk_state = DISK_ERROR;
       return RES_ERROR;
     }
   }

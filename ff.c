@@ -43,7 +43,7 @@
 #include <avr/pgmspace.h>
 #include <string.h>
 #include "ff.h"         /* FatFs declarations */
-#include "sdcard.h"     /* Include file for user provided disk functions */
+#include "diskio.h"     /* Include file for user provided disk functions */
 
 
 /*--------------------------------------------------------------------------
