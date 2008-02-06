@@ -536,18 +536,14 @@ void init_iec(void) {
   TCCR2A |= _BV(WGM21); // CTC mode
   TCCR2B |= _BV(CS20) | _BV(CS21); // prescaler /32
 
-  /* We're device 8 by default */
-  DEV9_JUMPER_SETUP();
-  DEV10_JUMPER_SETUP();
+  /* Read the hardware-set device address */
+  DEVICE_SELECT_SETUP();
   _delay_ms(1);
-  device_address = 8 + !!DEV9_JUMPER + 2*(!!DEV10_JUMPER);
+  device_address = DEVICE_SELECT;
 
   /* Set up disk change key */
   DISKCHANGE_DDR  &= ~DISKCHANGE_BIT;
   DISKCHANGE_PORT |=  DISKCHANGE_BIT;
-
-  /* Enable Jiffy for 8+9, disable for 10+11 */
-  iecflags.jiffy_enabled = !DEV10_JUMPER;
 
   set_error(ERROR_DOSVERSION);
 }

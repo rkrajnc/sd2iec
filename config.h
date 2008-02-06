@@ -88,16 +88,14 @@
 /* #  define SD_SUPPLY_VOLTAGE (1L<<23)  / * 3.5V - 3.6V */
 
 
-/*** Jumper ***/
-/* DEV9 jumper. If jumped, IEC device number is 9, otherwise 8 */
-/* R.Riedel uses PORTD.7 instead of PA2 */
-#  define DEV9_JUMPER         (!(PIND & _BV(PD7)))
-#  define DEV9_JUMPER_SETUP() do { DDRD &= ~_BV(PD7); PORTD |= _BV(PD7); } while(0)
-
-/* If DEV10_JUMPER is non-zero, IEC device number is 10, otherwise 8 */
-/* R.Riedel uses PORTD.5 instead of PA3 */
-#  define DEV10_JUMPER         (!(PIND & _BV(PD5)))
-#  define DEV10_JUMPER_SETUP() do { DDRD &= ~_BV(PD5); PORTD |= _BV(PD5); } while(0)
+/*** Device address selection ***/
+/* DEVICE_SELECT should return the selected device number,   */
+/* DEVICE_SELECT_SETUP() is called once to set up the ports. */
+#  define DEVICE_SELECT       (8+!(PIND & _BV(PD7))+2*!(PIND & _BV(PD5)))
+#  define DEVICE_SELECT_SETUP() do { \
+      DDRC  &= ~(_BV(PD7)|_BV(PD5)); \
+      PORTD |=   _BV(PD7)|_BV(PD5);  \
+   } while (0)
 
 
 /*** LEDs ***/
@@ -164,10 +162,11 @@
 #  define SDCARD_WP             (PIND & _BV(PD6))
 #  define SDCARD_WP_SETUP()     do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
 #  define SD_SUPPLY_VOLTAGE     (1L<<18)
-#  define DEV9_JUMPER           (!(PIND & _BV(PD7)))
-#  define DEV9_JUMPER_SETUP()   do { DDRD &= ~_BV(PD7); PORTD |= _BV(PD7); } while(0)
-#  define DEV10_JUMPER          (!(PIND & _BV(PD5)))
-#  define DEV10_JUMPER_SETUP()  do { DDRD &= ~_BV(PD5); PORTD |= _BV(PD5); } while(0)
+#  define DEVICE_SELECT         (8+!(PIND & _BV(PD7))+2*!(PIND & _BV(PD5)))
+#  define DEVICE_SELECT_SETUP() do {        \
+             DDRC  &= ~(_BV(PD7)|_BV(PD5)); \
+             PORTD |=   _BV(PD7)|_BV(PD5);  \
+          } while (0)
 #  define BUSY_LED_SETDDR()     DDRC  |= _BV(PC0)
 #  define BUSY_LED_ON()         PORTC |= _BV(PC0)
 #  define BUSY_LED_OFF()        PORTC &= ~_BV(PC0)
@@ -202,10 +201,11 @@
 #  define SDCARD_WP_SETUP()     do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
 #  define SD_CHANGE_ICR         MCUCR
 #  define SD_SUPPLY_VOLTAGE     (1L<<21)
-#  define DEV9_JUMPER           (!(PINA & _BV(PA2)))
-#  define DEV9_JUMPER_SETUP()   do { DDRA &= ~_BV(PA2); PORTA |= _BV(PA2); } while(0)
-#  define DEV10_JUMPER          (!(PINA & _BV(PA3)))
-#  define DEV10_JUMPER_SETUP()  do { DDRA &= ~_BV(PA3); PORTA |= _BV(PA3); } while(0)
+#  define DEVICE_SELECT         (8+!(PIND & _BV(PA2))+2*!(PIND & _BV(PA3)))
+#  define DEVICE_SELECT_SETUP() do {        \
+             DDRC  &= ~(_BV(PA2)|_BV(PA3)); \
+             PORTD |=   _BV(PA2)|_BV(PA3);  \
+          } while (0)
 #  define BUSY_LED_SETDDR()     DDRA  |= _BV(PA0)
 #  define BUSY_LED_ON()         PORTA &= ~_BV(PA0)
 #  define BUSY_LED_OFF()        PORTA |= _BV(PA0)
@@ -241,10 +241,8 @@
 #  define SDCARD_WP_SETUP()     do {} while (0)
 #  define SD_SUPPLY_VOLTAGE     (1L<<21)
 /* No device jumpers on uIEC */
-#  define DEV9_JUMPER           0
-#  define DEV9_JUMPER_SETUP()   do {} while (0)
-#  define DEV10_JUMPER          0
-#  define DEV10_JUMPER_SETUP()  do {} while (0)
+#  define DEVICE_SELECT         10
+#  define DEVICE_SELECT_SETUP() do {} while (0)
 #  define BUSY_LED_SETDDR()     DDRG  |= _BV(PG4)
 #  define BUSY_LED_ON()         PORTG |= _BV(PG4)
 #  define BUSY_LED_OFF()        PORTG &= ~_BV(PG4)
