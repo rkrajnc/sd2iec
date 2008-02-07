@@ -76,6 +76,10 @@
 
 #define _USE_EXT 0
 
+/* New features in 0.05a, not required yet */
+#define _USE_TRUNCATE 0
+#define _USE_UTIME   0
+
 #include "integer.h"
 
 #if _USE_LFN_DBCS != 0
@@ -87,11 +91,11 @@
 #endif
 
 /* Definitions corresponds to multiple sector size (not tested) */
-#define S_MAX_SIZ   512         /* Do not change */
+#define S_MAX_SIZ 512     /* Do not change */
 #if S_MAX_SIZ > 512
-#define S_SIZ   (fs->s_size)
+#define SS(fs)  ((fs)->s_size)
 #else
-#define S_SIZ   512
+#define SS(fs)  512
 #endif
 
 #if _USE_1_BUF == 1 && _USE_FS_BUF == 0
