@@ -590,6 +590,8 @@ uint8_t fat_getlabel(char *label) {
     return 1;
   }
 
+  finfo.lfn = NULL;
+
   while ((res = f_readdir(&dh, &finfo)) == FR_OK) {
     if (!finfo.fname[0]) break;
     if ((finfo.fattrib & (AM_VOL|AM_SYS|AM_HID)) == AM_VOL) {
