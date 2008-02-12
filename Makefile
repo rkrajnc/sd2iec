@@ -43,9 +43,9 @@ ifeq ($(CONFIG_BOOTLOADER),y)
   ifeq ($(MCU),atmega32)
     SIGNATUREADDRESS = 0x77f8
   else ifeq ($(MCU),atmega128)
-    SIGNATUREADDRESS = 0x1f7f8
+    SIGNATUREADDRESS = 0x1eff8
   else ifeq ($(MCU),atmega644)
-    SIGNATUREADDRESS = 0xf7f8
+    SIGNATUREADDRESS = 0xeff8
   else
 .PHONY: nochip
 nochip:
