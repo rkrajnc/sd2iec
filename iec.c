@@ -349,7 +349,6 @@ static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
 static uint8_t iec_listen_handler(const uint8_t cmd) {
   int16_t c;
   buffer_t *buf;
-  enum { DATA_COMMAND, DATA_BUFFER } data_state;
 
   uart_putc('L');
 
@@ -361,12 +360,6 @@ static uint8_t iec_listen_handler(const uint8_t cmd) {
     uart_putc('c');
     bus_state = BUS_CLEANUP;
     return 1;
-  }
-
-  if ((cmd & 0x0f) == 0x0f || (cmd & 0xf0) == 0xf0) {
-    data_state = DATA_COMMAND;
-  } else {
-    data_state = DATA_BUFFER;
   }
 
   while (1) {
@@ -385,7 +378,7 @@ static uint8_t iec_listen_handler(const uint8_t cmd) {
       c = iec_getc();
     if (c < 0) return 1;
 
-    if (data_state == DATA_COMMAND) {
+    if ((cmd & 0x0f) == 0x0f || (cmd & 0xf0) == 0xf0) {
       if (command_length < CONFIG_COMMAND_BUFFER_SIZE)
 	command_buffer[command_length++] = c;
       if (iecflags.eoi_recvd)
