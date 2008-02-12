@@ -519,7 +519,7 @@ char make_dirfile (   /* 1: error - detected an invalid format, '\0'or'/': next 
     if (c == ' ') goto md_l3;
     if (c == '.') {
 #if _USE_CHDIR != 0
-      if (n == 0 || (n == 1 && (*(*path)-1) == '.')) {
+      if (n == 0 || (n == 1 && *dirname == '.')) {
         goto md_l2;
       }
 #endif
