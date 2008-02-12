@@ -1,4 +1,4 @@
-/* Integer definitions for tff, based on example code from ChaN */
+/* Integer definitions for ff, based on example code from ChaN */
 
 #ifndef _INTEGER
 

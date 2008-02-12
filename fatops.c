@@ -5,7 +5,7 @@
    Inspiration and low-level SD/MMC access based on code from MMC2IEC
      by Lars Pontoppidan et al., see sdcard.c|h and config.h.
 
-   FAT filesystem access based on code from ChaN, see tff.c|h.
+   FAT filesystem access based on code from ChaN and Jim Brain, see ff.c|h.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -62,7 +62,7 @@ const PROGMEM fileops_t fatops = {
 /* ------------------------------------------------------------------------- */
 
 /**
- * parse_error - translates a tff FRESULT into a commodore error message
+ * parse_error - translates a ff FRESULT into a commodore error message
  * @res     : FRESULT to be translated
  * @readflag: Flags if it was a read operation
  *
@@ -118,7 +118,6 @@ void parse_error(FRESULT res, uint8_t readflag) {
     break;
 
   case FR_DENIED:
-    // FIXME: Change tff to be more precise
     set_error_ts(ERROR_DISK_FULL,res,0);
     break;
 

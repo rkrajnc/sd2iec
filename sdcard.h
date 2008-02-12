@@ -4,7 +4,7 @@
    Inspiration and low-level SD/MMC access based on code from MMC2IEC
      by Lars Pontoppidan et al., see sdcard.c|h and config.h.
 
-   FAT filesystem access based on code from ChaN, see tff.c|h.
+   FAT filesystem access based on code from ChaN and Jim Brain, see ff.c|h.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@
 
    sdcard.h: Definitions for the SD/MMC access routines
 
-   Based on diskio.h from TinyFatFS by ChaN, see tff.c for
+   Based on diskio.h from FatFS by ChaN, see ff.c for
    for full copyright details.
 
 */

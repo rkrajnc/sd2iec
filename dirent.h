@@ -4,7 +4,7 @@
    Inspiration and low-level SD/MMC access based on code from MMC2IEC
      by Lars Pontoppidan et al., see sdcard.c|h and config.h.
 
-   FAT filesystem access based on code from ChaN, see tff.c|h.
+   FAT filesystem access based on code from ChaN and Jim Brain, see ff.c|h.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -101,7 +101,7 @@ typedef struct d64fh {
 
 /**
  * union dh_t - union of all directory handles
- * @fat: tff directory handle
+ * @fat: fat directory handle
  * @m2i: m2i directory handle (offset of entry in the file)
  * @d64: d64 directory handle
  *

@@ -4,7 +4,7 @@
    Inspiration and low-level SD/MMC access based on code from MMC2IEC
      by Lars Pontoppidan et al., see sdcard.c|h and config.h.
 
-   FAT filesystem access based on code from ChaN, see tff.c|h.
+   FAT filesystem access based on code from ChaN and Jim Brain, see ff.c|h.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -427,7 +427,7 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
     do {                /* J1541 FF30 - wait until DATA inactive/high */
       if (check_atn()) return -1;
     } while (!IEC_DATA);
-    /* The LOAD path is only used after the first two bytes have beed */
+    /* The LOAD path is only used after the first two bytes have been */
     /* read. Reset the buffer position because there is a chance that */
     /* the third byte has slipped through.                            */
     buf->position = 4;
