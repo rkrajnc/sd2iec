@@ -1333,11 +1333,6 @@ FRESULT f_open (
 #if !_FS_READONLY
   /* Create or Open a file */
 # if _USE_CHDIR != 0
-#  if _USE_LFN != 0
-  if((len==1 && spath[0]=='.') || (len==2 && spath[0]=='.' && spath[1]=='.'))
-    return FR_INVALID_NAME;
-  else
-#  endif
   if(fn[0]=='.')
     return FR_INVALID_NAME;
 # endif
@@ -2079,6 +2074,10 @@ FRESULT f_unlink (
   if (res != FR_OK) return res;                 /* Trace failed */
   if (dir == NULL) return FR_INVALID_NAME;      /* It is the root directory */
   if (dir[DIR_Attr] & AM_RDO) return FR_DENIED; /* It is a R/O object */
+# if _USE_CHDIR != 0
+  if(fn[0]=='.')
+    return FR_INVALID_NAME;
+# endif
   dsect = FSBUF.sect;
   dclust = ((DWORD)LD_WORD(&dir[DIR_FstClusHI]) << 16) | LD_WORD(&dir[DIR_FstClusLO]);
 
@@ -2156,11 +2155,6 @@ FRESULT f_mkdir (
   if (res != FR_NO_FILE) return res;
 
 #if _USE_CHDIR != 0
-# if _USE_LFN != 0
-  if((len==1 && spath[0]=='.') || (len==2 && spath[0]=='.' && spath[1]=='.'))
-    return FR_INVALID_NAME;
-  else
-# endif
   if(fn[0]=='.')
     return FR_INVALID_NAME;
 #endif
@@ -2295,7 +2289,7 @@ FRESULT f_chmod (
     res = trace_path(&dj, fn, path, &dir);       /* trace the file path */
 #endif
     if (res == FR_OK) {                          /* Trace completed */
-      if (dir == NULL) {
+      if (dir == NULL || fn[0]=='.') {
         res = FR_INVALID_NAME;
       } else {
         mask &= AM_RDO|AM_HID|AM_SYS|AM_ARC;     /* Valid attribute mask */
@@ -2399,11 +2393,6 @@ FRESULT f_rename (
   if (res == FR_OK) return FR_EXIST;                   /* The new object name is already existing */
   if (res != FR_NO_FILE) return res;                   /* Is there no old name? */
 #if _USE_CHDIR != 0
-# if _USE_LFN != 0
-  if((len_new==1 && spath[0]=='.') || (len_new==2 && spath[0]=='.' && spath[1]=='.'))
-    return FR_INVALID_NAME;
-  else
-# endif
   if(fn[0]=='.')
     return FR_INVALID_NAME;
 #endif
