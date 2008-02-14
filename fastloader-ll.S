@@ -56,7 +56,24 @@ delay1us:
 	nop			; 1
 	ret			; 4
 
-
+	;; Variable-delay macros to compensate for the additional instructions
+	;; when using separate output lines
+#ifdef IEC_SEPARATE_OUT
+#  define JIFFY_SUB_LOOPS 1
+	
+	;; Nibble-swap the given register
+	.macro swapwait reg
+	swap	\reg		; 1
+	.endm
+#else
+#  define JIFFY_SUB_LOOPS 0
+	
+	;; Wait one cycle
+	.macro swapwait reg
+	nop			; 1
+	.endm
+#endif
+	
 	;; ====================================================================
 	;;  JiffyDOS
 	;; ====================================================================
@@ -74,12 +91,12 @@ jiffy_receive:
 	movw	r30,r24
 
 	;; Set clock+data high
-	cbi	_SFR_IO_ADDR(IEC_DDR), IEC_PIN_CLOCK
-	cbi	_SFR_IO_ADDR(IEC_DDR), IEC_PIN_DATA
+	cbi	_SFR_IO_ADDR(IEC_OUT), IEC_OPIN_CLOCK
+	cbi	_SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA
 
 	;; Wait until clock is high and emulate ATN-Ack
 0:	sbis	_SFR_IO_ADDR(IEC_PIN), IEC_PIN_ATN
-	sbi	_SFR_IO_ADDR(IEC_DDR), IEC_PIN_DATA ; Data low if ATN is low
+	sbi	_SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA ; Data low if ATN is low
 	sbis	_SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
 	rjmp	0b
 
@@ -167,7 +184,7 @@ jiffy_receive:
 	rcall	delayloop	; 45
 
 	;; Data low
-	sbi	_SFR_IO_ADDR(IEC_DDR), IEC_PIN_DATA ; 1
+	sbi	_SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA ; 1
 
 	;; Post-process data and store last bus state
 	ldi	r18, 0xff
@@ -180,15 +197,22 @@ jiffy_receive:
 
 	;; Shifts the lowest two bytes from r0 to r19
 	;; and sends then on the bus at cycle 10
-	;; Needs 14 cycles including the rcall
+	;; Needs 14 cycles including the rcall with combined in/out pins,
+	;; needs 17 cycles with separeted output pins
 jiffy_sendbits:
+				; 1 - Enable pullups on (not yet swapped) input bits
 	clr	r19		; 1 - clear output register
 	lsr	r0		; 1
 	rol	r19		; 1
 	lsr	r0		; 1
 	rol	r19		; 1
 	lsl	r19		; 1
-	out	_SFR_IO_ADDR(IEC_DDR), r19 ; 1 - output the bit pair
+#ifdef IEC_SEPARATE_OUT
+	swap	r19		; 1 - swap nibbles
+	ori	r19, IEC_PULLUPS ; 1 - keep pullups on the input lines
+	nop			; 1 - waste one cycle for easier timing compensation
+#endif
+	out	_SFR_IO_ADDR(IEC_OUT), r19 ; 1 - output the bit pair
 	ret			; 4
 
 	;;
@@ -213,12 +237,7 @@ jiffy_send:
 	;; The loop below will spin while ATN and Clock are high and
 	;; - Data is low  (single-byte transfer)
 	;; - Data is high (LOAD)
-		; Read bus (in case something is connected to the "free" bits)
-	in	r21, _SFR_IO_ADDR(IEC_PIN)
-		; Set Clock+ATN bits
-	ori	r21, (IEC_BIT_CLOCK|IEC_BIT_ATN)
-		; Clear data bit
-	andi	r21, ~IEC_BIT_DATA
+	ldi	r21, IEC_BIT_CLOCK | IEC_BIT_ATN
 	tst	r20		; loadflag set?
 	breq	0f		; Yes, skip
 		; No: Set data bit
@@ -230,16 +249,17 @@ jiffy_send:
 	tst	r22		; EOI flag set?
 	breq	0f		; No, branch
 
-	ldi	r22, IEC_BIT_DATA  ; Data low, Clock hi on EOI
+	ldi	r22, IEC_PULLUPS | IEC_OBIT_DATA  ; Data low, Clock hi on EOI
 	rjmp	1f
 
-0:	ldi	r22, IEC_BIT_CLOCK ; Data hi, Clock low on non-EOI
+0:	ldi	r22, IEC_PULLUPS | IEC_OBIT_CLOCK ; Data hi, Clock low on non-EOI
 
 1:
+	sbi	_SFR_IO_ADDR(IEC_OUT), IEC_OPIN_SRQ
 	;; Set clock and data high/inactive - FFB5
-	cbi	_SFR_IO_ADDR(IEC_DDR), IEC_PIN_DATA
+	cbi	_SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA
 		; this is the actual ready signal for the C64
-	cbi	_SFR_IO_ADDR(IEC_DDR), IEC_PIN_CLOCK
+	cbi	_SFR_IO_ADDR(IEC_OUT), IEC_OPIN_CLOCK
 
 	;; Wait 1us to allow the bus to settle (J1541 needs 4us here)
 	rcall	delay1us
@@ -251,6 +271,7 @@ jiffy_send:
 
 	;; Wait for start condition (calculated above) from C64 - FFB8
 0:	in	r24, _SFR_IO_ADDR(IEC_PIN)
+	andi	r24, IEC_BIT_CLOCK | IEC_BIT_DATA | IEC_BIT_ATN	; 1
 	cp	r24, r21	; 1
 	breq	0b		; 1
 
@@ -261,25 +282,25 @@ jiffy_send:
 
 	;; Output the first bitpair 6us (48 cycles) after the start
 	;; 6us is the best-case time from bus check to transmission in J1541
-	ldi	r18,8+JIFFY_OFFSET_WRITE
+	ldi	r18,8+JIFFY_OFFSET_WRITE - JIFFY_SUB_LOOPS
 				; 1 - see comments at offset definition
 	rcall	delayloop	; ((8-1)*3+6 + 3 = 30 = 48-17-1 (NOP omitted)
 	rcall	jiffy_sendbits	; 10+4 - [FFBD]
 
 	;; Output the second bitpair 10us (80 cycles) after the first
-	ldi	r18,19		; 1
+	ldi	r18,19 - JIFFY_SUB_LOOPS	; 1
 	rcall	delayloop	; ((19-1)*3+6) + 3 = 63 = 80-15-2
 	rjmp	0f		; 2
 0:	rcall	jiffy_sendbits	; 10+4 - [FFC4]
 
 	;; Output the third bitpair 11us (88 cycles) after the second
-	ldi	r18,22		; 1
+	ldi	r18,22 - JIFFY_SUB_LOOPS	; 1
 	rcall	delayloop	; ((22-1)*3+6) + 3 = 72 = 88-15-1
 	nop			; 1
 	rcall	jiffy_sendbits	; 10+4 - [FFCC]
 
 	;; Output the fourth bitpair 10us (80 cycles) after the third
-	ldi	r18,19		; 1
+	ldi	r18,19 - JIFFY_SUB_LOOPS	; 1
 	rcall	delayloop	; ((19-1)*3+6) + 3 = 63 = 80-15-2
 	rjmp	0f		; 2
 0:	rcall	jiffy_sendbits	; 10+4 - [FFD3]
@@ -292,7 +313,7 @@ jiffy_send:
 	ldi	r18,24		; 1
 	rcall	delayloop	; ((24-1)*3+6) + 3 = 78 = 88-8-2
 	rjmp	0f		; 2
-0:	out	_SFR_IO_ADDR(IEC_DDR), r22 ; 1 - output EOI marker [FFDB]
+0:	out	_SFR_IO_ADDR(IEC_OUT), r22 ; 1 - output EOI marker [FFDB]
 
 	;; Wait 1us to allow the bus to settle (J1541 needs 4us here)
 	rcall	delay1us
@@ -331,9 +352,8 @@ turbodisk_byte:
 	eor	r24, r18	; Invert it
 
 	;; All bus lines high
-	in	r18, _SFR_IO_ADDR(IEC_DDR)
-	andi	r18, ~(IEC_BIT_ATN | IEC_BIT_DATA | IEC_BIT_CLOCK | IEC_BIT_SRQ)
-	out	_SFR_IO_ADDR(IEC_DDR), r18
+	ldi	r18, IEC_PULLUPS
+	out	_SFR_IO_ADDR(IEC_OUT), r18
 
 	;; Wait until data is high
 0:	sbis	_SFR_IO_ADDR(IEC_PIN), IEC_PIN_DATA ; 2
@@ -344,20 +364,20 @@ turbodisk_byte:
 	ldi	r20, 4		; 1 - Bitpair counter
 
 tdbitloop:
-	clr	r19		; 1 - Output register
+	clr	r19		; 1 - Clear output register
 	lsl	r24		; 1 - grab top bit
 	rol	r19		; 1 - move to bottom
 	lsl	r24		; 1 - grab top bit
 	rol	r19		; 1 - move to bottom
 	lsl	r19		; 1 - move pair to correct position
-
+	
 	;; Wait for 28us from data high -> 224-8=216 cycles
 	ldi	r18,69		; 1
 	rcall	delayloop	; 213
 
-	nop			; 1
+	swapwait r19		; 1
 
-	out	_SFR_IO_ADDR(IEC_DDR), r19	; 1 - output the bit pair
+	out	_SFR_IO_ADDR(IEC_OUT), r19	; 1 - output the bit pair
 
 	rcall	delay1us	; 8 - additional us for loops 2-4
 
@@ -369,8 +389,8 @@ tdbitloop:
 	rcall	delayloop	; 195
 
 	;; Data high, Clock low
-	cbi	_SFR_IO_ADDR(IEC_DDR), IEC_PIN_DATA
-	sbi	_SFR_IO_ADDR(IEC_DDR), IEC_PIN_CLOCK
+	cbi	_SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA
+	sbi	_SFR_IO_ADDR(IEC_OUT), IEC_OPIN_CLOCK
 
 	ret
 
@@ -385,9 +405,8 @@ turbodisk_buffer:
 	rjmp	turbodisk_buffer
 
 	;; All bus lines high
-	in	r18, _SFR_IO_ADDR(IEC_DDR)
-	andi	r18, ~(IEC_BIT_ATN | IEC_BIT_DATA | IEC_BIT_CLOCK | IEC_BIT_SRQ)
-	out	_SFR_IO_ADDR(IEC_DDR), r18
+	ldi	r18, IEC_PULLUPS
+	out	_SFR_IO_ADDR(IEC_OUT), r18
 
 	movw	r30,r24		; output pointer
 	ldi	r21, 0xff	; constant for inverting bytes
@@ -414,7 +433,7 @@ tdbyteloop:
 	nop			; 1
 
 tdbitloop2:
-	clr	r19		; 1 - clear output register
+	clr	r19		; 1 - Clear output register
 	lsl	r0		; 1 - grab top bit
 	rol	r19		; 1 - move to bottom
 	lsl	r0		; 1 - grab top bit
@@ -424,8 +443,8 @@ tdbitloop2:
 	;; Wait another 24 us -> 192-7=185 cycles
 	ldi	r18,59		; 1
 	rcall	delayloop	; 183
-	nop			; 1
-	out	_SFR_IO_ADDR(IEC_DDR), r19	; 1 - output the bit pair
+	swapwait r19		; 1
+	out	_SFR_IO_ADDR(IEC_OUT), r19	; 1 - output the bit pair
 
 	;; 5 us -> 40-3=37 cycles
 	ldi	r18,10		; 1
@@ -448,8 +467,8 @@ tdbitloop2:
 	rcall	delayloop	; 87
 
 	;; Data high, Clock low
-	cbi	_SFR_IO_ADDR(IEC_DDR), IEC_PIN_DATA
-	sbi	_SFR_IO_ADDR(IEC_DDR), IEC_PIN_CLOCK
+	cbi	_SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA
+	sbi	_SFR_IO_ADDR(IEC_OUT), IEC_OPIN_CLOCK
 
 	ret
 #endif  

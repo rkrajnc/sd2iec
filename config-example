@@ -77,6 +77,7 @@ CONFIG_TURBODISK=y
 #   2 - Shadowolf MMC2IEC PCBs version 1.x
 #   3 - original MMC2IEC
 #   4 - uIEC (incomplete)
+#   5 - Shadowolf sd2iec PCBs version 1.x
 CONFIG_HARDWARE_VARIANT=1
 
 

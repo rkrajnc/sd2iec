@@ -27,12 +27,12 @@
 #ifndef IEC_LL_H
 #define IEC_LL_H
 
-#define set_atn(state)   do { if (state) IEC_DDR &= ~IEC_BIT_ATN;   else IEC_DDR |= IEC_BIT_ATN;   } while(0)
-#define set_data(state)  do { if (state) IEC_DDR &= ~IEC_BIT_DATA;  else IEC_DDR |= IEC_BIT_DATA;  } while(0)
-#define set_clock(state) do { if (state) IEC_DDR &= ~IEC_BIT_CLOCK; else IEC_DDR |= IEC_BIT_CLOCK; } while(0)
-#define set_srq(state)   do { if (state) IEC_DDR &= ~IEC_BIT_SRQ;   else IEC_DDR |= IEC_BIT_SRQ;   } while(0)
+#define set_atn(state)   do { if (state) IEC_OUT &= ~IEC_OBIT_ATN;   else IEC_OUT |= IEC_OBIT_ATN;   } while(0)
+#define set_data(state)  do { if (state) IEC_OUT &= ~IEC_OBIT_DATA;  else IEC_OUT |= IEC_OBIT_DATA;  } while(0)
+#define set_clock(state) do { if (state) IEC_OUT &= ~IEC_OBIT_CLOCK; else IEC_OUT |= IEC_OBIT_CLOCK; } while(0)
+#define set_srq(state)   do { if (state) IEC_OUT &= ~IEC_OBIT_SRQ;   else IEC_OUT |= IEC_OBIT_SRQ;   } while(0)
+#define toggle_srq()     IEC_PIN |= IEC_OBIT_SRQ
 
-#define toggle_srq() IEC_PIN |= IEC_BIT_SRQ
 
 #define IEC_ATN   (IEC_PIN & IEC_BIT_ATN)
 #define IEC_DATA  (IEC_PIN & IEC_BIT_DATA)

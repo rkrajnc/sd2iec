@@ -105,9 +105,9 @@ static uint8_t iec_pin(void) {
   uint8_t tmp;
 
   do {
-    tmp = IEC_PIN;
+    tmp = IEC_PIN & (IEC_BIT_ATN | IEC_BIT_DATA | IEC_BIT_CLOCK | IEC_BIT_SRQ);
     _delay_us(2); /* 1571 uses LDA/CMP/BNE, approximate by waiting 2us */
-  } while (tmp != IEC_PIN);
+  } while (tmp != (IEC_PIN & (IEC_BIT_ATN | IEC_BIT_DATA | IEC_BIT_CLOCK | IEC_BIT_SRQ)));
   return tmp;
 }
 
@@ -207,7 +207,7 @@ static int16_t _iec_getc(void) {
       start_timeout(TIMEOUT_US(218));
 
       do {
-	tmp = IEC_PIN;
+	tmp = IEC_PIN & (IEC_BIT_ATN | IEC_BIT_DATA | IEC_BIT_CLOCK | IEC_BIT_SRQ);
 
 	/* If there is a delay before the last bit, the controller uses JiffyDOS */
 	if (!iecflags.jiffy_active && has_timed_out()) {
@@ -223,7 +223,7 @@ static int16_t _iec_getc(void) {
     } else {
       /* Capture data on rising edge */
       do {                                             // EA0B
-	tmp = IEC_PIN;
+	tmp = IEC_PIN & (IEC_BIT_ATN | IEC_BIT_DATA | IEC_BIT_CLOCK | IEC_BIT_SRQ);
       } while (!(tmp & IEC_BIT_CLOCK));
     }
 
@@ -511,10 +511,17 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
 
 
 void init_iec(void) {
+#ifdef IEC_SEPARATE_OUT
+  /* Set up the port: Output bits as output, all others as input */
+  IEC_DDR  =            IEC_OBIT_ATN | IEC_OBIT_CLOCK | IEC_OBIT_DATA | IEC_OBIT_SRQ;
+  /* Enable pullups on the input pins and set the output lines to high */
+  IEC_PORT = (uint8_t)~(IEC_OBIT_ATN | IEC_OBIT_CLOCK | IEC_OBIT_DATA | IEC_OBIT_SRQ);
+#else
   /* Pullups would be nice, but AVR can't switch from */
   /* low output to hi-z input directly                */
   IEC_DDR  = 0;
   IEC_PORT = ~(IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA);
+#endif
 
   /* Count F_CPU/8 in timer 0 */
   TCCR0B = _BV(CS01);

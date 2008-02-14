@@ -133,6 +133,13 @@
 #  define IEC_PIN_CLOCK PA2
 #  define IEC_PIN_SRQ   PA3
 
+/* Use separate input/output lines?                                    */
+/* The code assumes that the input is NOT inverted, but the output is. */
+//#  define IEC_SEPARATE_OUT
+//#  define IEC_OPIN_ATN   PA4
+//#  define IEC_OPIN_DATA  PA5
+//#  define IEC_OPIN_CLOCK PA6
+//#  define IEC_OPIN_SRQ   PA7
 
 /*** User interface ***/
 /* Disk image change key */
@@ -269,15 +276,83 @@
 #  define DISKCHANGE_BIT        _BV(PG1)
 #  define DISKCHANGE_MAX        128
 
+#elif CONFIG_HARDWARE_VARIANT==5
+/* Hardware configuration: Shadowolf 2 aka sd2iec 1.0 */
+#  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
+#  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
+#  if defined __AVR_ATmega32__
+#    define SD_CHANGE_SETUP()   do { MCUCR |= _BV(ISC00); GICR |= _BV(INT0); } while(0)
+#  elif defined __AVR_ATmega644__
+#    define SD_CHANGE_SETUP()   do { EICRA |= _BV(ISC00); EIMSK |= _BV(INT0); } while(0)
+#  else
+#    error Unknown chip!
+#  endif
+#  define SD_CHANGE_ISR         INT0_vect
+#  define SDCARD_WP             (PIND & _BV(PD6))
+#  define SDCARD_WP_SETUP()     do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
+#  define SD_SUPPLY_VOLTAGE     (1L<<18)
+#  define DEVICE_SELECT         (8+!(PIND & _BV(PD7))+2*!(PIND & _BV(PD5)))
+#  define DEVICE_SELECT_SETUP() do {        \
+             DDRC  &= ~(_BV(PD7)|_BV(PD5)); \
+             PORTD |=   _BV(PD7)|_BV(PD5);  \
+          } while (0)
+#  define BUSY_LED_SETDDR()     DDRC  |= _BV(PC0)
+#  define BUSY_LED_ON()         PORTC |= _BV(PC0)
+#  define BUSY_LED_OFF()        PORTC &= ~_BV(PC0)
+#  define DIRTY_LED_SETDDR()    DDRC  |= _BV(PC1)
+#  define DIRTY_LED_ON()        PORTC |= _BV(PC1)
+#  define DIRTY_LED_OFF()       PORTC &= ~_BV(PC1)
+#  define DIRTY_LED_PORT        PORTC
+#  define DIRTY_LED_BIT()       _BV(PC1)
+#  define AUX_LED_SETDDR()      DDRC  |= _BV(PC2)
+#  define AUX_LED_ON()          PORTC |= _BV(PC2)
+#  define AUX_LED_OFF()         PORTC &= ~_BV(PC2)
+#  define IEC_PIN               PINA
+#  define IEC_DDR               DDRA
+#  define IEC_PORT              PORTA
+#  define IEC_PIN_ATN           PA0
+#  define IEC_PIN_DATA          PA1
+#  define IEC_PIN_CLOCK         PA2
+#  define IEC_PIN_SRQ           PA3
+#  define IEC_SEPARATE_OUT
+#  define IEC_OPIN_ATN          PA4
+#  define IEC_OPIN_DATA         PA5
+#  define IEC_OPIN_CLOCK        PA6
+#  define IEC_OPIN_SRQ          PA7
+#  define DISKCHANGE_PIN        PINC
+#  define DISKCHANGE_DDR        DDRC
+#  define DISKCHANGE_PORT       PORTC
+#  define DISKCHANGE_BIT        _BV(PC3)
+#  define DISKCHANGE_MAX        128
+
 #else
 #  error "CONFIG_HARDWARE_VARIANT is unset or set to an unknown value."
 #endif
 
-#define IEC_BIT_ATN   _BV(IEC_PIN_ATN)
-#define IEC_BIT_DATA  _BV(IEC_PIN_DATA)
-#define IEC_BIT_CLOCK _BV(IEC_PIN_CLOCK)
-#define IEC_BIT_SRQ   _BV(IEC_PIN_SRQ)
+#define IEC_BIT_ATN      _BV(IEC_PIN_ATN)
+#define IEC_BIT_DATA     _BV(IEC_PIN_DATA)
+#define IEC_BIT_CLOCK    _BV(IEC_PIN_CLOCK)
+#define IEC_BIT_SRQ      _BV(IEC_PIN_SRQ)
 
+#ifdef IEC_SEPARATE_OUT
+#  define IEC_PULLUPS    (IEC_BIT_ATN | IEC_BIT_DATA | IEC_BIT_CLOCK | IEC_BIT_SRQ)
+#  define IEC_OBIT_ATN   _BV(IEC_OPIN_ATN)
+#  define IEC_OBIT_DATA  _BV(IEC_OPIN_DATA)
+#  define IEC_OBIT_CLOCK _BV(IEC_OPIN_CLOCK)
+#  define IEC_OBIT_SRQ   _BV(IEC_OPIN_SRQ)
+#  define IEC_OUT        IEC_PORT
+#else
+#  define IEC_PULLUPS    0
+#  define IEC_OPIN_ATN   IEC_PIN_ATN
+#  define IEC_OPIN_DATA  IEC_PIN_DATA
+#  define IEC_OPIN_CLOCK IEC_PIN_CLOCK
+#  define IEC_OPIN_SRQ   IEC_PIN_SRQ
+#  define IEC_OBIT_ATN   IEC_BIT_ATN
+#  define IEC_OBIT_DATA  IEC_BIT_DATA
+#  define IEC_OBIT_CLOCK IEC_BIT_CLOCK
+#  define IEC_OBIT_SRQ   IEC_BIT_SRQ
+#  define IEC_OUT        IEC_DDR
+#endif
 
 /* ---------------- End of user-configurable options ---------------- */
 
