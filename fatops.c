@@ -445,9 +445,12 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
     strcpy((char *)dent->name, (char *)finfo.lfn);
 
     /* Type+Flags */
-    if (finfo.fattrib & AM_DIR)
+    if (finfo.fattrib & AM_DIR) {
       dent->typeflags = TYPE_DIR;
-    else
+      /* Hide directories starting with . */
+      if (finfo.lfn[0] == '.')
+	dent->typeflags |= FLAG_HIDDEN;
+    } else
       dent->typeflags = TYPE_PRG;
 
     if (finfo.fattrib & AM_RDO)
