@@ -565,8 +565,6 @@ static void d64_open_read(char *path, char *name, buffer_t *buf) {
   // FIXME: Check the file type
 
   buf->read    = 1;
-  buf->write   = 0;
-  buf->cleanup = NULL;
   buf->refill  = d64_read;
 
   buf->refill(buf);
@@ -689,9 +687,7 @@ static void d64_open_write(char *path, char *name, uint8_t type, buffer_t *buf, 
     return;
 
   /* Prepare the data buffer */
-  buf->read           = 0;
   buf->write          = 1;
-  buf->mustflush      = 0;
   buf->position       = 2;
   buf->lastused       = 2;
   buf->cleanup        = d64_write_cleanup;
@@ -700,7 +696,6 @@ static void d64_open_write(char *path, char *name, uint8_t type, buffer_t *buf, 
   buf->pvt.d64.dh     = dh.d64;
   buf->pvt.d64.track  = t;
   buf->pvt.d64.sector = s;
-  buf->pvt.d64.blocks = 0;
   DIRTY_LED_ON();
   active_buffers += 16;
 }

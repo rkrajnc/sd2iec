@@ -305,7 +305,6 @@ static void load_directory(uint8_t secondary) {
   if (!buf)
     return;
 
-  buf->pvt.dir.filetype = 0;
   if (command_length > 2) {
     /* Parse the name pattern */
     char *name;
@@ -363,16 +362,11 @@ static void load_directory(uint8_t secondary) {
       free_buffer(buf);
       return;
     }
-    buf->pvt.dir.matchstr = NULL;
   }
 
   buf->secondary = secondary;
   buf->read      = 1;
-  buf->write     = 0;
-  buf->cleanup   = NULL;
-  buf->position  = 0;
   buf->lastused  = 31;
-  buf->sendeoi   = 0;
 
   /* copy static header to start of buffer */
   memcpy_P(buf->data, dirheader, sizeof(dirheader));
@@ -442,8 +436,6 @@ void file_open(uint8_t secondary) {
     buf->lastused  = 255;
     buf->sendeoi   = 1;
     buf->mustflush = 0;
-    buf->cleanup   = NULL;
-    buf->refill    = NULL;
     active_buffers += 16;
     DIRTY_LED_ON();
     return;

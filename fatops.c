@@ -329,7 +329,6 @@ void fat_open_read(char *path, char *filename, buffer_t *buf) {
   }
 
   buf->read      = 1;
-  buf->write     = 0;
   buf->cleanup   = fat_file_close;
   buf->refill    = fat_file_read;
 
@@ -369,11 +368,7 @@ void fat_open_write(char *path, char *filename, uint8_t type, buffer_t *buf, uin
   active_buffers += 16;
   DIRTY_LED_ON();
 
-  buf->mustflush = 0;
-  buf->read      = 0;
   buf->write     = 1;
-  buf->position  = 0;
-  buf->lastused  = 0;
   buf->cleanup   = fat_file_close;
   buf->refill    = fat_file_write;
 }

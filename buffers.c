@@ -77,6 +77,8 @@ buffer_t *alloc_buffer(void) {
 
   for (i=0;i<CONFIG_BUFFER_COUNT;i++) {
     if (!buffers[i].allocated) {
+      /* Clear everything except the data pointer */
+      memset(sizeof(uint8_t *)+(char *)&(buffers[i]),0,sizeof(buffer_t)-sizeof(uint8_t *));
       buffers[i].allocated = 1;
       active_buffers++;
       BUSY_LED_ON();

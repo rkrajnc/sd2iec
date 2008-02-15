@@ -31,7 +31,7 @@
 
 /**
  * struct buffer_s - buffer handling structire
- * @data     : Pointer to the data area of the buffer
+ * @data     : Pointer to the data area of the buffer, MUST be the first field
  * @lastused : Index to the last used byted
  * @position : Index of the byte that will be read/written next
  * @seconday : Secondary address the buffer is associated with
