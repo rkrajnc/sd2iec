@@ -64,8 +64,8 @@
 ---------------------------------------------------------------------------*/
 static
 FATFS *FatFs[_DRIVES];  /* Pointer to the file system objects (logical drives) */
-static
-WORD fsid;              /* File system mount ID */
+//static
+//WORD fsid;              /* File system mount ID */
 
 #if _USE_LFN!=0
 static const PROGMEM
@@ -626,7 +626,7 @@ FRESULT trace_path (    /* FR_OK(0): successful, !=0: error code */
   dj->index = 0;
 
 #if _USE_LFN != 0
-  fileobj->id=dj->id;
+  //fileobj->id=dj->id;
   fileobj->fs=dj->fs;
 #endif    
 
@@ -1003,7 +1003,7 @@ FRESULT auto_mount (    /* FR_OK(0): successful, !=0: any error occured */
 # endif
 #endif
   fs->fs_type = fmt;      /* FAT syb-type */
-  fs->id = ++fsid;                    /* File system mount ID */
+  //fs->id = ++fsid;                    /* File system mount ID */
   return FR_OK;
 }
 
@@ -1016,11 +1016,11 @@ FRESULT auto_mount (    /* FR_OK(0): successful, !=0: any error occured */
 
 static
 FRESULT validate (    /* FR_OK(0): The object is valid, !=0: Not valid */
-  const FATFS *fs,    /* Pointer to the file system object */
-  WORD id             /* id member of the target object to be checked */
+  const FATFS *fs     /* Pointer to the file system object */
+  //,WORD id             /* id member of the target object to be checked */
 )
 {
-  if (!fs || !fs->fs_type || fs->id != id)
+  if (!fs || !fs->fs_type /*|| fs->id != id */)
     return FR_INVALID_OBJECT;
   if (disk_status(fs->drive) & STA_NOINIT)
     return FR_NOT_READY;
@@ -1402,7 +1402,7 @@ FRESULT f_open (
   fp->fsize = LD_DWORD(&dir[DIR_FileSize]);         /* File size */
   fp->fptr = 0;                                     /* File ptr */
   fp->sect_clust = 1;                               /* Sector counter */
-  fp->fs = fs; fp->id = fs->id;       /* Owner file system object of the file */
+  fp->fs = fs; //fp->id = fs->id;       /* Owner file system object of the file */
 
   return FR_OK;
 }
@@ -1429,7 +1429,7 @@ FRESULT f_read (
 
 
   *br = 0;
-  res = validate(fs, fp->id);                   /* Check validity of the object */
+  res = validate(fs /*, fp->id*/);                   /* Check validity of the object */
   if (res != FR_OK) return res;
   if (fp->flag & FA__ERROR) return FR_RW_ERROR; /* Check error flag */
   if (!(fp->flag & FA_READ)) return FR_DENIED;  /* Check access mode */
@@ -1512,7 +1512,7 @@ FRESULT f_write (
 
 
   *bw = 0;
-  res = validate(fs, fp->id);                     /* Check validity of the object */
+  res = validate(fs /*, fp->id*/);                     /* Check validity of the object */
   if (res != FR_OK) return res;
   if (fp->flag & FA__ERROR) return FR_RW_ERROR;   /* Check error flag */
   if (!(fp->flag & FA_WRITE)) return FR_DENIED;   /* Check access mode */
@@ -1598,7 +1598,7 @@ FRESULT f_sync (
   FATFS *fs = fp->fs;
 
 
-  res = validate(fs, fp->id);       /* Check validity of the object */
+  res = validate(fs /*, fp->id*/);       /* Check validity of the object */
   if (res == FR_OK) {
     if (fp->flag & FA__WRITTEN) {   /* Has the file been written? */
       /* Write back data buffer if needed */
@@ -1644,7 +1644,7 @@ FRESULT f_close (
 #if !_FS_READONLY
   res = f_sync(fp);
 #else
-  res = validate(fp->fs, fp->id);
+  res = validate(fp->fs /*, fp->id*/);
 #endif
   if (res == FR_OK) fp->fs = NULL;
   return res;
@@ -1669,7 +1669,7 @@ FRESULT f_lseek (
   FATFS *fs = fp->fs;
 
 
-  res = validate(fs, fp->id);         /* Check validity of the object */
+  res = validate(fs /*, fp->id*/);         /* Check validity of the object */
   if (res != FR_OK) return res;
   if (fp->flag & FA__ERROR) return FR_RW_ERROR;
 #if !_FS_READONLY
@@ -1784,7 +1784,7 @@ FRESULT f_opendir (
           res = FR_NO_FILE;
         }
       }
-      dj->id = fs->id;
+      //dj->id = fs->id;
     }
   }
   return res;
@@ -1820,7 +1820,7 @@ FRESULT f_readdir (
   }
 #endif
 
-  res = validate(fs, dj->id);         /* Check validity of the object */
+  res = validate(fs /*, dj->id*/);         /* Check validity of the object */
   if (res != FR_OK) return res;
 
   finfo->fname[0] = 0;
@@ -1945,7 +1945,7 @@ FRESULT f_truncate (
   FATFS *fs=fp->fs;
 
 
-  res = validate(fs, fp->id);   /* Check validity of the object */
+  res = validate(fs /*, fp->id */);   /* Check validity of the object */
   if (res != FR_OK) return res;
   if (fp->flag & FA__ERROR) return FR_RW_ERROR; /* Check error flag */
   if (!(fp->flag & FA_WRITE)) return FR_DENIED; /* Check access mode */

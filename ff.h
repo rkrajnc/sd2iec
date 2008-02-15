@@ -116,7 +116,7 @@ typedef struct _BUF {
 
 /* File system object structure */
 typedef struct _FATFS {
-    WORD    id;             /* File system mount ID */
+  //WORD    id;             /* File system mount ID */
     WORD    n_rootdir;      /* Number of root directory entries */
     //DWORD winsect;        /* Current sector appearing in the win[] */
     DWORD   sects_fat;      /* Sectors per fat */
@@ -155,7 +155,7 @@ typedef struct _FATFS {
 
 /* Directory object structure */
 typedef struct _DIR {
-    WORD    id;         /* Owner file system mount ID */
+  //WORD    id;         /* Owner file system mount ID */
     WORD    index;      /* Current index */
     FATFS*  fs;         /* Pointer to the owner file system object */
     DWORD   sclust;     /* Start cluster */
@@ -166,7 +166,7 @@ typedef struct _DIR {
 
 /* File object structure */
 typedef struct _FIL {
-    WORD    id;             /* Owner file system mount ID */
+  //WORD    id;             /* Owner file system mount ID */
     BYTE    flag;           /* File status flags */
     BYTE    sect_clust;     /* Left sectors in cluster */
     FATFS*  fs;             /* Pointer to the owner file system object */
