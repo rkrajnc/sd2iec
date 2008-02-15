@@ -255,7 +255,6 @@ jiffy_send:
 0:	ldi	r22, IEC_PULLUPS | IEC_OBIT_CLOCK ; Data hi, Clock low on non-EOI
 
 1:
-	sbi	_SFR_IO_ADDR(IEC_OUT), IEC_OPIN_SRQ
 	;; Set clock and data high/inactive - FFB5
 	cbi	_SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA
 		; this is the actual ready signal for the C64
