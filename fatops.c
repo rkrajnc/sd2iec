@@ -480,8 +480,10 @@ uint8_t fat_delete(char *path, char *filename) {
   if (!buf)
     return 255;
 
+  DIRTY_LED_ON();
   filename = build_name(path, filename, buf);
   res = f_unlink(filename);
+  /* free_buffer will turn off the LED for us */
   free_buffer(buf);
 
   parse_error(res,0);
