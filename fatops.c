@@ -135,7 +135,7 @@ void parse_error(FRESULT res, uint8_t readflag) {
 
 /**
  * asc2pet - convert string from ASCII to PETSCII
- * @buf - pointer to the string to be converted
+ * @buf: pointer to the string to be converted
  *
  * This function converts the string in the given buffer from ASCII to
  * PETSCII in-place.
@@ -159,7 +159,7 @@ static void asc2pet(char *buf) {
 
 /**
  * pet2asc - convert string from PETSCII to ASCII
- * @buf - pointer to the string to be converted
+ * @buf: pointer to the string to be converted
  *
  * This function converts the string in the given buffer from PETSCII to
  * ASCII in-place.
