@@ -327,7 +327,7 @@ static void parse_xcommand(void) {
 
   default:
     /* Unknown command, just show the status */
-    set_error(ERROR_STATUS);
+    set_error_ts(ERROR_STATUS,device_address,0);
     break;
   }
 }
