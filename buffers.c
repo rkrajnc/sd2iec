@@ -63,6 +63,7 @@ void init_buffers(void) {
   buffers[CONFIG_BUFFER_COUNT].read      = 1;
   buffers[CONFIG_BUFFER_COUNT].write     = 1;
   buffers[CONFIG_BUFFER_COUNT].sendeoi   = 1;
+  buffers[CONFIG_BUFFER_COUNT].refill    = set_ok_message;
 }
 
 /**

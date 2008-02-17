@@ -28,6 +28,7 @@
 #define ERRORMSG_H
 
 #include <stdint.h>
+#include "buffers.h"
 
 extern uint8_t current_error;
 extern uint8_t error_buffer[CONFIG_ERROR_BUFFER_SIZE];
@@ -36,6 +37,7 @@ extern volatile uint8_t error_blink_active;
 
 void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector);
 void set_error(uint8_t errornum);
+uint8_t set_ok_message(buffer_t *buf);
 
 // Commodore DOS error codes
 #define ERROR_OK                  0

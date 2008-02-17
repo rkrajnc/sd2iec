@@ -214,11 +214,10 @@ void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
   buffers[CONFIG_BUFFER_COUNT].lastused = msg - (char *)error_buffer;
 }
 
-#if 0
 /* Callback for the error channel buffer */
-void set_ok_message(uint8_t buffernum) {
-  //This may be helpful if we ever support M-R
-  //buffer[BUFFER_COUNT].data = error_buffer;
-  set_error(0,0,0);
+uint8_t set_ok_message(buffer_t *buf) {
+  /* Reset data pointer */
+  buf->data = error_buffer;
+  set_error(0);
+  return 0;
 }
-#endif

@@ -486,7 +486,7 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
       }
     } while (buf->position++ < buf->lastused);
 
-    if (buf->sendeoi)
+    if (buf->sendeoi && (cmd & 0x0f) != 0x0f)
       break;
 
     if (buf->refill)
@@ -495,10 +495,6 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
 	return 1;
       }
   }
-
-  /* If the error channel was read, create a new OK message */
-  if ((cmd & 0x0f) == 0x0f)
-    set_error(ERROR_OK);
 
   return 0;
 }
