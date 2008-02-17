@@ -61,8 +61,6 @@ static void mount_line(void) {
 
   /* Grab some scratch memory - this won't fail */
   buf = alloc_buffer();
-  buf->secondary = 0;
-  buf->cleanup   = NULL;
 
   curpos = 0;
   strend = NULL;
