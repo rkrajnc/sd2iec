@@ -242,7 +242,14 @@ static void handle_memread(void) {
   if (command_length < 6)
     return;
 
- // FIXME: M-R should return data even if it's just junk
+  /* Return the contents of the first buffer for now.     */
+  /* Simply reading the requested address in AVR ram here */
+  /* could cause problems with some IO registers.         */
+  /* FIXME: Check for signature addresses and return      */
+  /*        something fixed there.                        */
+  buffers[CONFIG_BUFFER_COUNT].data = buffers[0].data;
+  buffers[CONFIG_BUFFER_COUNT].position = 0;
+  buffers[CONFIG_BUFFER_COUNT].lastused = command_buffer[5]-1;
 }
 
 static void handle_memwrite(void) {
