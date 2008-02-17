@@ -72,6 +72,10 @@ Supported commands:
 - S:
   Name matching is fully supported, directories are ignored.
 
+- U0
+  Device address changing with "U0>"+chr$(new address) is supported,
+  other U0 commands are currently not implemented.
+
 - U1/U2/B-R/B-W
   Block reading and writing is fully supported while a D64 image is mounted.
 

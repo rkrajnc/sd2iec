@@ -601,6 +601,16 @@ void parse_doscommand(void) {
       restart_call();
       break;
 
+    case '0':
+      /* U0 - only device address changes for now */
+      if ((command_buffer[2] & 0x1f) == 0x1e &&
+	  command_buffer[3] >= 4 &&
+	  command_buffer[3] <= 30) {
+	device_address = command_buffer[3];
+	break;
+      }
+      /* Fall through */
+
     default:
       set_error(ERROR_SYNTAX_UNKNOWN);
       break;
