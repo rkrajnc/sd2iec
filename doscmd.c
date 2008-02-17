@@ -332,20 +332,20 @@ static void parse_xcommand(void) {
     default:
       set_error(ERROR_SYNTAX_UNKNOWN);
     }
-    set_error(ERROR_STATUS);
+    set_error_ts(ERROR_STATUS,device_address,0);
     break;
 
   case 'C':
     /* Calibration */
     str = (char *)command_buffer+2;
     OSCCAL = parse_number(&str);
-    set_error(ERROR_STATUS);
+    set_error_ts(ERROR_STATUS,device_address,0);
     break;
 
   case 'W':
     /* Write configuration */
     write_configuration();
-    set_error(ERROR_STATUS);
+    set_error_ts(ERROR_STATUS,device_address,0);
     break;
 
   case 'S':
