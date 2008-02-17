@@ -104,7 +104,8 @@ Supported commands:
 
   - X        X without any following characters reports the current state
              of all extended parameters via the error channel, similiar
-             to DolphinDOS. Example result: "03,J-:C152,00,00"
+             to DolphinDOS. Example result: "03,J-:C152,08,00"
+             The track indicates the current device address.
 
   - XS:name  Set up a swap list - see "Changing Disk Images" below.
     XS       Disable swap list
@@ -113,8 +114,26 @@ Supported commands:
              This commands stores the current configuration in the EEPROM.
              It will automatically be read when the AVR is reset, so
              any changes you made will persist even after turning off
-             the hardware. Currently the only things saved are the
-             oscillator calibration and the JiffyDOS protocol support flag.
+             the hardware.
+
+             The stored configuration includes the oscillator calibration
+             value, the JiffyDOS protocol support flag and the current
+             device address. If you have changed the device address by
+             software, sd2iec will power up with that address unless you
+             have changed the device address jumpers (if available) to
+             a different setting than the one active at the time the
+             configuration was saved. You can think of this feature as
+             changing the meaning of one specific setting of the jumpers
+             to a different address if this sounds logical enough to you.
+
+             The "hardware overrides software overrides hardware" priority
+             was chosen to allow accessing sd2iec even when it is soft-
+             configured for a device number that is already taken by
+             another device on the bus without having to remove that
+             device to reconfigure sd2iec (e.g. when using a C128D).
+
+ Currently the only things saved are the
+             oscillator calibration, the JiffyDOS protocol support flag
 
 - M-R, M-W, M-E
   Memory reading returns random data of the requested length. Memory writing
