@@ -95,6 +95,28 @@ static uint8_t sectors_per_track(uint8_t track) {
 }
 
 /**
+ * checked_read - read a specified sector after range-checking
+ * @track : track number to be read
+ * @sector: sector number to be read
+ * @buf   : pointer to where the data should be read to
+ * @len   : number of bytes to be read
+ * @error : error number to be flagged if the range check fails
+ *
+ * This function checks if the track and sector are within the
+ * limits for the image format and calls image_read to read
+ * the data if they are. Returns the result of image_read or
+ * 2 if the range check failed.
+ */
+static uint8_t checked_read(uint8_t track, uint8_t sector, uint8_t *buf, uint16_t len, uint8_t error) {
+  if (track < 1 || track > LAST_TRACK ||
+      sector >= sectors_per_track(track)) {
+    set_error_ts(error,track,sector);
+    return 2;
+  }
+  return image_read(sector_offset(track,sector), buf, len);
+}
+
+/**
  * strnsubst - substitute one character with another in a buffer
  * @buffer : pointer to the buffer
  * @len    : length of buffer
@@ -349,7 +371,7 @@ static int8_t nextdirentry(dh_t *dh) {
   /* End of directory entries in this sector? */
   if (dh->d64.entry == 8) {
     /* Read link pointer */
-    if (image_read(sector_offset(dh->d64.track, dh->d64.sector), entrybuf, 2))
+    if (checked_read(dh->d64.track, dh->d64.sector, entrybuf, 2, ERROR_ILLEGAL_TS_LINK))
       return 1;
 
     /* Final directory sector? */
@@ -371,13 +393,11 @@ static int8_t nextdirentry(dh_t *dh) {
 }
 
 static uint8_t d64_read(buffer_t *buf) {
-  uint32_t sectorofs = sector_offset(buf->data[0],buf->data[1]);
-
   /* Store the current sector, used for append */
   buf->pvt.d64.track  = buf->data[0];
   buf->pvt.d64.sector = buf->data[1];
 
-  if (image_read(sectorofs, buf->data, 256))
+  if (checked_read(buf->data[0], buf->data[1], buf->data, 256, ERROR_ILLEGAL_TS_LINK))
     return 1;
 
   buf->position = 2;
@@ -717,7 +737,7 @@ static uint8_t d64_delete(char *path, char *name) {
   do {
     free_sector(linkbuf[0], linkbuf[1], buf);
 
-    if (image_read(sector_offset(linkbuf[0],linkbuf[1]), linkbuf, 2)) {
+    if (checked_read(linkbuf[0], linkbuf[1], linkbuf, 2, ERROR_ILLEGAL_TS_LINK)) {
       free_buffer(buf);
       return 255;
     }
@@ -739,11 +759,15 @@ static uint8_t d64_delete(char *path, char *name) {
 }
 
 static void d64_read_sector(buffer_t *buf, uint8_t track, uint8_t sector) {
-  image_read(sector_offset(track,sector), buf->data, 256);
+  checked_read(track, sector, buf->data, 256, ERROR_ILLEGAL_TS_COMMAND);
 }
 
 static void d64_write_sector(buffer_t *buf, uint8_t track, uint8_t sector) {
-  image_write(sector_offset(track,sector), buf->data, 256, 1);
+  if (track < 1 || track > LAST_TRACK ||
+      sector >= sectors_per_track(track)) {
+    set_error_ts(ERROR_ILLEGAL_TS_COMMAND,track,sector);
+  } else
+    image_write(sector_offset(track,sector), buf->data, 256, 1);
 }
 
 const PROGMEM fileops_t d64ops = {
