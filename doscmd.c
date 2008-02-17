@@ -25,6 +25,7 @@
 */
 
 #include <util/delay.h>
+#include <avr/eeprom.h>
 #include <avr/wdt.h>
 #include <avr/interrupt.h>
 #include <ctype.h>
@@ -210,6 +211,26 @@ static int8_t parse_blockparam(uint8_t values[]) {
 /* ------------------------------------------------------------------------- */
 /*  Command handlers                                                         */
 /* ------------------------------------------------------------------------- */
+
+static void handle_eeread(uint16_t address, uint8_t length) {
+  if (length > CONFIG_ERROR_BUFFER_SIZE) {
+    set_error(ERROR_SYNTAX_TOOLONG);
+    return;
+  }
+
+  buffers[CONFIG_BUFFER_COUNT].position = 0;
+  buffers[CONFIG_BUFFER_COUNT].lastused = length-1;
+
+  uint8_t *ptr = error_buffer;
+  while (length--)
+    *ptr++ = eeprom_read_byte((uint8_t *)(CONFIG_EEPROM_OFFSET + address++));
+}
+
+static void handle_eewrite(uint16_t address, uint8_t length) {
+  uint8_t *ptr = command_buffer+6;
+  while (length--)
+    eeprom_write_byte((uint8_t *)(CONFIG_EEPROM_OFFSET + address++), *ptr++);
+}
 
 static void handle_memexec(void) {
   uint16_t address;
@@ -611,6 +632,30 @@ void parse_doscommand(void) {
       handle_memread();
     else
       set_error(ERROR_SYNTAX_UNKNOWN);
+    break;
+
+  case 'E':
+    /* EEPROM-something */
+    do { /* Create a block to get local variables */
+      uint16_t address = command_buffer[3] + (command_buffer[4] << 8);
+      uint8_t  length  = command_buffer[5];
+      
+      if (command_length < 6)
+	break;
+      
+      if (command_buffer[1] != '-' || (command_buffer[2] != 'W' && command_buffer[2] != 'R'))
+	set_error(ERROR_SYNTAX_UNKNOWN);
+      
+      if (address > CONFIG_EEPROM_SIZE || address+length > CONFIG_EEPROM_SIZE) {
+	set_error(ERROR_SYNTAX_TOOLONG);
+	break;;
+      }
+      
+      if (command_buffer[2] == 'W')
+	handle_eewrite(address, length);
+      else
+	handle_eeread(address, length);
+    } while (0);
     break;
 
   case 'S':

@@ -100,3 +100,9 @@ CONFIG_COMMAND_BUFFER_SIZE=42
 # Number of sector buffers (256 byte+a bit of overhead)
 #  In general: More buffers -> More open files at the same time
 CONFIG_BUFFER_COUNT=3
+
+# Size of the EEPROM user area
+CONFIG_EEPROM_SIZE=512
+
+# Offset of the EEPROM user area
+CONFIG_EEPROM_OFFSET=512

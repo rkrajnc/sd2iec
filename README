@@ -112,6 +112,31 @@ Supported commands:
              the hardware. Currently the only things saved are the
              oscillator calibration and the JiffyDOS protocol support flag.
 
+- M-R, M-W, M-E
+  Memory reading returns random data of the requested length. Memory writing
+  knows about the address used for changing the device address on a 1541 and
+  will change the address of sd2iec to the requested value. It will also
+  check if the transmitted data corresponds to any of the known software
+  fastloaders so the correct emulation code can be used when M-E is called.
+
+- E-R, E-W
+  Both commands work like M-R and M-W, but instead of reading/writing RAM
+  they allow access to a user-area of the EEPROM. This area currently holds
+  512 bytes and accesses beyond its end will result in a 32 SYNTAX ERROR.
+  It is strongly recommended to work on a protocol for sharing this area
+  between multiple applications that want to store their configuration in
+  there, but that is beyond the scope of this project.
+
+  As the contents of the EEPROM have to be copied to RAM before they can
+  be sent to the computer it is not possible to read more data with a
+  single command than the error message buffer (default size: 36 bytes)
+  can hold. Similiarly, writing is restricted by the size of the command
+  buffer (at least 42 bytes for compatibility, expected to be at least
+  100 bytes in release versions).
+
+  The user-area does not interfere with the stored configuration (XW) in
+  any way.
+
 Software fastloaders:
 =====================
 There is currently support for one software fastloader in the code. It is
