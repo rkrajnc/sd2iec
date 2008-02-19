@@ -167,6 +167,7 @@ void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
   char *msg = (char *) error_buffer;
 
   current_error = errornum;
+  buffers[CONFIG_BUFFER_COUNT].data     = error_buffer;
   buffers[CONFIG_BUFFER_COUNT].lastused = 0;
   buffers[CONFIG_BUFFER_COUNT].position = 0;
   memset(error_buffer,0,sizeof(error_buffer));
@@ -216,8 +217,6 @@ void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
 
 /* Callback for the error channel buffer */
 uint8_t set_ok_message(buffer_t *buf) {
-  /* Reset data pointer */
-  buf->data = error_buffer;
   set_error(0);
   return 0;
 }

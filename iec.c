@@ -651,6 +651,7 @@ void iec_mainloop(void) {
 	      bus_state = BUS_CLEANUP;
 	      break;
 	    }
+	    set_error(ERROR_OK);
 	  } else {
 	    /* Close a single buffer */
 	    buffer_t *buf;
