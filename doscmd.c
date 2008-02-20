@@ -401,7 +401,6 @@ static void parse_block(void) {
   case 'W':
     /* Block-Read  - CD56 */
     /* Block-Write - CD73 */
-    /* Does not include the bug/misfeature of the original */
     buf = find_buffer(params[0]);
     if (!buf) {
       set_error(ERROR_NO_CHANNEL);
@@ -410,10 +409,16 @@ static void parse_block(void) {
 
     if (*str == 'R') {
       read_sector(buf,params[2],params[3]);
-      buf->position = 1;
-      buf->lastused = buf->data[0];
+      if (command_buffer[0] == 'B') {
+	buf->position = 1;
+	buf->lastused = buf->data[0];
+      } else {
+	buf->position = 0;
+	buf->lastused = 255;
+      }
     } else {
-      buf->data[0] = buf->position-1; // FIXME: Untested, verify!
+      if (command_buffer[0] == 'B')
+	buf->data[0] = buf->position-1; // FIXME: Untested, verify!
       write_sector(buf,params[2],params[3]);
     }
     break;
