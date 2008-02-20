@@ -380,6 +380,7 @@ void fat_open_write(char *path, char *filename, uint8_t type, buffer_t *buf, uin
 uint8_t fat_opendir(dh_t *dh, char *dir) {
   FRESULT res;
 
+  pet2asc(dir);
   res = f_opendir(&dh->fat, dir);
   if (res != FR_OK) {
     parse_error(res,1);
