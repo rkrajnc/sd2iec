@@ -160,6 +160,16 @@ Supported commands:
   The user-area does not interfere with the stored configuration (XW) in
   any way.
 
+Long File Names:
+================
+Long file names (i.e names not within the 8.3 limits) are supported on
+FAT, but for compatibility reasons the 8.3 name is used if the long
+name exceeds 16 characters. If you use anything but ASCII characters
+on the PC or their PETSCII equivalents on the Commodore you may
+get strange characters on the other system because the LFN use
+unicode characters on disk, but sd2iec parses only the low byte
+of each character in the name.
+
 Software fastloaders:
 =====================
 There is currently support for one software fastloader in the code. It is
