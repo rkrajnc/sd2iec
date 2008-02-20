@@ -4,6 +4,7 @@
 MAJOR = 0
 MINOR = 5
 PATCHLEVEL = 1
+BOOT_VERSION = 51
 
 
 #----------------------------------------------------------------------------
@@ -37,23 +38,23 @@ endif
 # Include the configuration file
 include $(CONFIG)
 
-# Set MCU name and bootloader signature address
+# Set MCU name and length of binary for bootloader
 MCU := $(CONFIG_MCU)
 ifeq ($(CONFIG_BOOTLOADER),y)
   ifeq ($(MCU),atmega32)
-    SIGNATUREADDRESS = 0x77f8
+    BINARY_LENGTH = 0x7800
   else ifeq ($(MCU),atmega128)
-    SIGNATUREADDRESS = 0x1eff8
+    BINARY_LENGTH = 0x1f000
   else ifeq ($(MCU),atmega644)
-    SIGNATUREADDRESS = 0xeff8
+    BINARY_LENGTH = 0xf000
   else
 .PHONY: nochip
 nochip:
 	@echo '=============================================================='
 	@echo 'No known target chip specified.'
 	@echo
-	@echo 'Please disable CONFIG_BOOTLOADER or add the address for the'
-	@echo 'bootloader signature to the Makefile.'
+	@echo 'Please disable CONFIG_BOOTLOADER or add the size of the'
+	@echo 'binary to the Makefile.'
 	@exit 1
   endif
 endif
@@ -228,10 +229,6 @@ ifeq ($(CONFIG_LINKER_RELAX),y)
   LDFLAGS += -Wl,-O9,-relax
 endif
 
-ifeq ($(CONFIG_BOOTLOADER),y)
-  LDFLAGS += -Wl,-section-start=.bootloader=$(SIGNATUREADDRESS)
-endif
-
 
 
 #---------------- Programming Options (avrdude) ----------------
@@ -354,7 +351,6 @@ sym: $(TARGET).sym
 
 # A little helper target for the maintainer =)
 copy2card:
-	../utils/crcgen $(TARGET).bin
 	mount /mnt
 	cp $(TARGET).bin /mnt
 	umount /mnt
@@ -432,8 +428,15 @@ $(OBJDIR)/autoconf.h: $(CONFIG) | $(OBJDIR)
 	gawk -f conf2h.awk $(CONFIG) > $(OBJDIR)/autoconf.h
 
 # Create final output files (.hex, .eep) from ELF output file.
+ifeq ($(CONFIG_BOOTLOADER),y)
 $(OBJDIR)/%.bin: $(OBJDIR)/%.elf
 	$(OBJCOPY) -O binary -R .eeprom $< $@
+	crcgen-new $@ $(BINARY_LENGTH) $(CONFIG_BOOT_DEVID) $(BOOT_VERSION)
+else
+$(OBJDIR)/%.bin: $(OBJDIR)/%.elf
+	$(OBJCOPY) -O binary -R .eeprom $< $@
+endif
+
 
 $(OBJDIR)/%.hex: $(OBJDIR)/%.elf
 	$(OBJCOPY) -O $(FORMAT) -R .eeprom $< $@

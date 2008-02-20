@@ -40,18 +40,6 @@
 #include "ff.h"
 #include "uart.h"
 
-#ifdef CONFIG_BOOTLOADER
-typedef struct
-{
-	unsigned long dev_id;
-	unsigned short app_version;
-	unsigned short crc;
-} bootloaderinfo_t;
-/* R.Riedel - bootloader-support */
-
-const bootloaderinfo_t bootloaderinfo BOOTLOADER_SECTION = {CONFIG_BOOT_DEVID, CONFIG_BOOT_MAJOR << 8 | CONFIG_BOOT_MINOR, 0x0000};
-#endif
-
 /* Make sure the watchdog is disabled as soon as possible    */
 /* Copy this code to your bootloader if you use one and your */
 /* MCU doesn't disable the WDT after reset!                  */
