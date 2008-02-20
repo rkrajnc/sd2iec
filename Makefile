@@ -159,6 +159,10 @@ CFLAGS += -I$(OBJDIR)
 CFLAGS += $(patsubst %,-I%,$(EXTRAINCDIRS))
 CFLAGS += $(CSTANDARD)
 
+ifeq ($(CONFIG_STACK_TRACKING),y)
+  CFLAGS += -finstrument-functions
+endif
+
 
 #---------------- Assembler Options ----------------
 #  -Wa,...:   tell GCC to pass this to the assembler.

@@ -54,6 +54,17 @@ uint8_t command_length;
 
 uint16_t datacrc = 0xffff;
 
+#ifdef CONFIG_STACK_TRACKING
+uint16_t minstack = RAMEND;
+
+void __cyg_profile_func_enter (void *this_fn, void *call_site) __attribute__((no_instrument_function));
+void __cyg_profile_func_exit  (void *this_fn, void *call_site) __attribute__((alias("__cyg_profile_func_enter")));
+
+void __cyg_profile_func_enter (void *this_fn, void *call_site) {
+  if (SP < minstack) minstack = SP;
+}
+#endif
+
 /* ------------------------------------------------------------------------- */
 /*  Parsing helpers                                                          */
 /* ------------------------------------------------------------------------- */
@@ -352,6 +363,13 @@ static void parse_xcommand(void) {
     /* Swaplist */
     set_changelist((char *)command_buffer+3);
     break;
+
+#ifdef CONFIG_STACK_TRACKING
+  case '?':
+    /* Output the largest stack size seen */
+    set_error_ts(ERROR_OK,(RAMEND-minstack)>>8,(RAMEND-minstack)&0xff);
+    break;
+#endif
 
   default:
     /* Unknown command, just show the status */

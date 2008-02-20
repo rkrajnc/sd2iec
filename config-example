@@ -106,3 +106,7 @@ CONFIG_EEPROM_SIZE=512
 
 # Offset of the EEPROM user area
 CONFIG_EEPROM_OFFSET=512
+
+# Track the stack size
+# Warning: This option increases the code size a lot.
+CONFIG_STACK_TRACKING=n
