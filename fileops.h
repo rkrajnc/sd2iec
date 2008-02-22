@@ -32,9 +32,6 @@
 
 enum open_modes { OPEN_READ, OPEN_WRITE, OPEN_APPEND, OPEN_MODIFY };
 
-/* Zero-terminates the name in a dent and returns a pointer to it */
-char *dent2str(struct cbmdirent *dent);
-
 /* Returns the next matching dirent */
 int8_t next_match(dh_t *dh, char *matchstr, uint8_t type, struct cbmdirent *dent);
 
