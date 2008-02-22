@@ -329,6 +329,12 @@ js_finish:
 	eor	r24, r23	 ; invert port state (ATN low returns true)
 	andi	r24, IEC_BIT_ATN ; single out ATN bit
 
+#if IEC_PULLUPS != 0
+	in	r22, _SFR_IO_ADDR(IEC_OUT) ; Read output register
+	ori	r22, IEC_PULLUPS ; Set whatever bits are is required
+	out	_SFR_IO_ADDR(IEC_OUT), r22 ; Write output register
+#endif
+	
 	sei			; re-enable interrupts
 	ret
 
@@ -388,8 +394,8 @@ tdbitloop:
 	rcall	delayloop	; 195
 
 	;; Data high, Clock low
-	cbi	_SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA
-	sbi	_SFR_IO_ADDR(IEC_OUT), IEC_OPIN_CLOCK
+	ldi	r18, IEC_PULLUPS | IEC_OBIT_CLOCK
+	out	_SFR_IO_ADDR(IEC_OUT), r18
 
 	ret
 
@@ -466,8 +472,8 @@ tdbitloop2:
 	rcall	delayloop	; 87
 
 	;; Data high, Clock low
-	cbi	_SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA
-	sbi	_SFR_IO_ADDR(IEC_OUT), IEC_OPIN_CLOCK
+	ldi	r18, IEC_PULLUPS | IEC_OBIT_CLOCK
+	out	_SFR_IO_ADDR(IEC_OUT), r18
 
 	ret
 #endif  

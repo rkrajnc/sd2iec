@@ -141,6 +141,12 @@
 //#  define IEC_OPIN_CLOCK PA6
 //#  define IEC_OPIN_SRQ   PA7
 
+/* If non-separate output lines: Value to be ORed into the DDR register */
+/* This is used in the NKC configuration (6) to make sure that the      */
+/* SPI lines are configured correctly when the fastloader code uses     */
+/* OUT on the register instead of toggeling single bits.                */
+#  define IEC_PULLUPS     0
+
 /*** User interface ***/
 /* Disk image change key */
 #  define DISKCHANGE_PIN  PINC
@@ -192,6 +198,7 @@
 #  define IEC_PIN_DATA          PA1
 #  define IEC_PIN_CLOCK         PA2
 #  define IEC_PIN_SRQ           PA3
+#  define IEC_PULLUPS           0
 #  define DISKCHANGE_PIN        PINC
 #  define DISKCHANGE_DDR        DDRC
 #  define DISKCHANGE_PORT       PORTC
@@ -231,6 +238,7 @@
 #  define IEC_PIN_DATA          PC1
 #  define IEC_PIN_CLOCK         PC2
 #  define IEC_PIN_SRQ           PC3
+#  define IEC_PULLUPS           0
 #  define DISKCHANGE_PIN        PINA
 #  define DISKCHANGE_DDR        DDRA
 #  define DISKCHANGE_PORT       PORTA
@@ -269,6 +277,7 @@
 #  define IEC_PIN_DATA          PE4
 #  define IEC_PIN_CLOCK         PE5
 #  define IEC_PIN_SRQ           PE2
+#  define IEC_PULLUPS           0
 /* This should really be on a INT pin, but I need to find one.  Use G1 for now. */
 #  define DISKCHANGE_PIN        PING
 #  define DISKCHANGE_DDR        DDRG
@@ -325,6 +334,46 @@
 #  define DISKCHANGE_BIT        _BV(PC3)
 #  define DISKCHANGE_MAX        128
 
+#elif CONFIG_HARDWARE_VARIANT == 6
+/* Hardware configuration: NKC MMC2IEC */
+#  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
+#  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
+#  define SD_CHANGE_SETUP()     do { MCUCR |= _BV(ISC00); GICR |= _BV(INT0); } while(0)
+#  define SD_CHANGE_ISR         INT0_vect
+#  define SDCARD_WP             (PIND & _BV(PD6))
+#  define SDCARD_WP_SETUP()     do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
+#  define SD_CHANGE_ICR         MCUCR
+#  define SD_SUPPLY_VOLTAGE     (1L<<21)
+#  define DEVICE_SELECT         (8+!(PIND & _BV(PD2))+2*!(PIND & _BV(PD3)))
+#  define DEVICE_SELECT_SETUP() do {        \
+             DDRC  &= ~(_BV(PA2)|_BV(PA3)); \
+             PORTD |=   _BV(PA2)|_BV(PA3);  \
+          } while (0)
+#  define BUSY_LED_SETDDR()     DDRA  |= _BV(PA0)
+#  define BUSY_LED_ON()         PORTA &= ~_BV(PA0)
+#  define BUSY_LED_OFF()        PORTA |= _BV(PA0)
+#  define DIRTY_LED_SETDDR()    DDRA  |= _BV(PA1)
+#  define DIRTY_LED_ON()        PORTA &= ~_BV(PA1)
+#  define DIRTY_LED_OFF()       PORTA |= _BV(PA1)
+#  define DIRTY_LED_PORT        PORTA
+#  define DIRTY_LED_BIT()       _BV(PA1)
+#  define AUX_LED_SETDDR()      do {} while (0)
+#  define AUX_LED_ON()          do {} while (0)
+#  define AUX_LED_OFF()         do {} while (0)
+#  define IEC_PIN               PINB
+#  define IEC_DDR               DDRB
+#  define IEC_PORT              PORTB
+#  define IEC_PIN_ATN           PB0
+#  define IEC_PIN_DATA          PB1
+#  define IEC_PIN_CLOCK         PB2
+#  define IEC_PIN_SRQ           PB3
+#  define IEC_PULLUPS           (_BV(PB7) | _BV(PB6) | _BV(PB4))
+#  define DISKCHANGE_PIN        PINA
+#  define DISKCHANGE_DDR        DDRA
+#  define DISKCHANGE_PORT       PORTA
+#  define DISKCHANGE_BIT        _BV(PA4)
+#  define DISKCHANGE_MAX        128
+
 #else
 #  error "CONFIG_HARDWARE_VARIANT is unset or set to an unknown value."
 #endif
@@ -342,7 +391,6 @@
 #  define IEC_OBIT_SRQ   _BV(IEC_OPIN_SRQ)
 #  define IEC_OUT        IEC_PORT
 #else
-#  define IEC_PULLUPS    0
 #  define IEC_OPIN_ATN   IEC_PIN_ATN
 #  define IEC_OPIN_DATA  IEC_PIN_DATA
 #  define IEC_OPIN_CLOCK IEC_PIN_CLOCK

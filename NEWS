@@ -1,3 +1,7 @@
+2008-02-22 - release 0.6.1
+        - support for NKC MMC2IEC boards (untested)
+        - case-insensitive matching of M2I and D64
+
 2008-02-20 - release 0.6
 	- Bugfix: Properly emulate B-R/B-W (fixes Pirates!)
 	- Bugfix: Close buffers on I (fixes Drazpaint)

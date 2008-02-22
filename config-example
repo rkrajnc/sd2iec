@@ -73,6 +73,7 @@ CONFIG_TURBODISK=y
 #   3 - original MMC2IEC
 #   4 - uIEC
 #   5 - Shadowolf sd2iec PCBs version 1.x
+#   6 - NKC-modified MMC2IEC
 CONFIG_HARDWARE_VARIANT=1
 
 # The following SD settings are ignored on uIEC
