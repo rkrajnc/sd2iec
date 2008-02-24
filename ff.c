@@ -1748,6 +1748,7 @@ fk_error: /* Abort this file due to an unrecoverable error */
 /* Create a directroy object                                             */
 /*-----------------------------------------------------------------------*/
 
+#if 0
 FRESULT f_opendir (
   DIR *dj,          /* Pointer to directory object to create */
   const char *path  /* Pointer to the directory path */
@@ -1792,6 +1793,7 @@ FRESULT f_opendir (
   return res;
 }
 
+#endif
 
 
 /**
