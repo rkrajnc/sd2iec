@@ -209,9 +209,9 @@ static int8_t parse_blockparam(uint8_t values[]) {
 
   while (*str && paramcount < 4) {
     /* Skip all spaces, cursor-rights and commas - CC7C */
-    while (*str && (*str == ' ' || *str == 0x1d || *str == ',')) str++;
+    while (*str == ' ' || *str == 0x1d || *str == ',') str++;
     if (!*str)
-      return -1;
+      break;
 
     values[paramcount++] = parse_number(&str);
   }
