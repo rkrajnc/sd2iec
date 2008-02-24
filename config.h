@@ -93,7 +93,7 @@
 /* DEVICE_SELECT_SETUP() is called once to set up the ports. */
 #  define DEVICE_SELECT       (8+!(PIND & _BV(PD7))+2*!(PIND & _BV(PD5)))
 #  define DEVICE_SELECT_SETUP() do { \
-      DDRC  &= ~(_BV(PD7)|_BV(PD5)); \
+      DDRD  &= ~(_BV(PD7)|_BV(PD5)); \
       PORTD |=   _BV(PD7)|_BV(PD5);  \
    } while (0)
 
@@ -177,7 +177,7 @@
 #  define SD_SUPPLY_VOLTAGE     (1L<<18)
 #  define DEVICE_SELECT         (8+!(PIND & _BV(PD7))+2*!(PIND & _BV(PD5)))
 #  define DEVICE_SELECT_SETUP() do {        \
-             DDRC  &= ~(_BV(PD7)|_BV(PD5)); \
+             DDRD  &= ~(_BV(PD7)|_BV(PD5)); \
              PORTD |=   _BV(PD7)|_BV(PD5);  \
           } while (0)
 #  define BUSY_LED_SETDDR()     DDRC  |= _BV(PC0)
@@ -215,10 +215,10 @@
 #  define SDCARD_WP_SETUP()     do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
 #  define SD_CHANGE_ICR         MCUCR
 #  define SD_SUPPLY_VOLTAGE     (1L<<21)
-#  define DEVICE_SELECT         (8+!(PIND & _BV(PA2))+2*!(PIND & _BV(PA3)))
+#  define DEVICE_SELECT         (8+!(PINA & _BV(PA2))+2*!(PINA & _BV(PA3)))
 #  define DEVICE_SELECT_SETUP() do {        \
-             DDRC  &= ~(_BV(PA2)|_BV(PA3)); \
-             PORTD |=   _BV(PA2)|_BV(PA3);  \
+             DDRA  &= ~(_BV(PA2)|_BV(PA3)); \
+             PORTA |=   _BV(PA2)|_BV(PA3);  \
           } while (0)
 #  define BUSY_LED_SETDDR()     DDRA  |= _BV(PA0)
 #  define BUSY_LED_ON()         PORTA &= ~_BV(PA0)
@@ -302,7 +302,7 @@
 #  define SD_SUPPLY_VOLTAGE     (1L<<18)
 #  define DEVICE_SELECT         (8+!(PIND & _BV(PD7))+2*!(PIND & _BV(PD5)))
 #  define DEVICE_SELECT_SETUP() do {        \
-             DDRC  &= ~(_BV(PD7)|_BV(PD5)); \
+             DDRD  &= ~(_BV(PD7)|_BV(PD5)); \
              PORTD |=   _BV(PD7)|_BV(PD5);  \
           } while (0)
 #  define BUSY_LED_SETDDR()     DDRC  |= _BV(PC0)
@@ -344,10 +344,10 @@
 #  define SDCARD_WP_SETUP()     do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
 #  define SD_CHANGE_ICR         MCUCR
 #  define SD_SUPPLY_VOLTAGE     (1L<<21)
-#  define DEVICE_SELECT         (8+!(PIND & _BV(PD2))+2*!(PIND & _BV(PD3)))
+#  define DEVICE_SELECT         (8+!(PINA & _BV(PA2))+2*!(PINA & _BV(PA3)))
 #  define DEVICE_SELECT_SETUP() do {        \
-             DDRC  &= ~(_BV(PA2)|_BV(PA3)); \
-             PORTD |=   _BV(PA2)|_BV(PA3);  \
+             DDRA  &= ~(_BV(PA2)|_BV(PA3)); \
+             PORTA |=   _BV(PA2)|_BV(PA3);  \
           } while (0)
 #  define BUSY_LED_SETDDR()     DDRA  |= _BV(PA0)
 #  define BUSY_LED_ON()         PORTA &= ~_BV(PA0)
