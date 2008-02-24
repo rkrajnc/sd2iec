@@ -20,19 +20,19 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
-   fileops.h: Definitions for file operations
+   parser.h: Definitions for the common file name parsers
 
 */
 
-#ifndef FILEOPS_H
-#define FILEOPS_H
+#ifndef PARSER_H
+#define PARSER_H
 
 #include "dirent.h"
-#include "buffers.h"
 
-enum open_modes { OPEN_READ, OPEN_WRITE, OPEN_APPEND, OPEN_MODIFY };
+/* Returns the next matching dirent */
+int8_t next_match(dh_t *dh, char *matchstr, uint8_t type, struct cbmdirent *dent);
 
-/* Parses a filename in command_buffer and opens that file */
-void file_open(uint8_t secondary);
+/* Parses CMD-style directory specifications */
+void parse_path(char *in, char *out, char **name);
 
 #endif

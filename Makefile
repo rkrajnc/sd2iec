@@ -73,7 +73,7 @@ FORMAT = ihex
 TARGET = $(OBJDIR)/sd2iec
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = buffers.c fatops.c fileops.c iec.c main.c errormsg.c doscmd.c ff.c fastloader.c m2iops.c d64ops.c diskchange.c eeprom.c
+SRC = buffers.c fatops.c fileops.c iec.c main.c errormsg.c doscmd.c ff.c fastloader.c m2iops.c d64ops.c diskchange.c eeprom.c parser.c
 
 # uIEC needs the ATA module, all others use SD (for now)
 ifeq ($(CONFIG_HARDWARE_VARIANT),4)

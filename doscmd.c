@@ -33,6 +33,7 @@
 #include <string.h>
 #include <util/crc16.h>
 #include "config.h"
+#include "dirent.h"
 #include "diskchange.h"
 #include "eeprom.h"
 #include "errormsg.h"
@@ -40,6 +41,7 @@
 #include "fatops.h"
 #include "iec.h"
 #include "m2iops.h"
+#include "parser.h"
 #include "sdcard.h"
 #include "uart.h"
 #include "wrapops.h"
@@ -68,113 +70,6 @@ void __cyg_profile_func_enter (void *this_fn, void *call_site) {
 /* ------------------------------------------------------------------------- */
 /*  Parsing helpers                                                          */
 /* ------------------------------------------------------------------------- */
-
-/**
- * parse_path - parse CMD style directory specification
- * @in  : input buffer
- * @out : output buffer
- * @name: pointer to pointer to filename (may be NULL)
- *
- * This function parses a CMD style directory specification in a file name
- * and copies both path and filename to the output buffer, seperated by \0.
- * Both buffers may point to the same address, but must be able to hold one
- * character more than strlen(in)+1. If non-NULL, *name will point to the
- * beginning of the filename in the output buffer.
- */
-void parse_path(char *in, char *out, char **name) {
-  if (strchr(in, ':')) {
-    uint8_t state = 0;
-
-    /* Skip partition number */
-    while (*in && isdigit(*in)) in++;
-
-    /* Unoptimized DFA matcher             */
-    /* I wonder if this can be simplified? */
-    while (state != 5) {
-      switch (state) {
-      case 0: /* Starting state */
-	switch (*in++) {
-	case ':':
-	  *out++ = 0;
-	  state = 5;
-	  break;
-
-	case '/':
-	  state = 1;
-	  break;
-
-	default:
-	  state = 2;
-	  break;
-	}
-	break;
-
-      case 1: /* Initial slash found */
-	if (*in == ':') {
-	  *out++ = 0;
-	  in++;
-	  state = 5;
-	} else {
-	  *out++ = *in++;
-	  state = 3;
-	}
-	break;
-
-      case 2: /* Initial non-slash found */
-	while (*in++ != ':');
-	state = 5;
-	break;
-
-      case 3: /* Slash-noncolon found */
-	switch (*in) {
-	case ':':
-	  *out++ = 0;
-	  in++;
-	  state = 5;
-	  break;
-
-	case '/':
-	  in++;
-	  state = 4;
-	  break;
-
-	default:
-	  *out++ = *in++;
-	  break;
-	}
-	break;
-
-      case 4: /* Slash-noncolon-slash found */
-	if (*in == ':') {
-	  *out++ = 0;
-	  in++;
-	  state = 5;
-	} else {
-	  *out++ = '/';
-	  *out++ = *in++;
-	  state = 3;
-	}
-	break;
-      }
-    }
-  } else {
-    /* No colon in name, add a terminator for the path */
-    if (in == out) {
-      /* Make some space for the new colon */
-      memmove(in+1,in,strlen(in)+1);
-      in++;
-    }
-    *out++ = 0;
-  }
-
-  if (name)
-    *name = out;
-
-  /* Copy remaining string */
-  while ((*out++ = *in++));
-
-  return;
-}
 
 /* Parse a decimal number at str and return a pointer to the following char */
 static uint8_t parse_number(char **str) {

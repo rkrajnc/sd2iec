@@ -33,6 +33,7 @@
 #include "doscmd.h"
 #include "errormsg.h"
 #include "m2iops.h"
+#include "parser.h"
 #include "uart.h"
 #include "wrapops.h"
 #include "fileops.h"
@@ -154,76 +155,6 @@ static void addentry(struct cbmdirent *dent, buffer_t *buf) {
     data[5] = 'H';
 
   buf->lastused += 32;
-}
-
-/**
- * match_name - Match a pattern against a file name
- * @matchstr: pattern to be matched
- * @dent    : pointer to the directory entry to be matched against
- *
- * This function tests if matchstr matches name in dent.
- */
-static uint8_t match_name(char *matchstr, struct cbmdirent *dent) {
-  uint8_t *filename = dent->name;
-  uint8_t i = 0;
-
-  while (filename[i] && i < CBM_NAME_LENGTH) {
-    switch (*matchstr) {
-    case '?':
-      i++;
-      matchstr++;
-      break;
-
-    case '*':
-      return 1;
-
-    default:
-      if (filename[i++] != *matchstr++)
-	return 0;
-      break;
-    }
-  }
-  if (*matchstr && *matchstr != '*')
-    return 0;
-  else
-    return 1;
-}
-
-/**
- * next_match - get next matching directory entry
- * @dh      : directory handle
- * @matchstr: pattern to be matched
- * @type    : required file type (0 for any)
- * @dent    : pointer to a directory entry for returning the match
- *
- * This function looks for the next directory entry matching matchstr and
- * type (if != 0) and returns it in dent. Return values of the function are
- * -1 if no match could be found, 1 if an error occured or 0 if a match was
- * found.
- */
-int8_t next_match(dh_t *dh, char *matchstr, uint8_t type, struct cbmdirent *dent) {
-  int8_t res;
-  while (1) {
-    res = readdir(dh, dent);
-    if (res == 0) {
-      /* Skip if the type doesn't match */
-      if ((type & TYPE_MASK) &&
-	  (dent->typeflags & TYPE_MASK) != (type & TYPE_MASK))
-	continue;
-
-      /* Skip hidden files */
-      if ((dent->typeflags & FLAG_HIDDEN) &&
-	  !(type & FLAG_HIDDEN))
-	continue;
-
-      /* Skip if the name doesn't match */
-      if (matchstr &&
-	  !match_name(matchstr, dent))
-	continue;
-    }
-
-    return res;
-  }
 }
 
 /* ------------------------------------------------------------------------- */
