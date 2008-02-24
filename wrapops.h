@@ -60,7 +60,7 @@ typedef struct {
   void     (*open_read)(path_t *path, char *name, buffer_t *buf);
   void     (*open_write)(path_t *path, char *name, uint8_t type, buffer_t *buf, uint8_t append);
   uint8_t  (*file_delete)(path_t *path, char *name);
-  uint8_t  (*disk_label)(char *label);
+  uint8_t  (*disk_label)(path_t *path, char *label);
   uint8_t  (*disk_id)(char *id);
   uint16_t (*disk_free)(void);
   void     (*read_sector)(buffer_t *buf, uint8_t track, uint8_t sector);
@@ -81,7 +81,7 @@ extern const fileops_t *fop;
 #define open_read(dir,name,buf) ((pgmcall(fop->open_read))(dir,name,buf))
 #define open_write(dir,name,type,buf,app) ((pgmcall(fop->open_write))(dir,name,type,buf,app))
 #define file_delete(dir,name) ((pgmcall(fop->file_delete))(dir,name))
-#define disk_label(label) ((pgmcall(fop->disk_label))(label))
+#define disk_label(dir,label) ((pgmcall(fop->disk_label))(dir,label))
 #define disk_id(id) ((pgmcall(fop->disk_id))(id))
 #define disk_free() ((pgmcall(fop->disk_free))())
 #define read_sector(buf,t,s) ((pgmcall(fop->read_sector))(buf,t,s))

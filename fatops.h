@@ -42,7 +42,7 @@ void     fat_chdir(path_t *path, char *dirname);
 void     fat_mkdir(path_t *path, char *dirname);
 void     fat_open_read(path_t *path, char *filename, buffer_t *buf);
 void     fat_open_write(path_t *path, char *filename, uint8_t type, buffer_t *buf, uint8_t append);
-uint8_t  fat_getlabel(char *label);
+uint8_t  fat_getlabel(path_t *path, char *label);
 uint8_t  fat_getid(char *id);
 uint16_t fat_freeblocks(void);
 uint8_t  fat_opendir(dh_t *dh, path_t *dir);

@@ -554,7 +554,7 @@ void fat_mkdir(path_t *path, char *dirname) {
  * in the first 16 bytes of label. Returns 0 if successfull, != 0 if
  * an error occured.
  */
-uint8_t fat_getlabel(char *label) {
+uint8_t fat_getlabel(path_t *path, char *label) {
   DIR dh;
   FILINFO finfo;
   FRESULT res;
@@ -562,7 +562,7 @@ uint8_t fat_getlabel(char *label) {
 
   memset(label, ' ', 16);
 
-  res = l_opendir(&fatfs, 0, &dh);
+  res = l_opendir(&fatfs, path->fat, &dh);
 
   if (res != FR_OK) {
     parse_error(res,0);
@@ -584,6 +584,27 @@ uint8_t fat_getlabel(char *label) {
 	}
 	label[j++] = finfo.fname[i++];
       }
+      return 0;
+    }
+  }
+  if(l_opendir(&fatfs,path->fat,&dh))
+    return 1;
+  while ((res = f_readdir(&dh, &finfo)) == FR_OK) {
+    if(finfo.fname[0]=='\0')
+      break;
+    if(finfo.fname[0]=='.' && finfo.fname[1]=='.' && strlen(finfo.fname)==2) {
+      if(l_opendir(&fatfs,finfo.clust,&dh)) // open .. dir.
+        break;
+      while ((res = f_readdir(&dh, &finfo)) == FR_OK) {
+        if(finfo.fname[0]=='\0')
+          break;
+        if(finfo.clust==path->fat) {
+          for(i=0;finfo.fname[i];i++)
+            label[i] = finfo.fname[i];
+          break;
+        }
+      }
+      break;
     }
   }
 

@@ -231,6 +231,7 @@ static uint8_t dir_refill(buffer_t *buf) {
  */
 static void load_directory(uint8_t secondary) {
   buffer_t *buf;
+  path_t path;
 
   buf = alloc_buffer();
   if (!buf)
@@ -238,7 +239,6 @@ static void load_directory(uint8_t secondary) {
 
   if (command_length > 2) {
     /* Parse the name pattern */
-    path_t path;
     char *name;
 
     if (parse_path((char *) command_buffer+1, &path, &name, 0)) {
@@ -293,7 +293,8 @@ static void load_directory(uint8_t secondary) {
       }
     }
   } else {
-    if (opendir(&buf->pvt.dir.dh, &current_dir)) {
+    path.fat=current_dir.fat;  // if you do not do this, get_label will fail below.
+    if (opendir(&buf->pvt.dir.dh, &path)) {
       free_buffer(buf);
       return;
     }
@@ -307,7 +308,7 @@ static void load_directory(uint8_t secondary) {
   memcpy_P(buf->data, dirheader, sizeof(dirheader));
 
   /* read volume name */
-  if (disk_label((char *) (buf->data+8))) {
+  if (disk_label(&path,(char *) (buf->data+8))) {
     free_buffer(buf);
     return;
   }

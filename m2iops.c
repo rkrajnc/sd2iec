@@ -294,7 +294,7 @@ static int8_t m2i_readdir(dh_t *dh, struct cbmdirent *dent) {
   }
 }
 
-static uint8_t m2i_getlabel(char *label) {
+static uint8_t m2i_getlabel(path_t *path, char *label) {
   return image_read(0, label, 16);
 }
 

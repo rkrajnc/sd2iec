@@ -544,7 +544,7 @@ static int8_t d64_readdir(dh_t *dh, struct cbmdirent *dent) {
   return 0;
 }
 
-static uint8_t d64_getlabel(char *label) {
+static uint8_t d64_getlabel(path_t *path, char *label) {
   if (image_read(sector_offset(DIR_TRACK,0) + LABEL_OFFSET, label, 16))
     return 1;
 
