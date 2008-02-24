@@ -146,7 +146,7 @@ void set_changelist(path_t *path, char *filename) {
   FRESULT res;
 
   /* Assume this isn't the auto-swap list */
-  iecflags.autoswap_active = 0;
+  iec_data.iecflags &= (uint8_t)~AUTOSWAP_ACTIVE;
 
   /* Remove the old swaplist */
   if (linenum != 255) {
@@ -190,7 +190,7 @@ void change_disk(void) {
     } else {
       /* Autoswaplist found, mark it as active                */
       /* and exit because the first image is already mounted. */
-      iecflags.autoswap_active = 1;
+      iec_data.iecflags |= AUTOSWAP_ACTIVE;
       return;
     }
   }
@@ -206,5 +206,5 @@ void init_change(void) {
 
   memset(&swaplist,0,sizeof(swaplist));
   linenum = 255;
-  iecflags.autoswap_active = 0;
+  iec_data.iecflags &= (uint8_t)~AUTOSWAP_ACTIVE;
 }

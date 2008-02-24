@@ -191,7 +191,7 @@ static void handle_memwrite(void) {
 
   if (address == 119) {
     /* Change device address, 1541 style */
-    device_address = command_buffer[6] & 0x1f;
+    iec_data.device_address = command_buffer[6] & 0x1f;
     return;
   }
 
@@ -229,30 +229,30 @@ static void parse_xcommand(void) {
     /* Jiffy enable/disable */
     switch (command_buffer[2]) {
     case '+':
-      iecflags.jiffy_enabled = 1;
+      iec_data.iecflags |= JIFFY_ENABLED;
       break;
 
     case '-':
-      iecflags.jiffy_enabled = 0;
+      iec_data.iecflags &= (uint8_t)~JIFFY_ENABLED;
       break;
 
     default:
       set_error(ERROR_SYNTAX_UNKNOWN);
     }
-    set_error_ts(ERROR_STATUS,device_address,0);
+    set_error_ts(ERROR_STATUS,iec_data.device_address,0);
     break;
 
   case 'C':
     /* Calibration */
     str = (char *)command_buffer+2;
     OSCCAL = parse_number(&str);
-    set_error_ts(ERROR_STATUS,device_address,0);
+    set_error_ts(ERROR_STATUS,iec_data.device_address,0);
     break;
 
   case 'W':
     /* Write configuration */
     write_configuration();
-    set_error_ts(ERROR_STATUS,device_address,0);
+    set_error_ts(ERROR_STATUS,iec_data.device_address,0);
     break;
 
   case 'S':
@@ -272,7 +272,7 @@ static void parse_xcommand(void) {
 
   default:
     /* Unknown command, just show the status */
-    set_error_ts(ERROR_STATUS,device_address,0);
+    set_error_ts(ERROR_STATUS,iec_data.device_address,0);
     break;
   }
 }
@@ -434,7 +434,7 @@ void parse_doscommand(void) {
         }
       }
 
-      if (iecflags.autoswap_active)
+      if (iec_data.iecflags & AUTOSWAP_ACTIVE)
         set_changelist(NULL, NULLSTRING);
 
       break;
@@ -516,12 +516,12 @@ void parse_doscommand(void) {
 	break;
 
       case '+':
-	iecflags.vc20mode = 0;
-	break;
+        iec_data.iecflags &= (uint8_t)~VC20MODE;
+        break;
 
       case '-':
-	iecflags.vc20mode = 1;
-	break;
+        iec_data.iecflags |= VC20MODE;
+        break;
 
       default:
 	set_error(ERROR_SYNTAX_UNKNOWN);
@@ -541,8 +541,8 @@ void parse_doscommand(void) {
       if ((command_buffer[2] & 0x1f) == 0x1e &&
 	  command_buffer[3] >= 4 &&
 	  command_buffer[3] <= 30) {
-	device_address = command_buffer[3];
-	break;
+        iec_data.device_address = command_buffer[3];
+        break;
       }
       /* Fall through */
 

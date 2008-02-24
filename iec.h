@@ -41,19 +41,25 @@
  * autoswap_active is the only one not related to IEC stuff, but is still
  * included in here because it saves one byte of ram.
  */
-typedef struct {
-  int vc20mode:1;
-  int eoi_recvd:1;
-  int command_recvd:1;
-  int jiffy_enabled:1;
-  int jiffy_active:1;
-  int jiffy_load:1;
-  int autoswap_active:1;
-} iecflags_t;
 
-extern iecflags_t iecflags;
+#define VC20MODE        (1<<0)
+#define EOI_RECVD       (1<<1)
+#define COMMAND_RECVD   (1<<2)
+#define JIFFY_ENABLED   (1<<3)
+#define JIFFY_ACTIVE    (1<<4)
+#define JIFFY_LOAD      (1<<5)
+#define AUTOSWAP_ACTIVE (1<<6)
 
-extern uint8_t device_address;
+typedef struct iec_s {
+  uint8_t iecflags;
+  enum { BUS_IDLE = 0, BUS_ATNACTIVE, BUS_FOUNDATN, BUS_FORME, BUS_NOTFORME, BUS_ATNFINISH, BUS_ATNPROCESS, BUS_CLEANUP } bus_state;
+  enum { DEVICE_IDLE = 0, DEVICE_LISTEN, DEVICE_TALK } device_state;
+  uint8_t device_address;
+  uint8_t secondary_address;
+} iec_t;
+
+
+extern iec_t iec_data;
 
 void init_iec(void);
 void iec_mainloop(void);

@@ -54,14 +54,9 @@
 /*  Global variables                                                         */
 /* ------------------------------------------------------------------------- */
 
-uint8_t device_address;
-uint8_t secondary_address;
 
-iecflags_t iecflags;
+iec_t iec_data;
 
-enum { BUS_IDLE = 0, BUS_ATNACTIVE, BUS_FOUNDATN, BUS_FORME, BUS_NOTFORME, BUS_ATNFINISH, BUS_ATNPROCESS, BUS_CLEANUP } bus_state;
-
-enum { DEVICE_IDLE = 0, DEVICE_LISTEN, DEVICE_TALK } device_state;
 
 /* ------------------------------------------------------------------------- */
 /*  Utility stuff                                                            */
@@ -113,15 +108,15 @@ static uint8_t iec_pin(void) {
 
 /// Checks if ATN has changed and changes state to match (EA59)
 static uint8_t check_atn(void) {
-  if (bus_state == BUS_ATNACTIVE)
+  if (iec_data.bus_state == BUS_ATNACTIVE)
     if (IEC_ATN) {
-      bus_state = BUS_ATNPROCESS; // A9AC
+      iec_data.bus_state = BUS_ATNPROCESS; // A9AC
       return 1;
     } else
       return 0;
   else
     if (!IEC_ATN) {
-      bus_state = BUS_FOUNDATN; // A7B3
+      iec_data.bus_state = BUS_FOUNDATN;   // A7B3
       return 1;
     } else
       return 0;
@@ -197,26 +192,26 @@ static int16_t _iec_getc(void) {
 	return -1;
     } while (iec_pin() & IEC_BIT_CLOCK);
 
-    iecflags.eoi_recvd = 1;                            // EA07
+    iec_data.iecflags|=EOI_RECVD;                      // EA07
   }
 
   for (i=0;i<8;i++) {
     /* Check for JiffyDOS                                       */
     /*   Source: http://home.arcor.de/jochen.adler/ajnjil-t.htm */
-    if (bus_state == BUS_ATNACTIVE && iecflags.jiffy_enabled && i == 7) {
+    if (iec_data.bus_state == BUS_ATNACTIVE && (iec_data.iecflags & JIFFY_ENABLED) && i == 7) {
       start_timeout(TIMEOUT_US(218));
 
       do {
 	tmp = IEC_PIN & (IEC_BIT_ATN | IEC_BIT_DATA | IEC_BIT_CLOCK | IEC_BIT_SRQ);
 
 	/* If there is a delay before the last bit, the controller uses JiffyDOS */
-	if (!iecflags.jiffy_active && has_timed_out()) {
-	  if ((val>>1) < 0x60 && ((val>>1) & 0x1f) == device_address) {
+        if (!(iec_data.iecflags & JIFFY_ACTIVE) && has_timed_out()) {
+	  if ((val>>1) < 0x60 && ((val>>1) & 0x1f) == iec_data.device_address) {
 	    /* If it's for us, notify controller that we support Jiffy too */
 	    set_data(0);
 	    _delay_us(101); // nlq says 405us, but the code shows only 101
 	    set_data(1);
-	    iecflags.jiffy_active = 1;
+	    iec_data.iecflags |= JIFFY_ACTIVE;
 	  }
 	}
       } while (!(tmp & IEC_BIT_CLOCK));
@@ -269,7 +264,7 @@ static int16_t iec_getc(void) {
 static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
   uint8_t i;
 
-  if (iecflags.jiffy_active) {
+  if (iec_data.iecflags & JIFFY_ACTIVE) {
     /* This is the non-load Jiffy case */
     if (jiffy_send(data, with_eoi, 0)) {
       check_atn();
@@ -311,14 +306,14 @@ static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
 
   for (i=0;i<8;i++) {
     if (!(iec_pin() & IEC_BIT_DATA)) {
-      bus_state = BUS_CLEANUP;
+      iec_data.bus_state = BUS_CLEANUP;
       return -1;
     }
 
     set_data(data & 1<<i);
     _delay_us(70);    // Implicid delay, fudged
     set_clock(1);
-    if (iecflags.vc20mode)
+    if (iec_data.iecflags & VC20MODE)
       _delay_us(34);  // Calculated delay
     else
       _delay_us(69);  // Calculated delay
@@ -358,12 +353,12 @@ static uint8_t iec_listen_handler(const uint8_t cmd) {
   /* and it isn't an OPEN command                             */
   if ((buf == NULL || !buf->write) && (cmd & 0xf0) != 0xf0) {
     uart_putc('c');
-    bus_state = BUS_CLEANUP;
+    iec_data.bus_state = BUS_CLEANUP;
     return 1;
   }
 
   while (1) {
-    if (iecflags.jiffy_active) {
+    if (iec_data.iecflags & JIFFY_ACTIVE) {
       uint8_t flags;
       set_atnack(1);
       _delay_us(50); /* Slow down or we'll see garbage from the C64 */
@@ -373,7 +368,10 @@ static uint8_t iec_listen_handler(const uint8_t cmd) {
 	/* ATN was active at the end of the transfer */
 	c = iec_getc();
       else
-	iecflags.eoi_recvd = !!(flags & IEC_BIT_CLOCK);
+        if(flags & IEC_BIT_CLOCK)
+          iec_data.iecflags |= EOI_RECVD;
+        else
+          iec_data.iecflags &= (uint8_t)~EOI_RECVD;
     } else
       c = iec_getc();
     if (c < 0) return 1;
@@ -381,9 +379,9 @@ static uint8_t iec_listen_handler(const uint8_t cmd) {
     if ((cmd & 0x0f) == 0x0f || (cmd & 0xf0) == 0xf0) {
       if (command_length < CONFIG_COMMAND_BUFFER_SIZE)
 	command_buffer[command_length++] = c;
-      if (iecflags.eoi_recvd)
+      if (iec_data.iecflags & EOI_RECVD)
 	// Filenames are just a special type of command =)
-	iecflags.command_recvd = 1;
+	iec_data.iecflags |= COMMAND_RECVD;
     } else {
       /* Flush buffer if full */
       if (buf->mustflush && buf->refill)
@@ -418,11 +416,11 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
   if (buf == NULL)
     return 0; /* 0 because we didn't change the state here */
 
-  if (iecflags.jiffy_enabled)
+  if (iec_data.iecflags & JIFFY_ENABLED)
     /* wait 360us (J1541 E781) to make sure the C64 is at fbb7/fb0c */
     _delay_ms(0.36);
 
-  if (iecflags.jiffy_load) {
+  if (iec_data.iecflags & JIFFY_LOAD) {
     /* See if the C64 has passed fb06 or if we should abort */
     do {                /* J1541 FF30 - wait until DATA inactive/high */
       if (check_atn()) return -1;
@@ -434,7 +432,7 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
   }
 
   while (buf->read) {
-    if (iecflags.jiffy_load) {
+    if (iec_data.iecflags & JIFFY_LOAD) {
       /* Signal to the C64 that we're ready to send the next block */
       set_data(0);
       set_clock(1);
@@ -445,7 +443,7 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
 
     do {
       uint8_t finalbyte = (buf->position == buf->lastused);
-      if (iecflags.jiffy_load) {
+      if (iec_data.iecflags & JIFFY_LOAD) {
 	/* Send a byte using the LOAD protocol variant */
 	/* The final byte in the buffer must be sent with Clock low   */
 	/* to signal that the next transfer will take some time.      */
@@ -491,7 +489,7 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
 
     if (buf->refill)
       if (buf->refill(buf)) {
-	bus_state = BUS_CLEANUP;
+        iec_data.bus_state = BUS_CLEANUP;
 	return 1;
       }
   }
@@ -535,7 +533,7 @@ void init_iec(void) {
   /* Read the hardware-set device address */
   DEVICE_SELECT_SETUP();
   _delay_ms(1);
-  device_address = DEVICE_SELECT;
+  iec_data.device_address = DEVICE_SELECT;
 
   /* Set up disk change key */
   DISKCHANGE_DDR  &= ~DISKCHANGE_BIT;
@@ -548,18 +546,17 @@ void iec_mainloop(void) {
   int16_t cmd = 0; // make gcc happy...
 
   uart_puts_P(PSTR("\nIn iec_mainloop listening on "));
-  uart_puthex(device_address);
+  uart_puthex(iec_data.device_address);
   uart_putcrlf();
 
   sei();
 
-  iecflags.jiffy_active  = 0;
-  iecflags.vc20mode      = 0;
+  iec_data.iecflags=0;
 
-  bus_state = BUS_IDLE;
+  iec_data.bus_state = BUS_IDLE;
 
   while (1) {
-    switch (bus_state) {
+    switch (iec_data.bus_state) {
     case BUS_IDLE:  // EBFF
       /* Wait for ATN */
       set_atnack(1);
@@ -569,7 +566,7 @@ void iec_mainloop(void) {
 	}
       }
 
-      bus_state = BUS_FOUNDATN;
+      iec_data.bus_state = BUS_FOUNDATN;
       break;
 
     case BUS_FOUNDATN: // E85B
@@ -578,11 +575,9 @@ void iec_mainloop(void) {
       set_data(0);
       set_atnack(0);
 
-      device_state = DEVICE_IDLE;
-      bus_state    = BUS_ATNACTIVE;
-      iecflags.eoi_recvd    = 0;
-      iecflags.jiffy_active = 0;
-      iecflags.jiffy_load   = 0;
+      iec_data.device_state = DEVICE_IDLE;
+      iec_data.bus_state    = BUS_ATNACTIVE;
+      iec_data.iecflags &= (uint8_t)~(EOI_RECVD | JIFFY_ACTIVE | JIFFY_LOAD);
 
       /* Slight protocol violation:                        */
       /*   Wait until clock is low or 100us have passed    */
@@ -592,11 +587,11 @@ void iec_mainloop(void) {
       start_timeout(TIMEOUT_US(100));
       while (IEC_CLOCK && !has_timed_out())
 	if (IEC_ATN)
-	  bus_state = BUS_ATNPROCESS;
+	  iec_data.bus_state = BUS_ATNPROCESS;
 
       while (!IEC_CLOCK)
 	if (IEC_ATN)
-	  bus_state = BUS_ATNPROCESS;
+	  iec_data.bus_state = BUS_ATNPROCESS;
 
       break;
 
@@ -614,19 +609,19 @@ void iec_mainloop(void) {
       uart_putcrlf();
 
       if (cmd == 0x3f) { /* Unlisten */
-	if (device_state == DEVICE_LISTEN)
-	  device_state = DEVICE_IDLE;
-	bus_state = BUS_ATNFINISH;
+	if (iec_data.device_state == DEVICE_LISTEN)
+	  iec_data.device_state = DEVICE_IDLE;
+	iec_data.bus_state = BUS_ATNFINISH;
       } else if (cmd == 0x5f) { /* Untalk */
-	if (device_state == DEVICE_TALK)
-	  device_state = DEVICE_IDLE;
-	bus_state = BUS_ATNFINISH;
-      } else if (cmd == 0x40+device_address) { /* Talk */
-	device_state = DEVICE_TALK;
-	bus_state = BUS_FORME;
-      } else if (cmd == 0x20+device_address) { /* Listen */
-	device_state = DEVICE_LISTEN;
-	bus_state = BUS_FORME;
+	if (iec_data.device_state == DEVICE_TALK)
+	  iec_data.device_state = DEVICE_IDLE;
+	iec_data.bus_state = BUS_ATNFINISH;
+      } else if (cmd == 0x40+iec_data.device_address) { /* Talk */
+	iec_data.device_state = DEVICE_TALK;
+	iec_data.bus_state = BUS_FORME;
+      } else if (cmd == 0x20+iec_data.device_address) { /* Listen */
+	iec_data.device_state = DEVICE_LISTEN;
+	iec_data.bus_state = BUS_FORME;
       } else if ((cmd & 0x60) == 0x60) {
 	/* Check for OPEN/CLOSE/DATA */
 	/* JiffyDOS uses a slightly modified protocol for LOAD that */
@@ -636,72 +631,72 @@ void iec_mainloop(void) {
 	/* other than SEQ and PRG.                                  */
 	/* Please note that $ is special-cased in the kernal so it  */
 	/* will never trigger this.                                 */
-	if (cmd == 0x61 && device_state == DEVICE_TALK) {
+	if (cmd == 0x61 && iec_data.device_state == DEVICE_TALK) {
 	  cmd = 0x60;
-	  iecflags.jiffy_load = 1;
+	  iec_data.iecflags |= JIFFY_LOAD;
 	}
 
-	secondary_address = cmd & 0x0f;
+	iec_data.secondary_address = cmd & 0x0f;
 	/* 1571 handles close (0xe0-0xef) here, so we do that too. */
 	if ((cmd & 0xf0) == 0xe0) {
 	  if (cmd == 0xef) {
 	    /* Close all buffers if sec. 15 is closed */
 	    if (free_all_buffers(1)) {
 	      /* The 1571 error generator/handler always jumps to BUS_CLEANUP */
-	      bus_state = BUS_CLEANUP;
+	      iec_data.bus_state = BUS_CLEANUP;
 	      break;
 	    }
 	    set_error(ERROR_OK);
 	  } else {
 	    /* Close a single buffer */
 	    buffer_t *buf;
-	    buf = find_buffer(secondary_address);
+	    buf = find_buffer(iec_data.secondary_address);
 	    if (buf != NULL) {
 	      if (buf->cleanup && buf->cleanup(buf)) {
 		free_buffer(buf);
-		bus_state = BUS_CLEANUP;
+		iec_data.bus_state = BUS_CLEANUP;
 		break;
 	      }
 	      /* Free the buffer */
 	      free_buffer(buf);
 	    }
 	  }
-	  bus_state = BUS_FORME;
+	  iec_data.bus_state = BUS_FORME;
 	} else {
-	  bus_state = BUS_ATNFINISH;
+	  iec_data.bus_state = BUS_ATNFINISH;
 	}
       } else {
 	// Not me
-	bus_state = BUS_NOTFORME;
+	iec_data.bus_state = BUS_NOTFORME;
       }
       break;
 
     case BUS_FORME: // E8D2
       if (!IEC_ATN)
-	bus_state = BUS_ATNACTIVE;
+	iec_data.bus_state = BUS_ATNACTIVE;
       else
-	bus_state = BUS_ATNPROCESS;
+	iec_data.bus_state = BUS_ATNPROCESS;
       break;
 
     case BUS_NOTFORME: // E8FD
       set_atnack(0);
       set_clock(1);
       set_data(1);
-      bus_state = BUS_ATNFINISH;
+      iec_data.bus_state = BUS_ATNFINISH;
       break;
 
     case BUS_ATNFINISH: // E902
       while (!IEC_ATN) ;
-      bus_state = BUS_ATNPROCESS;
+      iec_data.bus_state = BUS_ATNPROCESS;
       break;
 
     case BUS_ATNPROCESS: // E8D7
       set_atnack(1);
 
-      if (device_state == DEVICE_LISTEN) {
+      if (iec_data.device_state == DEVICE_LISTEN) {
 	if (iec_listen_handler(cmd))
 	  break;
-      } else if (device_state == DEVICE_TALK) {
+      } else if (iec_data.device_state == DEVICE_TALK) {
 	set_data(1);
 	_delay_us(50);   // Implicit delay, fudged
 	set_clock(0);
@@ -711,7 +706,7 @@ void iec_mainloop(void) {
 	  break;
 
       }
-      bus_state = BUS_CLEANUP;
+      iec_data.bus_state = BUS_CLEANUP;
       break;
 
     case BUS_CLEANUP:
@@ -738,20 +733,20 @@ void iec_mainloop(void) {
 
       //   0x255 -> A61C
       /* Handle commands and filenames */
-      if (iecflags.command_recvd) {
-	if (secondary_address == 0x0f) {
-	  /* Command channel */
-	  parse_doscommand();
-	} else {
-	  /* Filename in command buffer */
-	  datacrc = 0xffff;
-	  file_open(secondary_address);
+      if (iec_data.iecflags & COMMAND_RECVD) {
+        if (iec_data.secondary_address == 0x0f) {
+          /* Command channel */
+          parse_doscommand();
+        } else {
+          /* Filename in command buffer */
+          datacrc = 0xffff;
+          file_open(iec_data.secondary_address);
 	}
 	command_length = 0;
-	iecflags.command_recvd = 0;
+	iec_data.iecflags &= (uint8_t)~COMMAND_RECVD;
       }
 
-      bus_state = BUS_IDLE;
+      iec_data.bus_state = BUS_IDLE;
       break;
     }
   }

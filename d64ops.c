@@ -219,7 +219,7 @@ static void allocate_sector(uint8_t track, uint8_t sector, buffer_t *bambuf) {
     if (trackmap[0] > 0)
       trackmap[0]--;
 
-    trackmap[1+(sector>>3)] &= ~(1<<(sector&7));
+    trackmap[1+(sector>>3)] &= (uint8_t)~(1<<(sector&7));
   }
 }
 

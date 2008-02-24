@@ -70,9 +70,10 @@ void read_configuration(void) {
 
   /* Read data from EEPROM */
   OSCCAL = eeprom_read_byte(&storedconfig.osccal);
-  iecflags.jiffy_enabled = eeprom_read_byte(&storedconfig.jiffyflag);
+  if(eeprom_read_byte(&storedconfig.jiffyflag))
+    iec_data.iecflags |= JIFFY_ENABLED;
   if (eeprom_read_byte(&storedconfig.hardaddress) == DEVICE_SELECT)
-    device_address = eeprom_read_byte(&storedconfig.address);
+    iec_data.device_address = eeprom_read_byte(&storedconfig.address);
 
   /* Paranoia: Set EEPROM address register to the dummy entry */
   EEAR = 0;
@@ -89,8 +90,8 @@ void write_configuration(void) {
 
   /* Write configuration to EEPROM */
   eeprom_write_byte(&storedconfig.osccal, OSCCAL);
-  eeprom_write_byte(&storedconfig.jiffyflag, iecflags.jiffy_enabled);
-  eeprom_write_byte(&storedconfig.address, device_address);
+  eeprom_write_byte(&storedconfig.jiffyflag, iec_data.iecflags & JIFFY_ENABLED);
+  eeprom_write_byte(&storedconfig.address, iec_data.device_address);
   eeprom_write_byte(&storedconfig.hardaddress, DEVICE_SELECT);
 
   /* Calculate checksum over EEPROM contents */
