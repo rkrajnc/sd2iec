@@ -59,7 +59,9 @@
 /* When _USE_NTFLAG is set to 1, upper/lower case of the file name is preserved.
 /  Note that the files are always accessed in case insensitive. */
 
-#define _USE_CHDIR 1
+#define _USE_CHDIR 0
+
+#define _USE_CURR_DIR 1
 
 #define _USE_LFN 1
 
@@ -124,7 +126,7 @@ typedef struct _FATFS {
     DWORD   fatbase;        /* FAT start sector */
     DWORD   dirbase;        /* Root directory start sector (cluster# for FAT32) */
     DWORD   database;       /* Data start sector */
-#if _USE_CHDIR != 0
+#if _USE_CHDIR != 0 || _USE_CURR_DIR != 0
     DWORD curr_dir;
 #endif
 #if !_FS_READONLY

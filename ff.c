@@ -607,7 +607,7 @@ FRESULT trace_path (    /* FR_OK(0): successful, !=0: error code */
 #endif
 
   /* Initialize directory object */
-#if _USE_CHDIR != 0
+#if _USE_CHDIR != 0 || _USE_CURR_DIR != 0
   if(fs->curr_dir==0 || (*path!=0 && path[0]=='/')) {
 #endif
     clust = fs->dirbase;
@@ -618,7 +618,7 @@ FRESULT trace_path (    /* FR_OK(0): successful, !=0: error code */
       dj->clust = dj->sclust = 0;
       dj->sect = clust;
     }
-#if _USE_CHDIR != 0
+#if _USE_CHDIR != 0 || _USE_CURR_DIR !=0
   } else {
     clust=fs->curr_dir;
     dj->clust = dj->sclust = clust;
@@ -1777,7 +1777,7 @@ FRESULT f_opendir (
         if (dir[DIR_Attr] & AM_DIR) {          /* The entry is a directory */
           dj->clust = ((DWORD)LD_WORD(&dir[DIR_FstClusHI]) << 16) | LD_WORD(&dir[DIR_FstClusLO]);
           dj->sect = clust2sect(fs, dj->clust);
-#if _USE_CHDIR != 0
+#if _USE_CHDIR != 0  || _USE_CURR_DIR != 0
           dj->index = 0;
 #else
           dj->index = 2;
@@ -1824,7 +1824,7 @@ FRESULT l_opendir(FATFS* fs, DWORD cluster, DIR *dj) {
 	/* Open a non-root directory */
     dj->clust = dj->sclust = cluster;
     dj->sect  = clust2sect(fs, cluster);
-#if _USE_CHDIR != 0
+#if _USE_CHDIR != 0 || _USE_CURR_DIR != 0
     dj->index = 0;
 #else
     dj->index = 2;
@@ -1832,6 +1832,7 @@ FRESULT l_opendir(FATFS* fs, DWORD cluster, DIR *dj) {
   }
   return FR_OK;
 }
+
 
 
 
@@ -2125,7 +2126,7 @@ FRESULT f_unlink (
   dclust = ((DWORD)LD_WORD(&dir[DIR_FstClusHI]) << 16) | LD_WORD(&dir[DIR_FstClusLO]);
 
   if (dir[DIR_Attr] & AM_DIR) {                 /* It is a sub-directory */
-#if _USE_CHDIR != 0
+#if _USE_CHDIR != 0 || _USE_CURR_DIR != 0
     if (dclust == fs->curr_dir)                 /* Never delete the current directory */
       return FR_DIR_NOT_EMPTY;
 #endif
@@ -2388,7 +2389,6 @@ FRESULT f_utime (
   return res;
 }
 #endif
-
 
 
 
