@@ -43,21 +43,6 @@
 
 FATFS fatfs;
 
-const PROGMEM fileops_t fatops = {
-  &fat_open_read,
-  &fat_open_write,
-  &fat_delete,
-  &fat_getlabel,
-  &fat_getid,
-  &fat_freeblocks,
-  &fat_sectordummy,
-  &fat_sectordummy,
-  &fat_opendir,
-  &fat_readdir,
-  &fat_mkdir,
-  &fat_chdir
-};
-
 /* ------------------------------------------------------------------------- */
 /*  Utility functions                                                        */
 /* ------------------------------------------------------------------------- */
@@ -791,3 +776,18 @@ uint8_t image_write(DWORD offset, void *buffer, uint16_t bytes, uint8_t flush) {
 
   return 0;
 }
+
+const PROGMEM fileops_t fatops = {  // These should be at bottom, to be consistent with d64ops and m2iops
+  &fat_open_read,
+  &fat_open_write,
+  &fat_delete,
+  &fat_getlabel,
+  &fat_getid,
+  &fat_freeblocks,
+  &fat_sectordummy,
+  &fat_sectordummy,
+  &fat_opendir,
+  &fat_readdir,
+  &fat_mkdir,
+  &fat_chdir
+};
