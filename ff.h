@@ -76,8 +76,6 @@
 
 #define _USE_1_BUF 1
 
-#define _USE_EXT 0
-
 /* New features in 0.05a, not required yet */
 #define _USE_TRUNCATE 0
 #define _USE_UTIME   0
@@ -395,8 +393,4 @@ FRESULT l_opendir(FATFS* fs, DWORD cluster, DIR *dirobj); /* Open an existing di
 void test(void);
 
 #define _FATFS
-
-#if _USE_EXT != 0
-#include "ff-ext.h"
-#endif
 #endif /* _FATFS */

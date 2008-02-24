@@ -2681,15 +2681,3 @@ FRESULT f_mkfs (
 #endif /* _FS_MINIMIZE <= 1 */
 #endif /* _FS_MINIMIZE <= 2 */
 
-#if _USE_EXT != 0
-#include "ff-ext.c"
-#endif
-
-/*
-Emacs stuff:
-  Local Variables:
-  c-basic-offset: 2
-  tab-width: 4
-  indent-tab-mode: nil
-  End:
-*/
