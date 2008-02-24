@@ -44,9 +44,14 @@ ISR(USART_UDRE_vect) {
 }
 
 void uart_putc(char c) {
-  UCSRB &= ~ _BV(UDRIE);
+  uint16_t t=(write_idx+1) & (sizeof(txbuf)-1);
+#ifndef CONFIG_DEADLOCK_ME_HARDER // :-)
+  UCSRB &= ~ _BV(UDRIE);   // turn off RS232 irq
+#else
+  while (t == read_idx);   // wait for free space
+#endif
   txbuf[write_idx] = c;
-  write_idx = (write_idx+1) & (sizeof(txbuf)-1);
+  write_idx = t;
   //if (read_idx == write_idx) PORTD |= _BV(PD7);
   UCSRB |= _BV(UDRIE);
 }
@@ -64,6 +69,49 @@ void uart_puthex(uint8_t num) {
     uart_putc('0'+tmp);
   else
     uart_putc('a'+tmp-10);
+}
+
+void uart_trace(unsigned char* ptr, uint16_t start, uint16_t len) {
+  unsigned int i=0;
+  unsigned char ch;
+  unsigned char text[16]="                ";
+  do {
+    if((i&0x0f)==0x00) {
+      uart_puthex(start>>8);
+      uart_puthex(start&0xff);
+      uart_putc('|');
+    }
+    ch=*(ptr + start);
+    uart_puthex(ch);
+    if(ch<32 || ch>0x7e)
+      ch='.';
+    text[i&0x0f]=ch;
+    if((i&0x0f)==0xf) {
+      uart_putc('|');
+      uart_putc(' ');
+      for(ch=0;ch<16;ch++) {
+        uart_putc(text[ch]);
+        text[ch]=' ';
+      }
+      uart_putc('|');
+      uart_putc('\r');
+    }
+    start++;
+    i++;
+  } while(i<len);
+  if((i&0xf)!=0) {
+    for(ch=(i&0xf);ch<16;ch++) {
+      uart_putc(' ');
+      uart_putc(' ');
+    }
+    uart_putc('|');
+    uart_putc(' ');
+    for(ch=0;ch<16;ch++) {
+      uart_putc(text[ch]);
+    }
+    uart_putc('|');
+    uart_putc('\r');
+  }
 }
 
 static int ioputc(char c, FILE *stream) {
