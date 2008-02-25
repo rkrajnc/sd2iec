@@ -132,7 +132,6 @@ static void mount_line(void) {
     return;
 
   /* Confirmation blink */
-  AUX_LED_ON();
   for (i=0;i<2;i++) {
     DIRTY_LED_ON();
     BUSY_LED_ON();
@@ -141,7 +140,6 @@ static void mount_line(void) {
     BUSY_LED_OFF();
     tdelay(100 * TICKS_PER_MS);
   }
-  while (keycounter == DISKCHANGE_MAX) ;
 }
 
 void set_changelist(path_t *path, char *filename) {
@@ -177,6 +175,9 @@ void set_changelist(path_t *path, char *filename) {
 
 
 void change_disk(void) {
+  /* Wait until the button is released */
+  while (keycounter == DISKCHANGE_MAX) ;
+
   if (linenum == 255) {
     /* No swaplist active, try using AUTOSWAP.LST */
     /* change_disk is called from the IEC idle loop, so entrybuf is free */
