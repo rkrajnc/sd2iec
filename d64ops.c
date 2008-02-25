@@ -515,7 +515,7 @@ static uint8_t d64_write_cleanup(buffer_t *buf) {
 /*  fileops-API                                                              */
 /* ------------------------------------------------------------------------- */
 
-static uint8_t d64_opendir(dh_t *dh, char *path) {
+static uint8_t d64_opendir(dh_t *dh, path_t *path) {
   dh->d64.track  = DIR_TRACK;
   dh->d64.sector = DIR_START_SECTOR;
   dh->d64.entry  = 0;
@@ -576,7 +576,7 @@ static uint16_t d64_freeblocks(void) {
   return blocks;
 }
 
-static void d64_open_read(char *path, char *name, buffer_t *buf) {
+static void d64_open_read(path_t *path, char *name, buffer_t *buf) {
   /* WARNING: Ugly hack used here. The directory entry is still in  */
   /*          entrybuf because of match_entry in fatops.c/file_open */
   buf->data[0] = entrybuf[OFS_TRACK];
@@ -590,7 +590,7 @@ static void d64_open_read(char *path, char *name, buffer_t *buf) {
   buf->refill(buf);
 }
 
-static void d64_open_write(char *path, char *name, uint8_t type, buffer_t *buf, uint8_t append) {
+static void d64_open_write(path_t *path, char *name, uint8_t type, buffer_t *buf, uint8_t append) {
   dh_t dh;
   int8_t res;
   uint8_t t,s;
@@ -720,7 +720,7 @@ static void d64_open_write(char *path, char *name, uint8_t type, buffer_t *buf, 
   active_buffers += 16;
 }
 
-static uint8_t d64_delete(char *path, char *name) {
+static uint8_t d64_delete(path_t *path, char *name) {
   /* At this point entrybuf will contain the directory entry and    */
   /* matchdh will almost point to it (entry incremented in readdir) */
   buffer_t *buf;

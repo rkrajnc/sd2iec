@@ -29,8 +29,11 @@
 #include <string.h>
 #include "config.h"
 #include "dirent.h"
+#include "errormsg.h"
 #include "fatops.h"
 #include "parser.h"
+
+path_t current_dir;
 
 /**
  * match_name - Match a pattern against a file name
@@ -104,108 +107,118 @@ int8_t next_match(dh_t *dh, char *matchstr, uint8_t type, struct cbmdirent *dent
 }
 
 /**
- * parse_path - parse CMD style directory specification
- * @in  : input buffer
- * @out : output buffer
- * @name: pointer to pointer to filename (may be NULL)
+ * first_match - get the first matching directory entry
+ * @path    : pointer to a path object
+ * @matchstr: pattern to be matched
+ * @type    : required file type (0 for any)
+ * @dent    : pointer to a directory entry for returning the match
  *
- * This function parses a CMD style directory specification in a file name
- * and copies both path and filename to the output buffer, seperated by \0.
- * Both buffers may point to the same address, but must be able to hold one
- * character more than strlen(in)+1. If non-NULL, *name will point to the
- * beginning of the filename in the output buffer.
+ * This function looks for the first directory entry matching matchstr and
+ * type (if != 0) in path and returns it in dent. Uses matchdh for matching
+ * and returns the same values as next_match. This function is just a
+ * convenience wrapper around opendir+next_match, it is not required to call
+ * it before using next_match.
  */
-void parse_path(char *in, char *out, char **name) {
-  if (strchr(in, ':')) {
-    uint8_t state = 0;
+int8_t first_match(path_t *path, char *matchstr, uint8_t type, struct cbmdirent *dent) {
+  int8_t res;
 
+  if (opendir(&matchdh, path))
+    return 1;
+
+  res = next_match(&matchdh, matchstr, type, dent);
+  if (res < 0)
+    set_error(ERROR_FILE_NOT_FOUND);
+  return res;
+}
+
+/**
+ * parse_path - parse CMD style directory specification
+ * @in          : input buffer
+ * @path        : pointer to path object
+ * @name        : pointer to pointer to filename (may be NULL)
+ * @parse_always: force parsing even if no : is present in the input string
+ *
+ * This function parses a CMD style directory specification in the input
+ * buffer. If successful, the path object will be set up for accessing
+ * the path named in the input buffer. Returns 0 if successful or 1 if an
+ * error occured.
+ */
+uint8_t parse_path(char *in, path_t *path, char **name, uint8_t parse_always) {
+  struct cbmdirent dent;
+  char *end;
+  char saved;
+
+  *path = current_dir;
+
+  if (parse_always || strchr(in, ':')) {
     /* Skip partition number */
-    while (*in && isdigit(*in)) in++;
+    while (*in && (isdigit(*in) || *in == ' ')) in++;
 
-    /* Unoptimized DFA matcher             */
-    /* I wonder if this can be simplified? */
-    while (state != 5) {
-      switch (state) {
-      case 0: /* Starting state */
-	switch (*in++) {
-	case ':':
-	  *out++ = 0;
-	  state = 5;
-	  break;
+    if (*in != '/') {
+      *name = strchr(in, ':');
+      if (*name == NULL)
+	*name = in;
+      else
+	*name += 1;
+      return 0;
+    }
 
-	case '/':
-	  state = 1;
-	  break;
-
-	default:
-	  state = 2;
-	  break;
-	}
-	break;
-
-      case 1: /* Initial slash found */
-	if (*in == ':') {
-	  *out++ = 0;
-	  in++;
-	  state = 5;
-	} else {
-	  *out++ = *in++;
-	  state = 3;
-	}
-	break;
-
-      case 2: /* Initial non-slash found */
-	while (*in++ != ':');
-	state = 5;
-	break;
-
-      case 3: /* Slash-noncolon found */
+    while (*in) {
+      switch (*in++) {
+      case '/':
 	switch (*in) {
-	case ':':
-	  *out++ = 0;
-	  in++;
-	  state = 5;
+	case '/':
+	  /* Double slash -> root */
+	  path->fat = 0;
 	  break;
 
-	case '/':
-	  in++;
-	  state = 4;
-	  break;
+	case 0:
+	  /* End of path found, no name */
+	  *name = in;
+	  return 0;
+
+	case ':':
+	  /* End of path found */
+	  *name = in+1;
+	  return 0;
 
 	default:
-	  *out++ = *in++;
+	  /* Extract path component and match it */
+	  end = in;
+	  while (*end && *end != '/' && *end != ':') end++;
+	  saved = *end;
+	  *end = 0;
+	  if (first_match(path, in, FLAG_HIDDEN, &dent))
+            /* first_match has set an error already */
+	    return 1;
+
+	  if ((dent.typeflags & TYPE_MASK) != TYPE_DIR) {
+	    /* Not a directory */
+	    /* FIXME: Try to mount as image here so they can be accessed like a directory */
+	    set_error(ERROR_FILE_NOT_FOUND);
+	    return 1;
+	  }
+
+	  /* Match found, move path */
+	  *path = dent.path;
+	  *end = saved;
+	  in = end;
 	  break;
 	}
 	break;
 
-      case 4: /* Slash-noncolon-slash found */
-	if (*in == ':') {
-	  *out++ = 0;
-	  in++;
-	  state = 5;
-	} else {
-	  *out++ = '/';
-	  *out++ = *in++;
-	  state = 3;
-	}
-	break;
+      case 0:
+        /* End of path found, no name */
+        *name = in-1;  // -1 to fix the ++ in switch
+        return 0;
+
+      case ':':
+	/* End of path found */
+	*name = in;
+	return 0;
       }
     }
-  } else {
-    /* No colon in name, add a terminator for the path */
-    if (in == out) {
-      /* Make some space for the new colon */
-      memmove(in+1,in,strlen(in)+1);
-      in++;
-    }
-    *out++ = 0;
   }
-
-  if (name)
-    *name = out;
-
-  /* Copy remaining string */
-  while ((*out++ = *in++));
-
-  return;
+  *name = in;
+  return 0;
 }

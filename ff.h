@@ -269,6 +269,9 @@ FRESULT f_rename (const char*, const char*);        /* Rename/Move a file or dir
 FRESULT f_mkfs (BYTE, BYTE, WORD);                  /* Create a file system on the drive */
 FRESULT f_chdir (const char*);                      /* Change current directory */
 
+/* Low Level functions */
+FRESULT l_opendir(FATFS* fs, DWORD cluster, DIR *dirobj); /* Open an existing directory by its start cluster */
+
 
 /* User defined function to give a current time to fatfs module */
 

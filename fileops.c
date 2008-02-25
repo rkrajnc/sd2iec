@@ -238,11 +238,15 @@ static void load_directory(uint8_t secondary) {
 
   if (command_length > 2) {
     /* Parse the name pattern */
+    path_t path;
     char *name;
 
-    parse_path((char *) command_buffer+1, (char *) command_buffer, &name);
+    if (parse_path((char *) command_buffer+1, &path, &name, 0)) {
+      free_buffer(buf);
+      return;
+    }
 
-    if (opendir(&buf->pvt.dir.dh, (char *) command_buffer)) {
+    if (opendir(&buf->pvt.dir.dh, &path)) {
       free_buffer(buf);
       return;
     }
@@ -289,7 +293,7 @@ static void load_directory(uint8_t secondary) {
       }
     }
   } else {
-    if (opendir(&buf->pvt.dir.dh,NULLSTRING)) {
+    if (opendir(&buf->pvt.dir.dh, &current_dir)) {
       free_buffer(buf);
       return;
     }
@@ -440,6 +444,7 @@ void file_open(uint8_t secondary) {
   char *fname;
   int8_t res;
   struct cbmdirent dent;
+  path_t path;
 
   /* Check for rewrite marker */
   if (command_buffer[0] == '@')
@@ -447,7 +452,8 @@ void file_open(uint8_t secondary) {
   else
     cbuf = (char *)command_buffer;
 
-  parse_path(cbuf, (char *) command_buffer, &fname);
+  if (parse_path(cbuf, &path, &fname, 0))
+    return;
 
   /* For M2I only: Remove trailing spaces from name */
   if (fop == &m2iops) {
@@ -457,10 +463,7 @@ void file_open(uint8_t secondary) {
   }
 
   /* Filename matching */
-  if (opendir(&matchdh, (char *) command_buffer))
-    return;
-
-  res = next_match(&matchdh, fname, FLAG_HIDDEN, &dent);
+  res = first_match(&path, fname, FLAG_HIDDEN, &dent);
   if (res > 0)
     return;
 
@@ -468,9 +471,14 @@ void file_open(uint8_t secondary) {
     if (res == 0) {
       /* Match found */
       if (cbuf != (char *) command_buffer) {
+	/* Make sure there is a free buffer to open the new file later */
+	if ((active_buffers & 0x0f) == CONFIG_BUFFER_COUNT) {
+	  set_error(ERROR_NO_CHANNEL);
+	  return;
+	}
+
 	/* Rewrite existing file: Delete the old one */
-	/* This is safe. If there is no buffer available, delete will fail. */
-	if (file_delete((char *) command_buffer, fname) == 255)
+	if (file_delete(&path, fname) == 255)
 	  return;
       } else {
 	/* Write existing file without replacement: Raise error */
@@ -481,6 +489,7 @@ void file_open(uint8_t secondary) {
       /* Normal write or non-existing rewrite */
       /* Doesn't exist: Copy name to dent */
       strcpy((char *)dent.name, fname);
+      set_error(ERROR_OK); // because first_match has set FNF
     }
   } else
     if (res != 0) {
@@ -503,12 +512,12 @@ void file_open(uint8_t secondary) {
   case OPEN_READ:
     /* Modify is the same as read, but allows reading *ed files.        */
     /* FAT doesn't have anything equivalent, so both are mapped to READ */
-    open_read((char *) command_buffer, fname, buf);
+    open_read(&path, fname, buf);
     break;
 
   case OPEN_WRITE:
   case OPEN_APPEND:
-    open_write((char *) command_buffer, fname, filetype, buf, (mode == OPEN_APPEND));
+    open_write(&path, fname, filetype, buf, (mode == OPEN_APPEND));
     break;
   }
 }

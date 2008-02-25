@@ -28,20 +28,24 @@
 #define FATOPS_H
 
 #include "buffers.h"
+#include "dirent.h"
 #include "wrapops.h"
+#include "ff.h"
+
+extern FATFS fatfs;
 
 /* API */
 void     init_fatops(void);
 void     parse_error(FRESULT res, uint8_t readflag);
-uint8_t  fat_delete(char *path, char *filename);
-void     fat_chdir(char *dirname);
-void     fat_mkdir(char *dirname);
-void     fat_open_read(char *path, char *filename, buffer_t *buf);
-void     fat_open_write(char *path, char *filename, uint8_t type, buffer_t *buf, uint8_t append);
+uint8_t  fat_delete(path_t *path, char *filename);
+void     fat_chdir(path_t *path, char *dirname);
+void     fat_mkdir(path_t *path, char *dirname);
+void     fat_open_read(path_t *path, char *filename, buffer_t *buf);
+void     fat_open_write(path_t *path, char *filename, uint8_t type, buffer_t *buf, uint8_t append);
 uint8_t  fat_getlabel(char *label);
 uint8_t  fat_getid(char *id);
 uint16_t fat_freeblocks(void);
-uint8_t  fat_opendir(dh_t *dh, char *dir);
+uint8_t  fat_opendir(dh_t *dh, path_t *dir);
 int8_t   fat_readdir(dh_t *dh, struct cbmdirent *dent);
 void     fat_sectordummy(buffer_t *buf, uint8_t track, uint8_t sector);
 
@@ -49,7 +53,7 @@ extern const fileops_t fatops;
 
 /* Generic helpers */
 void    image_unmount(void);
-void    image_chdir(char *dirname);
+void    image_chdir(path_t *path, char *dirname);
 uint8_t image_read(DWORD offset, void *buffer, uint16_t bytes);
 uint8_t image_write(DWORD offset, void *buffer, uint16_t bytes, uint8_t flush);
 

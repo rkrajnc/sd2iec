@@ -41,11 +41,16 @@ Supported commands:
 
   Quick syntax overview:
     CD:_         changes into the parent dir (_ is the left arrow on the C64)
+    CD_          dito
     CD:foo       changes into foo
     CD/foo       dito
     CD//foo      changes into \foo
     CD/foo/:bar  changes into foo\bar
     CD/foo/bar   dito
+
+  You can use wildcards anywhere in the path. To change into an M2I or D64
+  image the image file must be named after the :, it will not be recognized
+  otherwise.
 
   MD uses a syntax similiar to CD and will create the directory listed
   after the colon (:) relative to any directory listed before it.
@@ -212,12 +217,13 @@ add it yourself:
   to find out how to connect it.
 
 To use this functionality, create a text file that lists the file
-names of all disk images you want to swap between, one per line. The
-file names are not parsed in any way, so you can include FAT paths of
-the disk images if you use / instead of \. After that you can set up
-the swap list by sending "XS:filename" over the command channel with
-filename being the name of the image list you created (again,
-unparsed).
+names of all disk images you want to swap between, one per line.
+The file names are parsed in the same way as the CD command, so you
+can include a path to the image if desired.
+
+The swap list is enabled by sending "XS:filename" over the command channel
+with filename being the name of the image list you created, parsed
+in the same way as any other file name.
 
 After sending XS the first image in the list is automatically
 mounted. To switch to the next image in the list, push the button. If
@@ -230,7 +236,7 @@ button.
 
 Due to the way this feature is implemented you are not limited to a
 swap list containing just D64 images, M2I and even FAT directories
-will work too.
+will work too.  FIXME: Does that still work?
 
 If you press the button when no list has been set before or when the
 previous list was cleared by sending XS the software will look for a

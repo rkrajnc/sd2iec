@@ -222,6 +222,7 @@ static void handle_memwrite(void) {
 
 static void parse_xcommand(void) {
   char *str;
+  path_t path; // FIXME: use global? Dupe in parse_command
 
   switch (command_buffer[1]) {
   case 'J':
@@ -256,7 +257,10 @@ static void parse_xcommand(void) {
 
   case 'S':
     /* Swaplist */
-    set_changelist((char *)command_buffer+3);
+    if (parse_path((char *)command_buffer+2, &path, &str, 0))
+      return;
+
+    set_changelist(&path, str);
     break;
 
 #ifdef CONFIG_STACK_TRACKING
@@ -342,6 +346,7 @@ void parse_doscommand(void) {
   uint8_t i,count;
   char *fname;
   struct cbmdirent dent;
+  path_t path;
 
   /* Set default message: Everything ok */
   set_error(ERROR_OK);
@@ -382,9 +387,8 @@ void parse_doscommand(void) {
     return;
   }
 
-  command_buffer[command_length]   = 0;
-  /* Requires less space than checks in the parsers */
-  command_buffer[command_length+1] = 0;
+  /* Clear the remainder of the command buffer, simplifies parsing */
+  memset(command_buffer+command_length, 0, sizeof(command_buffer)-command_length);
 
   /* MD/CD/RD clash with other commands, so they're checked first */
   if (command_buffer[1] == 'D') {
@@ -396,29 +400,42 @@ void parse_doscommand(void) {
 	set_error(ERROR_SYNTAX_NONAME);
 	break;
       }
-      /* Fall-through */
+      if (parse_path((char *) command_buffer+2, &path, &name, 0))
+	break;
+      mkdir(&path,name);
+      break;
 
     case 'C':
-      i = command_buffer[0];
-      parse_path((char *) command_buffer+2, (char *) command_buffer, &name);
-      if (strlen((char *) command_buffer) != 0) {
-	/* Join path and name */
-	name[-1] = '/';
-	name = (char *) command_buffer;
-      } else
-	/* Yay, special case: CD/name/ means ./name   */
-	/* Technically the terminating / is required, */
-	/* but who'll notice if we don't check?       */
-	if (name[0] == '/')
-	  name++;
+      if (parse_path((char *) command_buffer+2, &path, &name, 1))
+	break;
+
+      if (strlen(name) != 0) {
+        /* Path component after the : */
+        if (name[0] == '_') {
+          /* Going up a level - let chdir handle it. */
+          chdir(&path,name);
+        } else {
+          /* A directory name - try to match it */
+          if (first_match(&path, name, FLAG_HIDDEN, &dent))
+            break;
+
+          /* Move into it if it's a directory, use chdir if it's a file. */
+          if ((dent.typeflags & TYPE_MASK) != TYPE_DIR)
+            chdir(&path,(char *)dent.name);
+          else
+            current_dir = dent.path;
+        }
+      } else {
+        if (current_dir.fat == path.fat) {
+          set_error(ERROR_FILE_NOT_FOUND_39);
+          break;
+        } else {
+          current_dir = path;
+        }
+      }
 
       if (iecflags.autoswap_active)
-	set_changelist(NULLSTRING);
-
-      if (i == 'C')
-	chdir(name);
-      else
-	mkdir(name);
+        set_changelist(NULL, NULLSTRING);
 
       break;
 
@@ -442,7 +459,7 @@ void parse_doscommand(void) {
       if (command_buffer[i] != ':') {
 	set_error(ERROR_SYNTAX_NONAME);
       } else {
-	i = file_delete(NULL, (char *)command_buffer+i+1);
+	i = file_delete(&current_dir, (char *)command_buffer+i+1);
 	if (i != 255)
 	  set_error_ts(ERROR_SCRATCHED,i,0);
       }
@@ -588,9 +605,9 @@ void parse_doscommand(void) {
 
   case 'S':
     /* Scratch */
-    parse_path((char *) command_buffer+1, (char *) command_buffer, &fname);
+    parse_path((char *) command_buffer+1, &path, &fname, 0);
 
-    if (opendir(&matchdh, (char *) command_buffer))
+    if (opendir(&matchdh, &path))
       return;
 
     i = 255;
@@ -599,7 +616,7 @@ void parse_doscommand(void) {
       /* Skip directories */
       if ((dent.typeflags & TYPE_MASK) == TYPE_DIR)
 	continue;
-      i = file_delete(NULL, (char *)dent.name);
+      i = file_delete(&path, (char *)dent.name);
       if (i != 255)
 	count += i;
       else

@@ -57,18 +57,18 @@
  * and no field may be set to NULL.
  */
 typedef struct {
-  void     (*open_read)(char *path, char *name, buffer_t *buf);
-  void     (*open_write)(char *path, char *name, uint8_t type, buffer_t *buf, uint8_t append);
-  uint8_t  (*file_delete)(char *path, char *name);
+  void     (*open_read)(path_t *path, char *name, buffer_t *buf);
+  void     (*open_write)(path_t *path, char *name, uint8_t type, buffer_t *buf, uint8_t append);
+  uint8_t  (*file_delete)(path_t *path, char *name);
   uint8_t  (*disk_label)(char *label);
   uint8_t  (*disk_id)(char *id);
   uint16_t (*disk_free)(void);
   void     (*read_sector)(buffer_t *buf, uint8_t track, uint8_t sector);
   void     (*write_sector)(buffer_t *buf, uint8_t track, uint8_t sector);
-  uint8_t  (*opendir)(dh_t *dh, char *path);
+  uint8_t  (*opendir)(dh_t *dh, path_t *path);
   int8_t   (*readdir)(dh_t *dh, struct cbmdirent *dent);
-  void     (*mkdir)(char *dirname);
-  void     (*chdir)(char *dirname);
+  void     (*mkdir)(path_t *path, char *dirname);
+  void     (*chdir)(path_t *path, char *dirname);
 } fileops_t;
 
 /* Pointer to the current fileops struct */
@@ -88,7 +88,7 @@ extern const fileops_t *fop;
 #define write_sector(buf,t,s) ((pgmcall(fop->write_sector))(buf,t,s))
 #define opendir(dh,dir) ((pgmcall(fop->opendir))(dh,dir))
 #define readdir(dh,dent) ((pgmcall(fop->readdir))(dh,dent))
-#define mkdir(dir) ((pgmcall(fop->mkdir))(dir))
-#define chdir(dir) ((pgmcall(fop->chdir))(dir))
+#define mkdir(path,dir) ((pgmcall(fop->mkdir))(path,dir))
+#define chdir(path,dir) ((pgmcall(fop->chdir))(path,dir))
 
 #endif

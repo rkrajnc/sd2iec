@@ -36,6 +36,7 @@
 #include "ff.h"
 #include "fileops.h"
 #include "m2iops.h"
+#include "parser.h"
 #include "uart.h"
 #include "wrapops.h"
 #include "fatops.h"
@@ -180,21 +181,6 @@ static void pet2asc(char *buf) {
   }
 }
 
-static char* build_name(char *path, char *name, buffer_t *buf) {
-  char *str;
-
-  if (path && strlen(path)) {
-    str = (char *) buf->data;
-    strcpy(str, path);
-    strcat_P(str, PSTR("/"));
-    strcat(str, name);
-  } else
-    str = name;
-
-  pet2asc(str);
-  return str;
-}
-
 /* ------------------------------------------------------------------------- */
 /*  Callbacks                                                                */
 /* ------------------------------------------------------------------------- */
@@ -316,10 +302,11 @@ static uint8_t fat_file_close(buffer_t *buf) {
  * This functions opens a file in the FAT filesystem for reading and sets up
  * buf to access it.
  */
-void fat_open_read(char *path, char *filename, buffer_t *buf) {
+void fat_open_read(path_t *path, char *filename, buffer_t *buf) {
   FRESULT res;
 
-  filename = build_name(path, filename, buf);
+  pet2asc(filename);
+  fatfs.curr_dir = path->fat;
   res = f_open(&buf->pvt.fh, filename, FA_READ | FA_OPEN_EXISTING);
   if (res != FR_OK) {
     parse_error(res,1);
@@ -347,10 +334,11 @@ void fat_open_read(char *path, char *filename, buffer_t *buf) {
  * buf to access it. type is ignored here because FAT has no equivalent of
  * file types.
  */
-void fat_open_write(char *path, char *filename, uint8_t type, buffer_t *buf, uint8_t append) {
+void fat_open_write(path_t *path, char *filename, uint8_t type, buffer_t *buf, uint8_t append) {
   FRESULT res;
 
-  filename = build_name(path, filename, buf);
+  pet2asc(filename);
+  fatfs.curr_dir = path->fat;
   if (append) {
     res = f_open(&buf->pvt.fh, filename, FA_WRITE | FA_OPEN_EXISTING);
     if (res == FR_OK)
@@ -376,11 +364,10 @@ void fat_open_write(char *path, char *filename, uint8_t type, buffer_t *buf, uin
 /*  External interface for the various operations                            */
 /* ------------------------------------------------------------------------- */
 
-uint8_t fat_opendir(dh_t *dh, char *dir) {
+uint8_t fat_opendir(dh_t *dh, path_t *path) {
   FRESULT res;
 
-  pet2asc(dir);
-  res = f_opendir(&dh->fat, dir);
+  res = l_opendir(&fatfs, path->fat, &dh->fat);
   if (res != FR_OK) {
     parse_error(res,1);
     return 1;
@@ -470,19 +457,16 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
  * This function deletes the file filename in path and returns
  * 0 if not found, 1 if deleted or 255 if an error occured.
  */
-uint8_t fat_delete(char *path, char *filename) {
-  buffer_t *buf;
+uint8_t fat_delete(path_t *path, char *filename) {
   FRESULT res;
 
-  buf = alloc_buffer();
-  if (!buf)
-    return 255;
-
   DIRTY_LED_ON();
-  filename = build_name(path, filename, buf);
+  pet2asc(filename);
+  fatfs.curr_dir = path->fat;
   res = f_unlink(filename);
-  /* free_buffer will turn off the LED for us */
-  free_buffer(buf);
+
+  if (!(active_buffers & 0xf0))
+    DIRTY_LED_OFF();
 
   parse_error(res,0);
   if (res == FR_OK)
@@ -502,46 +486,40 @@ uint8_t fat_delete(char *path, char *filename) {
  * current directory will be changed to the directory of the file and
  * it will be mounted as an image file.
  */
-void fat_chdir(char *dirname) {
+void fat_chdir(path_t *path, char *dirname) {
   FRESULT res;
+  FILINFO finfo;
+
+  fatfs.curr_dir = path->fat;
 
   /* Left arrow moves one directory up */
   if (dirname[0] == '_' && dirname[1] == 0) {
-    dirname[0] = '.';
-    dirname[1] = '.';
-    dirname[2] = 0;
-  } else {
-    pet2asc(dirname);
-    if (dirname[strlen(dirname)-1] == '/')
-      dirname[strlen(dirname)-1] = 0;
+    command_buffer[0] = '.';
+    command_buffer[1] = '.';
+    command_buffer[2] = 0;
+    dirname = (char *)command_buffer;
   }
-  res = f_chdir(dirname);
-  if (res == FR_NOT_DIRECTORY) {
+
+  pet2asc(dirname);
+  res = f_stat(dirname, &finfo);
+  if (res != FR_OK) {
+    parse_error(res,1);
+    return;
+  }
+
+  if (finfo.fattrib & AM_DIR) {
+    /* It's a directory, change to its cluster */
+    current_dir.fat = finfo.clust;
+  } else {
     /* Changing into a file, could be a mount request */
-    char *ext;
-    char *fname = strrchr(dirname, '/');
-
-    if (fname)
-      *fname++ = 0;
-    else
-      fname = dirname;
-
-    ext = strrchr(fname, '.');
+    char *ext = strrchr(dirname, '.');
 
     if (ext && (!strcasecmp_P(ext, PSTR(".m2i")) ||
 		!strcasecmp_P(ext, PSTR(".d64")))) {
       /* D64/M2I mount request */
-      if (fname != dirname) {
-	res = f_chdir(dirname);
-	if (res != FR_OK) {
-	  parse_error(res,1);
-	  return;
-	}
-      }
-
       free_all_buffers(1);
       /* Open image file */
-      res = f_open(&imagehandle, fname, FA_OPEN_EXISTING|FA_READ|FA_WRITE);
+      res = f_open(&imagehandle, dirname, FA_OPEN_EXISTING|FA_READ|FA_WRITE);
       if (res != FR_OK) {
 	parse_error(res,1);
 	return;
@@ -552,16 +530,17 @@ void fat_chdir(char *dirname) {
       else
 	fop = &d64ops;
 
+      current_dir.fat = fatfs.curr_dir;
       return;
     }
   }
-  parse_error(res,1);
 }
 
 /* Create a new directory */
-void fat_mkdir(char *dirname) {
+void fat_mkdir(path_t *path, char *dirname) {
   FRESULT res;
 
+  fatfs.curr_dir = path->fat;
   pet2asc(dirname);
   res = f_mkdir(dirname);
   parse_error(res,0);
@@ -580,13 +559,10 @@ uint8_t fat_getlabel(char *label) {
   FILINFO finfo;
   FRESULT res;
   uint8_t i,j;
-  char rootdir[2];
 
   memset(label, ' ', 16);
 
-  rootdir[0] = '/';
-  rootdir[1] = 0;
-  res = f_opendir(&dh, rootdir);
+  res = l_opendir(&fatfs, 0, &dh);
 
   if (res != FR_OK) {
     parse_error(res,0);
@@ -682,8 +658,11 @@ void init_fatops(void) {
   fop = &fatops;
   f_mount(0, &fatfs);
 
+  /* Reset the current path */
+  current_dir.fat = 0;
+
   /* Dummy operation to force the actual mounting */
-  f_chdir(NULLSTRING);
+  f_open(&imagehandle, NULLSTRING, FA_OPEN_EXISTING);
 }
 
 /**
@@ -712,7 +691,7 @@ void image_unmount(void) {
  * chdir/mkdir for all image types that don't support subdirectories
  * themselves.
  */
-void image_chdir(char *dirname) {
+void image_chdir(path_t *path, char *dirname) {
   if (dirname[0] == '_' && dirname[1] == 0) {
     /* Unmount request */
     image_unmount();

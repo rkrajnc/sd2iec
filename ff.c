@@ -1794,6 +1794,47 @@ FRESULT f_opendir (
 
 
 
+/**
+ * l_opendir - open a directory by cluster number
+ * @fs     : Pointer to the FATFS structure of the target file system
+ * @dj     : Pointer to the DIR structure to be filled
+ * @cluster: Number of the start cluster of the directory (0=root)
+ *
+ * This functions works like f_opendir, but instead of a path the directory
+ * to be opened is specified by the FATFS structure and the starting cluster
+ * number. Use 0 for the cluster to open the root directory.
+ * Always returns FR_OK.
+ */
+FRESULT l_opendir(FATFS* fs, DWORD cluster, DIR *dj) {
+  dj->fs = fs;
+  //dj->id = fs->id;
+
+  if (cluster == 0) {
+	/* Open the root directory */
+    cluster = fs->dirbase;
+    if (fs->fs_type == FS_FAT32) {
+      dj->clust = dj->sclust = cluster;
+      dj->sect  = clust2sect(fs, cluster);
+    } else {
+      dj->clust = dj->sclust = 0;
+      dj->sect  = cluster;
+    }
+    dj->index = 0;
+  } else {
+	/* Open a non-root directory */
+    dj->clust = dj->sclust = cluster;
+    dj->sect  = clust2sect(fs, cluster);
+#if _USE_CHDIR != 0
+    dj->index = 0;
+#else
+    dj->index = 2;
+#endif
+  }
+  return FR_OK;
+}
+
+
+
 
 /*-----------------------------------------------------------------------*/
 /* Read Directory Entry in Sequense                                      */

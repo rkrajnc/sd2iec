@@ -31,8 +31,9 @@
 #include "buffers.h"
 #include "errormsg.h"
 #include "fatops.h"
-#include "iec.h"
 #include "ff.h"
+#include "iec.h"
+#include "parser.h"
 #include "diskchange.h"
 
 static const char PROGMEM autoswap_name[] = "AUTOSWAP.LST";
@@ -40,6 +41,7 @@ static const char PROGMEM autoswap_name[] = "AUTOSWAP.LST";
 volatile uint8_t keycounter;
 
 static FIL     swaplist;
+static path_t  swappath;
 static uint8_t linenum;
 
 /* Timer-polling delay */
@@ -111,8 +113,18 @@ static void mount_line(void) {
   if (fop != &fatops)
     image_unmount();
 
+  /* Parse the path */
+  path_t path;
+  char *name; // FIXME: Remove this variable, reuse str instead
+
+  /* Start in the directory of the swap list */
+  current_dir = swappath;
+
+  if (parse_path((char *) buf->data, &path, &name, 0))
+    return;
+
   /* Mount the disk image */
-  fat_chdir((char *)buf->data);
+  fat_chdir(&path, name);
 
   free_buffer(buf);
 
@@ -132,7 +144,7 @@ static void mount_line(void) {
   while (keycounter == DISKCHANGE_MAX) ;
 }
 
-void set_changelist(char *filename) {
+void set_changelist(path_t *path, char *filename) {
   FRESULT res;
 
   /* Assume this isn't the auto-swap list */
@@ -145,12 +157,19 @@ void set_changelist(char *filename) {
     linenum = 255;
   }
 
+  if (strlen(filename) == 0)
+    return;
+
   /* Open a new swaplist */
+  fatfs.curr_dir = path->fat;
   res = f_open(&swaplist, filename, FA_READ | FA_OPEN_EXISTING);
   if (res != FR_OK) {
     parse_error(res,1);
     return;
   }
+
+  /* Remember its directory so relative paths work */
+  swappath = *path;
 
   linenum = 0;
   mount_line();
@@ -162,7 +181,7 @@ void change_disk(void) {
     /* No swaplist active, try using AUTOSWAP.LST */
     /* change_disk is called from the IEC idle loop, so entrybuf is free */
     strcpy_P((char *)entrybuf, autoswap_name);
-    set_changelist((char *)entrybuf);
+    set_changelist(&current_dir, (char *)entrybuf);
     if (linenum == 255) {
       /* No swap list found, clear error and exit */
       set_error(ERROR_OK);
