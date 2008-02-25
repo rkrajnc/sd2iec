@@ -89,7 +89,7 @@ int main(void) {
   init_buffers();
   init_iec();
   init_disk();
-  init_fatops();
+  init_fatops(0);
   init_change();
 
   read_configuration();

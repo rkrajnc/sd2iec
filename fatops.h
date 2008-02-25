@@ -35,7 +35,7 @@
 extern FATFS fatfs;
 
 /* API */
-void     init_fatops(void);
+void     init_fatops(uint8_t preserve_dir);
 void     parse_error(FRESULT res, uint8_t readflag);
 uint8_t  fat_delete(path_t *path, char *filename);
 void     fat_chdir(path_t *path, char *dirname);

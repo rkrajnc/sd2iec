@@ -651,17 +651,19 @@ void fat_sectordummy(buffer_t *buf, uint8_t track, uint8_t sector) {
 
 /**
  * init_fatops - Initialize fatops module
+ * @preserve_path: Preserve the current directory if non-zero
  *
  * This function will initialize the fatops module and force
  * mounting of the card. It can safely be called again if re-mounting
  * is required.
  */
-void init_fatops(void) {
+void init_fatops(uint8_t preserve_path) {
   fop = &fatops;
   f_mount(0, &fatfs);
 
-  /* Reset the current path */
-  current_dir.fat = 0;
+  if (!preserve_path)
+    /* Reset the current path */
+    current_dir.fat = 0;
 
   /* Dummy operation to force the actual mounting */
   f_open(&imagehandle, NULLSTRING, FA_OPEN_EXISTING);

@@ -714,13 +714,12 @@ void iec_mainloop(void) {
         if (disk_state == DISK_CHANGED) {
           free_all_buffers(0);
           init_change();
-        }
-        // FIXME: Preserve current directory if state was DISK_ERROR
-        init_fatops();
-        if (!active_buffers) {
+          init_fatops(0);
+        } else
+          init_fatops(1);
+
+        if (!active_buffers)
           BUSY_LED_OFF();
-          DIRTY_LED_OFF();
-        }
       }
 
       //   0x255 -> A61C
