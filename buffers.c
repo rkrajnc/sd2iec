@@ -134,7 +134,7 @@ uint8_t free_all_buffers(uint8_t cleanup) {
   for (i=0;i<CONFIG_BUFFER_COUNT;i++)
     if (buffers[i].allocated) {
       if (cleanup && buffers[i].cleanup)
-	res = res || buffers[i].cleanup(&buffers[i]);
+        res = res || buffers[i].cleanup(&buffers[i]);
       free_buffer(&buffers[i]);
     }
 

@@ -10,75 +10,75 @@
         - case-insensitive matching of M2I and D64
 
 2008-02-20 - release 0.6
-	- Bugfix: Properly emulate B-R/B-W (fixes Pirates!)
-	- Bugfix: Close buffers on I (fixes Drazpaint)
-	- Bugfix: Create new error message after closing channel 15
+        - Bugfix: Properly emulate B-R/B-W (fixes Pirates!)
+        - Bugfix: Close buffers on I (fixes Drazpaint)
+        - Bugfix: Create new error message after closing channel 15
         - Bugfix: Check for illegal track/sector while D64 is active
-	- reworked source configuration system
+        - reworked source configuration system
         - externalized bootloader signature generation
         - Support for long file names on FAT
-	- M-R returns (random) data
-	- New commands E-R, E-W: Read/write reserved area of EEPROM
-	- Added U0> for device address changes
-	- device address is stored in the EEPROM
+        - M-R returns (random) data
+        - New commands E-R, E-W: Read/write reserved area of EEPROM
+        - Added U0> for device address changes
+        - device address is stored in the EEPROM
         - Directories starting with . are hidden in FAT
         - support for sd2iec 1.0 PCBs
 
 2008-01-13 - release 0.5.1
-	- Bugfix: Really disable JTAG - fixes very slow access on some
+        - Bugfix: Really disable JTAG - fixes very slow access on some
           hardware variants
 
 2008-01-12 - release 0.5
-	- Bugfix: Recode ~/pi in both directions
-	- Bugfix: Fastloaders now work on LarsP-style hardware too
-	- Disk change key support
-	- Full JiffyDos support
-	- EEPROM configuration storage
-	- Full support for D64, read/write/sector access
+        - Bugfix: Recode ~/pi in both directions
+        - Bugfix: Fastloaders now work on LarsP-style hardware too
+        - Disk change key support
+        - Full JiffyDos support
+        - EEPROM configuration storage
+        - Full support for D64, read/write/sector access
 
 2007-12-25 - release 0.4.2
-	- Bugfix: LarsP-style hardware actually works now
+        - Bugfix: LarsP-style hardware actually works now
 
 2007-12-19 - release 0.4.1
-	- Bugfix: Creating a new file within an M2I image wrote
+        - Bugfix: Creating a new file within an M2I image wrote
                   a terminating zero byte into the M2I directory entry
-	- Bugfix: Another guesstimated delay in iec_putc
-	- AVR Studio project file updated
+        - Bugfix: Another guesstimated delay in iec_putc
+        - AVR Studio project file updated
 
 2007-12-07 - release 0.4
-	- Extended DOS commands:
-	  - Enable/Disable JiffyDOS
-	  - Set oscillator calibration
-	- Full support for M2I images
+        - Extended DOS commands:
+          - Enable/Disable JiffyDOS
+          - Set oscillator calibration
+        - Full support for M2I images
 
 2007-11-29 - release 0.3
-	- disable interrupts during iec_getc
-	- add full CRC checking in SD code with retries on errors
-	- software fastloader support: Turbodisk protocol
-	- card change detection
-	- better file name parsing
-	- directory loading supports wildcards
-	- support for file overwrite (@)
-	- option to display hidden files in directory
-	- filename matching for open
-	- filename matching for scratch
+        - disable interrupts during iec_getc
+        - add full CRC checking in SD code with retries on errors
+        - software fastloader support: Turbodisk protocol
+        - card change detection
+        - better file name parsing
+        - directory loading supports wildcards
+        - support for file overwrite (@)
+        - option to display hidden files in directory
+        - filename matching for open
+        - filename matching for scratch
 
 2007-11-02 - release 0.2.1
-	- bugfix: Don't cause repeated entries at the end of the directory
-	- bugfix: Don't repeast the last block of a saved file (1:256 chance)
-	- bugfix: Increase all timeouts in the card initialisation
-	- Recode 0xff in filenames to ~, both characters map to the pi
-	  symbol on the C64
+        - bugfix: Don't cause repeated entries at the end of the directory
+        - bugfix: Don't repeast the last block of a saved file (1:256 chance)
+        - bugfix: Increase all timeouts in the card initialisation
+        - Recode 0xff in filenames to ~, both characters map to the pi
+          symbol on the C64
 
 2007-11-01 - release 0.2
-	- conditional compilation via make command line for chip type
-	  and IO pin assignment (Shadowwolf/LarsP)
-	- object files are generated in a subdirectory
-	- bug fixes in IEC and buffer handling
-	- added project file for AVR Studio (untested)
-	- support for subdirectories
-	- support for UI+/UI- commands (faster bus for VC20)
-	- slightly improved command parser
+        - conditional compilation via make command line for chip type
+          and IO pin assignment (Shadowwolf/LarsP)
+        - object files are generated in a subdirectory
+        - bug fixes in IEC and buffer handling
+        - added project file for AVR Studio (untested)
+        - support for subdirectories
+        - support for UI+/UI- commands (faster bus for VC20)
+        - slightly improved command parser
 
 2007-10-16 - release 0.1
-	Initial release
+        Initial release

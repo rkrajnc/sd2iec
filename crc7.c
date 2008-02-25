@@ -61,11 +61,11 @@ uint8_t crc7update(uint8_t crc, const uint8_t data) {
     for (i = 0x80; i > 0; i >>= 1) {
       bit = crc & 0x40;
       if (c & i) {
-	bit = !bit;
+        bit = !bit;
       }
       crc <<= 1;
       if (bit) {
-	crc ^= 0x09;
+        crc ^= 0x09;
       }
     }
     crc &= 0x7f;

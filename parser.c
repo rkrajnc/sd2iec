@@ -58,7 +58,7 @@ static uint8_t match_name(char *matchstr, struct cbmdirent *dent) {
 
     default:
       if (filename[i++] != *matchstr++)
-	return 0;
+        return 0;
       break;
     }
   }
@@ -88,18 +88,18 @@ int8_t next_match(dh_t *dh, char *matchstr, uint8_t type, struct cbmdirent *dent
     if (res == 0) {
       /* Skip if the type doesn't match */
       if ((type & TYPE_MASK) &&
-	  (dent->typeflags & TYPE_MASK) != (type & TYPE_MASK))
-	continue;
+          (dent->typeflags & TYPE_MASK) != (type & TYPE_MASK))
+        continue;
 
       /* Skip hidden files */
       if ((dent->typeflags & FLAG_HIDDEN) &&
-	  !(type & FLAG_HIDDEN))
-	continue;
+          !(type & FLAG_HIDDEN))
+        continue;
 
       /* Skip if the name doesn't match */
       if (matchstr &&
-	  !match_name(matchstr, dent))
-	continue;
+          !match_name(matchstr, dent))
+        continue;
     }
 
     return res;
@@ -157,55 +157,55 @@ uint8_t parse_path(char *in, path_t *path, char **name, uint8_t parse_always) {
     if (*in != '/') {
       *name = strchr(in, ':');
       if (*name == NULL)
-	*name = in;
+        *name = in;
       else
-	*name += 1;
+        *name += 1;
       return 0;
     }
 
     while (*in) {
       switch (*in++) {
       case '/':
-	switch (*in) {
-	case '/':
-	  /* Double slash -> root */
-	  path->fat = 0;
-	  break;
+        switch (*in) {
+        case '/':
+          /* Double slash -> root */
+          path->fat = 0;
+          break;
 
-	case 0:
-	  /* End of path found, no name */
-	  *name = in;
-	  return 0;
+        case 0:
+          /* End of path found, no name */
+          *name = in;
+          return 0;
 
-	case ':':
-	  /* End of path found */
-	  *name = in+1;
-	  return 0;
+        case ':':
+          /* End of path found */
+          *name = in+1;
+          return 0;
 
-	default:
-	  /* Extract path component and match it */
-	  end = in;
-	  while (*end && *end != '/' && *end != ':') end++;
-	  saved = *end;
-	  *end = 0;
-	  if (first_match(path, in, FLAG_HIDDEN, &dent))
+        default:
+          /* Extract path component and match it */
+          end = in;
+          while (*end && *end != '/' && *end != ':') end++;
+          saved = *end;
+          *end = 0;
+          if (first_match(path, in, FLAG_HIDDEN, &dent))
             /* first_match has set an error already */
-	    return 1;
+            return 1;
 
-	  if ((dent.typeflags & TYPE_MASK) != TYPE_DIR) {
-	    /* Not a directory */
-	    /* FIXME: Try to mount as image here so they can be accessed like a directory */
-	    set_error(ERROR_FILE_NOT_FOUND);
-	    return 1;
-	  }
+          if ((dent.typeflags & TYPE_MASK) != TYPE_DIR) {
+            /* Not a directory */
+            /* FIXME: Try to mount as image here so they can be accessed like a directory */
+            set_error(ERROR_FILE_NOT_FOUND);
+            return 1;
+          }
 
-	  /* Match found, move path */
-	  *path = dent.path;
-	  *end = saved;
-	  in = end;
-	  break;
-	}
-	break;
+          /* Match found, move path */
+          *path = dent.path;
+          *end = saved;
+          in = end;
+          break;
+        }
+        break;
 
       case 0:
         /* End of path found, no name */
@@ -213,9 +213,9 @@ uint8_t parse_path(char *in, path_t *path, char **name, uint8_t parse_always) {
         return 0;
 
       case ':':
-	/* End of path found */
-	*name = in;
-	return 0;
+        /* End of path found */
+        *name = in;
+        return 0;
       }
     }
   }

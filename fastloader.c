@@ -90,7 +90,7 @@ void load_turbodisk(void) {
 
       i = buf->position;
       do {
-	turbodisk_byte(buf->data[i]);
+        turbodisk_byte(buf->data[i]);
       } while (i++ < buf->lastused);
 
       break;
@@ -98,9 +98,9 @@ void load_turbodisk(void) {
       /* Send the complete 254 byte buffer */
       turbodisk_buffer(buf->data + buf->position, 254);
       if (buf->refill(buf)) {
-	/* Some error, abort */
-	turbodisk_byte(0xff);
-	break;
+        /* Some error, abort */
+        turbodisk_byte(0xff);
+        break;
       }
     }
   }

@@ -129,11 +129,11 @@ static void addentry(struct cbmdirent *dent, buffer_t *buf) {
     if (dent->name[i] == 0x22 || dent->name[i] == 0 || i == 16) {
       data[i] = '"';
       while (i<=CBM_NAME_LENGTH) {
-	if (data[i] == 0)
-	  data[i] = ' ';
-	else
-	  data[i] &= 0x7f;
-	i++;
+        if (data[i] == 0)
+          data[i] = ' ';
+        else
+          data[i] &= 0x7f;
+        i++;
       }
     }
 
@@ -203,7 +203,7 @@ static uint8_t dir_refill(buffer_t *buf) {
   buf->lastused = 0;
 
   switch (next_match(&buf->pvt.dir.dh, buf->pvt.dir.matchstr,
-		     buf->pvt.dir.filetype, &dent)) {
+                     buf->pvt.dir.filetype, &dent)) {
   case 0:
     addentry(&dent, buf);
     buf->lastused--;
@@ -259,37 +259,37 @@ static void load_directory(uint8_t secondary) {
       *name++ = 0;
       switch (*name++) {
       case 'S':
-	buf->pvt.dir.filetype = TYPE_SEQ;
-	break;
+        buf->pvt.dir.filetype = TYPE_SEQ;
+        break;
 
       case 'P':
-	buf->pvt.dir.filetype = TYPE_PRG;
-	break;
+        buf->pvt.dir.filetype = TYPE_PRG;
+        break;
 
       case 'U':
-	buf->pvt.dir.filetype = TYPE_USR;
-	break;
+        buf->pvt.dir.filetype = TYPE_USR;
+        break;
 
       case 'R':
-	buf->pvt.dir.filetype = TYPE_REL;
-	break;
+        buf->pvt.dir.filetype = TYPE_REL;
+        break;
 
       case 'C': /* This is guessed, not verified */
-	buf->pvt.dir.filetype = TYPE_CBM;
-	break;
+        buf->pvt.dir.filetype = TYPE_CBM;
+        break;
 
       case 'B': /* CMD compatibility */
       case 'D': /* Specifying DEL matches everything anyway */
-	buf->pvt.dir.filetype = TYPE_DIR;
-	break;
+        buf->pvt.dir.filetype = TYPE_DIR;
+        break;
 
       case 'H': /* Extension: Also show hidden files */
-	buf->pvt.dir.filetype = FLAG_HIDDEN;
-	break;
+        buf->pvt.dir.filetype = FLAG_HIDDEN;
+        break;
 
       default:
-	buf->pvt.dir.filetype = 0;
-	break;
+        buf->pvt.dir.filetype = 0;
+        break;
       }
     }
   } else {
@@ -472,19 +472,19 @@ void file_open(uint8_t secondary) {
     if (res == 0) {
       /* Match found */
       if (cbuf != (char *) command_buffer) {
-	/* Make sure there is a free buffer to open the new file later */
-	if ((active_buffers & 0x0f) == CONFIG_BUFFER_COUNT) {
-	  set_error(ERROR_NO_CHANNEL);
-	  return;
-	}
+        /* Make sure there is a free buffer to open the new file later */
+        if ((active_buffers & 0x0f) == CONFIG_BUFFER_COUNT) {
+          set_error(ERROR_NO_CHANNEL);
+          return;
+        }
 
-	/* Rewrite existing file: Delete the old one */
-	if (file_delete(&path, fname) == 255)
-	  return;
+        /* Rewrite existing file: Delete the old one */
+        if (file_delete(&path, fname) == 255)
+          return;
       } else {
-	/* Write existing file without replacement: Raise error */
-	set_error(ERROR_FILE_EXISTS);
-	return;
+        /* Write existing file without replacement: Raise error */
+        set_error(ERROR_FILE_EXISTS);
+        return;
       }
     } else {
       /* Normal write or non-existing rewrite */

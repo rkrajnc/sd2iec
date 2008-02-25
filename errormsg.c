@@ -132,14 +132,14 @@ static char *appendmsg(char *msg, const prog_uint8_t *table, const uint8_t entry
       tmp = pgm_read_byte(table+i++);
 
       if (tmp < 32) {
-	/* Abbreviation found, handle by recursion */
-	msg = appendmsg(msg,abbrevs,tmp);
-	continue;
+        /* Abbreviation found, handle by recursion */
+        msg = appendmsg(msg,abbrevs,tmp);
+        continue;
       }
 
       if (tmp < EC(0))
-	/* Don't copy error numbers */
-	*msg++ = tmp;
+        /* Don't copy error numbers */
+        *msg++ = tmp;
     } while (tmp < EC(0));
   }
 

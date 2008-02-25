@@ -384,7 +384,7 @@ static int8_t nextdirentry(dh_t *dh) {
   }
 
   if (image_read(sector_offset(dh->d64.track, dh->d64.sector)+
-		 dh->d64.entry*32, entrybuf, 32))
+                 dh->d64.entry*32, entrybuf, 32))
     return 1;
 
   dh->d64.entry++;
@@ -457,7 +457,7 @@ static uint8_t d64_write(buffer_t *buf) {
 
   /* Store data in the already-reserved sector */
   if (image_write(sector_offset(buf->pvt.d64.track,buf->pvt.d64.sector),
-		  buf->data, 256, 1))
+                  buf->data, 256, 1))
     return 1;
 
   buf->pvt.d64.track  = t;
@@ -666,9 +666,9 @@ static void d64_open_write(path_t *path, char *name, uint8_t type, buffer_t *buf
     entrybuf[1] = 0xff;
     for (uint8_t i=0;i<256/32;i++) {
       if (image_write(sector_offset(dh.d64.track, dh.d64.sector)+32*i,
-		      entrybuf, 32, 0)) {
-	free_buffer(bambuf);
-	return;
+                      entrybuf, 32, 0)) {
+        free_buffer(bambuf);
+        return;
       }
       entrybuf[1] = 0;
     }
@@ -703,7 +703,7 @@ static void d64_open_write(path_t *path, char *name, uint8_t type, buffer_t *buf
 
   /* Write the directory entry */
   if (image_write(sector_offset(dh.d64.track,dh.d64.sector)+
-		  dh.d64.entry*32, entrybuf, 32, 1))
+                  dh.d64.entry*32, entrybuf, 32, 1))
     return;
 
   /* Prepare the data buffer */

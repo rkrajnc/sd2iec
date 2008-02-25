@@ -309,15 +309,15 @@ static void parse_block(void) {
     if (*str == 'R') {
       read_sector(buf,params[2],params[3]);
       if (command_buffer[0] == 'B') {
-	buf->position = 1;
-	buf->lastused = buf->data[0];
+        buf->position = 1;
+        buf->lastused = buf->data[0];
       } else {
-	buf->position = 0;
-	buf->lastused = 255;
+        buf->position = 0;
+        buf->lastused = 255;
       }
     } else {
       if (command_buffer[0] == 'B')
-	buf->data[0] = buf->position-1; // FIXME: Untested, verify!
+        buf->data[0] = buf->position-1; // FIXME: Untested, verify!
       write_sector(buf,params[2],params[3]);
     }
     break;
@@ -368,8 +368,8 @@ void parse_doscommand(void) {
       uart_puthex(command_buffer[i]);
       uart_putc(' ');
       if ((i & 0x0f) == 0x0f) {
-	uart_putcrlf();
-	uart_putc('>');
+        uart_putcrlf();
+        uart_putc('>');
       }
       uart_flush();
     }
@@ -397,17 +397,17 @@ void parse_doscommand(void) {
     case 'M':
       /* MD requires a colon */
       if (!strchr((char *)command_buffer, ':')) {
-	set_error(ERROR_SYNTAX_NONAME);
-	break;
+        set_error(ERROR_SYNTAX_NONAME);
+        break;
       }
       if (parse_path((char *) command_buffer+2, &path, &name, 0))
-	break;
+        break;
       mkdir(&path,name);
       break;
 
     case 'C':
       if (parse_path((char *) command_buffer+2, &path, &name, 1))
-	break;
+        break;
 
       if (strlen(name) != 0) {
         /* Path component after the : */
@@ -442,26 +442,26 @@ void parse_doscommand(void) {
     case 'R':
       /* No deletion across subdirectories */
       for (i=0;command_buffer[i];i++) {
-	if (command_buffer[i] == '/') {
-	  /* Hack around a missing 2-level-break */
-	  i = 255;
-	  break;
-	}
+        if (command_buffer[i] == '/') {
+          /* Hack around a missing 2-level-break */
+          i = 255;
+          break;
+        }
       }
       if (i == 255) {
-	set_error(ERROR_SYNTAX_NONAME);
-	break;
+        set_error(ERROR_SYNTAX_NONAME);
+        break;
       }
 
       /* Skip drive number */
       i = 2;
       while (isdigit(command_buffer[i]) || command_buffer[i] == ' ') i++;
       if (command_buffer[i] != ':') {
-	set_error(ERROR_SYNTAX_NONAME);
+        set_error(ERROR_SYNTAX_NONAME);
       } else {
-	i = file_delete(&current_dir, (char *)command_buffer+i+1);
-	if (i != 255)
-	  set_error_ts(ERROR_SCRATCHED,i,0);
+        i = file_delete(&current_dir, (char *)command_buffer+i+1);
+        if (i != 255)
+          set_error_ts(ERROR_SCRATCHED,i,0);
       }
       break;
 
@@ -511,9 +511,9 @@ void parse_doscommand(void) {
     case '9':
       switch (command_buffer[2]) {
       case 0:
-	/* Soft-reset - just return the dos version */
-	set_error(ERROR_DOSVERSION);
-	break;
+        /* Soft-reset - just return the dos version */
+        set_error(ERROR_DOSVERSION);
+        break;
 
       case '+':
         iec_data.iecflags &= (uint8_t)~VC20MODE;
@@ -524,8 +524,8 @@ void parse_doscommand(void) {
         break;
 
       default:
-	set_error(ERROR_SYNTAX_UNKNOWN);
-	break;
+        set_error(ERROR_SYNTAX_UNKNOWN);
+        break;
       }
       break;
 
@@ -539,8 +539,8 @@ void parse_doscommand(void) {
     case '0':
       /* U0 - only device address changes for now */
       if ((command_buffer[2] & 0x1f) == 0x1e &&
-	  command_buffer[3] >= 4 &&
-	  command_buffer[3] <= 30) {
+          command_buffer[3] >= 4 &&
+          command_buffer[3] <= 30) {
         iec_data.device_address = command_buffer[3];
         break;
       }
@@ -558,11 +558,11 @@ void parse_doscommand(void) {
     if (detected_loader == FL_NONE) {
       uart_flush();
       for (i=0;i<3;i++)
-	uart_putc(command_buffer[i]);
+        uart_putc(command_buffer[i]);
       for (i=3;i<command_length;i++) {
-	uart_putc(' ');
-	uart_puthex(command_buffer[i]);
-	uart_flush();
+        uart_putc(' ');
+        uart_puthex(command_buffer[i]);
+        uart_flush();
       }
       uart_putc(13);
       uart_putc(10);
@@ -586,20 +586,20 @@ void parse_doscommand(void) {
       uint8_t  length  = command_buffer[5];
       
       if (command_length < 6)
-	break;
+        break;
       
       if (command_buffer[1] != '-' || (command_buffer[2] != 'W' && command_buffer[2] != 'R'))
-	set_error(ERROR_SYNTAX_UNKNOWN);
+        set_error(ERROR_SYNTAX_UNKNOWN);
       
       if (address > CONFIG_EEPROM_SIZE || address+length > CONFIG_EEPROM_SIZE) {
-	set_error(ERROR_SYNTAX_TOOLONG);
-	break;;
+        set_error(ERROR_SYNTAX_TOOLONG);
+        break;;
       }
       
       if (command_buffer[2] == 'W')
-	handle_eewrite(address, length);
+        handle_eewrite(address, length);
       else
-	handle_eeread(address, length);
+        handle_eeread(address, length);
     } while (0);
     break;
 
@@ -615,12 +615,12 @@ void parse_doscommand(void) {
     while (!next_match(&matchdh, fname, FLAG_HIDDEN, &dent)) {
       /* Skip directories */
       if ((dent.typeflags & TYPE_MASK) == TYPE_DIR)
-	continue;
+        continue;
       i = file_delete(&path, (char *)dent.name);
       if (i != 255)
-	count += i;
+        count += i;
       else
-	break;
+        break;
     }
     if (i != 255)
       set_error_ts(ERROR_SCRATCHED,count,0);

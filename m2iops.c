@@ -142,9 +142,9 @@ static uint16_t find_entry(char *name) {
 
     if (i) {
       if (i == 1)
-	return 0;
+        return 0;
       else
-	return 1;
+        return 1;
     }
 
     /* Skip deleted entries */
@@ -180,9 +180,9 @@ static uint16_t find_empty_entry(void) {
 
     if (i) {
       if (i == 255)
-	return 1;
+        return 1;
       else
-	return pos;
+        return pos;
     }
 
     if (entrybuf[0] == '-')
@@ -239,9 +239,9 @@ static int8_t m2i_readdir(dh_t *dh, struct cbmdirent *dent) {
     i = load_entry(dh->m2i);
     if (i) {
       if (i == 255)
-	return 1;
+        return 1;
       else
-	return -1;
+        return -1;
     }
 
     dh->m2i += M2I_ENTRY_LEN;
@@ -271,19 +271,19 @@ static int8_t m2i_readdir(dh_t *dh, struct cbmdirent *dent) {
 
       res = f_stat((char *)entrybuf+M2I_FATNAME_OFFSET, &finfo);
       if (res != FR_OK) {
-	if (res == FR_NO_FILE)
-	  continue;
-	else {
-	  parse_error(res,1);
-	  return 1;
-	}
+        if (res == FR_NO_FILE)
+          continue;
+        else {
+          parse_error(res,1);
+          return 1;
+        }
       }
 
       if (finfo.fsize > 16255746)
-	/* File too large -> size 63999 blocks */
-	dent->blocksize = 63999;
+        /* File too large -> size 63999 blocks */
+        dent->blocksize = 63999;
       else
-	dent->blocksize = (finfo.fsize+253) / 254;
+        dent->blocksize = (finfo.fsize+253) / 254;
 
       dent->remainder = finfo.fsize % 254;
 #endif
@@ -317,9 +317,9 @@ static void m2i_open_write(path_t *path, char *name, uint8_t type, buffer_t *buf
     nameptr = name;
     while (*nameptr) {
       if (*nameptr == '=' || *nameptr == '"' ||
-	  *nameptr == '*' || *nameptr == '?') {
-	set_error(ERROR_SYNTAX_JOKER);
-	return;
+          *nameptr == '*' || *nameptr == '?') {
+        set_error(ERROR_SYNTAX_JOKER);
+        return;
       }
       nameptr++;
     }
@@ -368,15 +368,15 @@ static void m2i_open_write(path_t *path, char *name, uint8_t type, buffer_t *buf
       /* See if it's already there */
       res = f_stat((char *)entrybuf+M2I_FATNAME_OFFSET, &finfo);
       if (res == FR_OK) {
-	str = entrybuf+M2I_FATNAME_OFFSET+7;
-	/* Increment name */
-	while (1) {
-	  if (++(*str) > '9') {
-	    *str-- = '0';
-	    continue;
-	  }
-	  break;
-	}
+        str = entrybuf+M2I_FATNAME_OFFSET+7;
+        /* Increment name */
+        while (1) {
+          if (++(*str) > '9') {
+            *str-- = '0';
+            continue;
+          }
+          break;
+        }
       }
     } while (res == FR_OK);
 

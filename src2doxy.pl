@@ -39,37 +39,37 @@ while (<>) {
     
     $incomment = 1 if m!^/\*!;
     if (m!^/\*\*$!) {
-	$inspecialcomment = 1;
-	# Kill output
-	$_ = "";
-	next;
+        $inspecialcomment = 1;
+        # Kill output
+        $_ = "";
+        next;
     }
 
     if ($incomment) {
-	if (m!\*/$!) {
-	    # End of comment
-	    $incomment = 0;
-	    $inspecialcomment = 0;
-	    @outputstack = @postcomment;
-	    @postcomment = ();
-	} elsif (/$filename:\s+(.*).?\s*$/) {
-	    # Add file description
-	    push @postcomment, "\n/*! \\file $ARGV\n * \\brief $1. */\n";
-	}
-	if ($inspecialcomment == 1) {
-	    # First line of special comment: Brief description
-	    $inspecialcomment = 2;
-	    m/^\s*\*\s*((struct |union )?[^: \t]+):?\s+-?\s*(.*)\s*$/;
-	    $_ = "/*! \\brief $3\n *";
-	} elsif ($inspecialcomment == 2) {
-	    # Modify parameters
-	    s/\@([^: \t]+)\s*:\s+(.*)\s*$/\\param $1 $2/;
-	}
+        if (m!\*/$!) {
+            # End of comment
+            $incomment = 0;
+            $inspecialcomment = 0;
+            @outputstack = @postcomment;
+            @postcomment = ();
+        } elsif (/$filename:\s+(.*).?\s*$/) {
+            # Add file description
+            push @postcomment, "\n/*! \\file $ARGV\n * \\brief $1. */\n";
+        }
+        if ($inspecialcomment == 1) {
+            # First line of special comment: Brief description
+            $inspecialcomment = 2;
+            m/^\s*\*\s*((struct |union )?[^: \t]+):?\s+-?\s*(.*)\s*$/;
+            $_ = "/*! \\brief $3\n *";
+        } elsif ($inspecialcomment == 2) {
+            # Modify parameters
+            s/\@([^: \t]+)\s*:\s+(.*)\s*$/\\param $1 $2/;
+        }
     }
 } continue {
     print "$_\n";
     while (scalar(@outputstack)) {
-	print shift @outputstack,"\n";
+        print shift @outputstack,"\n";
     }
 }
 

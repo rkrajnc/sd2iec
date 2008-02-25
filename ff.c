@@ -484,7 +484,7 @@ void get_fileinfo (     /* No return code */
   finfo->fdate = LD_WORD(&dir[DIR_WrtDate]);    /* Date */
   finfo->ftime = LD_WORD(&dir[DIR_WrtTime]);    /* Time */
   finfo->clust = ((DWORD)LD_WORD(&dir[DIR_FstClusHI]) << 16)
-	| LD_WORD(&dir[DIR_FstClusLO]);            /* Get cluster# */
+    | LD_WORD(&dir[DIR_FstClusLO]);            /* Get cluster# */
 }
 #endif /* _FS_MINIMIZE <= 1 */
 
@@ -1812,7 +1812,7 @@ FRESULT l_opendir(FATFS* fs, DWORD cluster, DIR *dj) {
   //dj->id = fs->id;
 
   if (cluster == 0) {
-	/* Open the root directory */
+    /* Open the root directory */
     cluster = fs->dirbase;
     if (fs->fs_type == FS_FAT32) {
       dj->clust = dj->sclust = cluster;
@@ -1823,7 +1823,7 @@ FRESULT l_opendir(FATFS* fs, DWORD cluster, DIR *dj) {
     }
     dj->index = 0;
   } else {
-	/* Open a non-root directory */
+    /* Open a non-root directory */
     dj->clust = dj->sclust = cluster;
     dj->sect  = clust2sect(fs, cluster);
 #if _USE_CHDIR != 0 || _USE_CURR_DIR != 0

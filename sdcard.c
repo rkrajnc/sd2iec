@@ -163,8 +163,8 @@ static void deselectCard(void) {
  * the card will be deselected afterwards.
  */
 static int sendCommand(const uint8_t  command,
-		       const uint32_t parameter,
-		       const uint8_t  deselect) {
+                       const uint32_t parameter,
+                       const uint8_t  deselect) {
   union {
     unsigned long l;
     unsigned char c[4];
@@ -417,21 +417,21 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
     errorcount = 0;
     while (errorcount < CONFIG_SD_AUTO_RETRIES) {
       if (isSDHC)
-	res = sendCommand(READ_SINGLE_BLOCK, sector+sec, 0);
+        res = sendCommand(READ_SINGLE_BLOCK, sector+sec, 0);
       else
-	res = sendCommand(READ_SINGLE_BLOCK, (sector+sec) << 9, 0);
+        res = sendCommand(READ_SINGLE_BLOCK, (sector+sec) << 9, 0);
 
       if (res != 0) {
-	SPI_SS_HIGH();
-	disk_state = DISK_ERROR;
-	return RES_ERROR;
+        SPI_SS_HIGH();
+        disk_state = DISK_ERROR;
+        return RES_ERROR;
       }
 
       // Wait for data token
       if (!sdResponse(0xFE)) {
-	SPI_SS_HIGH();
-	disk_state = DISK_ERROR;
-	return RES_ERROR;
+        SPI_SS_HIGH();
+        disk_state = DISK_ERROR;
+        return RES_ERROR;
       }
 
       uint16_t i;
@@ -442,10 +442,10 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
       // Get data
       crc = 0;
       for (i=0; i<512; i++) {
-	tmp = spiTransferByte(0xff);
-	*(buffer++) = tmp;
+        tmp = spiTransferByte(0xff);
+        *(buffer++) = tmp;
 #ifdef CONFIG_SD_DATACRC
-	crc = _crc_xmodem_update(crc, tmp);
+        crc = _crc_xmodem_update(crc, tmp);
 #endif
       }
 
@@ -453,11 +453,11 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
       recvcrc = (spiTransferByte(0xFF) << 8) + spiTransferByte(0xFF);
 #ifdef CONFIG_SD_DATACRC
       if (recvcrc != crc) {
-	uart_putc('X');
-	deselectCard();
-	errorcount++;
-	buffer = oldbuffer;
-	continue;
+        uart_putc('X');
+        deselectCard();
+        errorcount++;
+        buffer = oldbuffer;
+        continue;
       }
 #endif
 
@@ -500,14 +500,14 @@ DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
     errorcount = 0;
     while (errorcount < CONFIG_SD_AUTO_RETRIES) {
       if (isSDHC)
-	res = sendCommand(WRITE_BLOCK, sector+sec, 0);
+        res = sendCommand(WRITE_BLOCK, sector+sec, 0);
       else
-	res = sendCommand(WRITE_BLOCK, (sector+sec)<<9, 0);
+        res = sendCommand(WRITE_BLOCK, (sector+sec)<<9, 0);
 
       if (res != 0) {
-	SPI_SS_HIGH();
-	disk_state = DISK_ERROR;
-	return RES_ERROR;
+        SPI_SS_HIGH();
+        disk_state = DISK_ERROR;
+        return RES_ERROR;
       }
 
       // Send data token
@@ -520,9 +520,9 @@ DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
       crc = 0;
       for (i=0; i<512; i++) {
 #ifdef CONFIG_SD_DATACRC
-	crc = _crc_xmodem_update(crc, *buffer);
+        crc = _crc_xmodem_update(crc, *buffer);
 #endif
-	spiTransferByte(*(buffer++));
+        spiTransferByte(*(buffer++));
       }
 
       // Send CRC
@@ -534,18 +534,18 @@ DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
 
       // Retry if neccessary
       if ((status & 0x0F) != 0x05) {
-	uart_putc('X');
-	deselectCard();
-	errorcount++;
-	buffer = oldbuffer;
-	continue;
+        uart_putc('X');
+        deselectCard();
+        errorcount++;
+        buffer = oldbuffer;
+        continue;
       }
 
       // Wait for write finish
       if (!sdWaitWriteFinish()) {
-	SPI_SS_HIGH();
-	disk_state = DISK_ERROR;
-	return RES_ERROR;
+        SPI_SS_HIGH();
+        disk_state = DISK_ERROR;
+        return RES_ERROR;
       }
       break;
     }
@@ -553,7 +553,7 @@ DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
 
     if (errorcount >= CONFIG_SD_AUTO_RETRIES) {
       if (!(status & STATUS_CRC_ERROR))
-	disk_state = DISK_ERROR;
+        disk_state = DISK_ERROR;
       return RES_ERROR;
     }
   }

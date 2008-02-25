@@ -10,7 +10,7 @@ typedef uint16_t UINT;
 
 /* These types are assumed as 8-bit integer */
 typedef int8_t  CHAR;
-typedef uint8_t	UCHAR;
+typedef uint8_t UCHAR;
 typedef uint8_t BYTE;
 
 /* These types are assumed as 16-bit integer */

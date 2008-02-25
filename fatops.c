@@ -380,9 +380,9 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
     res = f_readdir(&dh->fat, &finfo);
     if (res != FR_OK) {
       if (res == FR_INVALID_OBJECT)
-	set_error(ERROR_DIR_ERROR);
+        set_error(ERROR_DIR_ERROR);
       else
-	parse_error(res,1);
+        parse_error(res,1);
       return 1;
     }
   } while (finfo.fname[0] && (finfo.fattrib & AM_VOL));
@@ -402,8 +402,8 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
     if (!finfo.lfn[0]) {
       ptr = finfo.lfn = (unsigned char *)finfo.fname;
       while (*ptr) {
-	if (*ptr == '~') *ptr = 0xff;
-	ptr++;
+        if (*ptr == '~') *ptr = 0xff;
+        ptr++;
       }
     } else
       /* Convert only LFNs to PETSCII, 8.3 are always upper-case */
@@ -416,7 +416,7 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
       dent->typeflags = TYPE_DIR;
       /* Hide directories starting with . */
       if (finfo.lfn[0] == '.')
-	dent->typeflags |= FLAG_HIDDEN;
+        dent->typeflags |= FLAG_HIDDEN;
     } else
       dent->typeflags = TYPE_PRG;
 
@@ -500,20 +500,20 @@ void fat_chdir(path_t *path, char *dirname) {
     char *ext = strrchr(dirname, '.');
 
     if (ext && (!strcasecmp_P(ext, PSTR(".m2i")) ||
-		!strcasecmp_P(ext, PSTR(".d64")))) {
+                !strcasecmp_P(ext, PSTR(".d64")))) {
       /* D64/M2I mount request */
       free_all_buffers(1);
       /* Open image file */
       res = f_open(&imagehandle, dirname, FA_OPEN_EXISTING|FA_READ|FA_WRITE);
       if (res != FR_OK) {
-	parse_error(res,1);
-	return;
+        parse_error(res,1);
+        return;
       }
 
       if (!strcasecmp_P(ext, PSTR(".m2i")))
-	fop = &m2iops;
+        fop = &m2iops;
       else
-	fop = &d64ops;
+        fop = &d64ops;
 
       current_dir.fat = fatfs.curr_dir;
       return;
@@ -562,12 +562,12 @@ uint8_t fat_getlabel(path_t *path, char *label) {
       i=0;
       j=0;
       while (finfo.fname[i]) {
-	/* Skip dots */
-	if (finfo.fname[i] == '.') {
-	  i++;
-	  continue;
-	}
-	label[j++] = finfo.fname[i++];
+        /* Skip dots */
+        if (finfo.fname[i] == '.') {
+          i++;
+          continue;
+        }
+        label[j++] = finfo.fname[i++];
       }
       return 0;
     }
