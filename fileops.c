@@ -338,12 +338,6 @@ void file_open(uint8_t secondary) {
   /* Assume everything will go well unless proven otherwise */
   set_error(ERROR_OK);
 
-  /* Empty name? */
-  if (command_length == 0) {
-    set_error(ERROR_SYNTAX_NONAME);
-    return;
-  }
-
   command_buffer[command_length] = 0;
 
   /* Load directory? */
@@ -366,7 +360,6 @@ void file_open(uint8_t secondary) {
     buf->position  = 1;  /* Sic! */
     buf->lastused  = 255;
     buf->sendeoi   = 1;
-    buf->mustflush = 0;
     active_buffers += 16;
     DIRTY_LED_ON();
     return;
