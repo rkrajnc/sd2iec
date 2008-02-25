@@ -27,11 +27,6 @@ Supported commands:
 ===================
 - General notes:
   Any command not listed below is currently not supported.
-  Long filenames are not supported.
-
-  Subdirectory names in filenames are semi-supported, the syntax is not
-  compatible to the CMD drives. The filenames are directly passed to the
-  FAT library, so "/test/foo.bar" would access the file FOO.BAR in \TEST.
 
 - Directory filters:
   To show only directories, both =B (CMD-compatible) and =D can be used.
@@ -47,20 +42,18 @@ Supported commands:
   Quick syntax overview:
     CD:_         changes into the parent dir (_ is the left arrow on the C64)
     CD:foo       changes into foo
-    CD/foo       changes into foo
-    CD:/foo      changes into foo
-    CD://foo     changes into \foo
+    CD/foo       dito
     CD//foo      changes into \foo
-    CD/foo/:bar  changes into foo\bar, / before : is required
-    CD/foo/bar   changes into foo\bar
+    CD/foo/:bar  changes into foo\bar
+    CD/foo/bar   dito
 
-    MD uses a syntax similiar to CD and will create the directory listed
-    after the colon (:) relative to any directory listed before it.
+  MD uses a syntax similiar to CD and will create the directory listed
+  after the colon (:) relative to any directory listed before it.
 
     MD/foo/:bar  creates bar in foo
     MD//foo/:bar creates bar in \foo
 
-    RD can only remove subdirectories of the current directory.
+  RD can only remove subdirectories of the current directory.
 
     RD:foo       deletes foo
 
@@ -203,7 +196,20 @@ Changing Disk Images
 ====================
 Because some programs require more than one disk side there is support
 for changing the currently mounted disk image with a button connected
-from PC4 (for Shadowolfs layout) or PA4 (for LarsPs layout) to ground.
+to the disk change pin.
+
+If your circuit doesn't have a disk change pin/button you might be able to
+add it yourself:
+- For the original MMC2IEC and the NKC MMC2IEC:
+  Connect a button from PA4 to ground. PA4 is pin 36 on the DIL version
+  of the controller or pin 33 on the surface-mount version.
+- For Shadowolf's MMC2IEC 1.x PCBs:
+  Connect a button from PC4 to ground. PC4 is pin 23 on the DIL version
+  of the controller or pin 23 on the surface-mount version.
+- Any other circuit without disk change pin on a convenient connector
+  somewhere and no button dedicated to that function: Please check
+  with the supplier of the board and read config.h in the sources
+  to find out how to connect it.
 
 To use this functionality, create a text file that lists the file
 names of all disk images you want to swap between, one per line. The
