@@ -868,8 +868,11 @@ BYTE check_fs (     /* 0:The FAT boot record, 1:Valid boot record but not an FAT
 {
   if (!move_fs_window(fs, sect))                    /* Load boot record, save off old data in process */
     return 2;
-  if(!sect && disk_read(fs->drive, FSBUF.data, sect, 1) != RES_OK)  /* Load boot record, if sector 0 */
-    return 2;
+  if (!sect) {
+    if (disk_read(fs->drive, FSBUF.data, sect, 1) != RES_OK)  /* Load boot record, if sector 0 */
+      return 2;
+    FSBUF.sect = 0;
+  }
   if (LD_WORD(&FSBUF.data[BS_55AA]) != 0xAA55)      /* Check record signature (always placed at offset 510 even if the sector size is >512) */
     return 2;
 
