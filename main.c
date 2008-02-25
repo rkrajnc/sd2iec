@@ -26,8 +26,9 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <avr/pgmspace.h>
 #include <avr/boot.h>
+#include <avr/interrupt.h>
+#include <avr/pgmspace.h>
 #include <avr/wdt.h>
 #include <util/delay.h>
 #include "config.h"
@@ -84,14 +85,18 @@ int main(void) {
   DIRTY_LED_OFF();
 
   init_serial();
+  sei();
   init_buffers();
   init_iec();
   init_disk();
   init_fatops();
-
   init_change();
 
   read_configuration();
+
+  uart_puts_P(PSTR("\nsd2iec " VERSION " #"));
+  uart_puthex(iec_data.device_address);
+  uart_putcrlf();
 
   BUSY_LED_OFF();
 

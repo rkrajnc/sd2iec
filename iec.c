@@ -545,14 +545,6 @@ void init_iec(void) {
 void iec_mainloop(void) {
   int16_t cmd = 0; // make gcc happy...
 
-  uart_puts_P(PSTR("\nIn iec_mainloop listening on "));
-  uart_puthex(iec_data.device_address);
-  uart_putcrlf();
-
-  sei();
-
-  iec_data.iecflags=0;
-
   iec_data.bus_state = BUS_IDLE;
 
   while (1) {
