@@ -483,6 +483,8 @@ void get_fileinfo (     /* No return code */
   finfo->fsize = LD_DWORD(&dir[DIR_FileSize]);  /* Size */
   finfo->fdate = LD_WORD(&dir[DIR_WrtDate]);    /* Date */
   finfo->ftime = LD_WORD(&dir[DIR_WrtTime]);    /* Time */
+  finfo->clust = ((DWORD)LD_WORD(&dir[DIR_FstClusHI]) << 16)
+	| LD_WORD(&dir[DIR_FstClusLO]);            /* Get cluster# */
 }
 #endif /* _FS_MINIMIZE <= 1 */
 

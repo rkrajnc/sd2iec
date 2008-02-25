@@ -47,10 +47,22 @@
 #define FLAG_SPLAT  (1<<7)
 
 /**
+ * struct path_t - struct to reference a directory
+ * @fat: cluster number of the directory start
+ *
+ * This is just a wrapper around the FAT cluster number
+ * until there is anything else that support subdirectories.
+ */
+typedef struct {
+  uint32_t fat;
+} path_t;
+
+/**
  * struct cbmdirent - directory entry for CBM names
  * @blocksize: Size in blocks of 254 bytes
  * @remainder: (filesize MOD 254) or 0xff if unknown
  * @typeflags: OR of file type and flags
+ * @path     : Start cluster of the entry (if on FAT)
  * @name     : 0-padded commodore file name
  *
  * This structure holds a CBM filename, its type and its size. The typeflags
@@ -64,6 +76,7 @@ struct cbmdirent {
   uint16_t blocksize;
   uint8_t  remainder;
   uint8_t  typeflags;
+  path_t   path;
   uint8_t  name[CBM_NAME_LENGTH+1];
 };
 
@@ -116,4 +129,3 @@ typedef union dh_u {
 } dh_t;
 
 #endif
-

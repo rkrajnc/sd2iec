@@ -454,6 +454,9 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
     if (finfo.fattrib & (AM_HID|AM_SYS))
       dent->typeflags |= FLAG_HIDDEN;
 
+    /* Cluster number */
+    dent->path.fat = finfo.clust;
+
     return 0;
   } else
     return -1;

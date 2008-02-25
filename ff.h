@@ -192,6 +192,7 @@ typedef struct _FILINFO {
     WORD fdate;             /* Date */
     WORD ftime;             /* Time */
     BYTE fattrib;           /* Attribute */
+    DWORD clust;            /* Start cluster */
     char fname[8+1+3+1];    /* Name (8.3 format) */
 #if _USE_LFN != 0
     BYTE* lfn;
