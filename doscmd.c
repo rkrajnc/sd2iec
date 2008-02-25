@@ -543,7 +543,7 @@ void parse_doscommand(void) {
 
       /* Skip drive number */
       i = 2;
-      while (isdigit(command_buffer[i])) i++;
+      while (isdigit(command_buffer[i]) || command_buffer[i] == ' ') i++;
       if (command_buffer[i] != ':') {
 	set_error(ERROR_SYNTAX_NONAME);
       } else {
