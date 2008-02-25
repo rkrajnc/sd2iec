@@ -365,6 +365,7 @@ static void m2i_open_write(path_t *path, char *name, uint8_t type, buffer_t *buf
     do {
       FILINFO finfo;
 
+      finfo.lfn = NULL;
       /* See if it's already there */
       res = f_stat((char *)entrybuf+M2I_FATNAME_OFFSET, &finfo);
       if (res == FR_OK) {

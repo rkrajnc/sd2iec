@@ -545,6 +545,7 @@ uint8_t fat_getlabel(path_t *path, char *label) {
   FRESULT res;
   uint8_t i,j;
 
+  finfo.lfn = NULL;
   memset(label, ' ', 16);
 
   res = l_opendir(&fatfs, path->fat, &dh);
@@ -553,8 +554,6 @@ uint8_t fat_getlabel(path_t *path, char *label) {
     parse_error(res,0);
     return 1;
   }
-
-  finfo.lfn = NULL;
 
   while ((res = f_readdir(&dh, &finfo)) == FR_OK) {
     if (!finfo.fname[0]) break;
