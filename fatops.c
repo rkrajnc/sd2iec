@@ -337,10 +337,7 @@ void fat_open_write(path_t *path, char *filename, uint8_t type, buffer_t *buf, u
     return;
   }
 
-  active_buffers += 16;
-  DIRTY_LED_ON();
-
-  buf->write     = 1;
+  mark_write_buffer(buf);
   buf->cleanup   = fat_file_close;
   buf->refill    = fat_file_write;
 }
@@ -450,7 +447,7 @@ uint8_t fat_delete(path_t *path, char *filename) {
   fatfs.curr_dir = path->fat;
   res = f_unlink(filename);
 
-  if (!(active_buffers & 0xf0))
+  if (check_write_buf_count())
     DIRTY_LED_OFF();
 
   parse_error(res,0);

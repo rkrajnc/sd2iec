@@ -101,6 +101,15 @@ buffer_t *find_buffer(uint8_t secondary);
 /* Number of currently allocated buffers + 16 * number of write buffers */
 uint8_t active_buffers;
 
+/* Check if any buffers are free */
+#define check_free_buffers() ((active_buffers & 0x0f) < CONFIG_BUFFER_COUNT)
+
+/* Check if any buffers are open for writing */
+#define check_write_buf_count() ((active_buffers & 0xf0) != 0)
+
+/* Mark a buffer as write-buffer */
+void mark_write_buffer(buffer_t *buf);
+
 /* AVR-specific hack: Address 1 is r1 which is always zero in C code */
 #define NULLSTRING ((char *)1)
 

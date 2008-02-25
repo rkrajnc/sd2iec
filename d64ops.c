@@ -149,9 +149,7 @@ static buffer_t* read_bam(void) {
   if (!buf)
     return NULL;;
 
-  DIRTY_LED_ON();
-  active_buffers += 16;
-  buf->write      = 1;
+  mark_write_buffer(buf);
 
   if (image_read(sector_offset(BAM_TRACK,BAM_SECTOR), buf->data, 256)) {
     free_buffer(buf);
@@ -612,7 +610,6 @@ static void d64_open_write(path_t *path, char *name, uint8_t type, buffer_t *buf
     buf->pvt.d64.dh.entry  = matchdh.d64.entry-1;
     buf->pvt.d64.blocks    = entrybuf[OFS_SIZE_LOW] + 256*entrybuf[OFS_SIZE_HI]-1;
     buf->read       = 0;
-    buf->write      = 1;
     buf->position   = buf->lastused+1;
     if (buf->position == 0)
       buf->mustflush = 1;
@@ -620,9 +617,8 @@ static void d64_open_write(path_t *path, char *name, uint8_t type, buffer_t *buf
       buf->mustflush = 0;
     buf->refill     = d64_write;
     buf->cleanup    = d64_write_cleanup;
+    mark_write_buffer(buf);
 
-    active_buffers += 16;
-    DIRTY_LED_ON();
     return;
   }
 
@@ -707,7 +703,7 @@ static void d64_open_write(path_t *path, char *name, uint8_t type, buffer_t *buf
     return;
 
   /* Prepare the data buffer */
-  buf->write          = 1;
+  mark_write_buffer(buf);
   buf->position       = 2;
   buf->lastused       = 2;
   buf->cleanup        = d64_write_cleanup;
@@ -716,8 +712,6 @@ static void d64_open_write(path_t *path, char *name, uint8_t type, buffer_t *buf
   buf->pvt.d64.dh     = dh.d64;
   buf->pvt.d64.track  = t;
   buf->pvt.d64.sector = s;
-  DIRTY_LED_ON();
-  active_buffers += 16;
 }
 
 static uint8_t d64_delete(path_t *path, char *name) {

@@ -207,7 +207,7 @@ void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
     error_blink_active = 1;
   } else {
     error_blink_active = 0;
-    if (active_buffers & 0xf0)
+    if (check_write_buf_count())
       DIRTY_LED_ON();
     else
       DIRTY_LED_OFF();

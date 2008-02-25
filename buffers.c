@@ -158,3 +158,16 @@ buffer_t *find_buffer(uint8_t secondary) {
   }
   return NULL;
 }
+
+/**
+ * mark_write_buffer - mark a buffer as used for writing
+ * @buf: pointer to the buffer
+ *
+ * This function marks the given buffer as used for writing, tracks
+ * this in active_buffers and turns on the dirty LED.
+ */
+void mark_write_buffer(buffer_t *buf) {
+  buf->write = 1;
+  active_buffers += 16;
+  DIRTY_LED_ON();
+}

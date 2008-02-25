@@ -361,12 +361,10 @@ void file_open(uint8_t secondary) {
 
     buf->secondary = secondary;
     buf->read      = 1;
-    buf->write     = 1;
     buf->position  = 1;  /* Sic! */
     buf->lastused  = 255;
     buf->sendeoi   = 1;
-    active_buffers += 16;
-    DIRTY_LED_ON();
+    mark_write_buffer(buf);
     return;
   }
 
@@ -473,7 +471,7 @@ void file_open(uint8_t secondary) {
       /* Match found */
       if (cbuf != (char *) command_buffer) {
         /* Make sure there is a free buffer to open the new file later */
-        if ((active_buffers & 0x0f) == CONFIG_BUFFER_COUNT) {
+        if (!check_free_buffers()) {
           set_error(ERROR_NO_CHANNEL);
           return;
         }
