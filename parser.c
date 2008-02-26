@@ -41,23 +41,33 @@ path_t current_dir;
  * @dent    : pointer to the directory entry to be matched against
  *
  * This function tests if matchstr matches name in dent.
+ * Returns 1 for a match, 0 otherwise.
  */
 static uint8_t match_name(char *matchstr, struct cbmdirent *dent) {
-  uint8_t *filename = dent->name;
-  uint8_t i = 0;
+  char *filename = (char *)dent->name;
+  char *starpos;
 
-  while (filename[i] && i < CBM_NAME_LENGTH) {
+  while (*filename) {
     switch (*matchstr) {
     case '?':
-      i++;
+      filename++;
       matchstr++;
       break;
 
     case '*':
+      starpos = matchstr;
+      matchstr += strlen(matchstr)-1;
+      filename += strlen(filename)-1;
+      while (matchstr != starpos) {
+        if (*matchstr != *filename && *matchstr != '?')
+          return 0;
+        filename--;
+        matchstr--;
+      }
       return 1;
 
     default:
-      if (filename[i++] != *matchstr++)
+      if (*filename++ != *matchstr++)
         return 0;
       break;
     }
