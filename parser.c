@@ -188,14 +188,17 @@ uint8_t parse_path(char *in, path_t *path, char **name, uint8_t parse_always) {
           while (*end && *end != '/' && *end != ':') end++;
           saved = *end;
           *end = 0;
-          if (first_match(path, in, FLAG_HIDDEN, &dent))
+          if (first_match(path, in, FLAG_HIDDEN, &dent)) {
             /* first_match has set an error already */
+            if (current_error == ERROR_FILE_NOT_FOUND)
+              set_error(ERROR_FILE_NOT_FOUND_39);
             return 1;
+          }
 
           if ((dent.typeflags & TYPE_MASK) != TYPE_DIR) {
             /* Not a directory */
             /* FIXME: Try to mount as image here so they can be accessed like a directory */
-            set_error(ERROR_FILE_NOT_FOUND);
+            set_error(ERROR_FILE_NOT_FOUND_39);
             return 1;
           }
 
