@@ -117,7 +117,7 @@
 
 volatile enum diskstates disk_state;
 
-#ifdef SDHC_SUPPORT
+#ifdef CONFIG_SDHC_SUPPORT
 static uint8_t isSDHC;
 #else
 #define isSDHC 0
@@ -214,7 +214,7 @@ static int sendCommand(const uint8_t  command,
   return i;
 }
 
-#ifdef SDHC_SUPPORT
+#ifdef CONFIG_SDHC_SUPPORT
 // Extended init sequence for SDHC support
 static char extendedInit(void) __attribute__((unused));
 static char extendedInit(void) {
@@ -302,13 +302,11 @@ DSTATUS disk_initialize(BYTE drv) {
   uint16_t counter;
   uint32_t answer;
 
-#ifdef SDCARD_WP_SETUP
   SDCARD_WP_SETUP();
-#endif
 
   disk_state = DISK_ERROR;
 
-#ifdef SDHC_SUPPORT
+#ifdef CONFIG_SDHC_SUPPORT
   isSDHC   = FALSE;
 #endif
 
@@ -325,7 +323,7 @@ DSTATUS disk_initialize(BYTE drv) {
     return STA_NOINIT | STA_NODISK;
   }
 
-#ifdef SDHC_SUPPORT
+#ifdef CONFIG_SDHC_SUPPORT
   if (!extendedInit())
     return STA_NOINIT | STA_NODISK;
 #endif
@@ -353,7 +351,7 @@ DSTATUS disk_initialize(BYTE drv) {
       return STA_NOINIT | STA_NODISK;
     }
 
-#ifdef SDHC_SUPPORT
+#ifdef CONFIG_SDHC_SUPPORT
     // See what card we've got
     if (answer & 0x40000000) {
       isSDHC = TRUE;
@@ -492,9 +490,7 @@ DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
   uint8_t res,sec,errorcount,status;
   uint16_t crc;
 
-#ifdef SDCARD_WP
   if (SDCARD_WP) return RES_WRPRT;
-#endif
 
   for (sec=0;sec<count;sec++) {
     errorcount = 0;
