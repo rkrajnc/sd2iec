@@ -112,6 +112,10 @@ void parse_error(FRESULT res, uint8_t readflag) {
     set_error_ts(ERROR_FILE_EXISTS,res,0);
     break;
 
+  case FR_INVALID_OBJECT:
+    set_error_ts(ERROR_DRIVE_NOT_READY,res,0);
+    break;
+
   default:
     set_error_ts(ERROR_SYNTAX_UNABLE,res,99);
     break;
