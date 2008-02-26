@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include "config.h"
 #include "avrcompat.h"
+#include "uart.h"
 
 static char txbuf[1 << CONFIG_UART_BUF_SHIFT];
 static volatile uint16_t read_idx;
@@ -72,45 +73,41 @@ void uart_puthex(uint8_t num) {
 }
 
 void uart_trace(unsigned char* ptr, uint16_t start, uint16_t len) {
-  unsigned int i=0;
+  uint16_t i;
+  uint8_t j;
   unsigned char ch;
-  unsigned char text[16]="                ";
-  do {
-    if((i&0x0f)==0x00) {
-      uart_puthex(start>>8);
-      uart_puthex(start&0xff);
-      uart_putc('|');
-    }
-    ch=*(ptr + start);
-    uart_puthex(ch);
-    if(ch<32 || ch>0x7e)
-      ch='.';
-    text[i&0x0f]=ch;
-    if((i&0x0f)==0xf) {
-      uart_putc('|');
-      uart_putc(' ');
-      for(ch=0;ch<16;ch++) {
-        uart_putc(text[ch]);
-        text[ch]=' ';
-      }
-      uart_putc('|');
-      uart_putc('\r');
-    }
-    start++;
-    i++;
-  } while(i<len);
-  if((i&0xf)!=0) {
-    for(ch=(i&0xf);ch<16;ch++) {
-      uart_putc(' ');
-      uart_putc(' ');
-    }
+
+  ptr+=start;
+  for(i=0;i<len;i+=16) {
+
+    uart_puthex(start>>8);
+    uart_puthex(start&0xff);
     uart_putc('|');
     uart_putc(' ');
-    for(ch=0;ch<16;ch++) {
-      uart_putc(text[ch]);
+    for(j=0;j<16;j++) {
+      if(i+j<len) {
+        ch=*(ptr + j);
+        uart_puthex(ch);
+      } else {
+        uart_putc(' ');
+        uart_putc(' ');
+      }
+      uart_putc(' ');
     }
     uart_putc('|');
-    uart_putc('\r');
+    for(j=0;j<16;j++) {
+      if(i+j<len) {
+        ch=*(ptr++);
+        if(ch<32 || ch>0x7e)
+          ch='.';
+        uart_putc(ch);
+      } else {
+        uart_putc(' ');
+      }
+    }
+    uart_putc('|');
+    uart_putcrlf();
+    start+=16;
   }
 }
 
