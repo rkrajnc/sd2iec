@@ -54,7 +54,7 @@ void get_mcusr(void)
 }
 
 int main(void) {
-#ifdef __AVR_ATmega644__
+#if defined __AVR_ATmega644__ || defined __AVR_ATmega644P__
   asm volatile("in  r24, %0\n"
                "ori r24, 0x80\n"
                "out %0, r24\n"

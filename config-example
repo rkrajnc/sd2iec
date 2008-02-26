@@ -29,7 +29,7 @@
 # into autoconf.h.
 
 # MCU to compile for
-CONFIG_MCU=atmega644
+CONFIG_MCU=atmega644p
 
 # Use the -relax parameter when linking?
 # Passing -O9 and -relax to the linker saves ~650 bytes of flash,

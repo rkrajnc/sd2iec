@@ -26,7 +26,7 @@
 #ifndef AVRCOMPAT_H
 #define AVRCOMPAT_H
 
-#ifdef __AVR_ATmega644__
+#if defined __AVR_ATmega644__ || defined __AVR_ATmega644P__
 #  define RXC   RXC0
 #  define RXEN  RXEN0
 #  define TXC   TXC0

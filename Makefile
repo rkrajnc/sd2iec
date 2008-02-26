@@ -47,6 +47,8 @@ ifeq ($(CONFIG_BOOTLOADER),y)
     BINARY_LENGTH = 0x1f000
   else ifeq ($(MCU),atmega644)
     BINARY_LENGTH = 0xf000
+  else ifeq ($(MCU),atmega644p)
+    BINARY_LENGTH = 0xf000
   else
 .PHONY: nochip
 nochip:

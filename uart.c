@@ -152,7 +152,7 @@ void init_serial(void) {
 
   UCSRB = _BV(RXEN) | _BV(TXEN);
   // I really don't like random #ifdefs in the code =(
-#if defined __AVR_ATmega644__ || __AVR_ATmega128__
+#if defined __AVR_ATmega644__ || defined __AVR_ATmega644P__ || defined __AVR_ATmega128__
   UCSRC = _BV(UCSZ1) | _BV(UCSZ0);
 #elif defined __AVR_ATmega32__
   UCSRC = _BV(URSEL) | _BV(UCSZ1) | _BV(UCSZ0);
