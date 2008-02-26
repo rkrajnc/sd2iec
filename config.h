@@ -334,6 +334,17 @@
 #  define DISKCHANGE_BIT        _BV(PC3)
 #  define DISKCHANGE_MAX        128
 
+#  ifdef CONFIG_TWINSD
+/* Support for multiple SD cards - only used for testing    */
+/* Card change detecton is only supported on the first card */
+#   define SD2_DDR    DDRC
+#   define SD2_PORT   PORTC
+#   define SD2_PIN    PINC
+#   define SD2_CS     _BV(PC7)
+#   define SD2_DETECT _BV(PC6)
+#   define SD2_WP     _BV(PC5)
+#  endif
+
 #elif CONFIG_HARDWARE_VARIANT == 6
 /* Hardware configuration: NKC MMC2IEC */
 #  define SDCARD_DETECT         (!(PIND & _BV(PD2)))

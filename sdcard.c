@@ -146,14 +146,15 @@ static char sdWaitWriteFinish(void)
   return (count != 0);
 }
 
-static void deselectCard(void) {
+static void deselectCard(uint8_t card) {
   // Send 8 clock cycles
-  SPI_SS_HIGH();
+  SPI_SS_HIGH(card);
   spiTransferByte(0xff);
 }
 
 /**
  * sendCommand - send a command to the SD card
+ * @card     : card number to be accessed
  * @command  : command to be sent
  * @parameter: parameter to be sent
  * @deselect : Flags if the card should be deselected afterwards
@@ -162,7 +163,8 @@ static void deselectCard(void) {
  * parameter and transmits all of it to the SD card. If requested
  * the card will be deselected afterwards.
  */
-static int sendCommand(const uint8_t  command,
+static int sendCommand(const uint8_t  card,
+                       const uint8_t  command,
                        const uint32_t parameter,
                        const uint8_t  deselect) {
   union {
@@ -184,7 +186,7 @@ static int sendCommand(const uint8_t  command,
   errorcount = 0;
   while (errorcount < CONFIG_SD_AUTO_RETRIES) {
     // Select card
-    SPI_SS_LOW();
+    SPI_SS_LOW(card);
 
     // Transfer command
     spiTransferByte(0x40+command);
@@ -202,12 +204,12 @@ static int sendCommand(const uint8_t  command,
     // can't reliably retry unless deselect is allowed
     if (deselect && (i & STATUS_CRC_ERROR)) {
       uart_putc('x');
-      deselectCard();
+      deselectCard(card);
       errorcount++;
       continue;
     }
 
-    if (deselect) deselectCard();
+    if (deselect) deselectCard(card);
     break;
   }
 
@@ -216,24 +218,23 @@ static int sendCommand(const uint8_t  command,
 
 #ifdef CONFIG_SDHC_SUPPORT
 // Extended init sequence for SDHC support
-static char extendedInit(void) __attribute__((unused));
-static char extendedInit(void) {
+static char extendedInit(const uint8_t card) {
   uint8_t  i;
   uint16_t counter;
   uint32_t answer;
 
   // Send CMD8: SEND_IF_COND
   //   0b000110101010 == 2.7-3.6V supply, check pattern 0xAA
-  i = sendCommand(SEND_IF_COND, 0b000110101010, 0);
+  i = sendCommand(card, SEND_IF_COND, 0b000110101010, 0);
   if (i > 1) {
     // Card returned an error, ok (MMC oder SD1.x) but not SDHC
-    deselectCard();
+    deselectCard(card);
     return TRUE;
   }
 
   // No error, continue SDHC initialization
   answer = spiTransferLong(0);
-  deselectCard();
+  deselectCard(card);
 
   if (((answer >> 8) & 0x0f) != 0b0001) {
     // Card didn't accept our voltage specification
@@ -249,7 +250,7 @@ static char extendedInit(void) {
   counter = 0xffff;
   do {
     // Prepare for ACMD, send CMD55: APP_CMD
-    i = sendCommand(APP_CMD, 0, 1);
+    i = sendCommand(card, APP_CMD, 0, 1);
     if (i > 1) {
       // Command not accepted, could be MMC
       return TRUE;
@@ -257,7 +258,7 @@ static char extendedInit(void) {
 
     // Send ACMD41: SD_SEND_OP_COND
     //   1L<<30 == Host has High Capacity Support
-    i = sendCommand(SD_SEND_OP_COND, 1L<<30, 1);
+    i = sendCommand(card, SD_SEND_OP_COND, 1L<<30, 1);
     // Repeat while card card accepts command but isn't ready
   } while (i == 1 && --counter > 0);
 
@@ -284,10 +285,29 @@ void init_disk(void) {
   spiInit();
   SDCARD_DETECT_SETUP();
   SD_CHANGE_SETUP();
+#ifdef CONFIG_TWINSD
+  /* Initialize the control lines for card 2 */
+  SD2_DDR  |= SD2_CS;
+  SD2_DDR  &= (uint8_t)~(SD2_DETECT|SD2_WP);
+  SD2_PORT |= SD2_DETECT|SD2_WP|SD2_CS;
+#endif
 }
 
 
 DSTATUS disk_status(BYTE drv) {
+#ifdef CONFIG_TWINSD
+  if (drv != 0) {
+    if (!(SD2_PIN & SD2_DETECT)) {
+      if (SD2_PIN & SD2_WP) {
+        return STA_PROTECT;
+      } else {
+        return RES_OK;
+      }
+    } else {
+      return STA_NOINIT|STA_NODISK;
+    }
+  } else
+#endif
   if (SDCARD_DETECT)
     if (SDCARD_WP)
       return STA_PROTECT;
@@ -302,6 +322,10 @@ DSTATUS disk_initialize(BYTE drv) {
   uint16_t counter;
   uint32_t answer;
 
+#ifndef CONFIG_TWINSD
+  drv = 0;
+#endif
+
   SDCARD_WP_SETUP();
 
   disk_state = DISK_ERROR;
@@ -310,7 +334,7 @@ DSTATUS disk_initialize(BYTE drv) {
   isSDHC   = FALSE;
 #endif
 
-  SPI_SS_HIGH();
+  SPI_SS_HIGH(drv);
 
   // Send 80 clks
   for (i=0; i<10; i++) {
@@ -318,13 +342,13 @@ DSTATUS disk_initialize(BYTE drv) {
   }
 
   // Reset card
-  i = sendCommand(GO_IDLE_STATE, 0, 1);
+  i = sendCommand(drv, GO_IDLE_STATE, 0, 1);
   if (i != 1) {
     return STA_NOINIT | STA_NODISK;
   }
 
 #ifdef CONFIG_SDHC_SUPPORT
-  if (!extendedInit())
+  if (!extendedInit(drv))
     return STA_NOINIT | STA_NODISK;
 #endif
 
@@ -333,7 +357,7 @@ DSTATUS disk_initialize(BYTE drv) {
   // without retries. One of my Sandisk-cards thinks otherwise.
   do {
     // Send CMD58: READ_OCR
-    i = sendCommand(READ_OCR, 0, 0);
+    i = sendCommand(drv, READ_OCR, 0, 0);
     if (i > 1) {
       // kills my Sandisk 1G which requires the retries in the first place
       // deselectCard();
@@ -347,7 +371,7 @@ DSTATUS disk_initialize(BYTE drv) {
     if (!(answer & SD_SUPPLY_VOLTAGE)) {
       // The code isn't set up to completely ignore the card,
       // but at least report it as nonworking
-      deselectCard();
+      deselectCard(drv);
       return STA_NOINIT | STA_NODISK;
     }
 
@@ -362,7 +386,7 @@ DSTATUS disk_initialize(BYTE drv) {
   // Keep sending CMD1 (SEND_OP_COND) command until zero response
   counter = 0xffff;
   do {
-    i = sendCommand(SEND_OP_COND, 1L<<30, 1);
+    i = sendCommand(drv, SEND_OP_COND, 1L<<30, 1);
     counter--;
   } while (i != 0 && counter > 0);
 
@@ -375,14 +399,14 @@ DSTATUS disk_initialize(BYTE drv) {
   // The SD spec says that the host "should" send CRC_ON_OFF before ACMD_SEND_OP_COND.
   // The MMC manual I have says that CRC_ON_OFF isn't allowed before SEND_OP_COND.
   // Let's just hope that all SD cards work with this order. =(
-  i = sendCommand(CRC_ON_OFF, 1, 1);
+  i = sendCommand(drv, CRC_ON_OFF, 1, 1);
   if (i > 1) {
     return STA_NOINIT | STA_NODISK;
   }
 #endif
 
   // Send MMC CMD16(SET_BLOCKLEN) to 512 bytes
-  i = sendCommand(SET_BLOCKLEN, 512, 1);
+  i = sendCommand(drv, SET_BLOCKLEN, 512, 1);
   if (i != 0) {
     return FALSE;
   }
@@ -411,23 +435,27 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
   uint8_t sec,res,tmp,errorcount;
   uint16_t crc,recvcrc;
 
+#ifndef CONFIG_TWINSD
+  drv = 0;
+#endif
+
   for (sec=0;sec<count;sec++) {
     errorcount = 0;
     while (errorcount < CONFIG_SD_AUTO_RETRIES) {
       if (isSDHC)
-        res = sendCommand(READ_SINGLE_BLOCK, sector+sec, 0);
+        res = sendCommand(drv, READ_SINGLE_BLOCK, sector+sec, 0);
       else
-        res = sendCommand(READ_SINGLE_BLOCK, (sector+sec) << 9, 0);
+        res = sendCommand(drv, READ_SINGLE_BLOCK, (sector+sec) << 9, 0);
 
       if (res != 0) {
-        SPI_SS_HIGH();
+        SPI_SS_HIGH(drv);
         disk_state = DISK_ERROR;
         return RES_ERROR;
       }
 
       // Wait for data token
       if (!sdResponse(0xFE)) {
-        SPI_SS_HIGH();
+        SPI_SS_HIGH(drv);
         disk_state = DISK_ERROR;
         return RES_ERROR;
       }
@@ -452,7 +480,7 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
 #ifdef CONFIG_SD_DATACRC
       if (recvcrc != crc) {
         uart_putc('X');
-        deselectCard();
+        deselectCard(drv);
         errorcount++;
         buffer = oldbuffer;
         continue;
@@ -461,7 +489,7 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
 
       break;
     }
-    deselectCard();
+    deselectCard(drv);
 
     if (errorcount >= CONFIG_SD_AUTO_RETRIES) return RES_ERROR;
   }
@@ -490,18 +518,27 @@ DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
   uint8_t res,sec,errorcount,status;
   uint16_t crc;
 
+#ifndef CONFIG_TWINSD
+  drv = 0;
+#else
+  if (drv != 0) {
+    if (SD2_PIN & SD2_WP)
+      return RES_WRPRT;
+  } else
+#endif
+
   if (SDCARD_WP) return RES_WRPRT;
 
   for (sec=0;sec<count;sec++) {
     errorcount = 0;
     while (errorcount < CONFIG_SD_AUTO_RETRIES) {
       if (isSDHC)
-        res = sendCommand(WRITE_BLOCK, sector+sec, 0);
+        res = sendCommand(drv, WRITE_BLOCK, sector+sec, 0);
       else
-        res = sendCommand(WRITE_BLOCK, (sector+sec)<<9, 0);
+        res = sendCommand(drv, WRITE_BLOCK, (sector+sec)<<9, 0);
 
       if (res != 0) {
-        SPI_SS_HIGH();
+        SPI_SS_HIGH(drv);
         disk_state = DISK_ERROR;
         return RES_ERROR;
       }
@@ -531,7 +568,7 @@ DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
       // Retry if neccessary
       if ((status & 0x0F) != 0x05) {
         uart_putc('X');
-        deselectCard();
+        deselectCard(drv);
         errorcount++;
         buffer = oldbuffer;
         continue;
@@ -539,13 +576,13 @@ DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
 
       // Wait for write finish
       if (!sdWaitWriteFinish()) {
-        SPI_SS_HIGH();
+        SPI_SS_HIGH(drv);
         disk_state = DISK_ERROR;
         return RES_ERROR;
       }
       break;
     }
-    deselectCard();
+    deselectCard(drv);
 
     if (errorcount >= CONFIG_SD_AUTO_RETRIES) {
       if (!(status & STATUS_CRC_ERROR))

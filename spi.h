@@ -45,7 +45,24 @@ uint8_t spiTransferByte(uint8_t data);
 uint32_t spiTransferLong(uint32_t data);
 
 // Macros for setting slave select:
-#define SPI_SS_HIGH()  PORTB |= (1<<4)
-#define SPI_SS_LOW()   PORTB &= ~(1<<4)
+#ifdef CONFIG_TWINSD
+# define SPI_SS_HIGH(card) do { \
+    if (card == 0) {            \
+      PORTB |= _BV(PB4);        \
+    } else {                    \
+      SD2_PORT |= SD2_CS;       \
+    }                           \
+  } while (0)
+#define SPI_SS_LOW(card) do {       \
+    if (card == 0) {                \
+      PORTB &= (uint8_t)~_BV(PB4);  \
+    } else {                        \
+      SD2_PORT &= (uint8_t)~SD2_CS; \
+    }                               \
+  } while (0)
+#else
+# define SPI_SS_HIGH(card)  PORTB |= _BV(PB4)
+# define SPI_SS_LOW(card)   PORTB &= (uint8_t)~_BV(PB4)
+#endif
 
 #endif
