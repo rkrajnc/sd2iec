@@ -38,7 +38,7 @@ extern FATFS fatfs;
 void     init_fatops(uint8_t preserve_dir);
 void     parse_error(FRESULT res, uint8_t readflag);
 uint8_t  fat_delete(path_t *path, char *filename);
-void     fat_chdir(path_t *path, char *dirname);
+uint8_t  fat_chdir(path_t *path, char *dirname);
 void     fat_mkdir(path_t *path, char *dirname);
 void     fat_open_read(path_t *path, char *filename, buffer_t *buf);
 void     fat_open_write(path_t *path, char *filename, uint8_t type, buffer_t *buf, uint8_t append);
@@ -52,8 +52,9 @@ void     fat_sectordummy(buffer_t *buf, uint8_t track, uint8_t sector);
 extern const fileops_t fatops;
 
 /* Generic helpers */
-void    image_unmount(void);
-void    image_chdir(path_t *path, char *dirname);
+uint8_t image_unmount(void);
+uint8_t image_chdir(path_t *path, char *dirname);
+void    image_mkdir(path_t *path, char *dirname);
 uint8_t image_read(DWORD offset, void *buffer, uint16_t bytes);
 uint8_t image_write(DWORD offset, void *buffer, uint16_t bytes, uint8_t flush);
 

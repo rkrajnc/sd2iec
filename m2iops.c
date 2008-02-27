@@ -446,6 +446,6 @@ const PROGMEM fileops_t m2iops = {
   fat_sectordummy,
   m2i_opendir,
   m2i_readdir,
-  image_chdir, /* Technically mkdir, but who'll notice? */
+  image_mkdir,
   image_chdir
 };

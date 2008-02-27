@@ -470,9 +470,10 @@ uint8_t fat_delete(path_t *path, char *filename) {
  * This function changes the current FAT directory to dirname.
  * If dirname specifies a file with a known extension (e.g. M2I or D64), the
  * current directory will be changed to the directory of the file and
- * it will be mounted as an image file.
+ * it will be mounted as an image file. Returns 0 if successful,
+ * 1 otherwise.
  */
-void fat_chdir(path_t *path, char *dirname) {
+uint8_t fat_chdir(path_t *path, char *dirname) {
   FRESULT res;
   FILINFO finfo;
 
@@ -490,7 +491,7 @@ void fat_chdir(path_t *path, char *dirname) {
   res = f_stat(dirname, &finfo);
   if (res != FR_OK) {
     parse_error(res,1);
-    return;
+    return 1;
   }
 
   if (finfo.fattrib & AM_DIR) {
@@ -508,7 +509,7 @@ void fat_chdir(path_t *path, char *dirname) {
       res = f_open(&imagehandle, dirname, FA_OPEN_EXISTING|FA_READ|FA_WRITE);
       if (res != FR_OK) {
         parse_error(res,1);
-        return;
+        return 1;
       }
 
       if (!strcasecmp_P(ext, PSTR(".m2i")))
@@ -517,9 +518,10 @@ void fat_chdir(path_t *path, char *dirname) {
         fop = &d64ops;
 
       current_dir.fat = fatfs.curr_dir;
-      return;
+      return 0;
     }
   }
+  return 0;
 }
 
 /* Create a new directory */
@@ -679,15 +681,19 @@ void init_fatops(uint8_t preserve_path) {
  * This function will clear all buffers, close the image file and
  * restore file operations to fatops. It can be used for unmounting
  * any image file types that don't require special cleanups.
+ * Returns 0 if successful, 1 otherwise.
  */
-void image_unmount(void) {
+uint8_t image_unmount(void) {
   FRESULT res;
 
   free_all_buffers(1);
   fop = &fatops;
   res = f_close(&imagehandle);
-  if (res != FR_OK)
+  if (res != FR_OK) {
     parse_error(res,0);
+    return 1;
+  }
+  return 0;
 }
 
 /**
@@ -697,13 +703,24 @@ void image_unmount(void) {
  * This function will ignore any dirnames except _ (left arrow)
  * and unmount the image if that is found. It can be used as
  * chdir/mkdir for all image types that don't support subdirectories
- * themselves.
+ * themselves. Returns 0 if successful, 1 otherwise.
  */
-void image_chdir(path_t *path, char *dirname) {
+uint8_t image_chdir(path_t *path, char *dirname) {
   if (dirname[0] == '_' && dirname[1] == 0) {
     /* Unmount request */
-    image_unmount();
+    return image_unmount();
   }
+  return 1;
+}
+
+/**
+ * image_mkdir - generic mkdir for image files
+ * @path   : path of the directory
+ * @dirname: name of the directory to be created
+ *
+ * This function does nothing.
+ */
+void image_mkdir(path_t *path, char *dirname) {
   return;
 }
 

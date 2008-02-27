@@ -413,16 +413,18 @@ void parse_doscommand(void) {
         /* Path component after the : */
         if (name[0] == '_') {
           /* Going up a level - let chdir handle it. */
-          chdir(&path,name);
+          if (chdir(&path,name))
+            break;
         } else {
           /* A directory name - try to match it */
           if (first_match(&path, name, FLAG_HIDDEN, &dent))
             break;
 
           /* Move into it if it's a directory, use chdir if it's a file. */
-          if ((dent.typeflags & TYPE_MASK) != TYPE_DIR)
-            chdir(&path,(char *)dent.name);
-          else
+          if ((dent.typeflags & TYPE_MASK) != TYPE_DIR) {
+            if (chdir(&path,(char *)dent.name))
+              break;
+          } else
             current_dir = dent.path;
         }
       } else {

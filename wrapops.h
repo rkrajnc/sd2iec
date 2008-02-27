@@ -68,7 +68,7 @@ typedef struct {
   uint8_t  (*opendir)(dh_t *dh, path_t *path);
   int8_t   (*readdir)(dh_t *dh, struct cbmdirent *dent);
   void     (*mkdir)(path_t *path, char *dirname);
-  void     (*chdir)(path_t *path, char *dirname);
+  uint8_t  (*chdir)(path_t *path, char *dirname);
 } fileops_t;
 
 /* Pointer to the current fileops struct */

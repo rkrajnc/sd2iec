@@ -775,6 +775,6 @@ const PROGMEM fileops_t d64ops = {
   d64_write_sector,
   d64_opendir,
   d64_readdir,
-  image_chdir, // mkdir...
+  image_mkdir,
   image_chdir
 };
