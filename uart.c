@@ -32,7 +32,7 @@
 #include "avrcompat.h"
 #include "uart.h"
 
-static char txbuf[1 << CONFIG_UART_BUF_SHIFT];
+static uint8_t txbuf[1 << CONFIG_UART_BUF_SHIFT];
 static volatile uint16_t read_idx;
 static volatile uint16_t write_idx;
 
@@ -72,10 +72,10 @@ void uart_puthex(uint8_t num) {
     uart_putc('a'+tmp-10);
 }
 
-void uart_trace(unsigned char* ptr, uint16_t start, uint16_t len) {
+void uart_trace(uint8_t* ptr, uint16_t start, uint16_t len) {
   uint16_t i;
   uint8_t j;
-  unsigned char ch;
+  uint8_t ch;
 
   ptr+=start;
   for(i=0;i<len;i+=16) {
@@ -117,7 +117,7 @@ static int ioputc(char c, FILE *stream) {
   return 0;
 }
 
-unsigned char uart_getc(void) {
+uint8_t uart_getc(void) {
   loop_until_bit_is_set(UCSRA,RXC);
   return UDR;
 }

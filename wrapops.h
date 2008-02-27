@@ -57,18 +57,18 @@
  * and no field may be set to NULL.
  */
 typedef struct {
-  void     (*open_read)(path_t *path, char *name, buffer_t *buf);
-  void     (*open_write)(path_t *path, char *name, uint8_t type, buffer_t *buf, uint8_t append);
-  uint8_t  (*file_delete)(path_t *path, char *name);
-  uint8_t  (*disk_label)(path_t *path, char *label);
-  uint8_t  (*disk_id)(char *id);
+  void     (*open_read)(path_t *path, uint8_t *name, buffer_t *buf);
+  void     (*open_write)(path_t *path, uint8_t *name, uint8_t type, buffer_t *buf, uint8_t append);
+  uint8_t  (*file_delete)(path_t *path, uint8_t *name);
+  uint8_t  (*disk_label)(path_t *path, uint8_t *label);
+  uint8_t  (*disk_id)(uint8_t *id);
   uint16_t (*disk_free)(void);
   void     (*read_sector)(buffer_t *buf, uint8_t track, uint8_t sector);
   void     (*write_sector)(buffer_t *buf, uint8_t track, uint8_t sector);
   uint8_t  (*opendir)(dh_t *dh, path_t *path);
   int8_t   (*readdir)(dh_t *dh, struct cbmdirent *dent);
-  void     (*mkdir)(path_t *path, char *dirname);
-  uint8_t  (*chdir)(path_t *path, char *dirname);
+  void     (*mkdir)(path_t *path, uint8_t *dirname);
+  uint8_t  (*chdir)(path_t *path, uint8_t *dirname);
 } fileops_t;
 
 /* Pointer to the current fileops struct */

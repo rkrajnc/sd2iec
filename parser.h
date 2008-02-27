@@ -32,12 +32,12 @@
 extern path_t current_dir;
 
 /* Returns the next matching dirent */
-int8_t next_match(dh_t *dh, char *matchstr, uint8_t type, struct cbmdirent *dent);
+int8_t next_match(dh_t *dh, uint8_t *matchstr, uint8_t type, struct cbmdirent *dent);
 
 /* Returns the first matching dirent */
-int8_t first_match(path_t *path, char *matchstr, uint8_t type, struct cbmdirent *dent);
+int8_t first_match(path_t *path, uint8_t *matchstr, uint8_t type, struct cbmdirent *dent);
 
 /* Parses CMD-style directory specifications */
-uint8_t parse_path(char *in, path_t *path, char **name, uint8_t parse_always);
+uint8_t parse_path(uint8_t *in, path_t *path, uint8_t **name, uint8_t parse_always);
 
 #endif

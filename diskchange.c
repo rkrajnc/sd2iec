@@ -34,6 +34,7 @@
 #include "ff.h"
 #include "iec.h"
 #include "parser.h"
+#include "ustring.h"
 #include "diskchange.h"
 
 static const char PROGMEM autoswap_name[] = "AUTOSWAP.LST";
@@ -115,16 +116,15 @@ static void mount_line(void) {
 
   /* Parse the path */
   path_t path;
-  char *name; // FIXME: Remove this variable, reuse str instead
 
   /* Start in the directory of the swap list */
   current_dir = swappath;
 
-  if (parse_path((char *) buf->data, &path, &name, 0))
+  if (parse_path(buf->data, &path, &str, 0))
     return;
 
   /* Mount the disk image */
-  fat_chdir(&path, name);
+  fat_chdir(&path, str);
 
   free_buffer(buf);
 
@@ -142,7 +142,7 @@ static void mount_line(void) {
   }
 }
 
-void set_changelist(path_t *path, char *filename) {
+void set_changelist(path_t *path, uint8_t *filename) {
   FRESULT res;
 
   /* Assume this isn't the auto-swap list */
@@ -155,7 +155,7 @@ void set_changelist(path_t *path, char *filename) {
     linenum = 255;
   }
 
-  if (strlen(filename) == 0)
+  if (ustrlen(filename) == 0)
     return;
 
   /* Open a new swaplist */
@@ -181,8 +181,8 @@ void change_disk(void) {
   if (linenum == 255) {
     /* No swaplist active, try using AUTOSWAP.LST */
     /* change_disk is called from the IEC idle loop, so entrybuf is free */
-    strcpy_P((char *)entrybuf, autoswap_name);
-    set_changelist(&current_dir, (char *)entrybuf);
+    ustrcpy_P(entrybuf, autoswap_name);
+    set_changelist(&current_dir, entrybuf);
     if (linenum == 255) {
       /* No swap list found, clear error and exit */
       set_error(ERROR_OK);

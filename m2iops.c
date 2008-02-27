@@ -34,6 +34,7 @@
 #include "fatops.h"
 #include "ff.h"
 #include "parser.h"
+#include "ustring.h"
 #include "wrapops.h"
 #include "m2iops.h"
 
@@ -131,7 +132,7 @@ static uint8_t load_entry(uint16_t offset) {
  * mounted M2I File. Returns 0 if not found, 1 on errors or the
  * offset of the M2I line if found.
  */
-static uint16_t find_entry(char *name) {
+static uint16_t find_entry(uint8_t *name) {
   uint16_t pos = M2I_ENTRY_OFFSET;
   uint8_t i;
   uint8_t *srcname, *dstname;
@@ -152,11 +153,11 @@ static uint16_t find_entry(char *name) {
       continue;
 
     name_repad(' ',0);
-    srcname = (uint8_t *)name;
+    srcname = name;
     dstname = entrybuf + M2I_CBMNAME_OFFSET;
     dstname[CBM_NAME_LENGTH] = 0;
 
-    if (strcmp((char *)srcname, (char *)dstname))
+    if (ustrcmp(srcname, dstname))
       continue;
 
     return pos - M2I_ENTRY_LEN;
@@ -203,7 +204,7 @@ static uint16_t find_empty_entry(void) {
  * either in read or append mode according to appendflag by calling
  * the appropiate fat_* functions.
  */
-static void open_existing(char *name, uint8_t type, buffer_t *buf, uint8_t appendflag) {
+static void open_existing(uint8_t *name, uint8_t type, buffer_t *buf, uint8_t appendflag) {
   uint16_t offset;
 
   offset = find_entry(name);
@@ -218,9 +219,9 @@ static void open_existing(char *name, uint8_t type, buffer_t *buf, uint8_t appen
   }
 
   if (appendflag)
-    fat_open_write(&current_dir, (char *)entrybuf+M2I_FATNAME_OFFSET, type, buf, 1);
+    fat_open_write(&current_dir, entrybuf+M2I_FATNAME_OFFSET, type, buf, 1);
   else
-    fat_open_read(&current_dir, (char *)entrybuf+M2I_FATNAME_OFFSET, buf);
+    fat_open_read(&current_dir, entrybuf+M2I_FATNAME_OFFSET, buf);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -269,7 +270,7 @@ static int8_t m2i_readdir(dh_t *dh, struct cbmdirent *dent) {
 #if 0
       FILINFO finfo;
 
-      res = f_stat((char *)entrybuf+M2I_FATNAME_OFFSET, &finfo);
+      res = f_stat(entrybuf+M2I_FATNAME_OFFSET, &finfo);
       if (res != FR_OK) {
         if (res == FR_NO_FILE)
           continue;
@@ -294,19 +295,19 @@ static int8_t m2i_readdir(dh_t *dh, struct cbmdirent *dent) {
   }
 }
 
-static uint8_t m2i_getlabel(path_t *path, char *label) {
+static uint8_t m2i_getlabel(path_t *path, uint8_t *label) {
   return image_read(0, label, 16);
 }
 
-static void m2i_open_read(path_t *path, char *name, buffer_t *buf) {
+static void m2i_open_read(path_t *path, uint8_t *name, buffer_t *buf) {
   /* The type isn't checked anyway */
   open_existing(name, TYPE_PRG, buf, 0);
 }
 
-static void m2i_open_write(path_t *path, char *name, uint8_t type, buffer_t *buf, uint8_t append) {
+static void m2i_open_write(path_t *path, uint8_t *name, uint8_t type, buffer_t *buf, uint8_t append) {
   uint16_t offset;
   uint8_t *str;
-  char *nameptr;
+  uint8_t *nameptr;
   uint8_t i;
   FRESULT res;
 
@@ -367,7 +368,7 @@ static void m2i_open_write(path_t *path, char *name, uint8_t type, buffer_t *buf
 
       finfo.lfn = NULL;
       /* See if it's already there */
-      res = f_stat((char *)entrybuf+M2I_FATNAME_OFFSET, &finfo);
+      res = f_stat(entrybuf+M2I_FATNAME_OFFSET, &finfo);
       if (res == FR_OK) {
         str = entrybuf+M2I_FATNAME_OFFSET+7;
         /* Increment name */
@@ -391,7 +392,7 @@ static void m2i_open_write(path_t *path, char *name, uint8_t type, buffer_t *buf
       *str++ = *nameptr++;
 
     /* Overwrite the original name */
-    strcpy(name, (char *) entrybuf+M2I_FATNAME_OFFSET);
+    ustrcpy(name, entrybuf+M2I_FATNAME_OFFSET);
 
     /* Finish creating the M2I entry */
     entrybuf[M2I_FATNAME_OFFSET+8]  = ' ';
@@ -415,7 +416,7 @@ static void m2i_open_write(path_t *path, char *name, uint8_t type, buffer_t *buf
   }
 }
 
-static uint8_t m2i_delete(path_t *path, char *name) {
+static uint8_t m2i_delete(path_t *path, uint8_t *name) {
   uint16_t offset;
 
   offset = find_entry(name);
@@ -426,7 +427,7 @@ static uint8_t m2i_delete(path_t *path, char *name) {
     return 0;
 
   /* Ignore the result, we'll have to delete the entry anyway */
-  fat_delete(&current_dir, (char *)entrybuf+M2I_FATNAME_OFFSET);
+  fat_delete(&current_dir, entrybuf+M2I_FATNAME_OFFSET);
 
   entrybuf[0] = '-';
   if (image_write(offset, entrybuf, 1, 1))

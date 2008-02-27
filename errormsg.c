@@ -110,7 +110,7 @@ static const prog_uint8_t messages[] = {
 /// Version number string, will be added to message 73
 static const prog_uint8_t versionstr[] = VERSION;
 
-static char *appendmsg(char *msg, const prog_uint8_t *table, const uint8_t entry) {
+static uint8_t *appendmsg(uint8_t *msg, const prog_uint8_t *table, const uint8_t entry) {
   uint8_t i,tmp;
 
   i = 0;
@@ -146,7 +146,7 @@ static char *appendmsg(char *msg, const prog_uint8_t *table, const uint8_t entry
   return msg;
 }
 
-static char *appendnumber(char *msg, uint8_t value) {
+static uint8_t *appendnumber(uint8_t *msg, uint8_t value) {
   if (value >= 100) {
     *msg++ = '0' + value/100;
     value %= 100;
@@ -164,7 +164,7 @@ void set_error(uint8_t errornum) {
 }
 
 void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
-  char *msg = (char *) error_buffer;
+  uint8_t *msg = error_buffer;
 
   current_error = errornum;
   buffers[CONFIG_BUFFER_COUNT].data     = error_buffer;
@@ -212,7 +212,7 @@ void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
     else
       DIRTY_LED_OFF();
   }
-  buffers[CONFIG_BUFFER_COUNT].lastused = msg - (char *)error_buffer;
+  buffers[CONFIG_BUFFER_COUNT].lastused = msg - error_buffer;
 }
 
 /* Callback for the error channel buffer */

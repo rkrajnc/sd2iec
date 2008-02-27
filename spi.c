@@ -55,7 +55,7 @@
 // access routines
 void spiInit(void)
 {
-  char dummy;
+  uint8_t dummy;
 
   // setup SPI I/O pins
   PORTB |=  _BV(PB7) | _BV(PB4) | _BV(PB6); // set SCK+SS hi (no chip select),
@@ -101,8 +101,8 @@ uint32_t spiTransferLong(const uint32_t data)
   // assembler code.
   // Beware, endian unsafe union
   union {
-    unsigned long l;
-    unsigned char c[4];
+    uint32_t l;
+    uint8_t  c[4];
   } long2char;
 
   long2char.l = data;

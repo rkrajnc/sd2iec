@@ -38,6 +38,7 @@
 #include "m2iops.h"
 #include "parser.h"
 #include "uart.h"
+#include "ustring.h"
 #include "wrapops.h"
 #include "fatops.h"
 
@@ -129,10 +130,10 @@ void parse_error(FRESULT res, uint8_t readflag) {
  * This function converts the string in the given buffer from ASCII to
  * PETSCII in-place.
  */
-static void asc2pet(char *buf) {
+static void asc2pet(uint8_t *buf) {
   uint8_t ch;
   while (*buf) {
-    ch = *(uint8_t *)buf;
+    ch = *buf;
     if (ch > 64 && ch < 91)
       ch += 128;
     else if (ch > 96 && ch < 123)
@@ -153,10 +154,10 @@ static void asc2pet(char *buf) {
  * This function converts the string in the given buffer from PETSCII to
  * ASCII in-place.
  */
-static void pet2asc(char *buf) {
+static void pet2asc(uint8_t *buf) {
   uint8_t ch;
   while (*buf) {
-    ch = *(uint8_t *)buf;
+    ch = *buf;
     if (ch > (128+64) && ch < (128+91))
       ch -= 128;
     else if (ch > (96-32) && ch < (123-32))
@@ -291,7 +292,7 @@ static uint8_t fat_file_close(buffer_t *buf) {
  * This functions opens a file in the FAT filesystem for reading and sets up
  * buf to access it.
  */
-void fat_open_read(path_t *path, char *filename, buffer_t *buf) {
+void fat_open_read(path_t *path, uint8_t *filename, buffer_t *buf) {
   FRESULT res;
 
   pet2asc(filename);
@@ -323,7 +324,7 @@ void fat_open_read(path_t *path, char *filename, buffer_t *buf) {
  * buf to access it. type is ignored here because FAT has no equivalent of
  * file types.
  */
-void fat_open_write(path_t *path, char *filename, uint8_t type, buffer_t *buf, uint8_t append) {
+void fat_open_write(path_t *path, uint8_t *filename, uint8_t type, buffer_t *buf, uint8_t append) {
   FRESULT res;
 
   pet2asc(filename);
@@ -401,16 +402,16 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
     memset(dent->name, 0, sizeof(dent->name));
 
     if (!finfo.lfn[0]) {
-      ptr = finfo.lfn = (unsigned char *)finfo.fname;
+      ptr = finfo.lfn = finfo.fname;
       while (*ptr) {
         if (*ptr == '~') *ptr = 0xff;
         ptr++;
       }
     } else
       /* Convert only LFNs to PETSCII, 8.3 are always upper-case */
-      asc2pet((char *)finfo.lfn);
+      asc2pet(finfo.lfn);
 
-    strcpy((char *)dent->name, (char *)finfo.lfn);
+    ustrcpy(dent->name, finfo.lfn);
 
     /* Type+Flags */
     if (finfo.fattrib & AM_DIR) {
@@ -443,7 +444,7 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
  * This function deletes the file filename in path and returns
  * 0 if not found, 1 if deleted or 255 if an error occured.
  */
-uint8_t fat_delete(path_t *path, char *filename) {
+uint8_t fat_delete(path_t *path, uint8_t *filename) {
   FRESULT res;
 
   DIRTY_LED_ON();
@@ -473,7 +474,7 @@ uint8_t fat_delete(path_t *path, char *filename) {
  * it will be mounted as an image file. Returns 0 if successful,
  * 1 otherwise.
  */
-uint8_t fat_chdir(path_t *path, char *dirname) {
+uint8_t fat_chdir(path_t *path, uint8_t *dirname) {
   FRESULT res;
   FILINFO finfo;
 
@@ -484,7 +485,7 @@ uint8_t fat_chdir(path_t *path, char *dirname) {
     command_buffer[0] = '.';
     command_buffer[1] = '.';
     command_buffer[2] = 0;
-    dirname = (char *)command_buffer;
+    dirname = command_buffer;
   }
 
   pet2asc(dirname);
@@ -499,10 +500,10 @@ uint8_t fat_chdir(path_t *path, char *dirname) {
     current_dir.fat = finfo.clust;
   } else {
     /* Changing into a file, could be a mount request */
-    char *ext = strrchr(dirname, '.');
+    uint8_t *ext = ustrrchr(dirname, '.');
 
-    if (ext && (!strcasecmp_P(ext, PSTR(".m2i")) ||
-                !strcasecmp_P(ext, PSTR(".d64")))) {
+    if (ext && (!ustrcasecmp_P(ext, PSTR(".m2i")) ||
+                !ustrcasecmp_P(ext, PSTR(".d64")))) {
       /* D64/M2I mount request */
       free_all_buffers(1);
       /* Open image file */
@@ -512,7 +513,7 @@ uint8_t fat_chdir(path_t *path, char *dirname) {
         return 1;
       }
 
-      if (!strcasecmp_P(ext, PSTR(".m2i")))
+      if (!ustrcasecmp_P(ext, PSTR(".m2i")))
         fop = &m2iops;
       else
         fop = &d64ops;
@@ -525,7 +526,7 @@ uint8_t fat_chdir(path_t *path, char *dirname) {
 }
 
 /* Create a new directory */
-void fat_mkdir(path_t *path, char *dirname) {
+void fat_mkdir(path_t *path, uint8_t *dirname) {
   FRESULT res;
 
   fatfs.curr_dir = path->fat;
@@ -542,7 +543,7 @@ void fat_mkdir(path_t *path, char *dirname) {
  * in the first 16 bytes of label. Returns 0 if successfull, != 0 if
  * an error occured.
  */
-uint8_t fat_getlabel(path_t *path, char *label) {
+uint8_t fat_getlabel(path_t *path, uint8_t *label) {
   DIR dh;
   FILINFO finfo;
   FRESULT res;
@@ -579,7 +580,7 @@ uint8_t fat_getlabel(path_t *path, char *label) {
   while ((res = f_readdir(&dh, &finfo)) == FR_OK) {
     if(finfo.fname[0]=='\0')
       break;
-    if(finfo.fname[0]=='.' && finfo.fname[1]=='.' && strlen(finfo.fname)==2) {
+    if(finfo.fname[0]=='.' && finfo.fname[1]=='.' && ustrlen(finfo.fname)==2) {
       if(l_opendir(&fatfs,finfo.clust,&dh)) // open .. dir.
         break;
       while ((res = f_readdir(&dh, &finfo)) == FR_OK) {
@@ -610,7 +611,7 @@ uint8_t fat_getlabel(path_t *path, char *label) {
  * and the usual " 2A" of a 1541 in the first 5 bytes of id.
  * Always returns 0 for success.
  */
-uint8_t fat_getid(char *id) {
+uint8_t fat_getid(uint8_t *id) {
   switch (fatfs.fs_type) {
   case FS_FAT12:
     *id++ = '1';
@@ -705,7 +706,7 @@ uint8_t image_unmount(void) {
  * chdir/mkdir for all image types that don't support subdirectories
  * themselves. Returns 0 if successful, 1 otherwise.
  */
-uint8_t image_chdir(path_t *path, char *dirname) {
+uint8_t image_chdir(path_t *path, uint8_t *dirname) {
   if (dirname[0] == '_' && dirname[1] == 0) {
     /* Unmount request */
     return image_unmount();
@@ -720,7 +721,7 @@ uint8_t image_chdir(path_t *path, char *dirname) {
  *
  * This function does nothing.
  */
-void image_mkdir(path_t *path, char *dirname) {
+void image_mkdir(path_t *path, uint8_t *dirname) {
   return;
 }
 

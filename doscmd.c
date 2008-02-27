@@ -44,6 +44,7 @@
 #include "parser.h"
 #include "sdcard.h"
 #include "uart.h"
+#include "ustring.h"
 #include "wrapops.h"
 #include "doscmd.h"
 
@@ -72,7 +73,7 @@ void __cyg_profile_func_enter (void *this_fn, void *call_site) {
 /* ------------------------------------------------------------------------- */
 
 /* Parse a decimal number at str and return a pointer to the following char */
-static uint8_t parse_number(char **str) {
+static uint8_t parse_number(uint8_t **str) {
   uint8_t res = 0;
 
   /* Skip leading spaces */
@@ -91,13 +92,13 @@ static uint8_t parse_number(char **str) {
 /* Returns number of parameters (up to 4) or <0 on error    */
 static int8_t parse_blockparam(uint8_t values[]) {
   uint8_t paramcount = 0;
-  char *str;
+  uint8_t *str;
 
-  str = strchr((char *) command_buffer, ':');
+  str = ustrchr(command_buffer, ':');
   if (!str) {
-    if (strlen((char *) command_buffer) < 3)
+    if (ustrlen(command_buffer) < 3)
       return -1;
-    str = (char *)command_buffer + 2;
+    str = command_buffer + 2;
   }
 
   str++;
@@ -221,7 +222,7 @@ static void handle_memwrite(void) {
 }
 
 static void parse_xcommand(void) {
-  char *str;
+  uint8_t *str;
   path_t path; // FIXME: use global? Dupe in parse_command
 
   switch (command_buffer[1]) {
@@ -244,7 +245,7 @@ static void parse_xcommand(void) {
 
   case 'C':
     /* Calibration */
-    str = (char *)command_buffer+2;
+    str = command_buffer+2;
     OSCCAL = parse_number(&str);
     set_error_ts(ERROR_STATUS,iec_data.device_address,0);
     break;
@@ -257,7 +258,7 @@ static void parse_xcommand(void) {
 
   case 'S':
     /* Swaplist */
-    if (parse_path((char *)command_buffer+2, &path, &str, 0))
+    if (parse_path(command_buffer+2, &path, &str, 0))
       return;
 
     set_changelist(&path, str);
@@ -278,12 +279,12 @@ static void parse_xcommand(void) {
 }
 
 static void parse_block(void) {
-  char *str;
+  uint8_t *str;
   buffer_t *buf;
   uint8_t params[4];
   int8_t  pcount;
 
-  str = strchr((char *) command_buffer, '-');
+  str = ustrchr(command_buffer, '-');
   if (!str) {
     set_error(ERROR_SYNTAX_UNABLE);
     return;
@@ -344,7 +345,7 @@ static void parse_block(void) {
 
 void parse_doscommand(void) {
   uint8_t i,count;
-  char *fname;
+  uint8_t *fname;
   struct cbmdirent dent;
   path_t path;
 
@@ -392,24 +393,24 @@ void parse_doscommand(void) {
 
   /* MD/CD/RD clash with other commands, so they're checked first */
   if (command_buffer[1] == 'D') {
-    char *name;
+    uint8_t *name;
     switch (command_buffer[0]) {
     case 'M':
       /* MD requires a colon */
-      if (!strchr((char *)command_buffer, ':')) {
+      if (!ustrchr(command_buffer, ':')) {
         set_error(ERROR_SYNTAX_NONAME);
         break;
       }
-      if (parse_path((char *) command_buffer+2, &path, &name, 0))
+      if (parse_path(command_buffer+2, &path, &name, 0))
         break;
       mkdir(&path,name);
       break;
 
     case 'C':
-      if (parse_path((char *) command_buffer+2, &path, &name, 1))
+      if (parse_path(command_buffer+2, &path, &name, 1))
         break;
 
-      if (strlen(name) != 0) {
+      if (ustrlen(name) != 0) {
         /* Path component after the : */
         if (name[0] == '_') {
           /* Going up a level - let chdir handle it. */
@@ -422,13 +423,13 @@ void parse_doscommand(void) {
 
           /* Move into it if it's a directory, use chdir if it's a file. */
           if ((dent.typeflags & TYPE_MASK) != TYPE_DIR) {
-            if (chdir(&path,(char *)dent.name))
+            if (chdir(&path, dent.name))
               break;
           } else
             current_dir = dent.path;
         }
       } else {
-        if (strchr((char *)command_buffer, '/')) {
+        if (ustrchr(command_buffer, '/')) {
           current_dir = path;
         } else {
           set_error(ERROR_FILE_NOT_FOUND_39);
@@ -461,7 +462,7 @@ void parse_doscommand(void) {
       if (command_buffer[i] != ':') {
         set_error(ERROR_SYNTAX_NONAME);
       } else {
-        i = file_delete(&current_dir, (char *)command_buffer+i+1);
+        i = file_delete(&current_dir, command_buffer+i+1);
         if (i != 255)
           set_error_ts(ERROR_SCRATCHED,i,0);
       }
@@ -607,7 +608,7 @@ void parse_doscommand(void) {
 
   case 'S':
     /* Scratch */
-    parse_path((char *) command_buffer+1, &path, &fname, 0);
+    parse_path(command_buffer+1, &path, &fname, 0);
 
     if (opendir(&matchdh, &path))
       return;
@@ -618,7 +619,7 @@ void parse_doscommand(void) {
       /* Skip directories */
       if ((dent.typeflags & TYPE_MASK) == TYPE_DIR)
         continue;
-      i = file_delete(&path, (char *)dent.name);
+      i = file_delete(&path, dent.name);
       if (i != 255)
         count += i;
       else

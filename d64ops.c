@@ -542,19 +542,19 @@ static int8_t d64_readdir(dh_t *dh, struct cbmdirent *dent) {
   return 0;
 }
 
-static uint8_t d64_getlabel(path_t *path, char *label) {
+static uint8_t d64_getlabel(path_t *path, uint8_t *label) {
   if (image_read(sector_offset(DIR_TRACK,0) + LABEL_OFFSET, label, 16))
     return 1;
 
-  strnsubst((uint8_t *)label, 16, 0xa0, 0x20);
+  strnsubst(label, 16, 0xa0, 0x20);
   return 0;
 }
 
-static uint8_t d64_getid(char *id) {
+static uint8_t d64_getid(uint8_t *id) {
   if (image_read(sector_offset(DIR_TRACK,0) + ID_OFFSET, id, 5))
     return 1;
 
-  strnsubst((uint8_t *)id, 5, 0xa0, 0x20);
+  strnsubst(id, 5, 0xa0, 0x20);
   return 0;
 }
 
@@ -574,7 +574,7 @@ static uint16_t d64_freeblocks(void) {
   return blocks;
 }
 
-static void d64_open_read(path_t *path, char *name, buffer_t *buf) {
+static void d64_open_read(path_t *path, uint8_t *name, buffer_t *buf) {
   /* WARNING: Ugly hack used here. The directory entry is still in  */
   /*          entrybuf because of match_entry in fatops.c/file_open */
   buf->data[0] = entrybuf[OFS_TRACK];
@@ -588,7 +588,7 @@ static void d64_open_read(path_t *path, char *name, buffer_t *buf) {
   buf->refill(buf);
 }
 
-static void d64_open_write(path_t *path, char *name, uint8_t type, buffer_t *buf, uint8_t append) {
+static void d64_open_write(path_t *path, uint8_t *name, uint8_t type, buffer_t *buf, uint8_t append) {
   dh_t dh;
   int8_t res;
   uint8_t t,s;
@@ -714,7 +714,7 @@ static void d64_open_write(path_t *path, char *name, uint8_t type, buffer_t *buf
   buf->pvt.d64.sector = s;
 }
 
-static uint8_t d64_delete(path_t *path, char *name) {
+static uint8_t d64_delete(path_t *path, uint8_t *name) {
   /* At this point entrybuf will contain the directory entry and    */
   /* matchdh will almost point to it (entry incremented in readdir) */
   buffer_t *buf;

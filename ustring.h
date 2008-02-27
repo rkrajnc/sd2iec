@@ -20,40 +20,19 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
-   uart.h: Definitions for the UART access routines
+   ustring.h: uint8_t wrappers for string.h-functions
 
 */
 
-#ifndef UART_H
-#define UART_H
+#ifndef USTRING_H
+#define USTRING_H
 
-#ifdef CONFIG_UART_DEBUG
-
-#include <avr/pgmspace.h>
-
-void init_serial(void);
-unsigned char uart_getc(void);
-void uart_putc(char c);
-void uart_puthex(uint8_t num);
-void uart_trace(uint8_t* ptr, uint16_t start, uint16_t len);
-void uart_flush(void);
-void uart_puts_P(prog_char *text);
-void uart_putcrlf(void);
-
-#include <stdio.h>
-#define dprintf(str,...) printf_P(PSTR(str), ##__VA_ARGS__)
-
-#else
-
-#define init_serial()  do {} while(0)
-#define uart_getc()    0
-#define uart_putc(x)   do {} while(0)
-#define uart_puthex(x) do {} while(0)
-#define uart_flush()   do {} while(0)
-#define uart_puts_P(x) do {} while(0)
-#define uart_putcrlf() do {} while(0)
-#define uart_trace(a,b,c) do {} while(0)
-
-#endif
+#define ustrcasecmp_P(s1,s2) (strcasecmp_P((char *)(s1), (s2)))
+#define ustrchr(s,c)         ((uint8_t *)strchr((char *)(s), (c)))
+#define ustrcmp(s1,s2)       (strcmp((char *)(s1), (char *)(s2)))
+#define ustrcpy(s1,s2)       (strcpy((char *)(s1), (char *)(s2)))
+#define ustrcpy_P(s1,s2)     (strcpy_P((char *)(s1), (s2)))
+#define ustrlen(s)           (strlen((char *)(s)))
+#define ustrrchr(s,c)        ((uint8_t *)strrchr((char *)(s), (c)))
 
 #endif

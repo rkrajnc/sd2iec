@@ -35,6 +35,7 @@
 #include "m2iops.h"
 #include "parser.h"
 #include "uart.h"
+#include "ustring.h"
 #include "wrapops.h"
 #include "fileops.h"
 
@@ -239,9 +240,9 @@ static void load_directory(uint8_t secondary) {
 
   if (command_length > 2) {
     /* Parse the name pattern */
-    char *name;
+    uint8_t *name;
 
-    if (parse_path((char *) command_buffer+1, &path, &name, 0)) {
+    if (parse_path(command_buffer+1, &path, &name, 0)) {
       free_buffer(buf);
       return;
     }
@@ -254,7 +255,7 @@ static void load_directory(uint8_t secondary) {
     buf->pvt.dir.matchstr = name;
 
     /* Check for a filetype match */
-    name = strchr(name, '=');
+    name = ustrchr(name, '=');
     if (name != NULL) {
       *name++ = 0;
       switch (*name++) {
@@ -308,13 +309,13 @@ static void load_directory(uint8_t secondary) {
   memcpy_P(buf->data, dirheader, sizeof(dirheader));
 
   /* read volume name */
-  if (disk_label(&path,(char *) (buf->data+8))) {
+  if (disk_label(&path, buf->data+8)) {
     free_buffer(buf);
     return;
   }
 
   /* read id */
-  if (disk_id((char *) (buf->data+HEADER_OFFSET_ID))) {
+  if (disk_id(buf->data+HEADER_OFFSET_ID)) {
     free_buffer(buf);
     return;
   }
@@ -369,11 +370,11 @@ void file_open(uint8_t secondary) {
   }
 
   /* Parse type+mode suffixes */
-  char *ptr = (char *) command_buffer;
+  uint8_t *ptr = command_buffer;
   enum open_modes mode = OPEN_READ;
   uint8_t filetype = TYPE_DEL;
 
-  while (*ptr && (ptr = strchr(ptr, ','))) {
+  while (*ptr && (ptr = ustrchr(ptr, ','))) {
     *ptr = 0;
     ptr++;
     switch (*ptr) {
@@ -439,24 +440,24 @@ void file_open(uint8_t secondary) {
   }
 
   /* Parse path+drive numbers */
-  char *cbuf = (char *) command_buffer;
-  char *fname;
+  uint8_t *cbuf = command_buffer;
+  uint8_t *fname;
   int8_t res;
   struct cbmdirent dent;
   path_t path;
 
   /* Check for rewrite marker */
   if (command_buffer[0] == '@')
-    cbuf = (char *)command_buffer+1;
+    cbuf = command_buffer+1;
   else
-    cbuf = (char *)command_buffer;
+    cbuf = command_buffer;
 
   if (parse_path(cbuf, &path, &fname, 0))
     return;
 
   /* For M2I only: Remove trailing spaces from name */
   if (fop == &m2iops) {
-    res = strlen(fname);
+    res = ustrlen(fname);
     while (--res && fname[res] == ' ')
       fname[res] = 0;
   }
@@ -469,7 +470,7 @@ void file_open(uint8_t secondary) {
   if (mode == OPEN_WRITE) {
     if (res == 0) {
       /* Match found */
-      if (cbuf != (char *) command_buffer) {
+      if (cbuf != command_buffer) {
         /* Make sure there is a free buffer to open the new file later */
         if (!check_free_buffers()) {
           set_error(ERROR_NO_CHANNEL);
@@ -487,7 +488,7 @@ void file_open(uint8_t secondary) {
     } else {
       /* Normal write or non-existing rewrite */
       /* Doesn't exist: Copy name to dent */
-      strcpy((char *)dent.name, fname);
+      ustrcpy(dent.name, fname);
       set_error(ERROR_OK); // because first_match has set FNF
     }
   } else
@@ -497,7 +498,7 @@ void file_open(uint8_t secondary) {
       return;
     }
 
-  fname = (char *)dent.name;
+  fname = dent.name;
 
   /* Grab a buffer */
   buf = alloc_buffer();

@@ -124,7 +124,7 @@ static uint8_t isSDHC;
 #endif
 
 
-static char sdResponse(uint8_t expected)
+static uint8_t sdResponse(uint8_t expected)
 {
   unsigned short count = 0x0FFF;
 
@@ -135,7 +135,7 @@ static char sdResponse(uint8_t expected)
   return (count != 0);
 }
 
-static char sdWaitWriteFinish(void)
+static uint8_t sdWaitWriteFinish(void)
 {
   unsigned short count = 0xFFFF; // wait for quite some time
 
@@ -168,8 +168,8 @@ static int sendCommand(const uint8_t  card,
                        const uint32_t parameter,
                        const uint8_t  deselect) {
   union {
-    unsigned long l;
-    unsigned char c[4];
+    uint32_t l;
+    uint8_t  c[4];
   } long2char;
 
   uint8_t  i,crc,errorcount;
@@ -218,7 +218,7 @@ static int sendCommand(const uint8_t  card,
 
 #ifdef CONFIG_SDHC_SUPPORT
 // Extended init sequence for SDHC support
-static char extendedInit(const uint8_t card) {
+static uint8_t extendedInit(const uint8_t card) {
   uint8_t  i;
   uint16_t counter;
   uint32_t answer;

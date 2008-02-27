@@ -31,6 +31,7 @@
 #include "dirent.h"
 #include "errormsg.h"
 #include "fatops.h"
+#include "ustring.h"
 #include "parser.h"
 
 path_t current_dir;
@@ -43,9 +44,9 @@ path_t current_dir;
  * This function tests if matchstr matches name in dent.
  * Returns 1 for a match, 0 otherwise.
  */
-static uint8_t match_name(char *matchstr, struct cbmdirent *dent) {
-  char *filename = (char *)dent->name;
-  char *starpos;
+static uint8_t match_name(uint8_t *matchstr, struct cbmdirent *dent) {
+  uint8_t *filename = dent->name;
+  uint8_t *starpos;
 
   while (*filename) {
     switch (*matchstr) {
@@ -56,8 +57,8 @@ static uint8_t match_name(char *matchstr, struct cbmdirent *dent) {
 
     case '*':
       starpos = matchstr;
-      matchstr += strlen(matchstr)-1;
-      filename += strlen(filename)-1;
+      matchstr += ustrlen(matchstr)-1;
+      filename += ustrlen(filename)-1;
       while (matchstr != starpos) {
         if (*matchstr != *filename && *matchstr != '?')
           return 0;
@@ -90,7 +91,7 @@ static uint8_t match_name(char *matchstr, struct cbmdirent *dent) {
  * -1 if no match could be found, 1 if an error occured or 0 if a match was
  * found.
  */
-int8_t next_match(dh_t *dh, char *matchstr, uint8_t type, struct cbmdirent *dent) {
+int8_t next_match(dh_t *dh, uint8_t *matchstr, uint8_t type, struct cbmdirent *dent) {
   int8_t res;
 
   while (1) {
@@ -129,7 +130,7 @@ int8_t next_match(dh_t *dh, char *matchstr, uint8_t type, struct cbmdirent *dent
  * convenience wrapper around opendir+next_match, it is not required to call
  * it before using next_match.
  */
-int8_t first_match(path_t *path, char *matchstr, uint8_t type, struct cbmdirent *dent) {
+int8_t first_match(path_t *path, uint8_t *matchstr, uint8_t type, struct cbmdirent *dent) {
   int8_t res;
 
   if (opendir(&matchdh, path))
@@ -153,19 +154,19 @@ int8_t first_match(path_t *path, char *matchstr, uint8_t type, struct cbmdirent 
  * the path named in the input buffer. Returns 0 if successful or 1 if an
  * error occured.
  */
-uint8_t parse_path(char *in, path_t *path, char **name, uint8_t parse_always) {
+uint8_t parse_path(uint8_t *in, path_t *path, uint8_t **name, uint8_t parse_always) {
   struct cbmdirent dent;
-  char *end;
-  char saved;
+  uint8_t *end;
+  uint8_t saved;
 
   *path = current_dir;
 
-  if (parse_always || strchr(in, ':')) {
+  if (parse_always || ustrchr(in, ':')) {
     /* Skip partition number */
     while (*in && (isdigit(*in) || *in == ' ')) in++;
 
     if (*in != '/') {
-      *name = strchr(in, ':');
+      *name = ustrchr(in, ':');
       if (*name == NULL)
         *name = in;
       else

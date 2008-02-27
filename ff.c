@@ -456,7 +456,7 @@ void get_fileinfo (     /* No return code */
 )
 {
   BYTE n, c, a;
-  char *p;
+  uint8_t *p;
 
 
   p = &finfo->fname[0];
@@ -496,10 +496,10 @@ void get_fileinfo (     /* No return code */
 /*-----------------------------------------------------------------------*/
 
 static
-char make_dirfile (   /* 1: error - detected an invalid format, '\0'or'/': next character */
-  const char **path,  /* Pointer to the file path pointer */
-  char *dirname,      /* Pointer to directory name buffer {Name(8), Ext(3), NT flag(1)} */
-  BOOL* lfn           /* is this an LFN name? */
+uint8_t make_dirfile (   /* 1: error - detected an invalid format, '\0'or'/': next character */
+  const uint8_t **path,  /* Pointer to the file path pointer */
+  uint8_t *dirname,      /* Pointer to directory name buffer {Name(8), Ext(3), NT flag(1)} */
+  BOOL* lfn              /* is this an LFN name? */
 )
 {
   BYTE n, t, c, a, b;
@@ -582,20 +582,20 @@ char make_dirfile (   /* 1: error - detected an invalid format, '\0'or'/': next 
 /*-----------------------------------------------------------------------*/
 
 static
-FRESULT trace_path (    /* FR_OK(0): successful, !=0: error code */
-  DIR *dj,              /* Pointer to directory object to return last directory */
-  char *fn,             /* Pointer to last segment name to return {file(8),ext(3),attr(1)} */
-  const char *path,     /* Full-path string to trace a file or directory */
-  BYTE **dir            /* Directory pointer in Win[] to retutn */
+FRESULT trace_path (     /* FR_OK(0): successful, !=0: error code */
+  DIR *dj,               /* Pointer to directory object to return last directory */
+  uint8_t *fn,           /* Pointer to last segment name to return {file(8),ext(3),attr(1)} */
+  const uint8_t *path,   /* Full-path string to trace a file or directory */
+  BYTE **dir             /* Directory pointer in Win[] to retutn */
 #if _USE_LFN != 0
-  ,DIR *fileobj,        /* Pointer DIR holding the beginning of the LFN, identical to dj if none */
-  const char** spath,   /* path to start of last item's name */
-  UINT *len             /* length of LFN entry, 0=non-LFN */
+  ,DIR *fileobj,         /* Pointer DIR holding the beginning of the LFN, identical to dj if none */
+  const uint8_t** spath, /* path to start of last item's name */
+  UINT *len              /* length of LFN entry, 0=non-LFN */
 #endif
 )
 {
   DWORD clust;
-  char ds;
+  uint8_t ds;
   BYTE *dptr = NULL;
   FATFS *fs = dj->fs; /* Get logical drive from the given DIR structure */
   BOOL lfn;
@@ -858,7 +858,7 @@ FRESULT reserve_direntry (  /* FR_OK: successful, FR_DENIED: no free entry, FR_R
 /* Load boot record and check if it is a FAT boot record                 */
 /*-----------------------------------------------------------------------*/
 
-static const PROGMEM char fat32string[] = "FAT32";
+static const PROGMEM uint8_t fat32string[] = "FAT32";
 
 static
 BYTE check_fs (     /* 0:The FAT boot record, 1:Valid boot record but not an FAT, 2:Not a boot record or error */
@@ -893,7 +893,7 @@ BYTE check_fs (     /* 0:The FAT boot record, 1:Valid boot record but not an FAT
 
 static
 FRESULT auto_mount (    /* FR_OK(0): successful, !=0: any error occured */
-  const char **path,    /* Pointer to pointer to the path name (drive number) */
+  const uint8_t **path, /* Pointer to pointer to the path name (drive number) */
   FATFS **rfs,          /* Pointer to pointer to the found file system object */
   BYTE chk_wp           /* !=0: Check media write protection for write access */
 )
@@ -901,7 +901,7 @@ FRESULT auto_mount (    /* FR_OK(0): successful, !=0: any error occured */
   BYTE drv, fmt, *tbl;
   DSTATUS stat;
   DWORD bootsect, fatsize, totalsect, maxclust;
-  const char *p = *path;
+  const uint8_t *p = *path;
   FATFS *fs;
 
 
@@ -1038,7 +1038,7 @@ FRESULT validate (    /* FR_OK(0): The object is valid, !=0: Not valid */
 
 #if _USE_LFN != 0
 static
-BYTE compute_checksum(unsigned char *buf) {
+BYTE compute_checksum(uint8_t *buf) {
   BYTE i,rc;
   rc=buf[0];
   for(i=1;i<11;i++) {
@@ -1085,9 +1085,9 @@ BYTE dos_char(
 
 static
 void create_short_name(
-  const char* name, 
+  const uint8_t* name, 
   UINT len, 
-  char* buf
+  uint8_t* buf
 )
 {
   BYTE i=0,k,l=0;
@@ -1135,7 +1135,7 @@ void create_short_name(
 
 static
 BOOL fix_short_name(
-  char *buf
+  uint8_t *buf
 )
 {
   BYTE i=8;
@@ -1167,7 +1167,7 @@ BOOL fix_short_name(
 static
 FRESULT chk_filename( /* FR_EXIST means name is taken. */
   DIR *dj,            /* Target directory to create new entry */
-  char* fn            /* name to check */
+  uint8_t* fn         /* name to check */
 )
 {
   BYTE *dptr;
@@ -1203,9 +1203,9 @@ FRESULT chk_filename( /* FR_EXIST means name is taken. */
 FRESULT add_direntry(
   DIR *dj,              /* Target directory to create new entry */
   BYTE **dir,           /* pointer to created entry */
-  const char* spath,
+  const uint8_t* spath,
   UINT len,
-  char* fn
+  uint8_t* fn
 )
 {
   FATFS *fs = dj->fs;
@@ -1227,7 +1227,7 @@ FRESULT add_direntry(
     if(!fix_short_name(fn))
       return FR_EXIST;
   }
-  chk=compute_checksum((unsigned char*)fn);
+  chk=compute_checksum(fn);
   dj->clust = clust;    /* we now have a good name, use it */
   dj->index = index;
   dj->sect  = sect;
@@ -1296,20 +1296,20 @@ FRESULT f_mount (
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_open (
-  FIL *fp,            /* Pointer to the blank file object */
-  const char *path,   /* Pointer to the file name */
-  BYTE mode           /* Access mode and file open mode flags */
+  FIL *fp,             /* Pointer to the blank file object */
+  const uint8_t *path, /* Pointer to the file name */
+  BYTE mode            /* Access mode and file open mode flags */
 )
 {
   FRESULT res;
   BYTE *dir;
   DIR dj;
-  char fn[8+3+1];
+  uint8_t fn[8+3+1];
   FATFS *fs;
 #if _USE_LFN != 0
   UINT len;
   DIR fileobj;
-  const char* spath;
+  const uint8_t* spath;
 #endif
 
 
@@ -1753,17 +1753,17 @@ fk_error: /* Abort this file due to an unrecoverable error */
 
 #if 0
 FRESULT f_opendir (
-  DIR *dj,          /* Pointer to directory object to create */
-  const char *path  /* Pointer to the directory path */
+  DIR *dj,            /* Pointer to directory object to create */
+  const uint8_t *path /* Pointer to the directory path */
 )
 {
   BYTE *dir;
-  char fn[8+3+1];
+  uint8_t fn[8+3+1];
   FRESULT res;
   FATFS *fs;
 #if _USE_LFN != 0
   DIR fileobj;
-  const char* spath;
+  const uint8_t* spath;
   UINT len;
 #endif
 
@@ -1943,18 +1943,18 @@ FRESULT f_readdir (
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_stat (
-  const char *path, /* Pointer to the file path */
-  FILINFO *finfo    /* Pointer to file information to return */
+  const uint8_t *path, /* Pointer to the file path */
+  FILINFO *finfo       /* Pointer to file information to return */
 )
 {
   BYTE *dir;
-  char fn[8+3+1];
+  uint8_t fn[8+3+1];
   FRESULT res;
   DIR dj;
   FATFS *fs;
 #if _USE_LFN != 0
   DIR fileobj;
-  const char* spath;
+  const uint8_t* spath;
   UINT len;
 #endif
 
@@ -2030,9 +2030,9 @@ ft_error: /* Abort this file due to an unrecoverable error */
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_getfree (
-  const char *drv,  /* Logical drive number */
-  DWORD *nclust,    /* Pointer to the double word to return number of free clusters */
-  FATFS **fatfs     /* Pointer to pointer to the file system object to return */
+  const uint8_t *drv, /* Logical drive number */
+  DWORD *nclust,      /* Pointer to the double word to return number of free clusters */
+  FATFS **fatfs       /* Pointer to pointer to the file system object to return */
 )
 {
   DWORD n, clust, sect;
@@ -2095,18 +2095,18 @@ FRESULT f_getfree (
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_unlink (
-  const char *path      /* Pointer to the file or directory path */
+  const uint8_t *path      /* Pointer to the file or directory path */
 )
 {
   BYTE *dir, *sdir;
   DWORD dclust, dsect;
-  char fn[8+3+1];
+  uint8_t fn[8+3+1];
   FRESULT res;
   DIR dj;
   FATFS *fs;
 #if _USE_LFN != 0
   DIR fileobj;
-  const char* spath;
+  const uint8_t* spath;
   UINT len;
 #endif
 
@@ -2175,11 +2175,11 @@ FRESULT f_unlink (
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_mkdir (
-  const char *path    /* Pointer to the directory path */
+  const uint8_t *path    /* Pointer to the directory path */
 )
 {
   BYTE *dir, *fw, n;
-  char fn[8+3+1];
+  uint8_t fn[8+3+1];
   DWORD sect, dsect, dclust, pclust, tim;
   FRESULT res;
   DIR dj;
@@ -2187,7 +2187,7 @@ FRESULT f_mkdir (
 #if _USE_LFN != 0
   UINT len;
   DIR fileobj;
-  const char* spath;
+  const uint8_t* spath;
 #endif
 
 
@@ -2264,18 +2264,18 @@ FRESULT f_mkdir (
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_chdir (
-  const char *path  /* Pointer to the file name */
+  const uint8_t *path  /* Pointer to the file name */
 )
 {
   FRESULT res;
   BYTE *dir;
   DIR dj;
-  char fn[8+3+1];
+  uint8_t fn[8+3+1];
   FATFS *fs;
 #if _USE_LFN != 0
   UINT len;
   DIR fileobj;
-  const char* spath;
+  const uint8_t* spath;
 #endif
 
   res = auto_mount(&path, &fs, 0);
@@ -2312,20 +2312,20 @@ FRESULT f_chdir (
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_chmod (
-  const char *path, /* Pointer to the file path */
-  BYTE value,       /* Attribute bits */
-  BYTE mask         /* Attribute mask to change */
+  const uint8_t *path, /* Pointer to the file path */
+  BYTE value,          /* Attribute bits */
+  BYTE mask            /* Attribute mask to change */
 )
 {
   FRESULT res;
   BYTE *dir;
   DIR dj;
-  char fn[8+3+1];
+  uint8_t fn[8+3+1];
   FATFS *fs;
 #if _USE_LFN != 0
   UINT len;
   DIR fileobj;
-  const char* spath;
+  const uint8_t* spath;
 #endif
 
 
@@ -2358,19 +2358,19 @@ FRESULT f_chmod (
 /*-----------------------------------------------------------------------*/
 #if _USE_UTIME
 FRESULT f_utime (
-  const char *path,     /* Pointer to the file/directory name */
+  const uint8_t *path,  /* Pointer to the file/directory name */
   const FILINFO *finfo  /* Pointer to the timestamp to be set */
 )
 {
   FRESULT res;
   DIR dj;
   BYTE *dir;
-  char fn[8+3+1];
+  uint8_t fn[8+3+1];
   FATFS *fs;
 #if _USE_LFN != 0
   UINT len;
   DIR fileobj;
-  const char* spath;
+  const uint8_t* spath;
 #endif
 
   res = auto_mount(&path, &fs, 1);
@@ -2402,20 +2402,20 @@ FRESULT f_utime (
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_rename (
-  const char *path_old, /* Pointer to the old name */
-  const char *path_new  /* Pointer to the new name */
+  const uint8_t *path_old, /* Pointer to the old name */
+  const uint8_t *path_new  /* Pointer to the new name */
 )
 {
   FRESULT res;
   DWORD sect_old;
   BYTE *dir_old, *dir_new, direntry[32-11];
   DIR dj;
-  char fn[8+3+1];
+  uint8_t fn[8+3+1];
   FATFS *fs;
 #if _USE_LFN != 0
   UINT len_old, len_new;
   DIR fileobj;
-  const char* spath;
+  const uint8_t* spath;
 #endif
 
 

@@ -67,12 +67,12 @@ typedef struct buffer_s {
   /* private: */
   union {
     struct {
-      dh_t dh;          /* Directory handle */
-      uint8_t filetype; /* File type */
-      char *matchstr;   /* Pointer to filename pattern */
+      dh_t dh;           /* Directory handle */
+      uint8_t filetype;  /* File type */
+      uint8_t *matchstr; /* Pointer to filename pattern */
     } dir;
-    FIL fh;             /* File access via FAT */
-    d64fh_t d64;        /* File access on D64  */
+    FIL fh;              /* File access via FAT */
+    d64fh_t d64;         /* File access on D64  */
   } pvt;
 } buffer_t;
 
@@ -111,6 +111,6 @@ uint8_t active_buffers;
 void mark_write_buffer(buffer_t *buf);
 
 /* AVR-specific hack: Address 1 is r1 which is always zero in C code */
-#define NULLSTRING ((char *)1)
+#define NULLSTRING ((uint8_t *)1)
 
 #endif
