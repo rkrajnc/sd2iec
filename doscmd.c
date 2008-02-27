@@ -426,11 +426,11 @@ void parse_doscommand(void) {
             current_dir = dent.path;
         }
       } else {
-        if (current_dir.fat == path.fat) {
+        if (strchr((char *)command_buffer, '/')) {
+          current_dir = path;
+        } else {
           set_error(ERROR_FILE_NOT_FOUND_39);
           break;
-        } else {
-          current_dir = path;
         }
       }
 
