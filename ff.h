@@ -193,7 +193,7 @@ typedef struct _FILINFO {
     WORD ftime;             /* Time */
     BYTE fattrib;           /* Attribute */
     DWORD clust;            /* Start cluster */
-    uint8_t fname[8+1+3+1];    /* Name (8.3 format) */
+    UCHAR fname[8+1+3+1];   /* Name (8.3 format) */
 #if _USE_LFN != 0
     BYTE* lfn;
     BYTE  lfn_len;
@@ -252,22 +252,22 @@ typedef enum {
 /* FatFs module application interface                  */
 
 FRESULT f_mount (BYTE, FATFS*);                      /* Mount/Unmount a logical drive */
-FRESULT f_open (FIL*, const uint8_t*, BYTE);         /* Open or create a file */
+FRESULT f_open (FIL*, const UCHAR*, BYTE);           /* Open or create a file */
 FRESULT f_read (FIL*, void*, UINT, UINT*);           /* Read data from a file */
 FRESULT f_write (FIL*, const void*, UINT, UINT*);    /* Write data to a file */
 FRESULT f_lseek (FIL*, DWORD);                       /* Move file pointer of a file object */
 FRESULT f_close (FIL*);                              /* Close an open file object */
-FRESULT f_opendir (DIR*, const uint8_t*);            /* Open an existing directory */
+FRESULT f_opendir (DIR*, const UCHAR*);              /* Open an existing directory */
 FRESULT f_readdir (DIR*, FILINFO*);                  /* Read a directory item */
-FRESULT f_stat (const uint8_t*, FILINFO*);           /* Get file status */
-FRESULT f_getfree (const uint8_t*, DWORD*, FATFS**); /* Get number of free clusters on the drive */
+FRESULT f_stat (const UCHAR*, FILINFO*);             /* Get file status */
+FRESULT f_getfree (const UCHAR*, DWORD*, FATFS**);   /* Get number of free clusters on the drive */
 FRESULT f_sync (FIL*);                               /* Flush cached data of a writing file */
-FRESULT f_unlink (const uint8_t*);                   /* Delete an existing file or directory */
-FRESULT f_mkdir (const uint8_t*);                    /* Create a new directory */
-FRESULT f_chmod (const uint8_t*, BYTE, BYTE);        /* Change file/dir attriburte */
-FRESULT f_rename (const uint8_t*, const uint8_t*);   /* Rename/Move a file or directory */
+FRESULT f_unlink (const UCHAR*);                     /* Delete an existing file or directory */
+FRESULT f_mkdir (const UCHAR*);                      /* Create a new directory */
+FRESULT f_chmod (const UCHAR*, BYTE, BYTE);          /* Change file/dir attriburte */
+FRESULT f_rename (const UCHAR*, const UCHAR*);       /* Rename/Move a file or directory */
 FRESULT f_mkfs (BYTE, BYTE, WORD);                   /* Create a file system on the drive */
-FRESULT f_chdir (const uint8_t*);                    /* Change current directory */
+FRESULT f_chdir (const UCHAR*);                     /* Change current directory */
 
 /* Low Level functions */
 FRESULT l_opendir(FATFS* fs, DWORD cluster, DIR *dirobj); /* Open an existing directory by its start cluster */
