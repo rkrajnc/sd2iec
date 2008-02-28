@@ -665,15 +665,19 @@ void fat_sectordummy(buffer_t *buf, uint8_t track, uint8_t sector) {
  * is required.
  */
 void init_fatops(uint8_t preserve_path) {
+  FRESULT res;
+
   fop = &fatops;
-  f_mount(0, &fatfs);
+  res = f_mount(0, &fatfs);
+
+  if (res != FR_OK) {
+    parse_error(res,1);
+    return;
+  }
 
   if (!preserve_path)
     /* Reset the current path */
     current_dir.fat = 0;
-
-  /* Dummy operation to force the actual mounting */
-  f_open(&imagehandle, NULLSTRING, FA_OPEN_EXISTING);
 }
 
 /**

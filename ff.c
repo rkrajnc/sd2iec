@@ -888,52 +888,17 @@ BYTE check_fs (     /* 0:The FAT boot record, 1:Valid boot record but not an FAT
 
 
 /*-----------------------------------------------------------------------*/
-/* Make sure that the file system is valid                               */
+/* Mount a drive                                                         */
 /*-----------------------------------------------------------------------*/
 
-static
-FRESULT auto_mount (    /* FR_OK(0): successful, !=0: any error occured */
-  const UCHAR **path,   /* Pointer to pointer to the path name (drive number) */
-  FATFS **rfs,          /* Pointer to pointer to the found file system object */
-  BYTE chk_wp           /* !=0: Check media write protection for write access */
+FRESULT mount_drv(
+  BYTE drv,
+  FATFS* fs
 )
 {
-  BYTE drv, fmt, *tbl;
   DSTATUS stat;
+  BYTE fmt, *tbl;
   DWORD bootsect, fatsize, totalsect, maxclust;
-  const UCHAR *p = *path;
-  FATFS *fs;
-
-
-  /* Get drive number from the path name */
-  while (*p == ' ') p++;              /* Strip leading spaces */
-  drv = p[0] - '0';                   /* Is there a drive number? */
-  if (drv <= 9 && p[1] == ':')
-    p += 2;                           /* Found a drive number, get and strip it */
-  else
-    drv = 0;                          /* No drive number is given, use drive number 0 as default */
-#if _USE_CHDIR == 0
-  if (*p == '/') p++;                 /* Strip heading slash */
-#endif
-  *path = p;                          /* Return pointer to the path name */
-
-  /* Check if the drive number is valid or not */
-  if (drv >= _DRIVES) return FR_INVALID_DRIVE;    /* Is the drive number valid? */
-  *rfs = fs = FatFs[drv];             /* Returen pointer to the corresponding file system object */
-  if (!fs) return FR_NOT_ENABLED;     /* Is the file system object registered? */
-
-  if (fs->fs_type) {                  /* If the logical drive has been mounted */
-    stat = disk_status(fs->drive);
-    if (!(stat & STA_NOINIT)) {       /* If the physical drive is kept initialized */
-#if !_FS_READONLY
-      if (chk_wp && (stat & STA_PROTECT))         /* Check write protection if needed */
-        return FR_WRITE_PROTECTED;
-#endif
-      return FR_OK;                   /* The file system object is valid */
-    }
-  }
-
-  /* The logical drive has not been mounted, following code attempts to mount the logical drive */
 
   memset(fs, 0, sizeof(FATFS));       /* Clean-up the file system object */
 #if _USE_1_BUF != 0
@@ -946,10 +911,6 @@ FRESULT auto_mount (    /* FR_OK(0): successful, !=0: any error occured */
 #if S_MAX_SIZ > 512                   /* Check disk sector size */
   if (disk_ioctl(drv, GET_SECTOR_SIZE, &SS(fs)) != RES_OK || SS(fs) > S_MAX_SIZ)
     return FR_NO_FILESYSTEM;
-#endif
-#if !_FS_READONLY
-  if (chk_wp && (stat & STA_PROTECT)) /* Check write protection if needed */
-    return FR_WRITE_PROTECTED;
 #endif
   /* Search FAT partition on the drive */
   fmt = check_fs(fs, bootsect = 0);   /* Check sector 0 as an SFD format */
@@ -1012,6 +973,58 @@ FRESULT auto_mount (    /* FR_OK(0): successful, !=0: any error occured */
   return FR_OK;
 }
 
+
+
+
+/*-----------------------------------------------------------------------*/
+/* Make sure that the file system is valid                               */
+/*-----------------------------------------------------------------------*/
+
+static
+FRESULT auto_mount (    /* FR_OK(0): successful, !=0: any error occured */
+  const UCHAR **path,   /* Pointer to pointer to the path name (drive number) */
+  FATFS **rfs,          /* Pointer to pointer to the found file system object */
+  BYTE chk_wp           /* !=0: Check media write protection for write access */
+)
+{
+  BYTE drv;
+  DSTATUS stat;
+  const UCHAR *p = *path;
+
+
+  /* Get drive number from the path name */
+  while (*p == ' ') p++;              /* Strip leading spaces */
+  drv = p[0] - '0';                   /* Is there a drive number? */
+  if (drv <= 9 && p[1] == ':')
+    p += 2;                           /* Found a drive number, get and strip it */
+  else
+    drv = 0;                          /* No drive number is given, use drive number 0 as default */
+#if _USE_CHDIR == 0
+  if (*p == '/') p++;                 /* Strip heading slash */
+#endif
+  *path = p;                          /* Return pointer to the path name */
+
+  /* Check if the drive number is valid or not */
+  if (drv >= _DRIVES) return FR_INVALID_DRIVE;    /* Is the drive number valid? */
+  *rfs = FatFs[drv];                  /* Returen pointer to the corresponding file system object */
+  if (!*rfs) return FR_NOT_ENABLED;   /* Is the file system object registered? */
+
+  if ((*rfs)->fs_type) {              /* If the logical drive has been mounted */
+    stat = disk_status((*rfs)->drive);
+    if (!(stat & STA_NOINIT)) {       /* If the physical drive is kept initialized */
+#if !_FS_READONLY
+      if (chk_wp && (stat & STA_PROTECT))         /* Check write protection if needed */
+        return FR_WRITE_PROTECTED;
+#endif
+      return FR_OK;                   /* The file system object is valid */
+    }
+  }
+
+  /* The logical drive has not been mounted, return NOT READY */
+
+  return FR_NOT_READY;
+;
+}
 
 
 
@@ -1285,7 +1298,7 @@ FRESULT f_mount (
   FatFs[drv] = fs;      /* Register and clear new object */
   if (fs) fs->fs_type = 0;
 
-  return FR_OK;
+  return mount_drv(drv,fs);
 }
 
 
@@ -1943,7 +1956,7 @@ FRESULT f_readdir (
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_stat (
-  const UCHAR *path  , /* Pointer to the file path */
+  const UCHAR *path,   /* Pointer to the file path */
   FILINFO *finfo       /* Pointer to file information to return */
 )
 {
