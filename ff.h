@@ -67,7 +67,9 @@
 
 /* Maximum number of characters to return for a LFN */
 /* The buffer used for FILINFO.lfn must be at least */
-/* _MAX_LFN_LENGTH+1 bytes long!                    */
+/* _MAX_LFN_LENGTH+1 characters long!               */
+/* Note that if _USE_LFN_DBCS is set, this value    */
+/* represents the characters needed, not bytes      */
 #define _MAX_LFN_LENGTH 16
 
 #define _USE_LFN_DBCS 0
@@ -107,7 +109,7 @@ typedef struct _BUF {
   DWORD sect;
   BYTE  dirty;              /* win[] dirty flag (1:must be written back) */
 #if _USE_1_BUF != 0
-  BYTE  fsidx;
+  BYTE  drive;
 #else
   BYTE  pad1;
 #endif
@@ -118,7 +120,6 @@ typedef struct _BUF {
 typedef struct _FATFS {
   //WORD    id;             /* File system mount ID */
     WORD    n_rootdir;      /* Number of root directory entries */
-    //DWORD winsect;        /* Current sector appearing in the win[] */
     DWORD   sects_fat;      /* Sectors per fat */
     DWORD   max_clust;      /* Maximum cluster# + 1 */
     DWORD   fatbase;        /* FAT start sector */
@@ -143,14 +144,9 @@ typedef struct _FATFS {
 #endif
     BYTE    n_fats;         /* Number of FAT copies */
     BYTE    drive;          /* Physical drive number */
-#if _USE_1_BUF != 0
-    BYTE  idx;
-#else
+#if _USE_1_BUF == 0
     BUF   buf;
 #endif
-    //BYTE  winflag;        /* win[] dirty flag (1:must be written back) */
-    //BYTE  pad1;
-    //BYTE  win[S_MAX_SIZ]; /* Disk access window for Directory/FAT */
 } FATFS;
 
 /* Directory object structure */
@@ -182,7 +178,6 @@ typedef struct _FIL {
 #if _USE_LESS_BUF == 0 && _USE_1_BUF == 0 
     BUF   buf;
 #endif
-    //BYTE  buffer[S_MAX_SIZ];  /* File R/W buffer */
 } FIL;
 
 
@@ -196,7 +191,6 @@ typedef struct _FILINFO {
     UCHAR fname[8+1+3+1];   /* Name (8.3 format) */
 #if _USE_LFN != 0
     BYTE* lfn;
-    BYTE  lfn_len;
 #endif
 } FILINFO;
 

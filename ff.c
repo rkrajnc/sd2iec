@@ -103,7 +103,7 @@ BOOL move_window (      /* TRUE: successful, FALSE: failed */
   //printf("curr sector=%d, new sector=%d, dirty=%d\n",buf->sect,sector,buf->dirty);
   wsect = buf->sect;
 #if _USE_1_BUF != 0
-  if (wsect != sector || fs->idx != buf->fsidx) {   /* Changed current window */
+  if (wsect != sector || fs->drive != buf->drive) { /* Changed current window */
 #else
   if (wsect != sector) {                            /* Changed current window */
 #endif
@@ -126,7 +126,7 @@ BOOL move_window (      /* TRUE: successful, FALSE: failed */
         return FALSE;
       buf->sect = sector;
 #if _USE_1_BUF != 0
-      buf->fsidx=fs->idx;
+      buf->drive=fs->drive;
 #endif
     }
   }
@@ -145,8 +145,8 @@ BOOL move_fs_window(
 #if _USE_1_BUF != 0
   BOOL res;
   
-  if(FSBUF.fsidx!=fs->idx && FSBUF.dirty) {         /* Are we owner of this buf? */
-    res= move_window (FatFs[FSBUF.fsidx],&FSBUF,0); 
+  if(FSBUF.drive!=fs->drive && FSBUF.dirty) {       /* Are we owner of this buf? */
+    res= move_window (FatFs[FSBUF.drive],&FSBUF,0);
     if(!res)
       return res;
     FSBUF.sect=0;
@@ -901,9 +901,6 @@ FRESULT mount_drv(
   DWORD bootsect, fatsize, totalsect, maxclust;
 
   memset(fs, 0, sizeof(FATFS));       /* Clean-up the file system object */
-#if _USE_1_BUF != 0
-  fs->idx=drv;
-#endif
   fs->drive = LD2PD(drv);             /* Bind the logical drive and a physical drive */
   stat = disk_initialize(fs->drive);  /* Initialize low level disk I/O layer */
   if (stat & STA_NOINIT)              /* Check if the drive is ready */
@@ -1867,13 +1864,13 @@ FRESULT f_readdir (
 {
   BYTE *dir, c, res;
   FATFS *fs = dj->fs;
+  WORD len=0;
 #if _USE_LFN != 0
   BYTE i,pos;
 # ifdef _MAX_LFN_LENGTH
   BOOL skiplfn = FALSE;
 # endif
   
-  finfo->lfn_len=0;    /* set length to 0 */
   if (finfo->lfn) {
     finfo->lfn[0]=0;   /* set first char to null */
 # if _USE_LFN_DBCS != 0 
@@ -1897,7 +1894,7 @@ FRESULT f_readdir (
       if(finfo->lfn && ((dir[DIR_Attr] & AM_LFN) == AM_LFN)) {
         pos=((*dir & 0x1f)-1)*S_LFN_OFFSET;  /* get offset */
 # ifdef _MAX_LFN_LENGTH
-        if (skiplfn || pos >= _MAX_LFN_LENGTH) {
+        if (skiplfn || pos >= _MAX_LFN_LENGTH * S_LFN_INCREMENT) {
           skiplfn = TRUE;
           goto skippedlfn;
         }
@@ -1907,7 +1904,7 @@ FRESULT f_readdir (
           if(!dir[pgm_read_byte(LFN_pos+i)] && !dir[pgm_read_byte(LFN_pos+i)+1])
             break;
           if (pos >= _MAX_LFN_LENGTH) {
-            finfo->lfn_len = 0;
+            len = 0;
             i = 0;
             skiplfn = TRUE;
             break;
@@ -1919,15 +1916,15 @@ FRESULT f_readdir (
           pos+=S_LFN_INCREMENT;
           i++;
         }
-        finfo->lfn_len+=i;
+        len+=i;
       } else {
 # ifdef _MAX_LFN_LENGTH
         skiplfn = FALSE;
 # endif
         if (finfo->lfn) {
-          finfo->lfn[finfo->lfn_len*S_LFN_INCREMENT]=0;
+          finfo->lfn[len*S_LFN_INCREMENT]=0;
 # if _USE_LFN_DBCS != 0
-          finfo->lfn[finfo->lfn_len*S_LFN_INCREMENT+1]=0;
+          finfo->lfn[len*S_LFN_INCREMENT+1]=0;
 # endif
         }
         get_fileinfo(finfo, dir);
