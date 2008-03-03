@@ -65,6 +65,12 @@ CONFIG_COMMAND_CHANNEL_DUMP=y
 # This option requires an external crystal oscillator!
 CONFIG_TURBODISK=y
 
+# Use the assembler JiffyDos module
+# The assembler module is smaller than the C implementation, but it
+# requires that the IEC lines are connected to the MCU pins in the order
+# used by the MMC2IEC/sd2iec hardware. The C implementation is generic, but
+# its timing may be slightly off and it compiles to a larger binary.
+CONFIG_JIFFY_ASM=y
 
 # Select which hardware to compile for
 # Valid values:

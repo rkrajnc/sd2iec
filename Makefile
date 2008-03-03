@@ -88,6 +88,10 @@ ifeq ($(CONFIG_UART_DEBUG),y)
   SRC += uart.c
 endif
 
+ifneq ($(CONFIG_JIFFY_ASM),y)
+  SRC += jiffy.c
+endif
+
 # List Assembler source files here.
 #     Make them always end in a capital .S.  Files ending in a lowercase .s
 #     will not be considered source files but generated files (assembler

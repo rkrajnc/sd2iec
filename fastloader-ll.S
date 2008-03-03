@@ -73,7 +73,8 @@ delay1us:
 	nop			; 1
 	.endm
 #endif
-	
+
+#ifdef CONFIG_JIFFY_ASM
 	;; ====================================================================
 	;;  JiffyDOS
 	;; ====================================================================
@@ -338,6 +339,8 @@ js_finish:
 	sei			; re-enable interrupts
 	ret
 
+#endif  // CONFIG_JIFFY_ASM
+
 #ifdef CONFIG_TURBODISK
 	;; ====================================================================
 	;;  Turbodisk
@@ -374,7 +377,11 @@ tdbitloop:
 	rol	r19		; 1 - move to bottom
 	lsl	r24		; 1 - grab top bit
 	rol	r19		; 1 - move to bottom
+#if CONFIG_HARDWARE_VARIANT == 4
+        swap    r18             ; 1 - swap the bits to the upper nibble (uIEC)
+#else
 	lsl	r19		; 1 - move pair to correct position
+#endif
 	
 	;; Wait for 28us from data high -> 224-8=216 cycles
 	ldi	r18,69		; 1
@@ -443,7 +450,11 @@ tdbitloop2:
 	rol	r19		; 1 - move to bottom
 	lsl	r0		; 1 - grab top bit
 	rol	r19		; 1 - move to bottom
+#if CONFIG_HARDWARE_VARIANT == 4
+        swap    r19             ; 1 - swap bits to upper nibble (uIEC)
+#else
 	lsl	r19		; 1 - move pair to correct position
+#endif
 
 	;; Wait another 24 us -> 192-7=185 cycles
 	ldi	r18,59		; 1
