@@ -388,8 +388,14 @@ void parse_doscommand(void) {
     return;
   }
 
-  /* Clear the remainder of the command buffer, simplifies parsing */
-  memset(command_buffer+command_length, 0, sizeof(command_buffer)-command_length);
+#ifdef CONFIG_TURBODISK
+  if (detected_loader == FL_TURBODISK) {
+    /* Don't overwrite the file name in the final M-W command of Turbodisk */
+    command_buffer[command_length] = 0;
+  } else
+#endif
+    /* Clear the remainder of the command buffer, simplifies parsing */
+    memset(command_buffer+command_length, 0, sizeof(command_buffer)-command_length);
 
   /* MD/CD/RD clash with other commands, so they're checked first */
   if (command_buffer[1] == 'D') {
