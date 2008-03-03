@@ -62,8 +62,10 @@
    Module Private Functions
 
 ---------------------------------------------------------------------------*/
+#if _USE_DRIVE_PREFIX != 0
 static
 FATFS *FatFs[_DRIVES];  /* Pointer to the file system objects (logical drives) */
+#endif
 //static
 //WORD fsid;              /* File system mount ID */
 
@@ -98,25 +100,29 @@ BOOL move_window (      /* TRUE: successful, FALSE: failed */
 )                       /* Move to zero only writes back dirty window */
 {
   DWORD wsect;
+#if _USE_1_BUF != 0
+  FATFS* ofs = ((FATFS*)(buf->fs));
+#else
+#define ofs fs
+#endif
 
 
-  //printf("curr sector=%d, new sector=%d, dirty=%d\n",buf->sect,sector,buf->dirty);
   wsect = buf->sect;
 #if _USE_1_BUF != 0
-  if (wsect != sector || fs->drive != buf->drive) { /* Changed current window */
+  if (wsect != sector || fs != ofs) {   /* Changed current window */
 #else
   if (wsect != sector) {                            /* Changed current window */
 #endif
 #if !_FS_READONLY
     BYTE n;
     if (buf->dirty) {                               /* Write back dirty window if needed */
-      if (disk_write(fs->drive, buf->data, wsect, 1) != RES_OK)
+      if (disk_write(ofs->drive, buf->data, wsect, 1) != RES_OK)
         return FALSE;
       buf->dirty = FALSE;
-      if (wsect < (fs->fatbase + fs->sects_fat)) {  /* In FAT area */
-        for (n = fs->n_fats; n >= 2; n--) {         /* Reflect the change to FAT copy */
-          wsect += fs->sects_fat;
-          disk_write(fs->drive, buf->data, wsect, 1);
+      if (wsect < (ofs->fatbase + ofs->sects_fat)) {  /* In FAT area */
+        for (n = ofs->n_fats; n >= 2; n--) {          /* Reflect the change to FAT copy */
+          wsect += ofs->sects_fat;
+          disk_write(ofs->drive, buf->data, wsect, 1);
         }
       }
     }
@@ -126,7 +132,7 @@ BOOL move_window (      /* TRUE: successful, FALSE: failed */
         return FALSE;
       buf->sect = sector;
 #if _USE_1_BUF != 0
-      buf->drive=fs->drive;
+      buf->fs=fs;
 #endif
     }
   }
@@ -142,16 +148,6 @@ BOOL move_fs_window(
   DWORD  sector
 )
 {
-#if _USE_1_BUF != 0
-  BOOL res;
-  
-  if(FSBUF.drive!=fs->drive && FSBUF.dirty) {       /* Are we owner of this buf? */
-    res= move_window (FatFs[FSBUF.drive],&FSBUF,0);
-    if(!res)
-      return res;
-    FSBUF.sect=0;
-  }
-#endif
   return move_window(fs,&FSBUF,sector);
 }
 
@@ -893,7 +889,8 @@ BYTE check_fs (     /* 0:The FAT boot record, 1:Valid boot record but not an FAT
 
 FRESULT mount_drv(
   BYTE drv,
-  FATFS* fs
+  FATFS* fs,
+  BYTE chk_wp           /* !=0: Check media write protection for write access */
 )
 {
   DSTATUS stat;
@@ -908,6 +905,10 @@ FRESULT mount_drv(
 #if S_MAX_SIZ > 512                   /* Check disk sector size */
   if (disk_ioctl(drv, GET_SECTOR_SIZE, &SS(fs)) != RES_OK || SS(fs) > S_MAX_SIZ)
     return FR_NO_FILESYSTEM;
+#endif
+#if !_FS_READONLY
+  if (chk_wp && (stat & STA_PROTECT)) /* Check write protection if needed */
+    return FR_WRITE_PROTECTED;
 #endif
   /* Search FAT partition on the drive */
   fmt = check_fs(fs, bootsect = 0);   /* Check sector 0 as an SFD format */
@@ -984,10 +985,11 @@ FRESULT auto_mount (    /* FR_OK(0): successful, !=0: any error occured */
   BYTE chk_wp           /* !=0: Check media write protection for write access */
 )
 {
-  BYTE drv;
+  //BYTE drv;
   DSTATUS stat;
   const UCHAR *p = *path;
-
+#if _USE_DRIVE_PREFIX != 0
+  BYTE drv;
 
   /* Get drive number from the path name */
   while (*p == ' ') p++;              /* Strip leading spaces */
@@ -996,14 +998,17 @@ FRESULT auto_mount (    /* FR_OK(0): successful, !=0: any error occured */
     p += 2;                           /* Found a drive number, get and strip it */
   else
     drv = 0;                          /* No drive number is given, use drive number 0 as default */
+#endif
 #if _USE_CHDIR == 0
   if (*p == '/') p++;                 /* Strip heading slash */
 #endif
   *path = p;                          /* Return pointer to the path name */
 
   /* Check if the drive number is valid or not */
+#if _USE_DRIVE_PREFIX != 0
   if (drv >= _DRIVES) return FR_INVALID_DRIVE;    /* Is the drive number valid? */
   *rfs = FatFs[drv];                  /* Returen pointer to the corresponding file system object */
+#endif
   if (!*rfs) return FR_NOT_ENABLED;   /* Is the file system object registered? */
 
   if ((*rfs)->fs_type) {              /* If the logical drive has been mounted */
@@ -1019,8 +1024,11 @@ FRESULT auto_mount (    /* FR_OK(0): successful, !=0: any error occured */
 
   /* The logical drive has not been mounted, return NOT READY */
 
+#if _USE_DEFERRED_MOUNT != 0
+  return mount_drv(drv,*rfs, chk_wp);
+#else
   return FR_NOT_READY;
-;
+#endif
 }
 
 
@@ -1290,12 +1298,16 @@ FRESULT f_mount (
 {
   if (drv >= _DRIVES) return FR_INVALID_DRIVE;
 
+#if _USE_DRIVE_PREFIX != 0
   if (FatFs[drv]) FatFs[drv]->fs_type = 0;  /* Clear old object */
 
   FatFs[drv] = fs;      /* Register and clear new object */
+#endif
   if (fs) fs->fs_type = 0;
 
-  return mount_drv(drv,fs);
+#if _USE_DEFERRED_MOUNT == 0
+  return mount_drv(drv,fs,0);
+#endif
 }
 
 
@@ -1306,16 +1318,21 @@ FRESULT f_mount (
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_open (
+#if _USE_DRIVE_PREFIX == 0
+  FATFS *fs,           /* Pointer to file system object */
+#endif
   FIL *fp,             /* Pointer to the blank file object */
   const UCHAR *path,   /* Pointer to the file name */
   BYTE mode            /* Access mode and file open mode flags */
 )
 {
+#if _USE_DRIVE_PREFIX != 0
+  FATFS *fs;
+#endif
   FRESULT res;
   BYTE *dir;
   DIR dj;
   UCHAR fn[8+3+1];
-  FATFS *fs;
 #if _USE_LFN != 0
   UINT len;
   DIR fileobj;
@@ -1326,7 +1343,7 @@ FRESULT f_open (
 #if _USE_FS_BUF == 0 
   FPBUF.dirty=FALSE;
 #endif
-  fp->fs = NULL;
+  fp->fs = fs;
 #if !_FS_READONLY
   mode &= (FA_READ|FA_WRITE|FA_CREATE_ALWAYS|FA_OPEN_ALWAYS|FA_CREATE_NEW);
   res = auto_mount(&path, &fs, (BYTE)(mode & (FA_WRITE|FA_CREATE_ALWAYS|FA_OPEN_ALWAYS|FA_CREATE_NEW)));
@@ -1763,6 +1780,9 @@ fk_error: /* Abort this file due to an unrecoverable error */
 
 #if 0
 FRESULT f_opendir (
+#if _USE_DRIVE_PREFIX == 0
+  FATFS *fs,          /* Pointer to file system object */
+#endif
   DIR *dj,            /* Pointer to directory object to create */
   const UCHAR *path   /* Pointer to the directory path */
 )
@@ -1770,7 +1790,6 @@ FRESULT f_opendir (
   BYTE *dir;
   UCHAR fn[8+3+1];
   FRESULT res;
-  FATFS *fs;
 #if _USE_LFN != 0
   DIR fileobj;
   const UCHAR* spath;
@@ -1953,15 +1972,20 @@ FRESULT f_readdir (
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_stat (
+#if _USE_DRIVE_PREFIX == 0
+  FATFS *fs,           /* Pointer to file system object */
+#endif
   const UCHAR *path,   /* Pointer to the file path */
   FILINFO *finfo       /* Pointer to file information to return */
 )
 {
+#if _USE_DRIVE_PREFIX != 0
+  FATFS *fs;
+#endif
   BYTE *dir;
   UCHAR fn[8+3+1];
   FRESULT res;
   DIR dj;
-  FATFS *fs;
 #if _USE_LFN != 0
   DIR fileobj;
   const UCHAR* spath;
@@ -2040,21 +2064,30 @@ ft_error: /* Abort this file due to an unrecoverable error */
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_getfree (
+#if _USE_DRIVE_PREFIX == 0
+  FATFS *fs,          /* Pointer to file system object */
+#endif
   const UCHAR *drv,   /* Logical drive number */
-  DWORD *nclust,      /* Pointer to the double word to return number of free clusters */
-  FATFS **fatfs       /* Pointer to pointer to the file system object to return */
+  DWORD *nclust       /* Pointer to the double word to return number of free clusters */
+#if _USE_DRIVE_PREFIX != 0
+  ,FATFS **fatfs      /* Pointer to pointer to the file system object to return */
+#endif
 )
 {
+#if _USE_DRIVE_PREFIX != 0
+  FATFS *fs;
+#endif
   DWORD n, clust, sect;
   BYTE fat, f, *p;
   FRESULT res;
-  FATFS *fs;
 
 
   /* Get drive number */
   res = auto_mount(&drv, &fs, 0);
   if (res != FR_OK) return res;
+#if _USE_DRIVE_PREFIX != 0
   *fatfs = fs;
+#endif
 
   /* If number of free cluster is valid, return it without cluster scan. */
   if (fs->free_clust <= fs->max_clust - 2) {
@@ -2105,15 +2138,20 @@ FRESULT f_getfree (
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_unlink (
+#if _USE_DRIVE_PREFIX == 0
+  FATFS *fs,           /* Pointer to file system object */
+#endif
   const UCHAR *path        /* Pointer to the file or directory path */
 )
 {
+#if _USE_DRIVE_PREFIX != 0
+  FATFS *fs;
+#endif
   BYTE *dir, *sdir;
   DWORD dclust, dsect;
   UCHAR fn[8+3+1];
   FRESULT res;
   DIR dj;
-  FATFS *fs;
 #if _USE_LFN != 0
   DIR fileobj;
   const UCHAR* spath;
@@ -2185,15 +2223,20 @@ FRESULT f_unlink (
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_mkdir (
+#if _USE_DRIVE_PREFIX == 0
+  FATFS *fs,           /* Pointer to file system object */
+#endif
   const UCHAR *path      /* Pointer to the directory path */
 )
 {
+#if _USE_DRIVE_PREFIX != 0
+  FATFS *fs;
+#endif
   BYTE *dir, *fw, n;
   UCHAR fn[8+3+1];
   DWORD sect, dsect, dclust, pclust, tim;
   FRESULT res;
   DIR dj;
-  FATFS *fs;
 #if _USE_LFN != 0
   UINT len;
   DIR fileobj;
@@ -2274,14 +2317,19 @@ FRESULT f_mkdir (
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_chdir (
+#if _USE_DRIVE_PREFIX == 0
+  FATFS *fs,           /* Pointer to file system object */
+#endif
   const UCHAR *path    /* Pointer to the file name */
 )
 {
+#if _USE_DRIVE_PREFIX != 0
+  FATFS *fs;
+#endif
   FRESULT res;
   BYTE *dir;
   DIR dj;
   UCHAR fn[8+3+1];
-  FATFS *fs;
 #if _USE_LFN != 0
   UINT len;
   DIR fileobj;
@@ -2322,16 +2370,21 @@ FRESULT f_chdir (
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_chmod (
+#if _USE_DRIVE_PREFIX == 0
+  FATFS *fs,           /* Pointer to file system object */
+#endif
   const UCHAR *path,   /* Pointer to the file path */
   BYTE value,          /* Attribute bits */
   BYTE mask            /* Attribute mask to change */
 )
 {
+#if _USE_DRIVE_PREFIX != 0
+  FATFS *fs;
+#endif
   FRESULT res;
   BYTE *dir;
   DIR dj;
   UCHAR fn[8+3+1];
-  FATFS *fs;
 #if _USE_LFN != 0
   UINT len;
   DIR fileobj;
@@ -2368,15 +2421,20 @@ FRESULT f_chmod (
 /*-----------------------------------------------------------------------*/
 #if _USE_UTIME
 FRESULT f_utime (
+#if _USE_DRIVE_PREFIX == 0
+  FATFS *fs,           /* Pointer to file system object */
+#endif
   const UCHAR *path,    /* Pointer to the file/directory name */
   const FILINFO *finfo  /* Pointer to the timestamp to be set */
 )
 {
+#if _USE_DRIVE_PREFIX != 0
+  FATFS *fs;
+#endif
   FRESULT res;
   DIR dj;
   BYTE *dir;
   UCHAR fn[8+3+1];
-  FATFS *fs;
 #if _USE_LFN != 0
   UINT len;
   DIR fileobj;
@@ -2412,16 +2470,21 @@ FRESULT f_utime (
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_rename (
+#if _USE_DRIVE_PREFIX == 0
+  FATFS *fs,           /* Pointer to file system object */
+#endif
   const UCHAR *path_old,   /* Pointer to the old name */
   const UCHAR *path_new    /* Pointer to the new name */
 )
 {
+#if _USE_DRIVE_PREFIX != 0
+  FATFS *fs;
+#endif
   FRESULT res;
   DWORD sect_old;
   BYTE *dir_old, *dir_new, direntry[32-11];
   DIR dj;
   UCHAR fn[8+3+1];
-  FATFS *fs;
 #if _USE_LFN != 0
   UINT len_old, len_new;
   DIR fileobj;
