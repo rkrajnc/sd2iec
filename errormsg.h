@@ -73,5 +73,6 @@ uint8_t set_ok_message(buffer_t *buf);
 #define ERROR_DISK_FULL          72
 #define ERROR_DOSVERSION         73
 #define ERROR_DRIVE_NOT_READY    74
+#define ERROR_PARTITION_ILLEGAL  77
 
 #endif
