@@ -141,13 +141,12 @@ DSTATUS disk_initialize (BYTE drv) {
   
   if(drv>1) return STA_NOINIT;
   // we need to set the drive.
-  ATA_write_reg (ATA_REG_LBA3, 0xe0 | drv);
+  ATA_write_reg (ATA_REG_LBA3, 0xe0 | (drv?ATA_DEV_SLAVE:ATA_DEV_MASTER));
   // we should set a timeout on bsy();
   //ATA_rdy();
   // check for RDY hi.
   do {
       status=ATA_read_reg(ATA_REG_STATUS);
-      //printHex(status);
   } while((status&ATA_STATUS_RDY)==0 && (++i));
   if(status&ATA_STATUS_RDY) {
     i=ATA_INIT_WAIT;
@@ -183,7 +182,6 @@ DSTATUS disk_status (BYTE drv) {
 
 DRESULT disk_read (BYTE drv, BYTE* data, DWORD sec, BYTE count) {
   uint8_t i=0;
-  //BYTE* d2=data;
   
   if (drv>1 || !count) return RES_PARERR;
   if (ATA_drv_flags[drv] & STA_NOINIT) return RES_NOTRDY;
@@ -200,9 +198,6 @@ DRESULT disk_read (BYTE drv, BYTE* data, DWORD sec, BYTE count) {
     *data++=ATA_PORT_DATA_HI_IN;
     ATA_PORT_CTRL_OUT|=ATA_PIN_RD;
   } while (++i);
-  //printHexLong(sec);
-  //debug('\n');
-  //trace(d2,0,512);
   return RES_OK;
 }
 
