@@ -563,7 +563,7 @@ void parse_doscommand(void) {
 
   case 'M':
     /* Memory-something - just dump for later analysis */
-#ifndef COMMAND_CHANNEL_DUMP
+#ifndef CONFIG_COMMAND_CHANNEL_DUMP
     if (detected_loader == FL_NONE) {
       uart_flush();
       for (i=0;i<3;i++)
