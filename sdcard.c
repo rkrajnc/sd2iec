@@ -439,16 +439,26 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
 
       // Get data
       crc = 0;
+      // Initiate data exchange over SPI
+      SPDR = 0xff;
+
       for (i=0; i<512; i++) {
-	tmp = spiTransferByte(0xff);
-	*(buffer++) = tmp;
+        // Wait until data has been received
+        loop_until_bit_is_set(SPSR, SPIF);
+        tmp = SPDR;
+        // Transmit the next byte while we store the current one
+        SPDR = 0xff;
+
+        *(buffer++) = tmp;
 #ifdef CONFIG_SD_DATACRC
 	crc = _crc_xmodem_update(crc, tmp);
 #endif
       }
+      // Wait until the first CRC byte is received
+      loop_until_bit_is_set(SPSR, SPIF);
 
       // Check CRC
-      recvcrc = (spiTransferByte(0xFF) << 8) + spiTransferByte(0xFF);
+      recvcrc = (SPDR << 8) + spiTransferByte(0xff);
 #ifdef CONFIG_SD_DATACRC
       if (recvcrc != crc) {
 	uart_putc('X');
