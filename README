@@ -67,6 +67,9 @@ Supported commands:
   image files are detected by file extension only and there is no reliable
   way to see if a file is a valid image file.
 
+- CP
+  This changes the current partition, see "Partitions" below for details.
+
 - S:
   Name matching is fully supported, directories are ignored.
 
@@ -167,6 +170,18 @@ on the PC or their PETSCII equivalents on the Commodore you may
 get strange characters on the other system because the LFN use
 unicode characters on disk, but sd2iec parses only the low byte
 of each character in the name.
+
+Partition:
+==========
+sd2iec features a multi-partition support similiar to that of the CMD
+drives. The partitions (which may be on separate drives for some hardware
+configurations) are accessed using the drive number of the commands
+sent from the computer and are numbered starting with 1. Partition 0
+is a special case: Because most software doesn't support drive numbers
+or always sends drive number 0, this partition point to any of the
+real partitions. By default, accesses to partition 0 will access partition 1,
+this can be changed by sending "CP<num>" over the command channel with
+<num> being an ASCII number from 1 to 255.
 
 Software fastloaders:
 =====================

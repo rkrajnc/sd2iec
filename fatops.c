@@ -42,8 +42,6 @@
 #include "wrapops.h"
 #include "fatops.h"
 
-FATFS fatfs;
-
 /* ------------------------------------------------------------------------- */
 /*  Utility functions                                                        */
 /* ------------------------------------------------------------------------- */
@@ -296,8 +294,8 @@ void fat_open_read(path_t *path, uint8_t *filename, buffer_t *buf) {
   FRESULT res;
 
   pet2asc(filename);
-  fatfs.curr_dir = path->fat;
-  res = f_open(&buf->pvt.fh, filename, FA_READ | FA_OPEN_EXISTING);
+  partition[path->drive].fatfs.curr_dir = path->fat;
+  res = f_open(&partition[path->drive].fatfs,&buf->pvt.fh, filename, FA_READ | FA_OPEN_EXISTING);
   if (res != FR_OK) {
     parse_error(res,1);
     free_buffer(buf);
@@ -328,13 +326,13 @@ void fat_open_write(path_t *path, uint8_t *filename, uint8_t type, buffer_t *buf
   FRESULT res;
 
   pet2asc(filename);
-  fatfs.curr_dir = path->fat;
+  partition[path->drive].fatfs.curr_dir = path->fat;
   if (append) {
-    res = f_open(&buf->pvt.fh, filename, FA_WRITE | FA_OPEN_EXISTING);
+    res = f_open(&partition[path->drive].fatfs, &buf->pvt.fh, filename, FA_WRITE | FA_OPEN_EXISTING);
     if (res == FR_OK)
       res = f_lseek(&buf->pvt.fh, buf->pvt.fh.fsize);
   } else
-    res = f_open(&buf->pvt.fh, filename, FA_WRITE | FA_CREATE_NEW);
+    res = f_open(&partition[path->drive].fatfs, &buf->pvt.fh, filename, FA_WRITE | FA_CREATE_NEW);
 
   if (res != FR_OK) {
     parse_error(res,0);
@@ -354,7 +352,8 @@ void fat_open_write(path_t *path, uint8_t *filename, uint8_t type, buffer_t *buf
 uint8_t fat_opendir(dh_t *dh, path_t *path) {
   FRESULT res;
 
-  res = l_opendir(&fatfs, path->fat, &dh->fat);
+  res = l_opendir(&partition[path->drive].fatfs, path->fat, &dh->dir.fat);
+  dh->drive = path->drive;
   if (res != FR_OK) {
     parse_error(res,1);
     return 1;
@@ -379,7 +378,7 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
   finfo.lfn = entrybuf;
 
   do {
-    res = f_readdir(&dh->fat, &finfo);
+    res = f_readdir(&dh->dir.fat, &finfo);
     if (res != FR_OK) {
       if (res == FR_INVALID_OBJECT)
         set_error(ERROR_DIR_ERROR);
@@ -429,7 +428,7 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
       dent->typeflags |= FLAG_HIDDEN;
 
     /* Cluster number */
-    dent->path.fat = finfo.clust;
+    dent->fatcluster = finfo.clust;
 
     return 0;
   } else
@@ -449,8 +448,8 @@ uint8_t fat_delete(path_t *path, uint8_t *filename) {
 
   DIRTY_LED_ON();
   pet2asc(filename);
-  fatfs.curr_dir = path->fat;
-  res = f_unlink(filename);
+  partition[path->drive].fatfs.curr_dir = path->fat;
+  res = f_unlink(&partition[path->drive].fatfs, filename);
 
   if (check_write_buf_count())
     DIRTY_LED_OFF();
@@ -466,6 +465,7 @@ uint8_t fat_delete(path_t *path, uint8_t *filename) {
 
 /**
  * fat_chdir - change directory in FAT and/or mount image
+ * @path   : path object for the location of dirname
  * @dirname: Name of the directory/image to be changed into
  *
  * This function changes the current FAT directory to dirname.
@@ -478,7 +478,7 @@ uint8_t fat_chdir(path_t *path, uint8_t *dirname) {
   FRESULT res;
   FILINFO finfo;
 
-  fatfs.curr_dir = path->fat;
+  partition[path->drive].fatfs.curr_dir = path->fat;
 
   /* Left arrow moves one directory up */
   if (dirname[0] == '_' && dirname[1] == 0) {
@@ -489,7 +489,7 @@ uint8_t fat_chdir(path_t *path, uint8_t *dirname) {
   }
 
   pet2asc(dirname);
-  res = f_stat(dirname, &finfo);
+  res = f_stat(&partition[path->drive].fatfs, dirname, &finfo);
   if (res != FR_OK) {
     parse_error(res,1);
     return 1;
@@ -497,7 +497,7 @@ uint8_t fat_chdir(path_t *path, uint8_t *dirname) {
 
   if (finfo.fattrib & AM_DIR) {
     /* It's a directory, change to its cluster */
-    current_dir.fat = finfo.clust;
+    partition[path->drive].current_dir= finfo.clust;
   } else {
     /* Changing into a file, could be a mount request */
     uint8_t *ext = ustrrchr(dirname, '.');
@@ -507,18 +507,18 @@ uint8_t fat_chdir(path_t *path, uint8_t *dirname) {
       /* D64/M2I mount request */
       free_all_buffers(1);
       /* Open image file */
-      res = f_open(&imagehandle, dirname, FA_OPEN_EXISTING|FA_READ|FA_WRITE);
+      res = f_open(&partition[path->drive].fatfs, &partition[path->drive].imagehandle, dirname, FA_OPEN_EXISTING|FA_READ|FA_WRITE);
       if (res != FR_OK) {
         parse_error(res,1);
         return 1;
       }
 
       if (!ustrcasecmp_P(ext, PSTR(".m2i")))
-        fop = &m2iops;
+        partition[path->drive].fop = &m2iops;
       else
-        fop = &d64ops;
+        partition[path->drive].fop = &d64ops;
 
-      current_dir.fat = fatfs.curr_dir;
+      partition[path->drive].current_dir = partition[path->drive].fatfs.curr_dir;
       return 0;
     }
   }
@@ -529,14 +529,15 @@ uint8_t fat_chdir(path_t *path, uint8_t *dirname) {
 void fat_mkdir(path_t *path, uint8_t *dirname) {
   FRESULT res;
 
-  fatfs.curr_dir = path->fat;
+  partition[path->drive].fatfs.curr_dir = path->fat;
   pet2asc(dirname);
-  res = f_mkdir(dirname);
+  res = f_mkdir(&partition[path->drive].fatfs, dirname);
   parse_error(res,0);
 }
 
 /**
  * fat_getlabel - Get the volume label
+ * @path : path object of the directory
  * @label: pointer to the buffer for the label (16 characters)
  *
  * This function reads the FAT volume label and stores it space-padded
@@ -552,7 +553,7 @@ uint8_t fat_getlabel(path_t *path, uint8_t *label) {
   finfo.lfn = NULL;
   memset(label, ' ', 16);
 
-  res = l_opendir(&fatfs, path->fat, &dh);
+  res = l_opendir(&partition[path->drive].fatfs, path->fat, &dh);
 
   if (res != FR_OK) {
     parse_error(res,0);
@@ -575,13 +576,13 @@ uint8_t fat_getlabel(path_t *path, uint8_t *label) {
       return 0;
     }
   }
-  if(l_opendir(&fatfs,path->fat,&dh))
+  if(l_opendir(&partition[path->drive].fatfs,path->fat,&dh))
     return 1;
   while ((res = f_readdir(&dh, &finfo)) == FR_OK) {
     if(finfo.fname[0]=='\0')
       break;
     if(finfo.fname[0]=='.' && finfo.fname[1]=='.' && ustrlen(finfo.fname)==2) {
-      if(l_opendir(&fatfs,finfo.clust,&dh)) // open .. dir.
+      if(l_opendir(&partition[path->drive].fatfs,finfo.clust,&dh)) // open .. dir.
         break;
       while ((res = f_readdir(&dh, &finfo)) == FR_OK) {
         if(finfo.fname[0]=='\0')
@@ -605,14 +606,15 @@ uint8_t fat_getlabel(path_t *path, uint8_t *label) {
 
 /**
  * fat_getid - Create a disk id
- * @id: pointer to the buffer for the id (5 characters)
+ * @drive: drive number
+ * @id   : pointer to the buffer for the id (5 characters)
  *
  * This function creates a disk ID from the FAT type (12/16/32)
  * and the usual " 2A" of a 1541 in the first 5 bytes of id.
  * Always returns 0 for success.
  */
-uint8_t fat_getid(uint8_t *id) {
-  switch (fatfs.fs_type) {
+uint8_t fat_getid(uint8_t drive, uint8_t *id) {
+  switch (partition[drive].fatfs.fs_type) {
   case FS_FAT12:
     *id++ = '1';
     *id++ = '2';
@@ -636,11 +638,11 @@ uint8_t fat_getid(uint8_t *id) {
 }
 
 /* Returns the number of free blocks */
-uint16_t fat_freeblocks(void) {
-  FATFS *fs = &fatfs;
+uint16_t fat_freeblocks(uint8_t drive) {
+  FATFS *fs = &partition[drive].fatfs;
   DWORD clusters;
 
-  if (f_getfree(NULLSTRING, &clusters, &fs) == FR_OK) {
+  if (f_getfree(fs, NULLSTRING, &clusters) == FR_OK) {
     if (clusters < 64000)
       return clusters;
     else
@@ -652,7 +654,7 @@ uint16_t fat_freeblocks(void) {
 /* Dummy function for direct sector access */
 /* FIXME: Read/Write a file "BOOT.BIN" in the currect directory */
 /*        (e.g. for the C128 boot sector)                       */
-void fat_sectordummy(buffer_t *buf, uint8_t track, uint8_t sector) {
+void fat_sectordummy(buffer_t *buf, uint8_t drive, uint8_t track, uint8_t sector) {
   set_error_ts(ERROR_READ_NOHEADER,track,sector);
 }
 
@@ -666,34 +668,40 @@ void fat_sectordummy(buffer_t *buf, uint8_t track, uint8_t sector) {
  */
 void init_fatops(uint8_t preserve_path) {
   FRESULT res;
+  uint8_t i=0;
 
-  fop = &fatops;
-  res = f_mount(0, &fatfs);
+  max_part=0;
+  for(i=0;i<CONFIG_MAX_PARTITIONS;i++) {
+    partition[i].fop = &fatops;
+    res=f_mount(i, &partition[max_part].fatfs);
 
-  if (res != FR_OK) {
-    parse_error(res,1);
+    if (!preserve_path)
+      partition[max_part].current_dir = 0;
+
+    if(res==FR_OK)
+      max_part++;
+  }
+  if (!max_part) {
+    set_error_ts(ERROR_DRIVE_NOT_READY,0,0);
     return;
   }
-
-  if (!preserve_path)
-    /* Reset the current path */
-    current_dir.fat = 0;
 }
 
 /**
  * image_unmount - generic unmounting function for images
+ * @drive: drive number
  *
  * This function will clear all buffers, close the image file and
  * restore file operations to fatops. It can be used for unmounting
  * any image file types that don't require special cleanups.
  * Returns 0 if successful, 1 otherwise.
  */
-uint8_t image_unmount(void) {
+uint8_t image_unmount(uint8_t drive) {
   FRESULT res;
 
   free_all_buffers(1);
-  fop = &fatops;
-  res = f_close(&imagehandle);
+  partition[drive].fop = &fatops;
+  res = f_close(&partition[drive].imagehandle);
   if (res != FR_OK) {
     parse_error(res,0);
     return 1;
@@ -703,6 +711,7 @@ uint8_t image_unmount(void) {
 
 /**
  * image_chdir - generic chdir for image files
+ * @path   : path object of the location of dirname
  * @dirname: directory to be changed into
  *
  * This function will ignore any dirnames except _ (left arrow)
@@ -713,7 +722,7 @@ uint8_t image_unmount(void) {
 uint8_t image_chdir(path_t *path, uint8_t *dirname) {
   if (dirname[0] == '_' && dirname[1] == 0) {
     /* Unmount request */
-    return image_unmount();
+    return image_unmount(path->drive);
   }
   return 1;
 }
@@ -731,6 +740,7 @@ void image_mkdir(path_t *path, uint8_t *dirname) {
 
 /**
  * image_read - Seek to a specified image offset and read data
+ * @drive : drive number
  * @offset: offset to be seeked to
  * @buffer: pointer to where the data should be read to
  * @bytes : number of bytes to read from the image file
@@ -739,19 +749,19 @@ void image_mkdir(path_t *path, uint8_t *dirname) {
  * byte into buffer. It returns 0 on success, 1 if less than
  * bytes byte could be read and 2 on failure.
  */
-uint8_t image_read(DWORD offset, void *buffer, uint16_t bytes) {
+uint8_t image_read(uint8_t drive, DWORD offset, void *buffer, uint16_t bytes) {
   FRESULT res;
   UINT bytesread;
 
   if (offset != -1) {
-    res = f_lseek(&imagehandle, offset);
+    res = f_lseek(&partition[drive].imagehandle, offset);
     if (res != FR_OK) {
       parse_error(res,1);
       return 2;
     }
   }
 
-  res = f_read(&imagehandle, buffer, bytes, &bytesread);
+  res = f_read(&partition[drive].imagehandle, buffer, bytes, &bytesread);
   if (res != FR_OK) {
     parse_error(res,1);
     return 2;
@@ -765,6 +775,7 @@ uint8_t image_read(DWORD offset, void *buffer, uint16_t bytes) {
 
 /**
  * image_write - Seek to a specified image offset and write data
+ * @drive : drive number
  * @offset: offset to be seeked to
  * @buffer: pointer to the data to be written
  * @bytes : number of bytes to read from the image file
@@ -774,19 +785,19 @@ uint8_t image_read(DWORD offset, void *buffer, uint16_t bytes) {
  * byte into buffer. It returns 0 on success, 1 if less than
  * bytes byte could be written and 2 on failure.
  */
-uint8_t image_write(DWORD offset, void *buffer, uint16_t bytes, uint8_t flush) {
+uint8_t image_write(uint8_t drive, DWORD offset, void *buffer, uint16_t bytes, uint8_t flush) {
   FRESULT res;
   UINT byteswritten;
 
   if (offset != -1) {
-    res = f_lseek(&imagehandle, offset);
+    res = f_lseek(&partition[drive].imagehandle, offset);
     if (res != FR_OK) {
       parse_error(res,0);
       return 2;
     }
   }
 
-  res = f_write(&imagehandle, buffer, bytes, &byteswritten);
+  res = f_write(&partition[drive].imagehandle, buffer, bytes, &byteswritten);
   if (res != FR_OK) {
     parse_error(res,1);
     return 2;
@@ -796,7 +807,7 @@ uint8_t image_write(DWORD offset, void *buffer, uint16_t bytes, uint8_t flush) {
     return 1;
 
   if (flush)
-    f_sync(&imagehandle);
+    f_sync(&partition[drive].imagehandle);
 
   return 0;
 }

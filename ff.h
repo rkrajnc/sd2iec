@@ -36,7 +36,7 @@
 /  2: f_opendir and f_readdir are removed in addition to level 1.
 /  3: f_lseek is removed in addition to level 2. */
 
-#define _DRIVES     1
+#define _DRIVES     CONFIG_MAX_PARTITIONS
 /* Number of logical drives to be used. This affects the size of internal table. */
 
 #define _USE_MKFS   0
@@ -78,7 +78,7 @@
 
 #define _USE_1_BUF 1
 
-#define _USE_DRIVE_PREFIX 1
+#define _USE_DRIVE_PREFIX 0
 
 #define _USE_DEFERRED_MOUNT 0
 
@@ -112,8 +112,8 @@
 typedef struct _BUF {
   DWORD sect;
   BYTE  dirty;              /* win[] dirty flag (1:must be written back) */
+//BYTE  pad1;
 #if _USE_1_BUF != 0
-  //BYTE  pad1;
   struct _FATFS *fs;
 #endif
   BYTE  data[S_MAX_SIZ];    /* Disk access window for Directory/FAT */

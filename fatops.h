@@ -32,8 +32,6 @@
 #include "wrapops.h"
 #include "ff.h"
 
-extern FATFS fatfs;
-
 /* API */
 void     init_fatops(uint8_t preserve_dir);
 void     parse_error(FRESULT res, uint8_t readflag);
@@ -43,19 +41,19 @@ void     fat_mkdir(path_t *path, uint8_t *dirname);
 void     fat_open_read(path_t *path, uint8_t *filename, buffer_t *buf);
 void     fat_open_write(path_t *path, uint8_t *filename, uint8_t type, buffer_t *buf, uint8_t append);
 uint8_t  fat_getlabel(path_t *path, uint8_t *label);
-uint8_t  fat_getid(uint8_t *id);
-uint16_t fat_freeblocks(void);
+uint8_t  fat_getid(uint8_t drive, uint8_t *id);
+uint16_t fat_freeblocks(uint8_t drive);
 uint8_t  fat_opendir(dh_t *dh, path_t *dir);
 int8_t   fat_readdir(dh_t *dh, struct cbmdirent *dent);
-void     fat_sectordummy(buffer_t *buf, uint8_t track, uint8_t sector);
+void     fat_sectordummy(buffer_t *buf, uint8_t drive, uint8_t track, uint8_t sector);
 
 extern const fileops_t fatops;
 
 /* Generic helpers */
-uint8_t image_unmount(void);
+uint8_t image_unmount(uint8_t drive);
 uint8_t image_chdir(path_t *path, uint8_t *dirname);
 void    image_mkdir(path_t *path, uint8_t *dirname);
-uint8_t image_read(DWORD offset, void *buffer, uint16_t bytes);
-uint8_t image_write(DWORD offset, void *buffer, uint16_t bytes, uint8_t flush);
+uint8_t image_read(uint8_t drive, DWORD offset, void *buffer, uint16_t bytes);
+uint8_t image_write(uint8_t drive, DWORD offset, void *buffer, uint16_t bytes, uint8_t flush);
 
 #endif

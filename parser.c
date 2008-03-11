@@ -34,7 +34,32 @@
 #include "ustring.h"
 #include "parser.h"
 
-path_t current_dir;
+partition_t partition[CONFIG_MAX_PARTITIONS];
+uint8_t current_part;
+uint8_t max_part;
+
+
+/**
+ * parse_partition - parse a partition number from a file name
+ * @buf     : pointer to pointer to filename
+ *
+ * This function parses the partition number from the file name
+ * specified in buf and advances buf to point at the first character
+ * that isn't part of the number. Returns a 0-based partition number.
+ */
+uint8_t parse_partition(uint8_t **buf) {
+  uint8_t part=0;
+  while (isdigit(**buf) || **buf == ' ') {
+    if(isdigit(**buf))
+      part=part*10+(**buf-'0');
+    (*buf)++;
+  }
+  if (part == 0)
+    return current_part;
+  else
+    return part-1;
+}
+
 
 /**
  * match_name - Match a pattern against a file name
@@ -158,12 +183,18 @@ uint8_t parse_path(uint8_t *in, path_t *path, uint8_t **name, uint8_t parse_alwa
   struct cbmdirent dent;
   uint8_t *end;
   uint8_t saved;
-
-  *path = current_dir;
+  uint8_t part;
 
   if (parse_always || ustrchr(in, ':')) {
     /* Skip partition number */
-    while (*in && (isdigit(*in) || *in == ' ')) in++;
+    part=parse_partition(&in);
+    if(part>=max_part) {
+      set_error(ERROR_DRIVE_NOT_READY);
+      return 1;
+    }
+
+    path->drive = part;
+    path->fat   = partition[part].current_dir;
 
     if (*in != '/') {
       *name = ustrchr(in, ':');
@@ -214,7 +245,8 @@ uint8_t parse_path(uint8_t *in, path_t *path, uint8_t **name, uint8_t parse_alwa
           }
 
           /* Match found, move path */
-          *path = dent.path;
+          /* This will break for image files with TYPE_DIR entries */
+          path->fat = dent.fatcluster;
           *end = saved;
           in = end;
           break;
@@ -232,7 +264,12 @@ uint8_t parse_path(uint8_t *in, path_t *path, uint8_t **name, uint8_t parse_alwa
         return 0;
       }
     }
+  } else {
+    /* No :, use current dir/path */
+    path->drive = current_part;
+    path->fat   = partition[current_part].current_dir;
   }
+
   *name = in;
   return 0;
 }

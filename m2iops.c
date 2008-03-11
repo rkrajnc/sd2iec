@@ -98,16 +98,17 @@ static uint8_t parsetype(void) {
 
 /**
  * load_entry - load M2I entry at offset into entrybuf
+ * @drive : drive number
  * @offset: offset in M2I file to be loaded
  *
  * This function loads the M2I line at offset into entrybuf and zero-
  * terminates the FAT name within.  Returns 0 if successful, 1 at
  * end of file or 255 on error.
  */
-static uint8_t load_entry(uint16_t offset) {
+static uint8_t load_entry(uint8_t drive, uint16_t offset) {
   uint8_t i;
 
-  i = image_read(offset, entrybuf, M2I_ENTRY_LEN);
+  i = image_read(drive, offset, entrybuf, M2I_ENTRY_LEN);
 
   if (i > 1)
     return 255;
@@ -126,19 +127,20 @@ static uint8_t load_entry(uint16_t offset) {
 
 /**
  * find_entry - locate a CBM file name in an M2I file
- * @name: name to be located
+ * @drive: drive number
+ * @name : name to be located
  *
  * This function searches for a given CBM file name in the currently
  * mounted M2I File. Returns 0 if not found, 1 on errors or the
  * offset of the M2I line if found.
  */
-static uint16_t find_entry(uint8_t *name) {
+static uint16_t find_entry(uint8_t drive, uint8_t *name) {
   uint16_t pos = M2I_ENTRY_OFFSET;
   uint8_t i;
   uint8_t *srcname, *dstname;
 
   while (1) {
-    i = load_entry(pos);
+    i = load_entry(drive,pos);
     pos += M2I_ENTRY_LEN;
 
     if (i) {
@@ -166,18 +168,19 @@ static uint16_t find_entry(uint8_t *name) {
 
 /**
  * find_empty_entry - returns the offset of the first empty M2I entry
+ * @drive: drive number
  *
  * This function looks for a deleted entry in an M2I file and returns
  * it offset. Returns 1 on error or an offset if successful. The
  * offset may point to a position beyond the end of file if there
  * were no free entries available.
  */
-static uint16_t find_empty_entry(void) {
+static uint16_t find_empty_entry(uint8_t drive) {
   uint16_t pos = M2I_ENTRY_OFFSET;
   uint8_t i;
 
   while (1) {
-    i = load_entry(pos);
+    i = load_entry(drive, pos);
 
     if (i) {
       if (i == 255)
@@ -195,6 +198,7 @@ static uint16_t find_empty_entry(void) {
 
 /**
  * open_existing - open an existing file
+ * @path      : path handle
  * @name      : name of the file
  * @type      : type of the file (not checked)
  * @buf       : buffer to be used
@@ -204,10 +208,10 @@ static uint16_t find_empty_entry(void) {
  * either in read or append mode according to appendflag by calling
  * the appropiate fat_* functions.
  */
-static void open_existing(uint8_t *name, uint8_t type, buffer_t *buf, uint8_t appendflag) {
+static void open_existing(path_t *path, uint8_t *name, uint8_t type, buffer_t *buf, uint8_t appendflag) {
   uint16_t offset;
 
-  offset = find_entry(name);
+  offset = find_entry(path->drive, name);
   if (offset < M2I_ENTRY_OFFSET) {
     set_error(ERROR_FILE_NOT_FOUND);
     return;
@@ -219,9 +223,9 @@ static void open_existing(uint8_t *name, uint8_t type, buffer_t *buf, uint8_t ap
   }
 
   if (appendflag)
-    fat_open_write(&current_dir, entrybuf+M2I_FATNAME_OFFSET, type, buf, 1);
+    fat_open_write(path, entrybuf+M2I_FATNAME_OFFSET, type, buf, 1);
   else
-    fat_open_read(&current_dir, entrybuf+M2I_FATNAME_OFFSET, buf);
+    fat_open_read(path, entrybuf+M2I_FATNAME_OFFSET, buf);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -229,7 +233,8 @@ static void open_existing(uint8_t *name, uint8_t type, buffer_t *buf, uint8_t ap
 /* ------------------------------------------------------------------------- */
 
 static uint8_t m2i_opendir(dh_t *dh, path_t *path) {
-  dh->m2i = M2I_ENTRY_OFFSET;
+  dh->drive   = path->drive;
+  dh->dir.m2i = M2I_ENTRY_OFFSET;
   return 0;
 }
 
@@ -237,7 +242,7 @@ static int8_t m2i_readdir(dh_t *dh, struct cbmdirent *dent) {
   uint8_t i;
 
   while (1) {
-    i = load_entry(dh->m2i);
+    i = load_entry(dh->drive, dh->dir.m2i);
     if (i) {
       if (i == 255)
         return 1;
@@ -245,7 +250,7 @@ static int8_t m2i_readdir(dh_t *dh, struct cbmdirent *dent) {
         return -1;
     }
 
-    dh->m2i += M2I_ENTRY_LEN;
+    dh->dir.m2i += M2I_ENTRY_LEN;
 
     /* Check file type */
     if (parsetype())
@@ -296,12 +301,12 @@ static int8_t m2i_readdir(dh_t *dh, struct cbmdirent *dent) {
 }
 
 static uint8_t m2i_getlabel(path_t *path, uint8_t *label) {
-  return image_read(0, label, 16);
+  return image_read(path->drive, 0, label, 16);
 }
 
 static void m2i_open_read(path_t *path, uint8_t *name, buffer_t *buf) {
   /* The type isn't checked anyway */
-  open_existing(name, TYPE_PRG, buf, 0);
+  open_existing(path, name, TYPE_PRG, buf, 0);
 }
 
 static void m2i_open_write(path_t *path, uint8_t *name, uint8_t type, buffer_t *buf, uint8_t append) {
@@ -312,7 +317,7 @@ static void m2i_open_write(path_t *path, uint8_t *name, uint8_t type, buffer_t *
   FRESULT res;
 
   if (append) {
-    open_existing(name, type, buf, 1);
+    open_existing(path, name, type, buf, 1);
   } else {
     // FIXME: Sind das alle zu verbietenden Zeichen?
     nameptr = name;
@@ -326,7 +331,7 @@ static void m2i_open_write(path_t *path, uint8_t *name, uint8_t type, buffer_t *
     }
 
     /* Find an empty entry */
-    offset = find_empty_entry();
+    offset = find_empty_entry(path->drive);
     if (offset < M2I_ENTRY_OFFSET)
       return;
 
@@ -368,7 +373,7 @@ static void m2i_open_write(path_t *path, uint8_t *name, uint8_t type, buffer_t *
 
       finfo.lfn = NULL;
       /* See if it's already there */
-      res = f_stat(entrybuf+M2I_FATNAME_OFFSET, &finfo);
+      res = f_stat(&partition[path->drive].fatfs, entrybuf+M2I_FATNAME_OFFSET, &finfo);
       if (res == FR_OK) {
         str = entrybuf+M2I_FATNAME_OFFSET+7;
         /* Increment name */
@@ -401,17 +406,17 @@ static void m2i_open_write(path_t *path, uint8_t *name, uint8_t type, buffer_t *
     entrybuf[M2I_CBMNAME_OFFSET+CBM_NAME_LENGTH+1] = 10;
 
     /* Write it */
-    if (image_write(offset, entrybuf, M2I_ENTRY_LEN, 1))
+    if (image_write(path->drive, offset, entrybuf, M2I_ENTRY_LEN, 1))
       return;
 
     /* Write the actual file */
-    fat_open_write(&current_dir, name, type, buf, append);
+    fat_open_write(path, name, type, buf, append);
 
     /* Abort on error */
     if (current_error) {
       /* No error checking here. Either it works or everything has failed. */
       entrybuf[0] = '-';
-      image_write(offset, entrybuf, 1, 1);
+      image_write(path->drive, offset, entrybuf, 1, 1);
     }
   }
 }
@@ -419,7 +424,7 @@ static void m2i_open_write(path_t *path, uint8_t *name, uint8_t type, buffer_t *
 static uint8_t m2i_delete(path_t *path, uint8_t *name) {
   uint16_t offset;
 
-  offset = find_entry(name);
+  offset = find_entry(path->drive, name);
   if (offset == 1)
     return 255;
 
@@ -427,10 +432,10 @@ static uint8_t m2i_delete(path_t *path, uint8_t *name) {
     return 0;
 
   /* Ignore the result, we'll have to delete the entry anyway */
-  fat_delete(&current_dir, entrybuf+M2I_FATNAME_OFFSET);
+  fat_delete(path, entrybuf+M2I_FATNAME_OFFSET);
 
   entrybuf[0] = '-';
-  if (image_write(offset, entrybuf, 1, 1))
+  if (image_write(path->drive, offset, entrybuf, 1, 1))
     return 0;
   else
     return 1;

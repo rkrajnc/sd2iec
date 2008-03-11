@@ -28,8 +28,13 @@
 #define PARSER_H
 
 #include "dirent.h"
+#include "ff.h"
 
-extern path_t current_dir;
+extern partition_t partition[CONFIG_MAX_PARTITIONS];
+extern uint8_t current_part;
+extern uint8_t max_part;
+
+uint8_t parse_partition(uint8_t **buf);
 
 /* Returns the next matching dirent */
 int8_t next_match(dh_t *dh, uint8_t *matchstr, uint8_t type, struct cbmdirent *dent);

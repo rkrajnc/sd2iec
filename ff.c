@@ -53,6 +53,7 @@
 
 #include <avr/pgmspace.h>
 #include <string.h>
+#include "config.h"
 #include "ff.h"         /* FatFs declarations */
 #include "diskio.h"     /* Include file for user provided disk functions */
 
@@ -82,7 +83,7 @@ BUF static_buf;
 # define FSBUF (fs->buf)
 #endif
 
-#if _USE_FS_BUF == 1
+#if _USE_FS_BUF != 0
 # define FPBUF FSBUF
 #else
 # define FPBUF (fp->buf)
@@ -101,7 +102,7 @@ BOOL move_window (      /* TRUE: successful, FALSE: failed */
 {
   DWORD wsect;
 #if _USE_1_BUF != 0
-  FATFS* ofs = ((FATFS*)(buf->fs));
+  FATFS* ofs = buf->fs;
 #else
 #define ofs fs
 #endif
@@ -111,11 +112,11 @@ BOOL move_window (      /* TRUE: successful, FALSE: failed */
 #if _USE_1_BUF != 0
   if (wsect != sector || fs != ofs) {   /* Changed current window */
 #else
-  if (wsect != sector) {                            /* Changed current window */
+  if (wsect != sector) {                /* Changed current window */
 #endif
 #if !_FS_READONLY
     BYTE n;
-    if (buf->dirty) {                               /* Write back dirty window if needed */
+    if (buf->dirty) {                   /* Write back dirty window if needed */
       if (disk_write(ofs->drive, buf->data, wsect, 1) != RES_OK)
         return FALSE;
       buf->dirty = FALSE;
@@ -160,11 +161,7 @@ BOOL move_fp_window(
   DWORD  sector
 )
 {
-#if _USE_FS_BUF == 0
   return move_window(fp->fs,&FPBUF,sector);
-#else
-  return move_fs_window(fp->fs,sector);
-#endif
 }
 
 

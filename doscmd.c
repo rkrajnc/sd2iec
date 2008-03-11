@@ -307,8 +307,12 @@ static void parse_block(void) {
       return;
     }
 
+    /* Use current partition for 0 */
+    if (params[1] == 0)
+      params[1] = current_part;
+
     if (*str == 'R') {
-      read_sector(buf,params[2],params[3]);
+      read_sector(buf,params[1],params[2],params[3]);
       if (command_buffer[0] == 'B') {
         buf->position = 1;
         buf->lastused = buf->data[0];
@@ -319,7 +323,7 @@ static void parse_block(void) {
     } else {
       if (command_buffer[0] == 'B')
         buf->data[0] = buf->position-1; // FIXME: Untested, verify!
-      write_sector(buf,params[2],params[3]);
+      write_sector(buf,params[1],params[2],params[3]);
     }
     break;
 
@@ -348,6 +352,7 @@ void parse_doscommand(void) {
   uint8_t *fname;
   struct cbmdirent dent;
   path_t path;
+  uint8_t part;
 
   /* Set default message: Everything ok */
   set_error(ERROR_OK);
@@ -432,11 +437,11 @@ void parse_doscommand(void) {
             if (chdir(&path, dent.name))
               break;
           } else
-            current_dir = dent.path;
+            partition[path.drive].current_dir = dent.fatcluster;
         }
       } else {
         if (ustrchr(command_buffer, '/')) {
-          current_dir = path;
+          partition[path.drive].current_dir = path.fat;
         } else {
           set_error(ERROR_FILE_NOT_FOUND_39);
           break;
@@ -462,13 +467,15 @@ void parse_doscommand(void) {
         break;
       }
 
-      /* Skip drive number */
-      i = 2;
-      while (isdigit(command_buffer[i]) || command_buffer[i] == ' ') i++;
-      if (command_buffer[i] != ':') {
+      /* Parse partition number */
+      fname=command_buffer+2;
+      part=parse_partition(&fname);
+      if (*fname != ':') {
         set_error(ERROR_SYNTAX_NONAME);
       } else {
-        i = file_delete(&current_dir, command_buffer+i+1);
+        path.drive = part;
+        path.fat   = partition[part].current_dir;
+        i = file_delete(&path, command_buffer+i+1);
         if (i != 255)
           set_error_ts(ERROR_SCRATCHED,i,0);
       }
@@ -494,6 +501,31 @@ void parse_doscommand(void) {
   case 'B':
     /* Block-Something */
     parse_block();
+    break;
+
+  case 'C':
+    /* Copy or Change Partition */
+    switch(command_buffer[1]) {
+      /* Change Partition */
+    case 'P':
+        fname=command_buffer+2;
+        part=parse_partition(&fname);
+        if(part>=max_part) {
+          set_error_ts(ERROR_PARTITION_ILLEGAL,part+1,0);
+          return;
+        }
+
+        current_part=part;
+        if (iec_data.iecflags & AUTOSWAP_ACTIVE)
+          set_changelist(NULL, NULLSTRING);
+
+        break;
+
+    default:
+      /* Throw an error because we don't handle copy yet */
+      set_error(ERROR_SYNTAX_UNKNOWN);
+      break;
+    }
     break;
 
   case 'U':

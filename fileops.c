@@ -32,6 +32,7 @@
 #include "dirent.h"
 #include "doscmd.h"
 #include "errormsg.h"
+#include "ff.h"
 #include "m2iops.h"
 #include "parser.h"
 #include "uart.h"
@@ -43,7 +44,8 @@
 /*  Some constants used for directory generation                             */
 /* ------------------------------------------------------------------------- */
 
-#define HEADER_OFFSET_NAME
+#define HEADER_OFFSET_DRIVE 4
+#define HEADER_OFFSET_NAME  8
 #define HEADER_OFFSET_ID   26
 
 /* NOTE: I wonder if RLE-packing would save space in flash? */
@@ -76,9 +78,6 @@ const PROGMEM uint8_t filetypes[] = {
   'C','B','M', // 5
   'D','I','R'  // 6
 };
-
-/// Pointer to the currently active fileops structure
-const fileops_t *fop;
 
 /* ------------------------------------------------------------------------- */
 /*  Utility functions                                                        */
@@ -176,7 +175,7 @@ static uint8_t dir_footer(buffer_t *buf) {
   /* Copy the "BLOCKS FREE" message */
   memcpy_P(buf->data, dirfooter, sizeof(dirfooter));
 
-  blocks = disk_free();
+  blocks = disk_free(buf->pvt.dir.dh.drive);
   buf->data[2] = blocks & 0xff;
   buf->data[3] = blocks >> 8;
 
@@ -294,7 +293,8 @@ static void load_directory(uint8_t secondary) {
       }
     }
   } else {
-    path.fat=current_dir.fat;  // if you do not do this, get_label will fail below.
+    path.drive = current_part;
+    path.fat=partition[path.drive].current_dir;  // if you do not do this, get_label will fail below.
     if (opendir(&buf->pvt.dir.dh, &path)) {
       free_buffer(buf);
       return;
@@ -308,14 +308,17 @@ static void load_directory(uint8_t secondary) {
   /* copy static header to start of buffer */
   memcpy_P(buf->data, dirheader, sizeof(dirheader));
 
+  /* set drive number */
+  buf->data[HEADER_OFFSET_DRIVE] = path.drive+1;
+
   /* read volume name */
-  if (disk_label(&path, buf->data+8)) {
+  if (disk_label(&path, buf->data+HEADER_OFFSET_NAME)) {
     free_buffer(buf);
     return;
   }
 
   /* read id */
-  if (disk_id(buf->data+HEADER_OFFSET_ID)) {
+  if (disk_id(path.drive,buf->data+HEADER_OFFSET_ID)) {
     free_buffer(buf);
     return;
   }
@@ -456,7 +459,7 @@ void file_open(uint8_t secondary) {
     return;
 
   /* For M2I only: Remove trailing spaces from name */
-  if (fop == &m2iops) {
+  if (partition[path.drive].fop == &m2iops) {
     res = ustrlen(fname);
     while (--res && fname[res] == ' ')
       fname[res] = 0;

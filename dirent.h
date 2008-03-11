@@ -48,22 +48,24 @@
 
 /**
  * struct path_t - struct to reference a directory
- * @fat: cluster number of the directory start
+ * @drive: drive number (0-based)
+ * @fat  : cluster number of the directory start
  *
  * This is just a wrapper around the FAT cluster number
  * until there is anything else that support subdirectories.
  */
 typedef struct {
+  uint8_t  drive;
   uint32_t fat;
 } path_t;
 
 /**
  * struct cbmdirent - directory entry for CBM names
- * @blocksize: Size in blocks of 254 bytes
- * @remainder: (filesize MOD 254) or 0xff if unknown
- * @typeflags: OR of file type and flags
- * @path     : Start cluster of the entry (if on FAT)
- * @name     : 0-padded commodore file name
+ * @blocksize : Size in blocks of 254 bytes
+ * @remainder : (filesize MOD 254) or 0xff if unknown
+ * @typeflags : OR of file type and flags
+ * @fatcluster: Start cluster of the entry (if on FAT)
+ * @name      : 0-padded commodore file name
  *
  * This structure holds a CBM filename, its type and its size. The typeflags
  * are almost compatible to the file type byte in a D64 image, but the splat
@@ -76,7 +78,7 @@ struct cbmdirent {
   uint16_t blocksize;
   uint8_t  remainder;
   uint8_t  typeflags;
-  path_t   path;
+  uint32_t fatcluster;
   uint8_t  name[CBM_NAME_LENGTH+1];
 };
 
@@ -107,25 +109,46 @@ struct d64dh {
  */
 typedef struct d64fh {
   struct d64dh dh;
+  uint8_t drive;
   uint8_t track;
   uint8_t sector;
   uint16_t blocks;
 } d64fh_t;
 
 /**
- * union dh_t - union of all directory handles
- * @fat: fat directory handle
- * @m2i: m2i directory handle (offset of entry in the file)
- * @d64: d64 directory handle
+ * struct dh_t - union of all directory handles
+ * @drive: drive number for the handle
+ * @fat  : fat directory handle
+ * @m2i  : m2i directory handle (offset of entry in the file)
+ * @d64  : d64 directory handle
  *
  * This is a union of directory handles for all supported file types
  * which is used as an opaque type to be passed between openddir and
  * readdir.
  */
-typedef union dh_u {
-  DIR fat;
-  uint16_t m2i;
-  struct d64dh d64;
+typedef struct dh_s {
+  uint8_t drive;
+  union {
+    DIR fat;
+    uint16_t m2i;
+    struct d64dh d64;
+  } dir;
 } dh_t;
+
+/**
+ * struct partition_t - per-partition data
+ * @fatfs      : FatFs per-drive/partition structure
+ * @current_dir: current directory on FAT as seen by sd2iec
+ * @fop        : pointer to the fileops structure for this partition
+ * @imagehandle: file handle of a mounted image file on this partition
+ *
+ * This data structure holds per-partition data.
+ */
+typedef struct partition_s {
+  FATFS                  fatfs;
+  uint32_t               current_dir;
+  const struct fileops_s *fop;
+  FIL                    imagehandle;
+} partition_t;
 
 #endif

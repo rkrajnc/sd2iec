@@ -96,6 +96,7 @@ static uint8_t sectors_per_track(uint8_t track) {
 
 /**
  * checked_read - read a specified sector after range-checking
+ * @drive : drive number
  * @track : track number to be read
  * @sector: sector number to be read
  * @buf   : pointer to where the data should be read to
@@ -107,13 +108,13 @@ static uint8_t sectors_per_track(uint8_t track) {
  * the data if they are. Returns the result of image_read or
  * 2 if the range check failed.
  */
-static uint8_t checked_read(uint8_t track, uint8_t sector, uint8_t *buf, uint16_t len, uint8_t error) {
+static uint8_t checked_read(uint8_t drive, uint8_t track, uint8_t sector, uint8_t *buf, uint16_t len, uint8_t error) {
   if (track < 1 || track > LAST_TRACK ||
       sector >= sectors_per_track(track)) {
     set_error_ts(error,track,sector);
     return 2;
   }
-  return image_read(sector_offset(track,sector), buf, len);
+  return image_read(drive, sector_offset(track,sector), buf, len);
 }
 
 /**
@@ -138,11 +139,12 @@ static void strnsubst(uint8_t *buffer, uint8_t len, uint8_t oldchar, uint8_t new
 
 /**
  * read_bam - return a pointer to a buffer with the current BAM
+ * @drive: drive number
  *
  * This function returns a pointer to a buffer containing the
  * BAM of the D64 image. Returns NULL on failure.
  */
-static buffer_t* read_bam(void) {
+static buffer_t* read_bam(uint8_t drive) {
   buffer_t *buf;
 
   buf = alloc_buffer();
@@ -151,10 +153,12 @@ static buffer_t* read_bam(void) {
 
   mark_write_buffer(buf);
 
-  if (image_read(sector_offset(BAM_TRACK,BAM_SECTOR), buf->data, 256)) {
+  if (image_read(drive, sector_offset(BAM_TRACK,BAM_SECTOR), buf->data, 256)) {
     free_buffer(buf);
     return NULL;
   }
+
+  buf->pvt.d64.drive = drive;
 
   return buf;
 }
@@ -169,7 +173,7 @@ static buffer_t* read_bam(void) {
 static uint8_t write_bam(buffer_t *buf) {
   uint8_t res;
 
-  res = image_write(sector_offset(BAM_TRACK,BAM_SECTOR), buf->data, 256, 1);
+  res = image_write(buf->pvt.d64.drive, sector_offset(BAM_TRACK,BAM_SECTOR), buf->data, 256, 1);
   free_buffer(buf);
   return res;
 }
@@ -367,25 +371,25 @@ static uint8_t get_next_sector(uint8_t *track, uint8_t *sector, buffer_t *bambuf
  */
 static int8_t nextdirentry(dh_t *dh) {
   /* End of directory entries in this sector? */
-  if (dh->d64.entry == 8) {
+  if (dh->dir.d64.entry == 8) {
     /* Read link pointer */
-    if (checked_read(dh->d64.track, dh->d64.sector, entrybuf, 2, ERROR_ILLEGAL_TS_LINK))
+    if (checked_read(dh->drive, dh->dir.d64.track, dh->dir.d64.sector, entrybuf, 2, ERROR_ILLEGAL_TS_LINK))
       return 1;
 
     /* Final directory sector? */
     if (entrybuf[0] == 0)
       return -1;
 
-    dh->d64.track  = entrybuf[0];
-    dh->d64.sector = entrybuf[1];
-    dh->d64.entry  = 0;
+    dh->dir.d64.track  = entrybuf[0];
+    dh->dir.d64.sector = entrybuf[1];
+    dh->dir.d64.entry  = 0;
   }
 
-  if (image_read(sector_offset(dh->d64.track, dh->d64.sector)+
-                 dh->d64.entry*32, entrybuf, 32))
+  if (image_read(dh->drive, sector_offset(dh->dir.d64.track, dh->dir.d64.sector)+
+                 dh->dir.d64.entry*32, entrybuf, 32))
     return 1;
 
-  dh->d64.entry++;
+  dh->dir.d64.entry++;
 
   return 0;
 }
@@ -395,7 +399,7 @@ static uint8_t d64_read(buffer_t *buf) {
   buf->pvt.d64.track  = buf->data[0];
   buf->pvt.d64.sector = buf->data[1];
 
-  if (checked_read(buf->data[0], buf->data[1], buf->data, 256, ERROR_ILLEGAL_TS_LINK))
+  if (checked_read(buf->pvt.d64.drive, buf->data[0], buf->data[1], buf->data, 256, ERROR_ILLEGAL_TS_LINK))
     return 1;
 
   buf->position = 2;
@@ -428,7 +432,7 @@ static uint8_t d64_write(buffer_t *buf) {
 
   /* Read BAM */
   /* Yes, this means writing can suddenly fail with NO CHANNEL. */
-  bambuf = read_bam();
+  bambuf = read_bam(buf->pvt.d64.drive);
   if (!bambuf) {
     savederror = current_error;
     goto storedata;
@@ -454,7 +458,7 @@ static uint8_t d64_write(buffer_t *buf) {
   free_buffer(bambuf);
 
   /* Store data in the already-reserved sector */
-  if (image_write(sector_offset(buf->pvt.d64.track,buf->pvt.d64.sector),
+  if (image_write(buf->pvt.d64.drive, sector_offset(buf->pvt.d64.track,buf->pvt.d64.sector),
                   buf->data, 256, 1))
     return 1;
 
@@ -486,20 +490,20 @@ static uint8_t d64_write_cleanup(buffer_t *buf) {
     return 1;
 
   /* Store data */
-  if (image_write(sector_offset(t,s), buf->data, 256, 1))
+  if (image_write(buf->pvt.d64.drive, sector_offset(t,s), buf->data, 256, 1))
     return 1;
 
   /* Update directory entry */
   t = buf->pvt.d64.dh.track;
   s = buf->pvt.d64.dh.sector;
-  if (image_read(sector_offset(t,s)+32*buf->pvt.d64.dh.entry, entrybuf, 32))
+  if (image_read(buf->pvt.d64.drive, sector_offset(t,s)+32*buf->pvt.d64.dh.entry, entrybuf, 32))
     return 1;
 
   entrybuf[OFS_FILE_TYPE] |= FLAG_SPLAT;
   entrybuf[OFS_SIZE_LOW]   = buf->pvt.d64.blocks & 0xff;
   entrybuf[OFS_SIZE_HI]    = buf->pvt.d64.blocks >> 8;
 
-  if (image_write(sector_offset(t,s)+32*buf->pvt.d64.dh.entry, entrybuf, 32, 1))
+  if (image_write(buf->pvt.d64.drive, sector_offset(t,s)+32*buf->pvt.d64.dh.entry, entrybuf, 32, 1))
     return 1;
 
   buf->cleanup = NULL;
@@ -514,9 +518,10 @@ static uint8_t d64_write_cleanup(buffer_t *buf) {
 /* ------------------------------------------------------------------------- */
 
 static uint8_t d64_opendir(dh_t *dh, path_t *path) {
-  dh->d64.track  = DIR_TRACK;
-  dh->d64.sector = DIR_START_SECTOR;
-  dh->d64.entry  = 0;
+  dh->drive = path->drive;
+  dh->dir.d64.track  = DIR_TRACK;
+  dh->dir.d64.sector = DIR_START_SECTOR;
+  dh->dir.d64.entry  = 0;
   return 0;
 }
 
@@ -533,6 +538,11 @@ static int8_t d64_readdir(dh_t *dh, struct cbmdirent *dent) {
   } while (1);
 
   dent->typeflags = entrybuf[OFS_FILE_TYPE] ^ FLAG_SPLAT;
+
+  if ((dent->typeflags & TYPE_MASK) >= TYPE_DIR)
+    /* Change invalid types (includes DIR for now) to DEL */
+    dent->typeflags &= (uint8_t)~TYPE_MASK;
+
   dent->blocksize = entrybuf[OFS_SIZE_LOW] + 256*entrybuf[OFS_SIZE_HI];
   dent->remainder = 0xff;
   memcpy(dent->name, entrybuf+OFS_FILE_NAME, CBM_NAME_LENGTH);
@@ -543,22 +553,22 @@ static int8_t d64_readdir(dh_t *dh, struct cbmdirent *dent) {
 }
 
 static uint8_t d64_getlabel(path_t *path, uint8_t *label) {
-  if (image_read(sector_offset(DIR_TRACK,0) + LABEL_OFFSET, label, 16))
+  if (image_read(path->drive, sector_offset(DIR_TRACK,0) + LABEL_OFFSET, label, 16))
     return 1;
 
   strnsubst(label, 16, 0xa0, 0x20);
   return 0;
 }
 
-static uint8_t d64_getid(uint8_t *id) {
-  if (image_read(sector_offset(DIR_TRACK,0) + ID_OFFSET, id, 5))
+static uint8_t d64_getid(uint8_t drive, uint8_t *id) {
+  if (image_read(drive, sector_offset(DIR_TRACK,0) + ID_OFFSET, id, 5))
     return 1;
 
   strnsubst(id, 5, 0xa0, 0x20);
   return 0;
 }
 
-static uint16_t d64_freeblocks(void) {
+static uint16_t d64_freeblocks(uint8_t drive) {
   uint16_t blocks = 0;
   uint8_t i;
 
@@ -566,7 +576,7 @@ static uint16_t d64_freeblocks(void) {
     /* Skip directory track */
     if (i == 18)
       continue;
-    if (image_read(sector_offset(DIR_TRACK,0) + 4*i, entrybuf, 1))
+    if (image_read(drive, sector_offset(DIR_TRACK,0) + 4*i, entrybuf, 1))
       return 0;
     blocks += entrybuf[0];
   }
@@ -579,6 +589,8 @@ static void d64_open_read(path_t *path, uint8_t *name, buffer_t *buf) {
   /*          entrybuf because of match_entry in fatops.c/file_open */
   buf->data[0] = entrybuf[OFS_TRACK];
   buf->data[1] = entrybuf[OFS_SECTOR];
+
+  buf->pvt.d64.drive = path->drive;
 
   // FIXME: Check the file type
 
@@ -605,9 +617,9 @@ static void d64_open_write(path_t *path, uint8_t *name, uint8_t type, buffer_t *
       return;
 
     /* Modify the buffer for writing */
-    buf->pvt.d64.dh.track  = matchdh.d64.track;
-    buf->pvt.d64.dh.sector = matchdh.d64.sector;
-    buf->pvt.d64.dh.entry  = matchdh.d64.entry-1;
+    buf->pvt.d64.dh.track  = matchdh.dir.d64.track;
+    buf->pvt.d64.dh.sector = matchdh.dir.d64.sector;
+    buf->pvt.d64.dh.entry  = matchdh.dir.d64.entry-1;
     buf->pvt.d64.blocks    = entrybuf[OFS_SIZE_LOW] + 256*entrybuf[OFS_SIZE_HI]-1;
     buf->read       = 0;
     buf->position   = buf->lastused+1;
@@ -625,7 +637,7 @@ static void d64_open_write(path_t *path, uint8_t *name, uint8_t type, buffer_t *
   /* Non-append case */
 
   /* Search for an empty directotry entry */
-  d64_opendir(&dh,NULL);
+  d64_opendir(&dh, path);
   do {
     res = nextdirentry(&dh);
     if (res > 0)
@@ -633,35 +645,35 @@ static void d64_open_write(path_t *path, uint8_t *name, uint8_t type, buffer_t *
   } while (res == 0 && entrybuf[OFS_FILE_TYPE] != 0);
 
   /* Load the BAM */
-  bambuf = read_bam();
+  bambuf = read_bam(path->drive);
   if (!bambuf)
     return;
 
   /* Allocate a new directory sector if no empty entries were found */
   if (res < 0) {
-    t = dh.d64.track;
-    s = dh.d64.sector;
+    t = dh.dir.d64.track;
+    s = dh.dir.d64.sector;
 
-    if (get_next_sector(&dh.d64.track, &dh.d64.sector, bambuf)) {
+    if (get_next_sector(&dh.dir.d64.track, &dh.dir.d64.sector, bambuf)) {
       free_buffer(bambuf);
       return;
     }
 
     /* Link the old sector to the new */
-    entrybuf[0] = dh.d64.track;
-    entrybuf[1] = dh.d64.sector;
-    if (image_write(sector_offset(t,s), entrybuf, 2, 0)) {
+    entrybuf[0] = dh.dir.d64.track;
+    entrybuf[1] = dh.dir.d64.sector;
+    if (image_write(path->drive, sector_offset(t,s), entrybuf, 2, 0)) {
       free_buffer(bambuf);
       return;
     }
 
-    allocate_sector(dh.d64.track, dh.d64.sector, bambuf);
+    allocate_sector(dh.dir.d64.track, dh.dir.d64.sector, bambuf);
 
     /* Clear the new directory sector */
     memset(entrybuf, 0, 32);
     entrybuf[1] = 0xff;
     for (uint8_t i=0;i<256/32;i++) {
-      if (image_write(sector_offset(dh.d64.track, dh.d64.sector)+32*i,
+      if (image_write(path->drive, sector_offset(dh.dir.d64.track, dh.dir.d64.sector)+32*i,
                       entrybuf, 32, 0)) {
         free_buffer(bambuf);
         return;
@@ -671,12 +683,12 @@ static void d64_open_write(path_t *path, uint8_t *name, uint8_t type, buffer_t *
 
     /* Mark full sector as used */
     entrybuf[1] = 0xff;
-    dh.d64.entry = 0;
+    dh.dir.d64.entry = 0;
   } else {
     /* Fix gcc 4.2 "uninitialized" warning */
     s = t = 0;
     /* nextdirentry has already incremented this variable, undo it */
-    dh.d64.entry--;
+    dh.dir.d64.entry--;
   }
 
   /* Create directory entry in entrybuf */
@@ -698,8 +710,8 @@ static void d64_open_write(path_t *path, uint8_t *name, uint8_t type, buffer_t *
     return;
 
   /* Write the directory entry */
-  if (image_write(sector_offset(dh.d64.track,dh.d64.sector)+
-                  dh.d64.entry*32, entrybuf, 32, 1))
+  if (image_write(path->drive, sector_offset(dh.dir.d64.track,dh.dir.d64.sector)+
+                  dh.dir.d64.entry*32, entrybuf, 32, 1))
     return;
 
   /* Prepare the data buffer */
@@ -709,7 +721,8 @@ static void d64_open_write(path_t *path, uint8_t *name, uint8_t type, buffer_t *
   buf->cleanup        = d64_write_cleanup;
   buf->refill         = d64_write;
   buf->data[2]        = 13; /* Verified on VICE */
-  buf->pvt.d64.dh     = dh.d64;
+  buf->pvt.d64.dh     = dh.dir.d64;
+  buf->pvt.d64.drive  = path->drive;
   buf->pvt.d64.track  = t;
   buf->pvt.d64.sector = s;
 }
@@ -721,7 +734,7 @@ static uint8_t d64_delete(path_t *path, uint8_t *name) {
   uint8_t linkbuf[2];
 
   /* Read BAM */
-  buf = read_bam();
+  buf = read_bam(path->drive);
   if (!buf)
     return 255;
 
@@ -731,7 +744,7 @@ static uint8_t d64_delete(path_t *path, uint8_t *name) {
   do {
     free_sector(linkbuf[0], linkbuf[1], buf);
 
-    if (checked_read(linkbuf[0], linkbuf[1], linkbuf, 2, ERROR_ILLEGAL_TS_LINK)) {
+    if (checked_read(path->drive, linkbuf[0], linkbuf[1], linkbuf, 2, ERROR_ILLEGAL_TS_LINK)) {
       free_buffer(buf);
       return 255;
     }
@@ -739,8 +752,8 @@ static uint8_t d64_delete(path_t *path, uint8_t *name) {
 
   /* Clear directory entry */
   entrybuf[OFS_FILE_TYPE] = 0;
-  if (image_write(sector_offset(matchdh.d64.track,matchdh.d64.sector)
-                 +32*(matchdh.d64.entry-1), entrybuf, 32, 1)) {
+  if (image_write(path->drive, sector_offset(matchdh.dir.d64.track,matchdh.dir.d64.sector)
+                 +32*(matchdh.dir.d64.entry-1), entrybuf, 32, 1)) {
     free_buffer(buf);
     return 255;
   }
@@ -752,16 +765,16 @@ static uint8_t d64_delete(path_t *path, uint8_t *name) {
     return 1;
 }
 
-static void d64_read_sector(buffer_t *buf, uint8_t track, uint8_t sector) {
-  checked_read(track, sector, buf->data, 256, ERROR_ILLEGAL_TS_COMMAND);
+static void d64_read_sector(buffer_t *buf, uint8_t drive, uint8_t track, uint8_t sector) {
+  checked_read(drive, track, sector, buf->data, 256, ERROR_ILLEGAL_TS_COMMAND);
 }
 
-static void d64_write_sector(buffer_t *buf, uint8_t track, uint8_t sector) {
+static void d64_write_sector(buffer_t *buf, uint8_t drive, uint8_t track, uint8_t sector) {
   if (track < 1 || track > LAST_TRACK ||
       sector >= sectors_per_track(track)) {
     set_error_ts(ERROR_ILLEGAL_TS_COMMAND,track,sector);
   } else
-    image_write(sector_offset(track,sector), buf->data, 256, 1);
+    image_write(drive, sector_offset(track,sector), buf->data, 256, 1);
 }
 
 const PROGMEM fileops_t d64ops = {

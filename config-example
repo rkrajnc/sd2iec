@@ -106,3 +106,6 @@ CONFIG_EEPROM_OFFSET=512
 # Track the stack size
 # Warning: This option increases the code size a lot.
 CONFIG_STACK_TRACKING=n
+
+# Maximum number of partitions
+CONFIG_MAX_PARTITIONS=1

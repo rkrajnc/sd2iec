@@ -33,7 +33,6 @@
 #include "buffers.h"
 
 dh_t    matchdh;
-FIL     imagehandle;
 uint8_t entrybuf[33];
 
 /// One additional buffer structure for channel 15

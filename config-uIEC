@@ -53,6 +53,8 @@ CONFIG_UART_BAUDRATE=38400
 # log2 of the UART buffer size, i.e. 6 for 64, 7 for 128, 8 for 256 etc.
 CONFIG_UART_BUF_SHIFT=6
 
+CONFIG_DEADLOCK_ME_HARDER=y
+
 # Output a hex dump of all received commands via serial?
 # Not used if CONFIG_UART_DEBUG is disabled.
 CONFIG_COMMAND_CHANNEL_DUMP=y
@@ -89,3 +91,5 @@ CONFIG_EEPROM_SIZE=512
 
 # Offset of the EEPROM user area
 CONFIG_EEPROM_OFFSET=512
+
+CONFIG_MAX_PARTITIONS=2
