@@ -1592,7 +1592,7 @@ FRESULT f_write (
       if (wcnt > btw) wcnt = btw;
       if (
 #if _USE_1_BUF == 0
-      fp->fptr < fp->fsize &&       /             * Fill sector buffer with file data if needed */
+      fp->fptr < fp->fsize &&       /* Fill sector buffer with file data if needed */
 #endif
       !move_fp_window(fp,fp->curr_sect))
     goto fw_error;
@@ -1701,6 +1701,11 @@ FRESULT f_lseek (
   res = validate(fs /*, fp->id*/);         /* Check validity of the object */
   if (res != FR_OK) return res;
   if (fp->flag & FA__ERROR) return FR_RW_ERROR;
+
+  /* Don't seek if the target is the current position */
+  if (fp->fptr == ofs)
+    return FR_OK;
+
 #if !_FS_READONLY
   if (!move_fp_window(fp,0)) goto fk_error;
   //if (FPBUF.dirty) {      /* Write-back dirty buffer if needed */
@@ -1713,6 +1718,23 @@ FRESULT f_lseek (
   if (ofs > fp->fsize)
 #endif
     ofs = fp->fsize;
+
+  /* Check if we're seeking to the same sector */
+  if ((ofs/SS(fs)) == (fp->fptr/SS(fs))) {
+    if ((ofs & (SS(fs) - 1)) == 0) {
+      /* Target is at a sector boundary, f_read/write will increment before reading */
+      fp->curr_sect--;
+      fp->sect_clust++;
+    }
+    if ((fp->fptr & (SS(fs) - 1)) == 0) {
+      /* Current position is at a sector boundary, undo increment of f_read/write */
+      fp->curr_sect++;
+      fp->sect_clust--;
+    }
+    fp->fptr = ofs;
+    return FR_OK;
+  }
+
   fp->fptr = 0; fp->sect_clust = 1;   /* Set file R/W pointer to top of the file */
 
   /* Move file R/W pointer if needed */
