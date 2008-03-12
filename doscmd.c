@@ -119,6 +119,10 @@ static int8_t parse_blockparam(uint8_t values[]) {
 /*  Command handlers                                                         */
 /* ------------------------------------------------------------------------- */
 
+/* ------------ */
+/*  E commands  */
+/* ------------ */
+
 static void handle_eeread(uint16_t address, uint8_t length) {
   if (length > CONFIG_ERROR_BUFFER_SIZE) {
     set_error(ERROR_SYNTAX_TOOLONG);
@@ -138,6 +142,10 @@ static void handle_eewrite(uint16_t address, uint8_t length) {
   while (length--)
     eeprom_write_byte((uint8_t *)(CONFIG_EEPROM_OFFSET + address++), *ptr++);
 }
+
+/* ------------ */
+/*  M commands  */
+/* ------------ */
 
 static void handle_memexec(void) {
   uint16_t address;
@@ -221,6 +229,10 @@ static void handle_memwrite(void) {
   }
 }
 
+/* ------------ */
+/*  X commands  */
+/* ------------ */
+
 static void parse_xcommand(void) {
   uint8_t *str;
   path_t path; // FIXME: use global? Dupe in parse_command
@@ -277,6 +289,10 @@ static void parse_xcommand(void) {
     break;
   }
 }
+
+/* ------------ */
+/*  B commands  */
+/* ------------ */
 
 static void parse_block(void) {
   uint8_t *str;
@@ -342,6 +358,76 @@ static void parse_block(void) {
     return;
   }
 }
+
+/* ------------ */
+/*  U commands  */
+/* ------------ */
+
+void parse_user(void) {
+  switch (command_buffer[1]) {
+  case 'A':
+  case '1':
+    /* Tiny little hack: Rewrite as (B)-R and call that                */
+    /* This will always work because there is either a : in the string */
+    /* or the drive will start parsing at buf[3].                      */
+    command_buffer[0] = '-';
+    command_buffer[1] = 'R';
+    parse_block();
+    break;
+    
+  case 'B':
+  case '2':
+    /* Tiny little hack: see above case for rationale */
+    command_buffer[0] = '-';
+    command_buffer[1] = 'W';
+    parse_block();
+    break;
+    
+  case 'I':
+  case '9':
+    switch (command_buffer[2]) {
+    case 0:
+      /* Soft-reset - just return the dos version */
+      set_error(ERROR_DOSVERSION);
+      break;
+      
+    case '+':
+      iec_data.iecflags &= (uint8_t)~VC20MODE;
+      break;
+      
+    case '-':
+      iec_data.iecflags |= VC20MODE;
+      break;
+      
+    default:
+      set_error(ERROR_SYNTAX_UNKNOWN);
+      break;
+    }
+    break;
+    
+  case 'J':
+  case ':':
+    /* Reset - technically hard-reset */
+    cli();
+    restart_call();
+    break;
+    
+  case '0':
+    /* U0 - only device address changes for now */
+    if ((command_buffer[2] & 0x1f) == 0x1e &&
+        command_buffer[3] >= 4 &&
+        command_buffer[3] <= 30) {
+      iec_data.device_address = command_buffer[3];
+      break;
+    }
+    /* Fall through */
+    
+  default:
+    set_error(ERROR_SYNTAX_UNKNOWN);
+    break;
+  }
+}
+
 
 /* ------------------------------------------------------------------------- */
 /*  Main command parser function                                             */
@@ -490,14 +576,6 @@ void parse_doscommand(void) {
   }
 
   switch (command_buffer[0]) {
-  case 'I':
-    /* Initialize */
-    if (disk_state != DISK_OK)
-      set_error_ts(ERROR_READ_NOSYNC,18,0);
-    else
-      free_all_buffers(1);
-    break;
-
   case 'B':
     /* Block-Something */
     parse_block();
@@ -542,69 +620,36 @@ void parse_doscommand(void) {
     }
     break;
 
-  case 'U':
-    switch (command_buffer[1]) {
-    case 'A':
-    case '1':
-      /* Tiny little hack: Rewrite as (B)-R and call that                */
-      /* This will always work because there is either a : in the string */
-      /* or the drive will start parsing at buf[3].                      */
-      command_buffer[0] = '-';
-      command_buffer[1] = 'R';
-      parse_block();
-      break;
-
-    case 'B':
-    case '2':
-      /* Tiny little hack: see above case for rationale */
-      command_buffer[0] = '-';
-      command_buffer[1] = 'W';
-      parse_block();
-      break;
-
-    case 'I':
-    case '9':
-      switch (command_buffer[2]) {
-      case 0:
-        /* Soft-reset - just return the dos version */
-        set_error(ERROR_DOSVERSION);
+  case 'E':
+    /* EEPROM-something */
+    do { /* Create a block to get local variables */
+      uint16_t address = command_buffer[3] + (command_buffer[4] << 8);
+      uint8_t  length  = command_buffer[5];
+      
+      if (command_length < 6)
         break;
-
-      case '+':
-        iec_data.iecflags &= (uint8_t)~VC20MODE;
-        break;
-
-      case '-':
-        iec_data.iecflags |= VC20MODE;
-        break;
-
-      default:
+      
+      if (command_buffer[1] != '-' || (command_buffer[2] != 'W' && command_buffer[2] != 'R'))
         set_error(ERROR_SYNTAX_UNKNOWN);
-        break;
+      
+      if (address > CONFIG_EEPROM_SIZE || address+length > CONFIG_EEPROM_SIZE) {
+        set_error(ERROR_SYNTAX_TOOLONG);
+        break;;
       }
-      break;
+      
+      if (command_buffer[2] == 'W')
+        handle_eewrite(address, length);
+      else
+        handle_eeread(address, length);
+    } while (0);
+    break;
 
-    case 'J':
-    case ':':
-      /* Reset - technically hard-reset */
-      cli();
-      restart_call();
-      break;
-
-    case '0':
-      /* U0 - only device address changes for now */
-      if ((command_buffer[2] & 0x1f) == 0x1e &&
-          command_buffer[3] >= 4 &&
-          command_buffer[3] <= 30) {
-        iec_data.device_address = command_buffer[3];
-        break;
-      }
-      /* Fall through */
-
-    default:
-      set_error(ERROR_SYNTAX_UNKNOWN);
-      break;
-    }
+  case 'I':
+    /* Initialize */
+    if (disk_state != DISK_OK)
+      set_error_ts(ERROR_READ_NOSYNC,18,0);
+    else
+      free_all_buffers(1);
     break;
 
   case 'M':
@@ -634,28 +679,14 @@ void parse_doscommand(void) {
       set_error(ERROR_SYNTAX_UNKNOWN);
     break;
 
-  case 'E':
-    /* EEPROM-something */
-    do { /* Create a block to get local variables */
-      uint16_t address = command_buffer[3] + (command_buffer[4] << 8);
-      uint8_t  length  = command_buffer[5];
-      
-      if (command_length < 6)
-        break;
-      
-      if (command_buffer[1] != '-' || (command_buffer[2] != 'W' && command_buffer[2] != 'R'))
-        set_error(ERROR_SYNTAX_UNKNOWN);
-      
-      if (address > CONFIG_EEPROM_SIZE || address+length > CONFIG_EEPROM_SIZE) {
-        set_error(ERROR_SYNTAX_TOOLONG);
-        break;;
-      }
-      
-      if (command_buffer[2] == 'W')
-        handle_eewrite(address, length);
-      else
-        handle_eeread(address, length);
-    } while (0);
+  case 'N':
+    // FIXME: HACK! Sonst bleibt der 64'er Speed-Test mit Division by Zero stehen
+    /* mkdir+chdir may be a nice substitute for FAT */
+    _delay_ms(100);
+    _delay_ms(100);
+    _delay_ms(100);
+    _delay_ms(100);
+    _delay_ms(100);
     break;
 
   case 'S':
@@ -682,14 +713,8 @@ void parse_doscommand(void) {
 
     break;
 
-  case 'N':
-    // FIXME: HACK! Sonst bleibt der 64'er Speed-Test mit Division by Zero stehen
-    /* mkdir+chdir may be a nice substitute for FAT */
-    _delay_ms(100);
-    _delay_ms(100);
-    _delay_ms(100);
-    _delay_ms(100);
-    _delay_ms(100);
+  case 'U':
+    parse_user();
     break;
 
   case 'X':
