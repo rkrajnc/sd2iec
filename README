@@ -67,7 +67,7 @@ Supported commands:
   image files are detected by file extension only and there is no reliable
   way to see if a file is a valid image file.
 
-- CP
+- CP, C<Shift-P>
   This changes the current partition, see "Partitions" below for details.
 
 - S:
@@ -181,7 +181,9 @@ is a special case: Because most software doesn't support drive numbers
 or always sends drive number 0, this partition point to any of the
 real partitions. By default, accesses to partition 0 will access partition 1,
 this can be changed by sending "CP<num>" over the command channel with
-<num> being an ASCII number from 1 to 255.
+<num> being an ASCII number from 1 to 255. "C<Shift-P" (0x42 0xd0) works
+the same, but expects a binary partition number as the third character of
+the command.
 
 Software fastloaders:
 =====================

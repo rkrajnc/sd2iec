@@ -506,20 +506,34 @@ void parse_doscommand(void) {
   case 'C':
     /* Copy or Change Partition */
     switch(command_buffer[1]) {
-      /* Change Partition */
     case 'P':
-        fname=command_buffer+2;
-        part=parse_partition(&fname);
-        if(part>=max_part) {
-          set_error_ts(ERROR_PARTITION_ILLEGAL,part+1,0);
-          return;
-        }
-
-        current_part=part;
+      /* Change Partition */
+      fname=command_buffer+2;
+      part=parse_partition(&fname);
+      if(part>=max_part) {
+        set_error_ts(ERROR_PARTITION_ILLEGAL,part+1,0);
+        return;
+      }
+      
+      current_part=part;
+      if (iec_data.iecflags & AUTOSWAP_ACTIVE)
+        set_changelist(NULL, NULLSTRING);
+      
+      break;
+      
+    case 0xd0: /* Shift-P */
+      /* Change Partition, binary version */
+      if (command_buffer[2] > max_part) {
+        set_error_ts(ERROR_PARTITION_ILLEGAL, command_buffer[2], 0);
+        return;
+      }
+      
+      if (command_buffer[2]) {
+        current_part = command_buffer[2]-1;
         if (iec_data.iecflags & AUTOSWAP_ACTIVE)
           set_changelist(NULL, NULLSTRING);
-
-        break;
+      }
+      break;
 
     default:
       /* Throw an error because we don't handle copy yet */
