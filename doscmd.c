@@ -588,11 +588,11 @@ void parse_doscommand(void) {
             if (chdir(&path, dent.name))
               break;
           } else
-            partition[path.drive].current_dir = dent.fatcluster;
+            partition[path.part].current_dir = dent.fatcluster;
         }
       } else {
         if (ustrchr(command_buffer, '/')) {
-          partition[path.drive].current_dir = path.fat;
+          partition[path.part].current_dir = path.fat;
         } else {
           set_error(ERROR_FILE_NOT_FOUND_39);
           break;
@@ -624,8 +624,8 @@ void parse_doscommand(void) {
       if (*fname != ':') {
         set_error(ERROR_SYNTAX_NONAME);
       } else {
-        path.drive = part;
-        path.fat   = partition[part].current_dir;
+        path.part = part;
+        path.fat  = partition[part].current_dir;
         i = file_delete(&path, command_buffer+i+1);
         if (i != 255)
           set_error_ts(ERROR_SCRATCHED,i,0);

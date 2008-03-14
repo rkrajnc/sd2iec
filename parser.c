@@ -212,8 +212,8 @@ uint8_t parse_path(uint8_t *in, path_t *path, uint8_t **name, uint8_t parse_alwa
       return 1;
     }
 
-    path->drive = part;
-    path->fat   = partition[part].current_dir;
+    path->part = part;
+    path->fat  = partition[part].current_dir;
 
     if (*in != '/') {
       *name = ustrchr(in, ':');
@@ -285,8 +285,8 @@ uint8_t parse_path(uint8_t *in, path_t *path, uint8_t **name, uint8_t parse_alwa
     }
   } else {
     /* No :, use current dir/path */
-    path->drive = current_part;
-    path->fat   = partition[current_part].current_dir;
+    path->part = current_part;
+    path->fat  = partition[current_part].current_dir;
   }
 
   *name = in;

@@ -117,8 +117,8 @@ static void mount_line(void) {
   /* Parse the path */
   path_t path;
 
-  /* Start in the drive+directory of the swap list */
-  current_part = swappath.drive;
+  /* Start in the partition+directory of the swap list */
+  current_part = swappath.part;
   partition[current_part].current_dir = swappath.fat;
 
   if (parse_path(buf->data, &path, &str, 0))
@@ -160,8 +160,8 @@ void set_changelist(path_t *path, uint8_t *filename) {
     return;
 
   /* Open a new swaplist */
-  partition[path->drive].fatfs.curr_dir = path->fat;
-  res = f_open(&partition[path->drive].fatfs, &swaplist, filename, FA_READ | FA_OPEN_EXISTING);
+  partition[path->part].fatfs.curr_dir = path->fat;
+  res = f_open(&partition[path->part].fatfs, &swaplist, filename, FA_READ | FA_OPEN_EXISTING);
   if (res != FR_OK) {
     parse_error(res,1);
     return;
@@ -185,8 +185,8 @@ void change_disk(void) {
     /* No swaplist active, try using AUTOSWAP.LST */
     /* change_disk is called from the IEC idle loop, so entrybuf is free */
     ustrcpy_P(entrybuf, autoswap_name);
-    path.fat   = partition[current_part].current_dir;
-    path.drive = current_part;
+    path.fat  = partition[current_part].current_dir;
+    path.part = current_part;
     set_changelist(&path, entrybuf);
     if (linenum == 255) {
       /* No swap list found, clear error and exit */

@@ -175,7 +175,7 @@ static uint8_t dir_footer(buffer_t *buf) {
   /* Copy the "BLOCKS FREE" message */
   memcpy_P(buf->data, dirfooter, sizeof(dirfooter));
 
-  blocks = disk_free(buf->pvt.dir.dh.drive);
+  blocks = disk_free(buf->pvt.dir.dh.part);
   buf->data[2] = blocks & 0xff;
   buf->data[3] = blocks >> 8;
 
@@ -293,8 +293,8 @@ static void load_directory(uint8_t secondary) {
       }
     }
   } else {
-    path.drive = current_part;
-    path.fat=partition[path.drive].current_dir;  // if you do not do this, get_label will fail below.
+    path.part = current_part;
+    path.fat=partition[path.part].current_dir;  // if you do not do this, get_label will fail below.
     if (opendir(&buf->pvt.dir.dh, &path)) {
       free_buffer(buf);
       return;
@@ -308,8 +308,8 @@ static void load_directory(uint8_t secondary) {
   /* copy static header to start of buffer */
   memcpy_P(buf->data, dirheader, sizeof(dirheader));
 
-  /* set drive number */
-  buf->data[HEADER_OFFSET_DRIVE] = path.drive+1;
+  /* set partition number */
+  buf->data[HEADER_OFFSET_DRIVE] = path.part+1;
 
   /* read volume name */
   if (disk_label(&path, buf->data+HEADER_OFFSET_NAME)) {
@@ -318,7 +318,7 @@ static void load_directory(uint8_t secondary) {
   }
 
   /* read id */
-  if (disk_id(path.drive,buf->data+HEADER_OFFSET_ID)) {
+  if (disk_id(path.part,buf->data+HEADER_OFFSET_ID)) {
     free_buffer(buf);
     return;
   }
@@ -442,7 +442,7 @@ void file_open(uint8_t secondary) {
       filetype = TYPE_SEQ;
   }
 
-  /* Parse path+drive numbers */
+  /* Parse path+partition numbers */
   uint8_t *cbuf = command_buffer;
   uint8_t *fname;
   int8_t res;
@@ -459,7 +459,7 @@ void file_open(uint8_t secondary) {
     return;
 
   /* For M2I only: Remove trailing spaces from name */
-  if (partition[path.drive].fop == &m2iops) {
+  if (partition[path.part].fop == &m2iops) {
     res = ustrlen(fname);
     while (--res && fname[res] == ' ')
       fname[res] = 0;

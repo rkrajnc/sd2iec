@@ -48,14 +48,14 @@
 
 /**
  * struct path_t - struct to reference a directory
- * @drive: drive number (0-based)
- * @fat  : cluster number of the directory start
+ * @part: partition number (0-based)
+ * @fat : cluster number of the directory start
  *
  * This is just a wrapper around the FAT cluster number
  * until there is anything else that support subdirectories.
  */
 typedef struct {
-  uint8_t  drive;
+  uint8_t  part;
   uint32_t fat;
 } path_t;
 
@@ -100,6 +100,7 @@ struct d64dh {
 /**
  * struct d64fh - D64 file handle
  * @dh    : d64dh pointing to the directory entry
+ * @part  : partition
  * @track : current track
  * @sector: current sector
  * @blocks: number of sectors allocated before the current
@@ -109,7 +110,7 @@ struct d64dh {
  */
 typedef struct d64fh {
   struct d64dh dh;
-  uint8_t drive;
+  uint8_t part;
   uint8_t track;
   uint8_t sector;
   uint16_t blocks;
@@ -117,17 +118,17 @@ typedef struct d64fh {
 
 /**
  * struct dh_t - union of all directory handles
- * @drive: drive number for the handle
- * @fat  : fat directory handle
- * @m2i  : m2i directory handle (offset of entry in the file)
- * @d64  : d64 directory handle
+ * @part: partition number for the handle
+ * @fat : fat directory handle
+ * @m2i : m2i directory handle (offset of entry in the file)
+ * @d64 : d64 directory handle
  *
  * This is a union of directory handles for all supported file types
  * which is used as an opaque type to be passed between openddir and
  * readdir.
  */
 typedef struct dh_s {
-  uint8_t drive;
+  uint8_t part;
   union {
     DIR fat;
     uint16_t m2i;

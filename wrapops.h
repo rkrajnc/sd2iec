@@ -62,10 +62,10 @@ typedef struct fileops_s {
   void     (*open_write)(path_t *path, uint8_t *name, uint8_t type, buffer_t *buf, uint8_t append);
   uint8_t  (*file_delete)(path_t *path, uint8_t *name);
   uint8_t  (*disk_label)(path_t *path, uint8_t *label);
-  uint8_t  (*disk_id)(uint8_t drive, uint8_t *id);
-  uint16_t (*disk_free)(uint8_t drive);
-  void     (*read_sector)(buffer_t *buf, uint8_t drive, uint8_t track, uint8_t sector);
-  void     (*write_sector)(buffer_t *buf, uint8_t drive, uint8_t track, uint8_t sector);
+  uint8_t  (*disk_id)(uint8_t part, uint8_t *id);
+  uint16_t (*disk_free)(uint8_t part);
+  void     (*read_sector)(buffer_t *buf, uint8_t part, uint8_t track, uint8_t sector);
+  void     (*write_sector)(buffer_t *buf, uint8_t part, uint8_t track, uint8_t sector);
   uint8_t  (*opendir)(dh_t *dh, path_t *path);
   int8_t   (*readdir)(dh_t *dh, struct cbmdirent *dent);
   void     (*mkdir)(path_t *path, uint8_t *dirname);
@@ -77,18 +77,18 @@ typedef struct fileops_s {
 #define pgmcall(x) ((typeof(x))pgm_read_word(&(x)))
 
 /* Wrappers to make the indirect calls look like normal functions */
-#define open_read(path,name,buf) ((pgmcall(partition[(path)->drive].fop->open_read))(path,name,buf))
-#define open_write(path,name,type,buf,app) ((pgmcall(partition[(path)->drive].fop->open_write))(path,name,type,buf,app))
-#define file_delete(path,name) ((pgmcall(partition[(path)->drive].fop->file_delete))(path,name))
-#define disk_label(path,label) ((pgmcall(partition[(path)->drive].fop->disk_label))(path,label))
+#define open_read(path,name,buf) ((pgmcall(partition[(path)->part].fop->open_read))(path,name,buf))
+#define open_write(path,name,type,buf,app) ((pgmcall(partition[(path)->part].fop->open_write))(path,name,type,buf,app))
+#define file_delete(path,name) ((pgmcall(partition[(path)->part].fop->file_delete))(path,name))
+#define disk_label(path,label) ((pgmcall(partition[(path)->part].fop->disk_label))(path,label))
 #define disk_id(drv,id) ((pgmcall(partition[drv].fop->disk_id))(drv,id))
 #define disk_free(drv) ((pgmcall(partition[drv].fop->disk_free))(drv))
 #define read_sector(buf,drv,t,s) ((pgmcall(partition[(drv)].fop->read_sector))(buf,drv,t,s))
 #define write_sector(buf,drv,t,s) ((pgmcall(partition[(drv)].fop->write_sector))(buf,drv,t,s))
-#define opendir(dh,path) ((pgmcall(partition[(path)->drive].fop->opendir))(dh,path))
-#define readdir(dh,dent) ((pgmcall(partition[(dh)->drive].fop->readdir))(dh,dent))
-#define mkdir(path,dir) ((pgmcall(partition[(path)->drive].fop->mkdir))(path,dir))
-#define chdir(path,dir) ((pgmcall(partition[(path)->drive].fop->chdir))(path,dir))
-#define rename(path,old,new) ((pgmcall(partition[(path)->drive].fop->rename))(path,old,new))
+#define opendir(dh,path) ((pgmcall(partition[(path)->part].fop->opendir))(dh,path))
+#define readdir(dh,dent) ((pgmcall(partition[(dh)->part].fop->readdir))(dh,dent))
+#define mkdir(path,dir) ((pgmcall(partition[(path)->part].fop->mkdir))(path,dir))
+#define chdir(path,dir) ((pgmcall(partition[(path)->part].fop->chdir))(path,dir))
+#define rename(path,old,new) ((pgmcall(partition[(path)->part].fop->rename))(path,old,new))
 
 #endif
