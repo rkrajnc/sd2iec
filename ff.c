@@ -503,7 +503,6 @@ UCHAR make_dirfile (     /* 1: error - detected an invalid format, '\0'or'/': ne
   a = 0; b = 0x18;            /* NT flag */
   n = 0; t = 8;
   for (;;) {
-    //printf("Path=%s\n",*path);
     c = *(*path)++;
     if (c == '\0' || c == '/') {           /* Reached to end of str or directory separator */
       if (n == 0) break;
@@ -558,7 +557,6 @@ UCHAR make_dirfile (     /* 1: error - detected an invalid format, '\0'or'/': ne
     if(c== '\\' || c==':' || c=='*' || c=='?' || c == '"' || c == '<' || c == '>' || c=='|')
       return 1;
     c = *(*path)++;
-    //printf("-Path=%s\n",*path);
   } while (c != '\0' && c != '/');     /* Reached to end of str or directory separator */
   *lfn=TRUE;
   return c;
@@ -640,7 +638,6 @@ FRESULT trace_path (     /* FR_OK(0): successful, !=0: error code */
     l=0;
 #endif    
     ds = make_dirfile(&path, fn, &lfn);     /* Get a paragraph into fn[] */
-    //printf("Path='%s',Spath='%s', lfn=%d\n",path,*spath,lfn);
 #if _USE_LFN != 0
     if(lfn)
       *len=path-*spath-1; /* this might not be ANSI-compatible, not sure */
@@ -666,16 +663,13 @@ FRESULT trace_path (     /* FR_OK(0): successful, !=0: error code */
         return !ds ? FR_NO_FILE : FR_NO_PATH;
 #if _USE_LFN != 0
       if (dptr[DIR_Name] != 0xE5) {            /* Matched? */
-        //trace(dptr,0,32);
         if((dptr[DIR_Attr] & AM_LFN) == AM_LFN) {
           if (lfn) {
-            //printf("Hey, here's an LFN, match=%d\n",match);
             i=((dptr[0]&0x1f)-1)*13;
             j=0;
             while(j<13 && match) {
               a=dptr[pgm_read_byte(LFN_pos+j)];
               b=dptr[pgm_read_byte(LFN_pos+j++)+1];
-              //printf("a=%x, b=%x, spath[i] = %x\n",a,b,(*spath)[i]);
               if(!a && !b) {
                 j--;
                 break;
@@ -691,11 +685,8 @@ FRESULT trace_path (     /* FR_OK(0): successful, !=0: error code */
           }
         } else if (!(dptr[DIR_Attr] & AM_VOL)) {  // we're a normal entry
           if (lfn) {
-            //printf("len=%d=%d\n",l,(path-(*spath)-1));
             if(lfn && (match && l == *len)) {// match
-              //printf("found a match, len=%d\n",l);
                 memcpy(fn,&dptr[DIR_Name], 8+3);
-                //printf("found a match, len=%d\n",*len);
                 fn[11] = dptr[DIR_NTres];
                 break;
             }
@@ -775,35 +766,26 @@ FRESULT reserve_direntry (  /* FR_OK: successful, FR_DENIED: no free entry, FR_R
   }
   dj->index = 0;
 
-  //printf("We're looking for %d entries\n",num);
   do {
     if (!move_fs_window(fs, dj->sect)) return FR_RW_ERROR;
     dptr = &FSBUF.data[(dj->index & ((SS(fs) - 1) / 32)) * 32];  /* Pointer to the directory entry */
-    //printf("clust=%d,sector=%d,index=%d\n",dj->clust,dj->sect,dj->index);
-    //trace(dptr,0,32);
     c = dptr[DIR_Name];
-    //printf("This entry has first byte=%2.2x\n",c);
     if (c == 0 || c == 0xE5) {      /* Found an empty entry! */
 #if _USE_LFN != 0
       /* capture initial entry. */
       if((entries++) == 0) {
-        //printf("OK, this one looks good to start\n");
         *dir=dptr;
-        //printf("Saved off: clust=%d,sector=%d,index=%d\n",dj->clust,dj->sect,dj->index);
         isave=dj->index;
         ssave=dj->sect;
         csave=dj->clust;
       }
       if(entries==len) {
-        //printf("We found enough within the dir\n");
         dj->index=isave;
         dj->sect=ssave;
         dj->clust=csave;
-        //printf("Restored: clust=%d,sector=%d,index=%d\n",dj->clust,dj->sect,dj->index);
         return FR_OK;
       }
     } else if(entries!=len){
-      //printf("Darn, not enough entries\n");
       entries=0;
 #else      
       *dir = dptr; return FR_OK;
@@ -829,7 +811,6 @@ FRESULT reserve_direntry (  /* FR_OK: successful, FR_DENIED: no free entry, FR_R
     dj->index=isave;
     dj->sect=ssave;
     dj->clust=csave;
-    //printf("Restored: clust=%d,sector=%d,index=%d\n",dj->clust,dj->sect,dj->index);
   } else {
     /* We allocated a new cluster for all entries, point dj there */
     dj->index = 0;
@@ -1202,7 +1183,6 @@ FRESULT chk_filename( /* FR_EXIST means name is taken. */
   do {
     if (!move_fs_window(fs, dj->sect)) return FR_RW_ERROR;
     dptr = &FSBUF.data[(dj->index & ((SS(fs) - 1) / 32)) * 32]; /* Pointer to the directory entry */
-    //trace(dptr,0,32);
     if(dptr[DIR_Name] == 0) {         /* if we got here, we have a match */
       return FR_OK;
     } else if(*dptr!=0xe5 
@@ -1246,7 +1226,6 @@ FRESULT add_direntry(
   dj->clust = clust;    /* we now have a good name, use it */
   dj->index = index;
   dj->sect  = sect;
-  //printf("We are using shortname=%s\n",fn);
   while(move_fs_window(fs, dj->sect)) {
     *dir = &FSBUF.data[(dj->index & ((SS(fs) - 1) / 32)) * 32]; /* Pointer to the directory entry */
     if(!i)
@@ -1352,7 +1331,6 @@ FRESULT f_open (
   dj.fs = fs;
 
   /* Trace the file path */
-  //printf("getting ready to trace file path\n");
 
 #if _USE_LFN != 0
   res = trace_path(&dj, fn, path, &dir, &fileobj, &spath, &len);
@@ -1467,7 +1445,6 @@ FRESULT f_read (
 
   for ( ;  btr;                                 /* Repeat until all data transferred */
     rbuff += rcnt, fp->fptr += rcnt, *br += rcnt, btr -= rcnt) {
-    //printf("Sect=%d, curr_sect=%d\n",sect,fp->curr_sect);
     if ((fp->fptr & (SS(fs) - 1)) == 0) {       /* On the sector boundary */
       if (--fp->sect_clust) {                   /* Decrement left sector counter */
         sect = fp->curr_sect + 1;               /* Get current sector */
@@ -1488,7 +1465,6 @@ FRESULT f_read (
       //  FPBUF.dirty=FALSE;
       //}
 #endif
-      //printf("2 Sect=%d, curr_sect=%d\n",sect,fp->curr_sect);
       fp->curr_sect = sect;           /* Update current sector */
       cc = btr / SS(fs);              /* When left bytes >= SS(fs), */
       if (cc) {                       /* Read maximum contiguous sectors directly */
