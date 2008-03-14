@@ -53,6 +53,35 @@ void get_mcusr(void)
   wdt_disable();
 }
 
+#ifdef CONFIG_MEMPOISON
+void poison_memory(void) \
+  __attribute__((naked)) \
+  __attribute__((section(".init1")));
+void poison_memory(void) {
+  register uint16_t i;
+  register uint8_t  *ptr;
+
+  asm("clr r1\n");
+  /* There is no RAMSTARt variable =( */
+  if (RAMEND > 2048 && RAMEND < 4096) {
+    /* 2K memory */
+    ptr = (void *)RAMEND-2047;
+    for (i=0;i<2048;i++)
+      ptr[i] = 0x55;
+  } else if (RAMEND > 4096 && RAMEND < 8192) {
+    /* 4K memory */
+    ptr = (void *)RAMEND-4095;
+    for (i=0;i<4096;i++)
+      ptr[i] = 0x55;
+  } else {
+    /* Assume 8K memory */
+    ptr = (void *)RAMEND-8191;
+    for (i=0;i<8192;i++)
+      ptr[i] = 0x55;
+  }
+}
+#endif
+
 int main(void) {
 #if defined __AVR_ATmega644__ || defined __AVR_ATmega644P__
   asm volatile("in  r24, %0\n"
