@@ -760,6 +760,11 @@ void parse_doscommand(void) {
     break;
 
   case 'S':
+    if(command_length == 3 && command_buffer[1] == '-') {
+      /* Swap drive number */
+      set_error(ERROR_SYNTAX_UNABLE);
+      break;
+    }
     /* Scratch */
     parse_path(command_buffer+1, &path, &buf, 0);
 
