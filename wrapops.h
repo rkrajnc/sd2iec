@@ -50,6 +50,7 @@
  * @readdir     : read an entry from a directory
  * @mkdir       : create a directory
  * @chdir       : change current directory
+ * @rename      : rename a file
  *
  * This structure holds function pointers for the various
  * abstracted operations on the supported file systems/images.
@@ -69,6 +70,7 @@ typedef struct fileops_s {
   int8_t   (*readdir)(dh_t *dh, struct cbmdirent *dent);
   void     (*mkdir)(path_t *path, uint8_t *dirname);
   uint8_t  (*chdir)(path_t *path, uint8_t *dirname);
+  void     (*rename)(path_t *path, uint8_t *oldname, uint8_t *newname);
 } fileops_t;
 
 /* Helper-Define to avoid lots of typedefs */
@@ -87,5 +89,6 @@ typedef struct fileops_s {
 #define readdir(dh,dent) ((pgmcall(partition[(dh)->drive].fop->readdir))(dh,dent))
 #define mkdir(path,dir) ((pgmcall(partition[(path)->drive].fop->mkdir))(path,dir))
 #define chdir(path,dir) ((pgmcall(partition[(path)->drive].fop->chdir))(path,dir))
+#define rename(path,old,new) ((pgmcall(partition[(path)->drive].fop->rename))(path,old,new))
 
 #endif

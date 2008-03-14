@@ -319,15 +319,9 @@ static void m2i_open_write(path_t *path, uint8_t *name, uint8_t type, buffer_t *
   if (append) {
     open_existing(path, name, type, buf, 1);
   } else {
-    // FIXME: Sind das alle zu verbietenden Zeichen?
-    nameptr = name;
-    while (*nameptr) {
-      if (*nameptr == '=' || *nameptr == '"' ||
-          *nameptr == '*' || *nameptr == '?') {
-        set_error(ERROR_SYNTAX_JOKER);
-        return;
-      }
-      nameptr++;
+    if (check_invalid_name(name)) {
+      set_error(ERROR_SYNTAX_JOKER);
+      return;
     }
 
     /* Find an empty entry */
@@ -441,6 +435,43 @@ static uint8_t m2i_delete(path_t *path, uint8_t *name) {
     return 1;
 }
 
+static void m2i_rename(path_t *path, uint8_t *oldname, uint8_t *newname) {
+  uint16_t offset;
+  uint8_t *ptr;
+
+  BUSY_LED_ON();
+  /* Locate entry in the M2I file */
+  offset = find_entry(path->drive, oldname);
+  if (offset == 1) {
+    if (!active_buffers)
+      BUSY_LED_OFF();
+    return;
+  }
+
+  if (offset == 0) {
+    if (!active_buffers)
+      BUSY_LED_OFF();
+    set_error(ERROR_FILE_NOT_FOUND);
+    return;
+  }
+
+  /* Re-load the entry because find_entry modifies it */
+  /* Assume this never fails because find_entry was successful */
+  image_read(path->drive, offset, entrybuf, M2I_ENTRY_LEN);
+
+  /* Copy the new filename */
+  ptr = entrybuf+M2I_CBMNAME_OFFSET;
+  memset(ptr, ' ', CBM_NAME_LENGTH);
+  while (*newname)
+    *ptr++ = *newname++;
+
+  /* Write new entry */
+  image_write(path->drive, offset, entrybuf, M2I_ENTRY_LEN, 1);
+
+  if (!active_buffers)
+    BUSY_LED_OFF();
+}
+
 const PROGMEM fileops_t m2iops = {
   m2i_open_read,
   m2i_open_write,
@@ -453,5 +484,6 @@ const PROGMEM fileops_t m2iops = {
   m2i_opendir,
   m2i_readdir,
   image_mkdir,
-  image_chdir
+  image_chdir,
+  m2i_rename
 };

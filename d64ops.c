@@ -777,6 +777,21 @@ static void d64_write_sector(buffer_t *buf, uint8_t drive, uint8_t track, uint8_
     image_write(drive, sector_offset(track,sector), buf->data, 256, 1);
 }
 
+static void d64_rename(path_t *path, uint8_t *oldname, uint8_t *newname) {
+  uint8_t *ptr;
+
+  /* We're assuming that the caller has looked up the old name just   */
+  /* before calling us  so entrybuf holds the correct directory entry */
+  /* and matchdh has the track/sector/offset we need.                 */
+  memset(entrybuf+OFS_FILE_NAME, 0xa0, CBM_NAME_LENGTH);
+  ptr = entrybuf+OFS_FILE_NAME;
+  while (*newname) *ptr++ = *newname++;
+
+  image_write(path->drive,
+              sector_offset(matchdh.dir.d64.track,matchdh.dir.d64.sector)+
+              (matchdh.dir.d64.entry-1)*32, entrybuf, 32, 1);
+}
+
 const PROGMEM fileops_t d64ops = {
   d64_open_read,
   d64_open_write,
@@ -789,5 +804,6 @@ const PROGMEM fileops_t d64ops = {
   d64_opendir,
   d64_readdir,
   image_mkdir,
-  image_chdir
+  image_chdir,
+  d64_rename
 };

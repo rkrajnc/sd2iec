@@ -659,6 +659,26 @@ void fat_sectordummy(buffer_t *buf, uint8_t drive, uint8_t track, uint8_t sector
 }
 
 /**
+ * fat_rename - rename a file
+ * @path   : path object
+ * @oldname: old file name
+ * @newname: new file name
+ *
+ * This function renames the file oldname in the directory referenced by
+ * path to newname.
+ */
+void fat_rename(path_t *path, uint8_t *oldname, uint8_t *newname) {
+  FRESULT res;
+
+  partition[path->drive].fatfs.curr_dir = path->fat;
+  pet2asc(oldname);
+  pet2asc(newname);
+  res = f_rename(&partition[path->drive].fatfs, oldname, newname);
+  if (res != FR_OK)
+    parse_error(res, 0);
+}
+
+/**
  * init_fatops - Initialize fatops module
  * @preserve_path: Preserve the current directory if non-zero
  *
@@ -824,5 +844,6 @@ const PROGMEM fileops_t fatops = {  // These should be at bottom, to be consiste
   &fat_opendir,
   &fat_readdir,
   &fat_mkdir,
-  &fat_chdir
+  &fat_chdir,
+  &fat_rename
 };

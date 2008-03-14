@@ -40,6 +40,25 @@ uint8_t max_part;
 
 
 /**
+ * check_invalid_name - check for invalid characters in a file name
+ * @name: pointer to the file name
+ *
+ * This function checks if the passed name contains any characters
+ * that are not valid in a CBM file name. Returns 1 if invalid
+ * characters are found, 0 if not.
+ */
+uint8_t check_invalid_name(uint8_t *name) {
+  while (*name) {
+    if (*name == '=' || *name == '"' ||
+        *name == '*' || *name == '?' ||
+        *name == ',')
+      return 1;
+    name++;
+  }
+  return 0;
+}
+
+/**
  * parse_partition - parse a partition number from a file name
  * @buf     : pointer to pointer to filename
  *

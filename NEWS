@@ -2,6 +2,7 @@
         - Bugfix: Ignore trailing separation characters of B-* parameters
         - Match trailing part of names after * too
         - Multi-drive/partition support
+        - Rename
 
 2008-02-24 - release 0.6.2
         - Bugfix: Read the correct pins when determining the device

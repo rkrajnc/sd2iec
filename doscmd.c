@@ -428,6 +428,71 @@ void parse_user(void) {
   }
 }
 
+/* ------------ */
+/*  R - Rename  */
+/* ------------ */
+void parse_rename(void) {
+  path_t oldpath,newpath;
+  uint8_t *oldname,*newname;
+  struct cbmdirent dent;
+  int8_t res;
+
+  /* Find the boundary between the names */
+  oldname = ustrchr(command_buffer,'=');
+  if (oldname == NULL) {
+    set_error(ERROR_SYNTAX_UNKNOWN);
+    return;
+  }
+  *oldname++ = 0;
+
+  /* Parse both names */
+  if (parse_path(command_buffer+1, &newpath, &newname, 0))
+    return;
+
+  if (parse_path(oldname, &oldpath, &oldname, 0))
+    return;
+
+  /* Rename can't move files across directories */
+  if (oldpath.fat != newpath.fat) {
+    set_error(ERROR_FILE_NOT_FOUND);
+    return;
+  }
+
+  /* Check for invalid characters in the new name */
+  if (check_invalid_name(newname)) {
+    /* This isn't correct for all cases, but for most. */
+    set_error(ERROR_SYNTAX_UNKNOWN);
+    return;
+  }
+
+  /* Don't allow an empty new name */
+  /* The 1541 renames the file to "=" in this case, but I consider that a bug. */
+  if (ustrlen(newname) == 0) {
+    set_error(ERROR_SYNTAX_NONAME);
+    return;
+  }
+
+  /* Check if the new name already exists */
+  res = first_match(&newpath, newname, FLAG_HIDDEN, &dent);
+  if (res == 0) {
+    set_error(ERROR_FILE_EXISTS);
+    return;
+  }
+
+  if (res > 0)
+    /* first_match generated an error other than File Not Found, abort */
+    return;
+
+  /* Clear the FNF */
+  set_error(ERROR_OK);
+
+  /* Check if the old name exists */
+  if (first_match(&oldpath, oldname, FLAG_HIDDEN, &dent))
+    return;
+
+  rename(&oldpath,oldname,newname);
+}
+
 
 /* ------------------------------------------------------------------------- */
 /*  Main command parser function                                             */
@@ -687,6 +752,11 @@ void parse_doscommand(void) {
     _delay_ms(100);
     _delay_ms(100);
     _delay_ms(100);
+    break;
+
+  case 'R':
+    /* Rename */
+    parse_rename();
     break;
 
   case 'S':

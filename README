@@ -73,6 +73,10 @@ Supported commands:
 - S:
   Name matching is fully supported, directories are ignored.
 
+- R
+  Renaming files should work the same as it does on CMD drives, although
+  the errors flagged for invalid characters in the name may differ.
+
 - U0
   Device address changing with "U0>"+chr$(new address) is supported,
   other U0 commands are currently not implemented.

@@ -45,4 +45,7 @@ int8_t first_match(path_t *path, uint8_t *matchstr, uint8_t type, struct cbmdire
 /* Parses CMD-style directory specifications */
 uint8_t parse_path(uint8_t *in, path_t *path, uint8_t **name, uint8_t parse_always);
 
+/* Check for invalid characters in a name */
+uint8_t check_invalid_name(uint8_t *name);
+
 #endif
