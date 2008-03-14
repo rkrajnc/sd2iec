@@ -709,6 +709,50 @@ void parse_doscommand(void) {
     } while (0);
     break;
 
+  case 'G':
+    /* Get-Partition */
+    if (command_length < 3) /* FIXME: should this set an error? */
+      break;
+
+    if (command_buffer[1] != '-' || command_buffer[2] != 'P') {
+      set_error(ERROR_SYNTAX_UNKNOWN);
+      break;
+    }
+
+    if (command_length == 3)
+      path.part = current_part+1;
+    else
+      path.part = command_buffer[3];
+
+    /* Valid partition number? */
+    if (path.part >= max_part) {
+      set_error(ERROR_PARTITION_ILLEGAL);
+      break;
+    }
+
+    buffers[CONFIG_BUFFER_COUNT].position = 0;
+    buffers[CONFIG_BUFFER_COUNT].lastused = 31;
+    buf=buffers[CONFIG_BUFFER_COUNT].data;
+    memset(buf,0,32);
+    *(buf++) = 7;
+    buf++;
+
+    *(buf++) = path.part+1;
+    path.fat=0;
+    disk_label(&path,buf);
+    buf+= 16;
+    *(buf++) = partition[path.part].fatfs.fatbase>>16;
+    *(buf++) = partition[path.part].fatfs.fatbase>>8;
+    *(buf++) = (partition[path.part].fatfs.fatbase & 0xff);
+    buf++;
+
+    uint32_t size = (partition[path.part].fatfs.max_clust - 1) * partition[path.part].fatfs.sects_clust;
+    *(buf++) = size>>16;
+    *(buf++) = size>>8;
+    *(buf++) = size;
+    *buf = 13;
+    break;
+
   case 'I':
     /* Initialize */
     if (disk_state != DISK_OK)
