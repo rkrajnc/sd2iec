@@ -685,9 +685,16 @@ FRESULT trace_path (    /* FR_OK(0): successful, !=0: error code */
                 j--;
                 break;
               }
-                if(a!=(*spath)[i++]) {
-                  match=FALSE;
-                }
+              b=(*spath)[i++];
+              if (b >= 'a' && b <= 'z') {          /* Convert to upper case */
+                b -= 0x20;
+              }
+              if (a >= 'a' && a <= 'z') {          /* Convert to upper case */
+                a -= 0x20;
+              }
+              if(a!= b) {
+                match=FALSE;
+              }
             }
             l+=j;
           } else {
