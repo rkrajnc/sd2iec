@@ -534,8 +534,8 @@ void parse_doscommand(void) {
   }
 #endif
 
-  /* Remove CRs at end of command */
-  while (command_length > 0 && command_buffer[command_length-1] == 0x0d)
+  /* Remove one CR at end of command */
+  if (command_length > 0 && command_buffer[command_length-1] == 0x0d)
     command_length--;
 
   /* Abort if there is no command */
