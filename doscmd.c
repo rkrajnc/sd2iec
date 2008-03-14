@@ -500,7 +500,7 @@ void parse_rename(void) {
 
 void parse_doscommand(void) {
   uint8_t i,count;
-  uint8_t *fname;
+  uint8_t *buf;
   struct cbmdirent dent;
   path_t path;
   uint8_t part;
@@ -619,9 +619,9 @@ void parse_doscommand(void) {
       }
 
       /* Parse partition number */
-      fname=command_buffer+2;
-      part=parse_partition(&fname);
-      if (*fname != ':') {
+      buf=command_buffer+2;
+      part=parse_partition(&buf);
+      if (*buf != ':') {
         set_error(ERROR_SYNTAX_NONAME);
       } else {
         path.part = part;
@@ -651,8 +651,8 @@ void parse_doscommand(void) {
     switch(command_buffer[1]) {
     case 'P':
       /* Change Partition */
-      fname=command_buffer+2;
-      part=parse_partition(&fname);
+      buf=command_buffer+2;
+      part=parse_partition(&buf);
       if(part>=max_part) {
         set_error_ts(ERROR_PARTITION_ILLEGAL,part+1,0);
         return;
@@ -761,14 +761,14 @@ void parse_doscommand(void) {
 
   case 'S':
     /* Scratch */
-    parse_path(command_buffer+1, &path, &fname, 0);
+    parse_path(command_buffer+1, &path, &buf, 0);
 
     if (opendir(&matchdh, &path))
       return;
 
     i = 255;
     count = 0;
-    while (!next_match(&matchdh, fname, FLAG_HIDDEN, &dent)) {
+    while (!next_match(&matchdh, buf, FLAG_HIDDEN, &dent)) {
       /* Skip directories */
       if ((dent.typeflags & TYPE_MASK) == TYPE_DIR)
         continue;
