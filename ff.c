@@ -513,9 +513,8 @@ UCHAR make_dirfile (     /* 1: error - detected an invalid format, '\0'or'/': ne
     if (c == ' ') goto md_l3;
     if (c == '.') {
 #if _USE_CHDIR != 0 || _USE_CURR_DIR != 0
-      if (n == 0 || (n == 1 && *dirname == '.')) {
+      if (n == 0 || (n == 1 && *dirname == '.'))
         goto md_l2;
-      }
 #endif
       if (!(a & 1) && n >= 1 && n <= 8) {  /* Enter extension part */
         n = 8; t = 11; continue;
@@ -970,7 +969,6 @@ FRESULT auto_mount (    /* FR_OK(0): successful, !=0: any error occured */
   BYTE chk_wp           /* !=0: Check media write protection for write access */
 )
 {
-  //BYTE drv;
   DSTATUS stat;
   const UCHAR *p = *path;
 #if _USE_DRIVE_PREFIX != 0
@@ -1007,7 +1005,7 @@ FRESULT auto_mount (    /* FR_OK(0): successful, !=0: any error occured */
     }
   }
 
-  /* The logical drive has not been mounted, return NOT READY */
+  /* The logical drive has not been mounted */
 
 #if _USE_DEFERRED_MOUNT != 0
   return mount_drv(drv,*rfs, chk_wp);
@@ -1015,6 +1013,7 @@ FRESULT auto_mount (    /* FR_OK(0): successful, !=0: any error occured */
   return FR_NOT_READY;
 #endif
 }
+
 
 
 
@@ -1296,6 +1295,7 @@ FRESULT f_mount (
 
 
 
+
 /*-----------------------------------------------------------------------*/
 /* Open or Create a File                                                 */
 /*-----------------------------------------------------------------------*/
@@ -1326,7 +1326,7 @@ FRESULT f_open (
 #if _USE_FS_BUF == 0 
   FPBUF.dirty=FALSE;
 #endif
-  fp->fs = fs;
+  fp->fs = NULL;
 #if !_FS_READONLY
   mode &= (FA_READ|FA_WRITE|FA_CREATE_ALWAYS|FA_OPEN_ALWAYS|FA_CREATE_NEW);
   res = auto_mount(&path, &fs, (BYTE)(mode & (FA_WRITE|FA_CREATE_ALWAYS|FA_OPEN_ALWAYS|FA_CREATE_NEW)));
@@ -1789,6 +1789,9 @@ FRESULT f_opendir (
   const UCHAR *path   /* Pointer to the directory path */
 )
 {
+#if _USE_DRIVE_PREFIX != 0
+  FATFS *fs;
+#endif
   BYTE *dir;
   UCHAR fn[8+3+1];
   FRESULT res;
@@ -1826,8 +1829,9 @@ FRESULT f_opendir (
   }
   return res;
 }
-
 #endif
+
+
 
 
 /**
@@ -2464,6 +2468,7 @@ FRESULT f_utime (
   return res;
 }
 #endif
+
 
 
 

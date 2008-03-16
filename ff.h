@@ -179,7 +179,7 @@ typedef struct _FIL {
     BYTE*   dir_ptr;        /* Ponter to the directory entry in the window */
 #endif
 #if _USE_LESS_BUF == 0 && _USE_1_BUF == 0 
-    BUF   buf;
+    BUF   buf;              /* File R/W buffer */
 #endif
 } FIL;
 
@@ -255,7 +255,7 @@ FRESULT f_read (FIL*, void*, UINT, UINT*);                  /* Read data from a 
 FRESULT f_write (FIL*, const void*, UINT, UINT*);           /* Write data to a file */
 FRESULT f_lseek (FIL*, DWORD);                              /* Move file pointer of a file object */
 FRESULT f_close (FIL*);                                     /* Close an open file object */
-FRESULT f_opendir (DIR*, const UCHAR*);                     /* Open an existing directory */
+FRESULT f_opendir (FATFS*, DIR*, const UCHAR*);             /* Open an existing directory */
 FRESULT f_readdir (DIR*, FILINFO*);                         /* Read a directory item */
 FRESULT f_stat (FATFS*, const UCHAR*, FILINFO*);            /* Get file status */
 FRESULT f_getfree (FATFS*, const UCHAR*, DWORD*);           /* Get number of free clusters on the drive */
@@ -409,8 +409,6 @@ FRESULT l_opendir(FATFS* fs, DWORD cluster, DIR *dirobj);   /* Open an existing 
 #error Do not forget to set _MCU_ENDIAN properly!
 #endif
 #endif
-
-void test(void);
 
 #define _FATFS
 #endif /* _FATFS */
