@@ -690,8 +690,10 @@ void parse_doscommand(void) {
       uint16_t address = command_buffer[3] + (command_buffer[4] << 8);
       uint8_t  length  = command_buffer[5];
       
-      if (command_length < 6)
+      if (command_length < 6) {
+        set_error(ERROR_SYNTAX_UNKNOWN);
         break;
+      }
       
       if (command_buffer[1] != '-' || (command_buffer[2] != 'W' && command_buffer[2] != 'R'))
         set_error(ERROR_SYNTAX_UNKNOWN);
@@ -738,7 +740,8 @@ void parse_doscommand(void) {
 
     *(buf++) = path.part+1;
     path.fat=0;
-    disk_label(&path,buf);
+    if (disk_label(&path,buf))
+      break;
     buf+= 16;
     *(buf++) = partition[path.part].fatfs.fatbase>>16;
     *(buf++) = partition[path.part].fatfs.fatbase>>8;
