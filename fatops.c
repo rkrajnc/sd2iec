@@ -98,7 +98,7 @@ void parse_error(FRESULT res, uint8_t readflag) {
     break;
 
   case FR_DIR_NOT_EMPTY:
-    // FIXME: What do the CMD parts return when removing a non-empty directory?
+    // FIXME: What do the CMD drives return when removing a non-empty directory?
     set_error_ts(ERROR_FILE_EXISTS,res,0);
     break;
 
