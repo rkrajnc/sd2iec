@@ -127,13 +127,15 @@ static uint8_t check_atn(void) {
 ISR(TIMER2_COMPA_vect) {
   static uint8_t blinktimer;
 
+#ifndef ATN_INT_VECT
   if (!IEC_ATN) {
     set_data(0);
   }
+#endif
 
   if (error_blink_active) {
     blinktimer++;
-    if (blinktimer == 200) {
+    if (blinktimer == BLINKTIMER_MAX) {
       DIRTY_LED_PORT ^= DIRTY_LED_BIT();
       blinktimer = 0;
     }
@@ -146,6 +148,15 @@ ISR(TIMER2_COMPA_vect) {
     keycounter = 0;
   }
 }
+
+#ifdef ATN_INT_VECT
+/// Actual interrupt-based ATN handling
+ISR(ATN_INT_VECT) {
+  if (!IEC_ATN) {
+    set_data(0);
+  }
+}
+#endif
 
 /* ------------------------------------------------------------------------- */
 /*  Byte transfer routines                                                   */
@@ -517,9 +528,21 @@ void init_iec(void) {
   IEC_PORT = ~(IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA);
 #endif
 
+  /* Prepare ATN interrupt (if any */
+  ATN_INT_SETUP();
+
   /* Count F_CPU/8 in timer 0 */
   TCCR0B = _BV(CS01);
 
+#ifdef ATN_INT_VECT
+  /* Timer interrupt every 9.984ms for time-keeping and the error LED */
+  OCR2A  = 78;
+  TCNT2  = 0;
+  TCCR2B = 0;
+  TCCR2A |= _BV(WGM21);
+  TCCR2B |= _BV(CS20) | _BV(CS21) | _BV(CS22);
+  TIMSK2 |= _BV(OCIE2A);
+#else
   /* Issue an interrupt every 500us with timer 2 for ATN-Acknowledge.    */
   /* The exact timing isn't critical, it just has to be faster than 1ms. */
   /* Every 800us was too slow in rare situations.                        */
@@ -529,6 +552,7 @@ void init_iec(void) {
   TCCR2B = 0;
   TCCR2A |= _BV(WGM21); // CTC mode
   TCCR2B |= _BV(CS20) | _BV(CS21); // prescaler /32
+#endif
 
   /* Read the hardware-set device address */
   DEVICE_SELECT_SETUP();

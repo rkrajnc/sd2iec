@@ -147,14 +147,28 @@
 /* OUT on the register instead of toggeling single bits.                */
 #  define IEC_PULLUPS     0
 
+/* ATN interrupt line (not required) */
+/* If this is commented out, the ATN line will be polled by a timer interrupt instead */
+//#  define ATN_INT_VECT    PCINT0_vect
+//#  define ATN_INT_SETUP() do { PCMSK0 = _BV(PCINT0); PCIFR |= _BV(PCIF0); } while (0)
+//#  define set_atnack(x)   if (x) { PCICR |= _BV(PCIE0); } else { PCICR &= (uint8_t)~_BV(PCIE0); }
+#  define ATN_INT_SETUP() do {} while (0)
+
 /*** User interface ***/
 /* Disk image change key */
 #  define DISKCHANGE_PIN  PINC
 #  define DISKCHANGE_DDR  DDRC
 #  define DISKCHANGE_PORT PORTC
 #  define DISKCHANGE_BIT  _BV(PC4)
-/* Target value of the debounce counter */
+
+/* Both of the following values are defined in terms of timer interrupts */
+/* If there is no ATN interrupt, the timer interrupt is called every 500 microseconds. */
+/* If the ATN interrupt is used, the timer interrupt is called every 9.984 milliseconds.  */
+/* Accept disk change key press after this many interrupts */
 #  define DISKCHANGE_MAX  128
+/* Toggle error LED blink after this many interrupts  */
+/* The default is the nervous 1541 blink rate of 5 Hz */
+#  define BLINKTIMER_MAX  200
 
 
 
@@ -199,11 +213,13 @@
 #  define IEC_PIN_CLOCK         PA2
 #  define IEC_PIN_SRQ           PA3
 #  define IEC_PULLUPS           0
+#  define ATN_INT_SETUP()       do {} while (0)
 #  define DISKCHANGE_PIN        PINC
 #  define DISKCHANGE_DDR        DDRC
 #  define DISKCHANGE_PORT       PORTC
 #  define DISKCHANGE_BIT        _BV(PC4)
 #  define DISKCHANGE_MAX        128
+#  define BLINKTIMER_MAX        200
 
 #elif CONFIG_HARDWARE_VARIANT == 3
 /* Hardware configuration: LarsP */
@@ -239,11 +255,13 @@
 #  define IEC_PIN_CLOCK         PC2
 #  define IEC_PIN_SRQ           PC3
 #  define IEC_PULLUPS           0
+#  define ATN_INT_SETUP()       do {} while (0)
 #  define DISKCHANGE_PIN        PINA
 #  define DISKCHANGE_DDR        DDRA
 #  define DISKCHANGE_PORT       PORTA
 #  define DISKCHANGE_BIT        _BV(PA4)
 #  define DISKCHANGE_MAX        128
+#  define BLINKTIMER_MAX        200
 
 #elif CONFIG_HARDWARE_VARIANT == 4
 /* Hardware configuration: uIEC (incomplete) */
@@ -278,12 +296,14 @@
 #  define IEC_PIN_CLOCK         PE5
 #  define IEC_PIN_SRQ           PE2
 #  define IEC_PULLUPS           0
+#  define ATN_INT_SETUP()       do {} while (0)
 /* This should really be on a INT pin, but I need to find one.  Use G1 for now. */
 #  define DISKCHANGE_PIN        PING
 #  define DISKCHANGE_DDR        DDRG
 #  define DISKCHANGE_PORT       PORTG
 #  define DISKCHANGE_BIT        _BV(PG1)
 #  define DISKCHANGE_MAX        128
+#  define BLINKTIMER_MAX        200
 
 #elif CONFIG_HARDWARE_VARIANT==5
 /* Hardware configuration: Shadowolf 2 aka sd2iec 1.0 */
@@ -328,11 +348,16 @@
 #  define IEC_OPIN_DATA         PA5
 #  define IEC_OPIN_CLOCK        PA6
 #  define IEC_OPIN_SRQ          PA7
+#  define ATN_INT_VECT          PCINT0_vect
+#  define ATN_INT_SETUP()       do { PCMSK0 = _BV(PCINT0); PCIFR |= _BV(PCIF0); } while (0)
+#  define set_atnack(x)         if (x) { PCICR |= _BV(PCIE0); } else { PCICR &= (uint8_t)~_BV(PCIE0); }
 #  define DISKCHANGE_PIN        PINC
 #  define DISKCHANGE_DDR        DDRC
 #  define DISKCHANGE_PORT       PORTC
 #  define DISKCHANGE_BIT        _BV(PC3)
-#  define DISKCHANGE_MAX        128
+#  define DISKCHANGE_MAX        6
+#  define BLINKTIMER_MAX        10
+
 
 #  ifdef CONFIG_TWINSD
 /* Support for multiple SD cards - only used for testing    */
@@ -379,11 +404,13 @@
 #  define IEC_PIN_CLOCK         PB2
 #  define IEC_PIN_SRQ           PB3
 #  define IEC_PULLUPS           (_BV(PB7) | _BV(PB6) | _BV(PB4))
+#  define ATN_INT_SETUP()       do {} while (0)
 #  define DISKCHANGE_PIN        PINA
 #  define DISKCHANGE_DDR        DDRA
 #  define DISKCHANGE_PORT       PORTA
 #  define DISKCHANGE_BIT        _BV(PA4)
 #  define DISKCHANGE_MAX        128
+#  define BLINKTIMER_MAX        200
 
 #else
 #  error "CONFIG_HARDWARE_VARIANT is unset or set to an unknown value."
