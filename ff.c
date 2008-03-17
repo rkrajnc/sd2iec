@@ -894,6 +894,7 @@ FRESULT mount_drv(
   if (chk_wp && (stat & STA_PROTECT)) /* Check write protection if needed */
     return FR_WRITE_PROTECTED;
 #endif
+#if _MULTI_PARTITION == 0
   /* Search FAT partition on the drive */
   fmt = check_fs(fs, bootsect = 0);   /* Check sector 0 as an SFD format */
   if (fmt == 1) {                     /* Not a FAT boot record, it may be patitioned */
@@ -904,8 +905,81 @@ FRESULT mount_drv(
       fmt = check_fs(fs, bootsect);   /* Check the partition */
     }
   }
-  if (fmt || LD_WORD(&FSBUF.data[BPB_BytsPerSec]) != SS(fs)) /* No valid FAT patition is found */
-    return FR_NO_FILESYSTEM;
+#else
+  /* Check only the partition that was requested */
+  if (LD2PT(drv) == 0) {
+    /* Unpartitioned media */
+    fmt = check_fs(fs, bootsect = 0);
+  } else {
+    /* Read MBR */
+    fmt = 1;
+    if (disk_read(fs->drive, FSBUF.data, 0, 1) != RES_OK)
+      goto failed;
+
+    if (LD2PT(drv) < 5) {
+      /* Primary partition */
+      tbl = &FSBUF.data[MBR_Table + (LD2PT(drv)-1) * 16];
+      fmt = 1;
+      if (tbl[4]) {
+        bootsect = LD_DWORD(&tbl[8]);
+        fmt = check_fs(fs, bootsect);
+      }
+    } else {
+      /* Logical drive */
+      uint8_t i,curr;
+      fmt = 1;
+      bootsect = 0;
+      fatsize = 0;  // Used to store the offset of the first extended part
+      curr = LD2PT(drv)-4;
+      /* Walk the chain of extended partitions */
+      do {
+        /* Check for an extended partition */
+        for (i=0;i<4;i++) {
+          tbl = &FSBUF.data[MBR_Table + i*16];
+          if (tbl[4] == 5 || tbl[4] == 0x0f)
+            break;
+        }
+        if (i == 4) {
+          fmt = 255;
+          goto failed;
+        }
+        bootsect = fatsize + LD_DWORD(&tbl[8]);
+
+        if (fatsize == 0)
+          fatsize = bootsect;
+
+        /* Read the next sector in the partition chain */
+        if (disk_read(fs->drive, FSBUF.data, bootsect, 1) != RES_OK)
+          goto failed;
+      } while (--curr);
+      /* Look for the non-extended, non-empty partition entry */
+      for (i=0;i<4;i++) {
+        tbl = &FSBUF.data[MBR_Table + i*16];
+        if (tbl[4] && tbl[4] != 5 && tbl[4] != 0x0f)
+          break;
+      }
+      if (i == 4) {
+        /* End of extended partition chain */
+        fmt = 255;
+        goto failed;
+      }
+      bootsect = bootsect + LD_DWORD(&tbl[8]);
+      fmt = check_fs(fs, bootsect);
+    }
+  }
+ failed:
+
+#endif
+
+  if (fmt || LD_WORD(&FSBUF.data[BPB_BytsPerSec]) != SS(fs)) { /* No valid FAT patition is found */
+    if (fmt == 255) {
+      /* At end of extended partition chain */
+      return FR_INVALID_OBJECT;
+    } else {
+      /* No file system found */
+      return FR_NO_FILESYSTEM;
+    }
+  }
 
   /* Initialize the file system object */
   fatsize = LD_WORD(&FSBUF.data[BPB_FATSz16]);      /* Number of sectors per FAT */
@@ -1278,9 +1352,9 @@ FRESULT f_mount (
   FATFS *fs   /* Pointer to new file system object (NULL for unmount)*/
 )
 {
+#if _USE_DRIVE_PREFIX != 0
   if (drv >= _DRIVES) return FR_INVALID_DRIVE;
 
-#if _USE_DRIVE_PREFIX != 0
   if (FatFs[drv]) FatFs[drv]->fs_type = 0;  /* Clear old object */
 
   FatFs[drv] = fs;      /* Register and clear new object */

@@ -87,6 +87,9 @@
 /* #  define SD_SUPPLY_VOLTAGE (1L<<22)  / * 3.4V - 3.5V */
 /* #  define SD_SUPPLY_VOLTAGE (1L<<23)  / * 3.5V - 3.6V */
 
+/* How many drives can be accessed on this hardware? */
+#  define MAX_DRIVES         1
+
 
 /*** Device address selection ***/
 /* DEVICE_SELECT should return the selected device number,   */
@@ -189,6 +192,7 @@
 #  define SDCARD_WP             (PIND & _BV(PD6))
 #  define SDCARD_WP_SETUP()     do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
 #  define SD_SUPPLY_VOLTAGE     (1L<<18)
+#  define MAX_DRIVES            1
 #  define DEVICE_SELECT         (8+!(PIND & _BV(PD7))+2*!(PIND & _BV(PD5)))
 #  define DEVICE_SELECT_SETUP() do {        \
              DDRD  &= ~(_BV(PD7)|_BV(PD5)); \
@@ -231,6 +235,7 @@
 #  define SDCARD_WP_SETUP()     do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
 #  define SD_CHANGE_ICR         MCUCR
 #  define SD_SUPPLY_VOLTAGE     (1L<<21)
+#  define MAX_DRIVES            1
 #  define DEVICE_SELECT         (8+!(PINA & _BV(PA2))+2*!(PINA & _BV(PA3)))
 #  define DEVICE_SELECT_SETUP() do {        \
              DDRA  &= ~(_BV(PA2)|_BV(PA3)); \
@@ -265,6 +270,7 @@
 
 #elif CONFIG_HARDWARE_VARIANT == 4
 /* Hardware configuration: uIEC */
+#  define MAX_DRIVES            2
 /* No device jumpers on uIEC */
 #  define DEVICE_SELECT         10
 #  define DEVICE_SELECT_SETUP() do {} while (0)
@@ -361,6 +367,9 @@
 #   define SD2_WP               _BV(PC5)
 #   define SD2_CHANGE_VECT      PCINT2_vect
 #   define SD2_CHANGE_SETUP()   do { PCMSK1 = _BV(PCINT22); PCIFR |= _BV(PCIF2); PCICR |= _BV(PCIE0); } while (0)
+#   define MAX_DRIVES           2
+#  else
+#   define MAX_DRIVES           1
 #  endif
 
 #elif CONFIG_HARDWARE_VARIANT == 6
@@ -373,6 +382,7 @@
 #  define SDCARD_WP_SETUP()     do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
 #  define SD_CHANGE_ICR         MCUCR
 #  define SD_SUPPLY_VOLTAGE     (1L<<21)
+#  define MAX_DRIVES            1
 #  define DEVICE_SELECT         (8+!(PINA & _BV(PA2))+2*!(PINA & _BV(PA3)))
 #  define DEVICE_SELECT_SETUP() do {        \
              DDRA  &= ~(_BV(PA2)|_BV(PA3)); \

@@ -688,19 +688,36 @@ void fat_rename(path_t *path, uint8_t *oldname, uint8_t *newname) {
  */
 void init_fatops(uint8_t preserve_path) {
   FRESULT res;
-  uint8_t i=0;
+  uint8_t drive,part;
 
-  max_part=0;
-  for(i=0;i<CONFIG_MAX_PARTITIONS;i++) {
-    partition[i].fop = &fatops;
-    res=f_mount(i, &partition[max_part].fatfs);
+  max_part = 0;
+  drive = 0;
+  part = 0;
+  while (max_part < CONFIG_MAX_PARTITIONS && drive < MAX_DRIVES) {
+    partition[max_part].fop = &fatops;
+    res=f_mount((drive * 16) + part, &partition[max_part].fatfs);
 
     if (!preserve_path)
       partition[max_part].current_dir = 0;
 
-    if(res==FR_OK)
+    if (res == FR_OK)
       max_part++;
+
+    if (res != FR_INVALID_OBJECT && part < 15 &&
+        /* Don't try to mount partitions on an unpartitioned medium */
+        !(res == FR_OK && part == 0))
+      /* Try all partitions */
+      part++;
+    else {
+      /* End of extended partition chain, try next drive */
+      part = 0;
+      drive++;
+    }
   }
+
+  if (!preserve_path)
+    current_part = 0;
+
 #ifndef HAVE_HOTPLUG
   if (!max_part) {
     set_error_ts(ERROR_DRIVE_NOT_READY,0,0);

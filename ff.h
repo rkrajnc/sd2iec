@@ -43,7 +43,7 @@
 /* When _USE_MKFS is set to 1 and _FS_READONLY is set to 0, f_mkfs function is
 /  enabled. */
 
-#define _MULTI_PARTITION    0
+#define _MULTI_PARTITION    1
 /* When _MULTI_PARTITION is set to 0, each logical drive is bound to same
 /  physical drive number and can mount only 1st primaly partition. When it is
 /  set to 1, each logical drive can mount a partition listed in Drives[]. */
@@ -203,14 +203,8 @@ typedef struct _FILINFO {
 
 #if _MULTI_PARTITION != 0   /* Multiple partition cfg */
 
-typedef struct _PARTITION {
-    BYTE pd;    /* Physical drive # (0-255) */
-    BYTE pt;    /* Partition # (0-3) */
-} PARTITION;
-extern
-const PARTITION Drives[];           /* Logical drive# to physical location conversion table */
-#define LD2PD(drv) (Drives[drv].pd) /* Get physical drive# */
-#define LD2PT(drv) (Drives[drv].pt) /* Get partition# */
+#define LD2PD(drv) (drv >> 4)       /* Get physical drive# */
+#define LD2PT(drv) (drv & 0x0f)     /* Get partition# */
 
 #else                               /* Single partition cfg */
 
