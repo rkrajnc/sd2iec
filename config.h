@@ -264,15 +264,7 @@
 #  define BLINKTIMER_MAX        200
 
 #elif CONFIG_HARDWARE_VARIANT == 4
-/* Hardware configuration: uIEC (incomplete) */
-/* Faked SD definition so the code can at lease be compile-tested */
-#  define SDCARD_DETECT         1
-#  define SDCARD_DETECT_SETUP() do {} while (0)
-#  define SD_CHANGE_SETUP()     do {} while (0)
-#  define SD_CHANGE_ISR         INT0_vect
-#  define SDCARD_WP             0
-#  define SDCARD_WP_SETUP()     do {} while (0)
-#  define SD_SUPPLY_VOLTAGE     (1L<<21)
+/* Hardware configuration: uIEC */
 /* No device jumpers on uIEC */
 #  define DEVICE_SELECT         10
 #  define DEVICE_SELECT_SETUP() do {} while (0)
