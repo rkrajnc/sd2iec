@@ -31,6 +31,7 @@
 #include "config.h"
 #include "buffers.h"
 #include "d64ops.h"
+#include "diskchange.h"
 #include "doscmd.h"
 #include "errormsg.h"
 #include "ff.h"
@@ -715,8 +716,10 @@ void init_fatops(uint8_t preserve_path) {
     }
   }
 
-  if (!preserve_path)
+  if (!preserve_path) {
     current_part = 0;
+    set_changelist(NULL, NULLSTRING);
+  }
 
 #ifndef HAVE_HOTPLUG
   if (!max_part) {

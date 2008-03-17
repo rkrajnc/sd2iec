@@ -111,8 +111,8 @@ static void mount_line(void) {
   /* Terminate file name */
   *strend = 0;
 
-  if (partition[swaplist.fs->drive].fop != &fatops)
-    image_unmount(swaplist.fs->drive);
+  if (partition[swappath.part].fop != &fatops)
+    image_unmount(swappath.part);
 
   /* Parse the path */
   path_t path;
