@@ -439,4 +439,9 @@
 #  undef CONFIG_COMMAND_CHANNEL_DUMP
 #endif
 
+/* An interrupt for detecting card changes implies hotplugging capability */
+#ifdef SD_CHANGE_ISR
+#  define HAVE_HOTPLUG
+#endif
+
 #endif

@@ -701,10 +701,12 @@ void init_fatops(uint8_t preserve_path) {
     if(res==FR_OK)
       max_part++;
   }
+#ifndef HAVE_HOTPLUG
   if (!max_part) {
     set_error_ts(ERROR_DRIVE_NOT_READY,0,0);
     return;
   }
+#endif
 }
 
 /**
