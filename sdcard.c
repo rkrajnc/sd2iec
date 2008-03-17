@@ -284,6 +284,7 @@ ISR(SD_CHANGE_ISR) {
 void init_disk(void) {
   spiInit();
   SDCARD_DETECT_SETUP();
+  SDCARD_WP_SETUP();
   SD_CHANGE_SETUP();
 #ifdef CONFIG_TWINSD
   /* Initialize the control lines for card 2 */
@@ -326,7 +327,9 @@ DSTATUS disk_initialize(BYTE drv) {
   drv = 0;
 #endif
 
-  SDCARD_WP_SETUP();
+  /* Don't bother initializing a card that isn't there */
+  if (disk_status(drv) & STA_NODISK)
+    return disk_status(drv);
 
   disk_state = DISK_ERROR;
 
