@@ -689,7 +689,7 @@ FRESULT trace_path (     /* FR_OK(0): successful, !=0: error code */
             /* Track the length of the LFN entry in case it belongs to our file */
             *len = *len + 13;
           }
-        } else if (!(dptr[DIR_Attr] & AM_VOL)) {  // we're a normal entry
+        } else if ((dptr[DIR_Attr] & AM_LFN) != AM_LFN) {  // we're a normal entry
           if (lfn) {
             if(lfn && (match && l == *len)) {// match
                 memcpy(fn,&dptr[DIR_Name], 8+3);
