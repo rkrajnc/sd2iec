@@ -270,13 +270,23 @@ static uint8_t extendedInit(const uint8_t card) {
 }
 #endif
 
-ISR(SD_CHANGE_ISR) {
+/* Detect changes of SD card 0 */
+ISR(SD_CHANGE_VECT) {
   if (SDCARD_DETECT)
     disk_state = DISK_CHANGED;
   else
     disk_state = DISK_REMOVED;
 }
 
+#ifdef CONFIG_TWINSD
+/* Detect changes of SD card 1 */
+ISR(SD2_CHANGE_VECT) {
+  if (!(SD2_PIN & SD2_DETECT))
+    disk_state = DISK_CHANGED;
+  else
+    disk_state = DISK_REMOVED;
+}
+#endif
 
 //
 // Public functions
@@ -291,6 +301,7 @@ void init_disk(void) {
   SD2_DDR  |= SD2_CS;
   SD2_DDR  &= (uint8_t)~(SD2_DETECT|SD2_WP);
   SD2_PORT |= SD2_DETECT|SD2_WP|SD2_CS;
+  SD2_CHANGE_SETUP();
 #endif
 }
 

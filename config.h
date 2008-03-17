@@ -70,7 +70,7 @@
 #  endif
 
 /* Name of the interrupt of the card detect pin */
-#  define SD_CHANGE_ISR INT0_vect
+#  define SD_CHANGE_VECT INT0_vect
 
 /* CARD Write Protect must return non-zero when card is write protected */
 #  define SDCARD_WP         (PIND & _BV(PD6))
@@ -185,7 +185,7 @@
 #  else
 #    error Unknown chip!
 #  endif
-#  define SD_CHANGE_ISR         INT0_vect
+#  define SD_CHANGE_VECT        INT0_vect
 #  define SDCARD_WP             (PIND & _BV(PD6))
 #  define SDCARD_WP_SETUP()     do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
 #  define SD_SUPPLY_VOLTAGE     (1L<<18)
@@ -226,7 +226,7 @@
 #  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
 #  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
 #  define SD_CHANGE_SETUP()     do { MCUCR |= _BV(ISC00); GICR |= _BV(INT0); } while(0)
-#  define SD_CHANGE_ISR         INT0_vect
+#  define SD_CHANGE_VECT        INT0_vect
 #  define SDCARD_WP             (PIND & _BV(PD6))
 #  define SDCARD_WP_SETUP()     do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
 #  define SD_CHANGE_ICR         MCUCR
@@ -308,7 +308,7 @@
 #  else
 #    error Unknown chip!
 #  endif
-#  define SD_CHANGE_ISR         INT0_vect
+#  define SD_CHANGE_VECT        INT0_vect
 #  define SDCARD_WP             (PIND & _BV(PD6))
 #  define SDCARD_WP_SETUP()     do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
 #  define SD_SUPPLY_VOLTAGE     (1L<<18)
@@ -352,14 +352,15 @@
 
 
 #  ifdef CONFIG_TWINSD
-/* Support for multiple SD cards - only used for testing    */
-/* Card change detecton is only supported on the first card */
-#   define SD2_DDR    DDRC
-#   define SD2_PORT   PORTC
-#   define SD2_PIN    PINC
-#   define SD2_CS     _BV(PC7)
-#   define SD2_DETECT _BV(PC6)
-#   define SD2_WP     _BV(PC5)
+/* Support for multiple SD cards */
+#   define SD2_DDR              DDRC
+#   define SD2_PORT             PORTC
+#   define SD2_PIN              PINC
+#   define SD2_CS               _BV(PC7)
+#   define SD2_DETECT           _BV(PC6)
+#   define SD2_WP               _BV(PC5)
+#   define SD2_CHANGE_VECT      PCINT2_vect
+#   define SD2_CHANGE_SETUP()   do { PCMSK1 = _BV(PCINT22); PCIFR |= _BV(PCIF2); PCICR |= _BV(PCIE0); } while (0)
 #  endif
 
 #elif CONFIG_HARDWARE_VARIANT == 6
@@ -367,7 +368,7 @@
 #  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
 #  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
 #  define SD_CHANGE_SETUP()     do { MCUCR |= _BV(ISC00); GICR |= _BV(INT0); } while(0)
-#  define SD_CHANGE_ISR         INT0_vect
+#  define SD_CHANGE_VECT        INT0_vect
 #  define SDCARD_WP             (PIND & _BV(PD6))
 #  define SDCARD_WP_SETUP()     do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
 #  define SD_CHANGE_ICR         MCUCR
@@ -440,7 +441,7 @@
 #endif
 
 /* An interrupt for detecting card changes implies hotplugging capability */
-#ifdef SD_CHANGE_ISR
+#ifdef SD_CHANGE_VECT
 #  define HAVE_HOTPLUG
 #endif
 

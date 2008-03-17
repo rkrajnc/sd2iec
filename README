@@ -277,6 +277,11 @@ Other important notes:
   true size of the file if required. The 2 is added so it can never be
   mistaken for an end marker (0) or for the default value (1, used by at
   least the 1541 and 1571 disk drives).
+- If your hardware supports more than one SD card, changing either one
+  will reset the current partition to 1 and the current directory of
+  all partitions to the root drive. Doing this just for the card that
+  was changed would cause lots of problems if the number of partitions
+  on the previous and the newly inserted cards are different.
 
 Compilation notes:
 ==================
