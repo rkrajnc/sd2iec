@@ -1674,7 +1674,7 @@ FRESULT f_lseek (
 )
 {
   DWORD clust, csize;
-  BYTE csect;
+  CHAR csect;
   FRESULT res;
   FATFS *fs = fp->fs;
 
@@ -1682,6 +1682,8 @@ FRESULT f_lseek (
   res = validate(fs /*, fp->id*/);         /* Check validity of the object */
   if (res != FR_OK) return res;
   if (fp->flag & FA__ERROR) return FR_RW_ERROR;
+  if (fp->fptr == ofs)   /* Don't seek if the target is the current position */
+    return FR_OK;
 #if !_FS_READONLY
   if (!move_fp_window(fp,0)) goto fk_error;
   //if (FPBUF.dirty) {      /* Write-back dirty buffer if needed */
@@ -1694,45 +1696,62 @@ FRESULT f_lseek (
   if (ofs > fp->fsize)
 #endif
     ofs = fp->fsize;
-  fp->fptr = 0; fp->sect_clust = 1;   /* Set file R/W pointer to top of the file */
 
   /* Move file R/W pointer if needed */
   if (ofs) {
-    clust = fp->org_clust;    /* Get start cluster */
-#if !_FS_READONLY
-    if (!clust) {             /* If the file does not have a cluster chain, create new cluster chain */
-      clust = create_chain(fs, 0);
-      if (clust == 1) goto fk_error;
-      fp->org_clust = clust;
-    }
-#endif
-    if (clust) {              /* If the file has a cluster chain, it can be followed */
-      csize = (DWORD)fs->sects_clust * SS(fs);    /* Cluster size in unit of byte */
-      for (;;) {                                  /* Loop to skip leading clusters */
-        fp->curr_clust = clust;                   /* Update current cluster */
-        if (ofs <= csize) break;
-#if !_FS_READONLY
-        if (fp->flag & FA_WRITE)                  /* Check if in write mode or not */
-          clust = create_chain(fs, clust);        /* Force streached if in write mode */
-        else
-#endif
-          clust = get_cluster(fs, clust);         /* Only follow cluster chain if not in write mode */
-        if (clust == 0) {                         /* Stop if could not follow the cluster chain */
-          ofs = csize; break;
-        }
-        if (clust == 1 || clust >= fs->max_clust) goto fk_error;
-        fp->fptr += csize;                        /* Update R/W pointer */
-        ofs -= csize;
+    csize = (DWORD)fs->sects_clust * SS(fs);    /* Cluster size in unit of byte */
+    if(ofs/csize == (fp->fptr-1)/csize) {
+      /* Source and Target are in the same cluster.  Just reset sector fields */
+      fp->fptr = ofs;
+      ofs-=(((DWORD)(ofs/csize))*csize); /* subtract off up to current cluster */
+    } else {
+      fp->sect_clust = 1;
+
+      if(fp->fptr && ofs > fp->fptr) {
+        fp->fptr = (((DWORD)((fp->fptr-1)/csize))*csize);  /* Set file R/W pointer to start of cluster */
+        ofs-=fp->fptr;            /* subtract off clusters traversed */
+        clust = fp->curr_clust;   /* Get current cluster */
+      } else {
+        fp->fptr = 0;             /* Set file R/W pointer to top of the file */
+        clust = fp->org_clust;    /* Get start cluster */
       }
-      csect = (BYTE)((ofs - 1) / SS(fs));         /* Sector offset in the cluster */
-      fp->curr_sect = clust2sect(fs, clust) + csect;  /* Current sector */
-      /* we can delay this... */
-      //if ((ofs & (SS(fs) - 1)) &&         /* Load current sector if needed */
-      //  disk_read(fs->drive, FPBUF.data, fp->curr_sect, 1) != RES_OK)
-      //  goto fk_error;
-      fp->sect_clust = fs->sects_clust - csect;   /* Left sector counter in the cluster */
-      fp->fptr += ofs;                            /* Update file R/W pointer */
+
+#if !_FS_READONLY
+      if (!clust) {             /* If the file does not have a cluster chain, create new cluster chain */
+        clust = create_chain(fs, 0);
+        if (clust == 1) goto fk_error;
+        fp->org_clust = clust;
+      }
+#endif
+      if (clust) {              /* If the file has a cluster chain, it can be followed */
+        for (;;) {                                  /* Loop to skip leading clusters */
+          fp->curr_clust = clust;                   /* Update current cluster */
+          if (ofs <= csize) break;
+#if !_FS_READONLY
+          if (fp->flag & FA_WRITE)                  /* Check if in write mode or not */
+            clust = create_chain(fs, clust);        /* Force streached if in write mode */
+          else
+#endif
+            clust = get_cluster(fs, clust);         /* Only follow cluster chain if not in write mode */
+          if (clust == 0) {                         /* Stop if could not follow the cluster chain */
+            ofs = csize; break;
+          }
+          if (clust == 1 || clust >= fs->max_clust) goto fk_error;
+          fp->fptr += csize;                        /* Update R/W pointer */
+          ofs -= csize;
+        }
+        fp->fptr += ofs;                            /* Update file R/W pointer */
+      }
     }
+    csect = (CHAR)((ofs - 1) / SS(fs));         /* Sector offset in the cluster */
+    fp->curr_sect = clust2sect(fs, fp->curr_clust) + csect;  /* Current sector */
+    /* we can delay this... */
+    //if ((ofs & (SS(fs) - 1)) &&         /* Load current sector if needed */
+    //  disk_read(fs->drive, FPBUF.data, fp->curr_sect, 1) != RES_OK)
+    //  goto fk_error;
+    fp->sect_clust = fs->sects_clust - csect;   /* Left sector counter in the cluster */
+  } else {
+    fp->fptr = 0; fp->sect_clust = 1;   /* Set file R/W pointer to top of the file */
   }
 #if !_FS_READONLY
   if ((fp->flag & FA_WRITE) && fp->fptr > fp->fsize) {  /* Set updated flag if in write mode */
