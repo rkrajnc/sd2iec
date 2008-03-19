@@ -86,7 +86,7 @@ void parse_path(char *in, char *out, char **name) {
     uint8_t state = 0;
 
     /* Skip partition number */
-    while (*in && isdigit(*in)) in++;
+    while (*in && (isdigit(*in) || *in == ' ')) in++;
 
     /* Unoptimized DFA matcher             */
     /* I wonder if this can be simplified? */
