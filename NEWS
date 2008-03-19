@@ -1,5 +1,17 @@
-2008-xx-xx - release x.x
+2008-03-19 - release 0.6.3
         - Bugfix: Ignore trailing separation characters of B-* parameters
+        - Bugfix: Always ignore volume labels while scanning for LFNs
+        - Bugfix: SDHC was always disabled in 0.6.x
+        - Bugfix: Ignore spaces in drive number
+        - Bugfix: Fix possible error after changing partitioned cards
+        - Bugfix: Case-insensitive name matching in the FAT library
+                  (but not in sd2iec)
+        - Bugfix: Fix compile error with larsp configuration on mega644
+        - Wait for the release of the disk change key before trying to
+          access a swap list
+        - Remove some ancient not-true-anymore statements from README
+        - Improve sector read performance
+        - Reduce unecessary reads during seeking
 
 2008-02-24 - release 0.6.2
         - Bugfix: Read the correct pins when determining the device
