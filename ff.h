@@ -37,16 +37,22 @@
 /  3: f_lseek is removed in addition to level 2. */
 
 #define _DRIVES     CONFIG_MAX_PARTITIONS
-/* Number of logical drives to be used. This affects the size of internal table. */
+/* Number of physical drives to be used. This affects the size of internal
+ * table. (when using _USE_DRIVE_PREFIX */
 
 #define _USE_MKFS   0
 /* When _USE_MKFS is set to 1 and _FS_READONLY is set to 0, f_mkfs function is
 /  enabled. */
 
 #define _MULTI_PARTITION    1
-/* When _MULTI_PARTITION is set to 0, each logical drive is bound to same
-/  physical drive number and can mount only 1st primaly partition. When it is
-/  set to 1, each logical drive can mount a partition listed in Drives[]. */
+/* When _MULTI_PARTITION is set to 0, each logical drive is bound to the same
+ * physical drive number and can mount only 1st primary partition.
+ *
+ * When it is set to 1, the low _PARTITION_MASK bits of each partition represent
+ * the partition and the high (8-_PARTITION_MASK) bits represent the physical
+ *  drive */
+
+#define _PARTITION_MASK     4
 
 #define _USE_FSINFO 0
 /* To enable FSInfo support on FAT32 volume, set _USE_FSINFO to 1. */
@@ -203,13 +209,15 @@ typedef struct _FILINFO {
 
 #if _MULTI_PARTITION != 0   /* Multiple partition cfg */
 
-#define LD2PD(drv) (drv >> 4)       /* Get physical drive# */
-#define LD2PT(drv) (drv & 0x0f)     /* Get partition# */
+#define LD2PD(drv) (drv >> (8-_PARTITION_MASK))       /* Get physical drive# */
+#define LD2PT(drv) (drv & ((2<<_PARTITION_MASK)-1))   /* Get partition# */
+#define _LOGICAL_DRIVES (_DRIVES * (2<<_PARTITION_MASK))
 
 #else                               /* Single partition cfg */
 
 #define LD2PD(drv) (drv)            /* Physical drive# is equal to logical drive# */
 #define LD2PT(drv) 0                /* Always mounts the 1st partition */
+#define _LOGICAL_DRIVES _DRIVES
 
 #endif
 

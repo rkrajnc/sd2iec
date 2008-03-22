@@ -65,7 +65,7 @@
 ---------------------------------------------------------------------------*/
 #if _USE_DRIVE_PREFIX != 0
 static
-FATFS *FatFs[_DRIVES];  /* Pointer to the file system objects (logical drives) */
+FATFS *FatFs[_LOGICAL_DRIVES];  /* Pointer to the file system objects (logical drives) */
 #endif
 //static
 //WORD fsid;              /* File system mount ID */
@@ -689,9 +689,9 @@ FRESULT trace_path (     /* FR_OK(0): successful, !=0: error code */
             /* Track the length of the LFN entry in case it belongs to our file */
             *len = *len + 13;
           }
-        } else if ((dptr[DIR_Attr] & AM_LFN) != AM_LFN) {  // we're a normal entry
+        } else if ((dptr[DIR_Attr] & AM_LFN) != AM_LFN) {  /* we're a normal entry */
           if (lfn) {
-            if(lfn && (match && l == *len)) {// match
+            if(lfn && (match && l == *len)) { /* match */
                 memcpy(fn,&dptr[DIR_Name], 8+3);
                 fn[11] = dptr[DIR_NTres];
                 break;
@@ -887,7 +887,7 @@ FRESULT mount_drv(
   if (stat & STA_NOINIT)              /* Check if the drive is ready */
     return FR_NOT_READY;
 #if S_MAX_SIZ > 512                   /* Check disk sector size */
-  if (disk_ioctl(drv, GET_SECTOR_SIZE, &SS(fs)) != RES_OK || SS(fs) > S_MAX_SIZ)
+  if (disk_ioctl(fs->drive, GET_SECTOR_SIZE, &SS(fs)) != RES_OK || SS(fs) > S_MAX_SIZ)
     return FR_NO_FILESYSTEM;
 #endif
 #if !_FS_READONLY
@@ -926,7 +926,7 @@ FRESULT mount_drv(
       }
     } else {
       /* Logical drive */
-      uint8_t i,curr;
+      BYTE i,curr;
       fmt = 1;
       bootsect = 0;
       fatsize = 0;  // Used to store the offset of the first extended part
@@ -1050,11 +1050,25 @@ FRESULT auto_mount (    /* FR_OK(0): successful, !=0: any error occured */
 
   /* Get drive number from the path name */
   while (*p == ' ') p++;              /* Strip leading spaces */
+# if _MULTI_PARTITION != 0
+  *path=p;
+  drv = 0;
+  while(*p >= '0' && *p<='9') {
+    if(drv >= 25 && *p > '5')
+      return FR_INVALID_DRIVE;
+    drv = drv*10+((*p++)-'0');
+  }
+  if(*p != ':') {
+    p = *path;
+    drv = 0;
+  }
+# else
   drv = p[0] - '0';                   /* Is there a drive number? */
   if (drv <= 9 && p[1] == ':')
     p += 2;                           /* Found a drive number, get and strip it */
   else
     drv = 0;                          /* No drive number is given, use drive number 0 as default */
+# endif
 #endif
 #if _USE_CHDIR == 0
   if (*p == '/') p++;                 /* Strip heading slash */
@@ -1063,7 +1077,7 @@ FRESULT auto_mount (    /* FR_OK(0): successful, !=0: any error occured */
 
   /* Check if the drive number is valid or not */
 #if _USE_DRIVE_PREFIX != 0
-  if (drv >= _DRIVES) return FR_INVALID_DRIVE;    /* Is the drive number valid? */
+  if (drv >= _LOGICAL_DRIVES) return FR_INVALID_DRIVE;    /* Is the drive number valid? */
   *rfs = FatFs[drv];                  /* Returen pointer to the corresponding file system object */
 #endif
   if (!*rfs) return FR_NOT_ENABLED;   /* Is the file system object registered? */
@@ -1352,9 +1366,9 @@ FRESULT f_mount (
   FATFS *fs   /* Pointer to new file system object (NULL for unmount)*/
 )
 {
-#if _USE_DRIVE_PREFIX != 0
-  if (drv >= _DRIVES) return FR_INVALID_DRIVE;
+  if (drv >= _LOGICAL_DRIVES) return FR_INVALID_DRIVE;
 
+#if _USE_DRIVE_PREFIX != 0
   if (FatFs[drv]) FatFs[drv]->fs_type = 0;  /* Clear old object */
 
   FatFs[drv] = fs;      /* Register and clear new object */
@@ -2658,7 +2672,7 @@ FRESULT f_mkfs (
 
 
   /* Check validity of the parameters */
-  if (drv >= _DRIVES) return FR_INVALID_DRIVE;
+  if (drv >= _LOGICAL_DRIVES) return FR_INVALID_DRIVE;
   if (partition >= 2) return FR_MKFS_ABORTED;
   for (n = 512; n <= 32768U && n != allocsize; n <<= 1);
   if (n != allocsize) return FR_MKFS_ABORTED;
