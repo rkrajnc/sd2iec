@@ -219,7 +219,6 @@ static int sendCommand(const uint8_t  command,
 static char extendedInit(void) __attribute__((unused));
 static char extendedInit(void) {
   uint8_t  i;
-  uint16_t counter;
   uint32_t answer;
 
   // Send CMD8: SEND_IF_COND
@@ -242,9 +241,17 @@ static char extendedInit(void) {
 
   // Verify echo-back of check pattern
   if ((answer & 0xff) != 0b10101010) {
-    // Check pattern mismatch, working but not SD2.0 compliant
-    return TRUE;
+    // Check pattern mismatch, something is broken
+    return FALSE;
   }
+  return TRUE;
+}
+#endif
+
+// SD common initialisation
+static uint8_t sdInit(void) {
+  uint8_t i;
+  uint16_t counter;
 
   counter = 0xffff;
   do {
@@ -267,7 +274,6 @@ static char extendedInit(void) {
   else
     return TRUE;
 }
-#endif
 
 ISR(SD_CHANGE_ISR) {
   if (SDCARD_DETECT)
@@ -331,7 +337,10 @@ DSTATUS disk_initialize(BYTE drv) {
     return STA_NOINIT | STA_NODISK;
 #endif
 
-  counter = 0xffff;
+  if (!sdInit())
+    return STA_NOINIT | STA_NODISK;
+
+  counter = 0xfff;
   // According to the spec READ_OCR should work at this point
   // without retries. One of my Sandisk-cards thinks otherwise.
   do {
