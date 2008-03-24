@@ -337,10 +337,8 @@ DSTATUS disk_initialize(BYTE drv) {
   do {
     // Send CMD58: READ_OCR
     i = sendCommand(READ_OCR, 0, 0);
-    if (i > 1) {
-      // kills my Sandisk 1G which requires the retries in the first place
-      // deselectCard();
-    }
+    if (i > 1)
+      deselectCard();
   } while (i > 1 && counter-- > 0);
 
   if (counter > 0) {
