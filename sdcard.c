@@ -283,6 +283,7 @@ ISR(SD_CHANGE_ISR) {
 void init_disk(void) {
   spiInit();
   SDCARD_DETECT_SETUP();
+  SDCARD_WP_SETUP();
   SD_CHANGE_SETUP();
 }
 
@@ -302,7 +303,9 @@ DSTATUS disk_initialize(BYTE drv) {
   uint16_t counter;
   uint32_t answer;
 
-  SDCARD_WP_SETUP();
+  /* Don't bother initializing a card that isn't there */
+  if (disk_status(drv) & STA_NODISK)
+    return disk_status(drv);
 
   disk_state = DISK_ERROR;
 
