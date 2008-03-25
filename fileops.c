@@ -84,77 +84,72 @@ const PROGMEM uint8_t filetypes[] = {
 /* ------------------------------------------------------------------------- */
 
 /**
- * addentry - add a single directory entry to the end of buf
+ * addentry - create a single directory entry in buf
  * @dent: directory entry to be added
- * @buf : buffer to be added to
+ * @buf : buffer to be used
  *
- * This function adds a directory entry for dent in 15x1 compatible format
- * to the end of buf.
+ * This function creates a directory entry for dent in 15x1 compatible format
+ * in the given buffer.
  */
-static void addentry(struct cbmdirent *dent, buffer_t *buf) {
+static void addentry(struct cbmdirent *dent, uint8_t *buf) {
   uint8_t i;
-  uint8_t *data;
-
-  data = buf->data + buf->lastused;
 
   /* Clear the line */
-  memset(data, ' ', 31);
+  memset(buf, ' ', 31);
   /* Line end marker */
-  data[31] = 0;
+  buf[31] = 0;
 
   /* Next line pointer, 1571-compatible =) */
   if (dent->remainder != 0xff)
     /* store remainder in low byte of link pointer          */
     /* +2 so it is never 0 (end-marker) or 1 (normal value) */
-    *data++ = dent->remainder+2;
+    *buf++ = dent->remainder+2;
   else
-    *data++ = 1;
-  *data++ = 1;
+    *buf++ = 1;
+  *buf++ = 1;
 
-  *data++ = dent->blocksize & 0xff;
-  *data++ = dent->blocksize >> 8;
+  *buf++ = dent->blocksize & 0xff;
+  *buf++ = dent->blocksize >> 8;
 
   /* Filler before file name */
   if (dent->blocksize < 1000)
-    data++;
+    buf++;
   if (dent->blocksize < 100)
-    data++;
+    buf++;
   if (dent->blocksize < 10)
-    data++;
-  *data++ = '"';
+    buf++;
+  *buf++ = '"';
 
   /* copy and adjust the filename - C783 */
-  memcpy(data, dent->name, CBM_NAME_LENGTH);
+  memcpy(buf, dent->name, CBM_NAME_LENGTH);
   for (i=0;i<=CBM_NAME_LENGTH;i++)
     if (dent->name[i] == 0x22 || dent->name[i] == 0 || i == 16) {
-      data[i] = '"';
+      buf[i] = '"';
       while (i<=CBM_NAME_LENGTH) {
-        if (data[i] == 0)
-          data[i] = ' ';
+        if (buf[i] == 0)
+          buf[i] = ' ';
         else
-          data[i] &= 0x7f;
+          buf[i] &= 0x7f;
         i++;
       }
     }
 
   /* Skip name and final quote */
-  data += CBM_NAME_LENGTH+1;
+  buf += CBM_NAME_LENGTH+1;
 
   if (dent->typeflags & FLAG_SPLAT)
-    *data = '*';
+    *buf = '*';
 
   /* File type */
-  memcpy_P(data+1, filetypes + TYPE_LENGTH * (dent->typeflags & TYPE_MASK), TYPE_LENGTH);
+  memcpy_P(buf+1, filetypes + TYPE_LENGTH * (dent->typeflags & TYPE_MASK), TYPE_LENGTH);
 
   /* RO marker */
   if (dent->typeflags & FLAG_RO)
-    data[4] = '<';
+    buf[4] = '<';
 
   /* Extension: Hidden marker */
   if (dent->typeflags & FLAG_HIDDEN)
-    data[5] = 'H';
-
-  buf->lastused += 32;
+    buf[5] = 'H';
 }
 
 /* ------------------------------------------------------------------------- */
@@ -205,8 +200,8 @@ static uint8_t dir_refill(buffer_t *buf) {
   switch (next_match(&buf->pvt.dir.dh, buf->pvt.dir.matchstr,
                      buf->pvt.dir.filetype, &dent)) {
   case 0:
-    addentry(&dent, buf);
-    buf->lastused--;
+    addentry(&dent, buf->data);
+    buf->lastused = 31;
     return 0;
 
   case -1:
