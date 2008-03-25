@@ -372,7 +372,7 @@
 #   define SD2_DETECT           _BV(PC6)
 #   define SD2_WP               _BV(PC5)
 #   define SD2_CHANGE_VECT      PCINT2_vect
-#   define SD2_CHANGE_SETUP()   do { PCMSK1 = _BV(PCINT22); PCIFR |= _BV(PCIF2); PCICR |= _BV(PCIE0); } while (0)
+#   define SD2_CHANGE_SETUP()   do { PCMSK2 = _BV(PCINT22); PCIFR |= _BV(PCIF2); PCICR |= _BV(PCIE2); } while (0)
 #   define MAX_DRIVES           2
 #  else
 #   define MAX_DRIVES           1
