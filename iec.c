@@ -731,26 +731,27 @@ void iec_mainloop(void) {
       set_clock(1);
       set_data(1);
 
-#ifdef HAVE_HOTPLUG
-      /* This seems to be a nice point to handle card changes */
-      if (disk_state != DISK_OK && disk_state != DISK_REMOVED) {
-        BUSY_LED_ON();
-        /* If the disk was changed the buffer contents are useless */
-        if (disk_state == DISK_CHANGED) {
-          free_all_buffers(0);
-          init_change();
-          init_fatops(0);
-        } else
-          init_fatops(1);
-
-        if (!active_buffers)
-          BUSY_LED_OFF();
-      }
-#endif
-
       //   0x255 -> A61C
       /* Handle commands and filenames */
       if (iec_data.iecflags & COMMAND_RECVD) {
+
+#ifdef HAVE_HOTPLUG
+        /* This seems to be a nice point to handle card changes */
+        if (disk_state != DISK_OK && disk_state != DISK_REMOVED) {
+          BUSY_LED_ON();
+          /* If the disk was changed the buffer contents are useless */
+          if (disk_state == DISK_CHANGED) {
+            free_all_buffers(0);
+            init_change();
+            init_fatops(0);
+          } else
+            init_fatops(1);
+          
+          if (!active_buffers)
+            BUSY_LED_OFF();
+        }
+#endif
+
         if (iec_data.secondary_address == 0x0f) {
           /* Command channel */
           parse_doscommand();
