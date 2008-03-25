@@ -210,8 +210,8 @@ typedef struct _FILINFO {
 #if _MULTI_PARTITION != 0   /* Multiple partition cfg */
 
 #define LD2PD(drv) (drv >> (8-_PARTITION_MASK))       /* Get physical drive# */
-#define LD2PT(drv) (drv & ((2<<_PARTITION_MASK)-1))   /* Get partition# */
-#define _LOGICAL_DRIVES (_DRIVES * (2<<_PARTITION_MASK))
+#define LD2PT(drv) (drv & ((1<<_PARTITION_MASK)-1))   /* Get partition# */
+#define _LOGICAL_DRIVES (_DRIVES * (1<<_PARTITION_MASK))
 
 #else                               /* Single partition cfg */
 
