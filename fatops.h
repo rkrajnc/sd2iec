@@ -40,6 +40,7 @@ uint8_t  fat_chdir(path_t *path, uint8_t *dirname);
 void     fat_mkdir(path_t *path, uint8_t *dirname);
 void     fat_open_read(path_t *path, uint8_t *filename, buffer_t *buf);
 void     fat_open_write(path_t *path, uint8_t *filename, uint8_t type, buffer_t *buf, uint8_t append);
+uint8_t  fat_getvolumename(uint8_t part, uint8_t *label);
 uint8_t  fat_getlabel(path_t *path, uint8_t *label);
 uint8_t  fat_getid(uint8_t part, uint8_t *id);
 uint16_t fat_freeblocks(uint8_t part);

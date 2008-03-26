@@ -32,6 +32,7 @@
 #include "dirent.h"
 #include "doscmd.h"
 #include "errormsg.h"
+#include "fatops.h"
 #include "ff.h"
 #include "m2iops.h"
 #include "parser.h"
@@ -54,7 +55,7 @@ const PROGMEM uint8_t dirheader[] = {
   1, 1,                            /* next line pointer */
   0, 0,                            /* line number 0 */
   0x12, 0x22,                      /* Reverse on, quote */
-  ' ',' ',' ',' ',' ',' ',' ',' ', /* 16 spaces as the disk name */
+  'S','D','2','I','E','C',' ',' ', /* 16 spaces as the disk name */
   ' ',' ',' ',' ',' ',' ',' ',' ', /* will be overwritten if needed */
   0x22,0x20,                       /* quote, space */
   'I','K',' ','2','A',             /* id IK, shift-space, dosmarker 2A */
@@ -76,7 +77,11 @@ const PROGMEM uint8_t filetypes[] = {
   'U','S','R', // 3
   'R','E','L', // 4
   'C','B','M', // 5
-  'D','I','R'  // 6
+  'D','I','R', // 6
+  '?','?','?', // 7
+  'S','Y','S', // 8
+  'N','A','T', // 9
+  'F','A','T' // 10
 };
 
 /* ------------------------------------------------------------------------- */
@@ -141,7 +146,7 @@ static void addentry(struct cbmdirent *dent, uint8_t *buf) {
     *buf = '*';
 
   /* File type */
-  memcpy_P(buf+1, filetypes + TYPE_LENGTH * (dent->typeflags & TYPE_MASK), TYPE_LENGTH);
+  memcpy_P(buf+1, filetypes + TYPE_LENGTH * (dent->typeflags & EXT_TYPE_MASK), TYPE_LENGTH);
 
   /* RO marker */
   if (dent->typeflags & FLAG_RO)
@@ -175,9 +180,30 @@ static uint8_t dir_footer(buffer_t *buf) {
   buf->data[3] = blocks >> 8;
 
   buf->position = 0;
-  buf->lastused = 31;
   buf->sendeoi  = 1;
 
+  return 0;
+}
+
+/* Callback for the partition directory */
+static uint8_t pdir_refill(buffer_t* buf) {
+  struct cbmdirent dent;
+
+  buf->position = 0;
+  if(buf->pvt.part == max_part) {
+    buf->lastused = 2;
+    buf->sendeoi = 1;
+    memset(buf->data,0,2);
+    return 0;
+  }
+  /* read volume name */
+  if (fat_getvolumename(buf->pvt.part, dent.name)) {
+    free_buffer(buf);
+    return 0;
+  }
+  dent.blocksize=++buf->pvt.part;
+  dent.typeflags = TYPE_FAT;
+  addentry(&dent, buf->data);
   return 0;
 }
 
@@ -195,13 +221,11 @@ static uint8_t dir_refill(buffer_t *buf) {
   uart_putc('+');
 
   buf->position = 0;
-  buf->lastused = 0;
 
   switch (next_match(&buf->pvt.dir.dh, buf->pvt.dir.matchstr,
                      buf->pvt.dir.filetype, &dent)) {
   case 0:
     addentry(&dent, buf->data);
-    buf->lastused = 31;
     return 0;
 
   case -1:
@@ -233,6 +257,23 @@ static void load_directory(uint8_t secondary) {
     return;
 
   if (command_length > 2) {
+    if(command_buffer[1]=='=' && command_buffer[2]=='P') {
+      /* Parse Partition Directory */
+      buf->secondary = secondary;
+      buf->read      = 1;
+      buf->lastused  = 31;
+
+      /* copy static header to start of buffer */
+      memcpy_P(buf->data, dirheader, sizeof(dirheader));
+
+      /* set partition number */
+      buf->data[HEADER_OFFSET_DRIVE] = max_part;
+
+      /* Let the refill callback handly everything else */
+      buf->refill = pdir_refill;
+
+      return;
+    }
     /* Parse the name pattern */
     uint8_t *name;
 

@@ -537,24 +537,23 @@ void fat_mkdir(path_t *path, uint8_t *dirname) {
 }
 
 /**
- * fat_getlabel - Get the volume label
- * @path : path object of the directory
+ * fat_getpartname - Get the partition label
+ * @part : partition to request
  * @label: pointer to the buffer for the label (16 characters)
  *
- * This function reads the FAT volume label and stores it space-padded
- * in the first 16 bytes of label. Returns 0 if successfull, != 0 if
- * an error occured.
+ * This function reads the FAT volume label and stores it zero-terminated
+ * in label. Returns 0 if successfull, != 0 if an error occured.
  */
-uint8_t fat_getlabel(path_t *path, uint8_t *label) {
+uint8_t fat_getvolumename(uint8_t part, uint8_t *label) {
   DIR dh;
   FILINFO finfo;
   FRESULT res;
   uint8_t i,j;
 
   finfo.lfn = NULL;
-  memset(label, ' ', 16);
+  memset(label, 0, CBM_NAME_LENGTH+1);
 
-  res = l_opendir(&partition[path->part].fatfs, path->fat, &dh);
+  res = l_opendir(&partition[part].fatfs, 0, &dh);
 
   if (res != FR_OK) {
     parse_error(res,0);
@@ -577,20 +576,47 @@ uint8_t fat_getlabel(path_t *path, uint8_t *label) {
       return 0;
     }
   }
-  if(l_opendir(&partition[path->part].fatfs,path->fat,&dh))
-    return 1;
+  return 0;
+}
+
+/**
+ * fat_getlabel - Get the directory label
+ * @path : path object of the directory
+ * @label: pointer to the buffer for the label (16 characters)
+ *
+ * This function reads the FAT volume label (if in root directory) or FAT
+ * directory name (if not) and stores it space-padded
+ * in the first 16 bytes of label. Returns 0 if successfull, != 0 if
+ * an error occured.
+ */
+uint8_t fat_getlabel(path_t *path, uint8_t *label) {
+  DIR dh;
+  FILINFO finfo;
+  FRESULT res;
+  uint8_t *name = entrybuf;
+
+  finfo.lfn = name;
+  memset(label, ' ', CBM_NAME_LENGTH);
+
+  if((res = l_opendir(&partition[path->part].fatfs,path->fat,&dh)) != FR_OK)
+    goto gl_error;
   while ((res = f_readdir(&dh, &finfo)) == FR_OK) {
-    if(finfo.fname[0]=='\0')
+    if(finfo.fname[0] == '\0' || finfo.fname[0] != '.') {
+      if((res = fat_getvolumename(path->part,name)) != FR_OK)
+        return res;
       break;
-    if(finfo.fname[0]=='.' && finfo.fname[1]=='.' && ustrlen(finfo.fname)==2) {
-      if(l_opendir(&partition[path->part].fatfs,finfo.clust,&dh)) // open .. dir.
+    }
+    if(finfo.fname[0] == '.' && finfo.fname[1] == '.' && finfo.fname[2] == 0) {
+      if((res = l_opendir(&partition[path->part].fatfs,finfo.clust,&dh)) != FR_OK) // open .. dir.
         break;
       while ((res = f_readdir(&dh, &finfo)) == FR_OK) {
-        if(finfo.fname[0]=='\0')
+        if(finfo.fname[0] == '\0')
           break;
-        if(finfo.clust==path->fat) {
-          for(i=0;finfo.fname[i];i++)
-            label[i] = finfo.fname[i];
+        if(finfo.clust == path->fat) {
+          if(!*name)
+            name = finfo.fname;
+          else
+            asc2pet(name);
           break;
         }
       }
@@ -598,11 +624,13 @@ uint8_t fat_getlabel(path_t *path, uint8_t *label) {
     }
   }
 
-  if (res != FR_OK) {
-    parse_error(res,0);
-    return 1;
-  } else
-    return 0;
+  if(*name)
+    memcpy(label,name,ustrlen(name));
+  return 0;
+
+gl_error:
+  parse_error(res,0);
+  return 1;
 }
 
 /**

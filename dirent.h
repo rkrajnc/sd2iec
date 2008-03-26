@@ -33,6 +33,7 @@
 
 #define TYPE_LENGTH 3
 #define TYPE_MASK 7
+#define EXT_TYPE_MASK 15
 #define TYPE_DEL 0
 #define TYPE_SEQ 1
 #define TYPE_PRG 2
@@ -40,6 +41,10 @@
 #define TYPE_REL 4
 #define TYPE_CBM 5
 #define TYPE_DIR 6
+
+#define TYPE_SYS 8
+#define TYPE_NAT 9
+#define TYPE_FAT 10
 
 /// Hidden is an unused bit on CBM
 #define FLAG_HIDDEN (1<<5)
