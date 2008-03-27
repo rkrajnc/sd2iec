@@ -252,7 +252,7 @@ static uint8_t extendedInit(const uint8_t card) {
 #endif
 
 // SD common initialisation
-static uint8_t sdInit(const uint8_t card) {
+static void sdInit(const uint8_t card) {
   uint8_t i;
   uint16_t counter;
 
@@ -262,7 +262,7 @@ static uint8_t sdInit(const uint8_t card) {
     i = sendCommand(card, APP_CMD, 0, 1);
     if (i > 1) {
       // Command not accepted, could be MMC
-      return TRUE;
+      return;
     }
 
     // Send ACMD41: SD_SEND_OP_COND
@@ -271,11 +271,8 @@ static uint8_t sdInit(const uint8_t card) {
     // Repeat while card card accepts command but isn't ready
   } while (i == 1 && --counter > 0);
 
-  // If ACMD41 fails something strange happened...
-  if (i != 0)
-    return FALSE;
-  else
-    return TRUE;
+  // Ignore failures, there is at least one Sandisk MMC card
+  // that accepts CMD55, but not ACMD41.
 }
 
 /* Detect changes of SD card 0 */
@@ -374,8 +371,7 @@ DSTATUS disk_initialize(BYTE drv) {
     return STA_NOINIT | STA_NODISK;
 #endif
 
-  if (!sdInit(drv))
-    return STA_NOINIT | STA_NODISK;
+  sdInit(drv);
 
   counter = 0xffff;
   // According to the spec READ_OCR should work at this point
