@@ -382,7 +382,13 @@
 /* Hardware configuration: NKC MMC2IEC */
 #  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
 #  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
-#  define SD_CHANGE_SETUP()     do { MCUCR |= _BV(ISC00); GICR |= _BV(INT0); } while(0)
+#  if defined __AVR_ATmega32__
+#    define SD_CHANGE_SETUP()   do { MCUCR |= _BV(ISC00); GICR |= _BV(INT0); } while(0)
+#  elif defined __AVR_ATmega644__ || defined __AVR_ATmega644P__
+#    define SD_CHANGE_SETUP()   do { EICRA |= _BV(ISC00); EIMSK |= _BV(INT0); } while(0)
+#  else
+#    error Unknown chip!
+#  endif
 #  define SD_CHANGE_VECT        INT0_vect
 #  define SDCARD_WP             (PIND & _BV(PD6))
 #  define SDCARD_WP_SETUP()     do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
