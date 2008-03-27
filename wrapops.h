@@ -58,9 +58,9 @@
  * and no field may be set to NULL.
  */
 typedef struct fileops_s {
-  void     (*open_read)(path_t *path, uint8_t *name, buffer_t *buf);
-  void     (*open_write)(path_t *path, uint8_t *name, uint8_t type, buffer_t *buf, uint8_t append);
-  uint8_t  (*file_delete)(path_t *path, uint8_t *name);
+  void     (*open_read)(path_t *path, struct cbmdirent *name, buffer_t *buf);
+  void     (*open_write)(path_t *path, struct cbmdirent *name, uint8_t type, buffer_t *buf, uint8_t append);
+  uint8_t  (*file_delete)(path_t *path, struct cbmdirent *name);
   uint8_t  (*disk_label)(path_t *path, uint8_t *label);
   uint8_t  (*disk_id)(uint8_t part, uint8_t *id);
   uint16_t (*disk_free)(uint8_t part);
@@ -70,7 +70,7 @@ typedef struct fileops_s {
   int8_t   (*readdir)(dh_t *dh, struct cbmdirent *dent);
   void     (*mkdir)(path_t *path, uint8_t *dirname);
   uint8_t  (*chdir)(path_t *path, uint8_t *dirname);
-  void     (*rename)(path_t *path, uint8_t *oldname, uint8_t *newname);
+  void     (*rename)(path_t *path, struct cbmdirent *oldname, uint8_t *newname);
 } fileops_t;
 
 /* Helper-Define to avoid lots of typedefs */

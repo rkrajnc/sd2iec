@@ -35,11 +35,11 @@
 /* API */
 void     init_fatops(uint8_t preserve_dir);
 void     parse_error(FRESULT res, uint8_t readflag);
-uint8_t  fat_delete(path_t *path, uint8_t *filename);
+uint8_t  fat_delete(path_t *path, struct cbmdirent *dent);
 uint8_t  fat_chdir(path_t *path, uint8_t *dirname);
 void     fat_mkdir(path_t *path, uint8_t *dirname);
-void     fat_open_read(path_t *path, uint8_t *filename, buffer_t *buf);
-void     fat_open_write(path_t *path, uint8_t *filename, uint8_t type, buffer_t *buf, uint8_t append);
+void     fat_open_read(path_t *path, struct cbmdirent *dent, buffer_t *buf);
+void     fat_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t *buf, uint8_t append);
 uint8_t  fat_getvolumename(uint8_t part, uint8_t *label);
 uint8_t  fat_getlabel(path_t *path, uint8_t *label);
 uint8_t  fat_getid(uint8_t part, uint8_t *id);

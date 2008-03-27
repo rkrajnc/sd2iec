@@ -517,7 +517,7 @@ void file_open(uint8_t secondary) {
         }
 
         /* Rewrite existing file: Delete the old one */
-        if (file_delete(&path, fname) == 255)
+        if (file_delete(&path, &dent) == 255)
           return;
       } else {
         /* Write existing file without replacement: Raise error */
@@ -537,8 +537,6 @@ void file_open(uint8_t secondary) {
       return;
     }
 
-  fname = dent.name;
-
   /* Grab a buffer */
   buf = alloc_buffer();
   if (!buf)
@@ -551,12 +549,12 @@ void file_open(uint8_t secondary) {
   case OPEN_READ:
     /* Modify is the same as read, but allows reading *ed files.        */
     /* FAT doesn't have anything equivalent, so both are mapped to READ */
-    open_read(&path, fname, buf);
+    open_read(&path, &dent, buf);
     break;
 
   case OPEN_WRITE:
   case OPEN_APPEND:
-    open_write(&path, fname, filetype, buf, (mode == OPEN_APPEND));
+    open_write(&path, &dent, filetype, buf, (mode == OPEN_APPEND));
     break;
   }
 }

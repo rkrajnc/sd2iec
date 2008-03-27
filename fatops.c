@@ -284,19 +284,21 @@ static uint8_t fat_file_close(buffer_t *buf) {
 
 /**
  * fat_open_read - opens a file for reading
- * @path    : path of the file
- * @filename: name of the file
- * @buf     : buffer to be used
+ * @path: path of the file
+ * @dent: pointer to cbmdirent with name of the file
+ * @buf : buffer to be used
  *
  * This functions opens a file in the FAT filesystem for reading and sets up
  * buf to access it.
  */
-void fat_open_read(path_t *path, uint8_t *filename, buffer_t *buf) {
+void fat_open_read(path_t *path, struct cbmdirent *dent, buffer_t *buf) {
   FRESULT res;
+  uint8_t *name;
 
-  pet2asc(filename);
+  pet2asc(dent->name);
+  name = dent->name;
   partition[path->part].fatfs.curr_dir = path->fat;
-  res = f_open(&partition[path->part].fatfs,&buf->pvt.fh, filename, FA_READ | FA_OPEN_EXISTING);
+  res = f_open(&partition[path->part].fatfs,&buf->pvt.fh, name, FA_READ | FA_OPEN_EXISTING);
   if (res != FR_OK) {
     parse_error(res,1);
     free_buffer(buf);
@@ -313,27 +315,29 @@ void fat_open_read(path_t *path, uint8_t *filename, buffer_t *buf) {
 
 /**
  * fat_open_write - opens a file for writing
- * @path    : path of the file
- * @filename: name of the file
- * @type    : type of the file
- * @buf     : buffer to be used
- * @append  : Flags if the new data should be appended to the end of file
+ * @path  : path of the file
+ * @dent  : pointer to cbmdirent with name of the file
+ * @type  : type of the file
+ * @buf   : buffer to be used
+ * @append: Flags if the new data should be appended to the end of file
  *
  * This function opens a file in the FAT filesystem for writing and sets up
  * buf to access it. type is ignored here because FAT has no equivalent of
  * file types.
  */
-void fat_open_write(path_t *path, uint8_t *filename, uint8_t type, buffer_t *buf, uint8_t append) {
+void fat_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t *buf, uint8_t append) {
   FRESULT res;
+  uint8_t *name;
 
-  pet2asc(filename);
+  name = dent->name;
+  pet2asc(name);
   partition[path->part].fatfs.curr_dir = path->fat;
   if (append) {
-    res = f_open(&partition[path->part].fatfs, &buf->pvt.fh, filename, FA_WRITE | FA_OPEN_EXISTING);
+    res = f_open(&partition[path->part].fatfs, &buf->pvt.fh, name, FA_WRITE | FA_OPEN_EXISTING);
     if (res == FR_OK)
       res = f_lseek(&buf->pvt.fh, buf->pvt.fh.fsize);
   } else
-    res = f_open(&partition[path->part].fatfs, &buf->pvt.fh, filename, FA_WRITE | FA_CREATE_NEW);
+    res = f_open(&partition[path->part].fatfs, &buf->pvt.fh, name, FA_WRITE | FA_CREATE_NEW);
 
   if (res != FR_OK) {
     parse_error(res,0);
@@ -438,19 +442,21 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
 
 /**
  * fat_delete - Delete a file/directory on FAT
- * @path    : path to the file/directory
- * @filename: name of the file/directory to be deleted
+ * @path: path to the file/directory
+ * @dent: pointer to cbmdirent with name of the file/directory to be deleted
  *
  * This function deletes the file filename in path and returns
  * 0 if not found, 1 if deleted or 255 if an error occured.
  */
-uint8_t fat_delete(path_t *path, uint8_t *filename) {
+uint8_t fat_delete(path_t *path, struct cbmdirent *dent) {
   FRESULT res;
+  uint8_t *name;
 
   DIRTY_LED_ON();
-  pet2asc(filename);
+  name = dent->name;
+  pet2asc(name);
   partition[path->part].fatfs.curr_dir = path->fat;
-  res = f_unlink(&partition[path->part].fatfs, filename);
+  res = f_unlink(&partition[path->part].fatfs, name);
 
   if (check_write_buf_count())
     DIRTY_LED_OFF();
@@ -690,19 +696,19 @@ void fat_sectordummy(buffer_t *buf, uint8_t part, uint8_t track, uint8_t sector)
 /**
  * fat_rename - rename a file
  * @path   : path object
- * @oldname: old file name
+ * @dent   : pointer to cbmdirent with old file name
  * @newname: new file name
  *
- * This function renames the file oldname in the directory referenced by
+ * This function renames the file in dent in the directory referenced by
  * path to newname.
  */
-void fat_rename(path_t *path, uint8_t *oldname, uint8_t *newname) {
+void fat_rename(path_t *path, struct cbmdirent *dent, uint8_t *newname) {
   FRESULT res;
 
   partition[path->part].fatfs.curr_dir = path->fat;
-  pet2asc(oldname);
+  pet2asc(dent->name);
   pet2asc(newname);
-  res = f_rename(&partition[path->part].fatfs, oldname, newname);
+  res = f_rename(&partition[path->part].fatfs, dent->name, newname);
   if (res != FR_OK)
     parse_error(res, 0);
 }

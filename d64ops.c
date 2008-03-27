@@ -584,7 +584,7 @@ static uint16_t d64_freeblocks(uint8_t part) {
   return blocks;
 }
 
-static void d64_open_read(path_t *path, uint8_t *name, buffer_t *buf) {
+static void d64_open_read(path_t *path, struct cbmdirent *dent, buffer_t *buf) {
   /* WARNING: Ugly hack used here. The directory entry is still in  */
   /*          entrybuf because of match_entry in fatops.c/file_open */
   buf->data[0] = entrybuf[OFS_TRACK];
@@ -600,7 +600,7 @@ static void d64_open_read(path_t *path, uint8_t *name, buffer_t *buf) {
   buf->refill(buf);
 }
 
-static void d64_open_write(path_t *path, uint8_t *name, uint8_t type, buffer_t *buf, uint8_t append) {
+static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t *buf, uint8_t append) {
   dh_t dh;
   int8_t res;
   uint8_t t,s;
@@ -609,7 +609,7 @@ static void d64_open_write(path_t *path, uint8_t *name, uint8_t type, buffer_t *
 
   if (append) {
     /* Append case: Open the file and read the last sector */
-    d64_open_read(path,name,buf);
+    d64_open_read(path, dent, buf);
     while (!current_error && buf->data[0])
       buf->refill(buf);
 
@@ -692,6 +692,7 @@ static void d64_open_write(path_t *path, uint8_t *name, uint8_t type, buffer_t *
   }
 
   /* Create directory entry in entrybuf */
+  uint8_t *name = dent->name;
   memset(entrybuf+2, 0, sizeof(entrybuf)-2);  /* Don't overwrite the link pointer! */
   memset(entrybuf+OFS_FILE_NAME, 0xa0, CBM_NAME_LENGTH);
   ptr = entrybuf+OFS_FILE_NAME;
@@ -727,7 +728,7 @@ static void d64_open_write(path_t *path, uint8_t *name, uint8_t type, buffer_t *
   buf->pvt.d64.sector = s;
 }
 
-static uint8_t d64_delete(path_t *path, uint8_t *name) {
+static uint8_t d64_delete(path_t *path, struct cbmdirent *dent) {
   /* At this point entrybuf will contain the directory entry and    */
   /* matchdh will almost point to it (entry incremented in readdir) */
   buffer_t *buf;
@@ -777,7 +778,7 @@ static void d64_write_sector(buffer_t *buf, uint8_t part, uint8_t track, uint8_t
     image_write(part, sector_offset(track,sector), buf->data, 256, 1);
 }
 
-static void d64_rename(path_t *path, uint8_t *oldname, uint8_t *newname) {
+static void d64_rename(path_t *path, struct cbmdirent *dent, uint8_t *newname) {
   uint8_t *ptr;
 
   /* We're assuming that the caller has looked up the old name just   */

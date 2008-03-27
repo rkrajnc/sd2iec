@@ -199,7 +199,7 @@ static uint16_t find_empty_entry(uint8_t part) {
 /**
  * open_existing - open an existing file
  * @path      : path handle
- * @name      : name of the file
+ * @dent      : pointer to cbmdirent with name of the file
  * @type      : type of the file (not checked)
  * @buf       : buffer to be used
  * @appendflag: Flags if the file should be opened for appending
@@ -208,10 +208,10 @@ static uint16_t find_empty_entry(uint8_t part) {
  * either in read or append mode according to appendflag by calling
  * the appropiate fat_* functions.
  */
-static void open_existing(path_t *path, uint8_t *name, uint8_t type, buffer_t *buf, uint8_t appendflag) {
+static void open_existing(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t *buf, uint8_t appendflag) {
   uint16_t offset;
 
-  offset = find_entry(path->part, name);
+  offset = find_entry(path->part, dent->name);
   if (offset < M2I_ENTRY_OFFSET) {
     set_error(ERROR_FILE_NOT_FOUND);
     return;
@@ -222,10 +222,12 @@ static void open_existing(path_t *path, uint8_t *name, uint8_t type, buffer_t *b
     return;
   }
 
+  ustrcpy(dent->name, entrybuf+M2I_FATNAME_OFFSET);
+
   if (appendflag)
-    fat_open_write(path, entrybuf+M2I_FATNAME_OFFSET, type, buf, 1);
+    fat_open_write(path, dent, type, buf, 1);
   else
-    fat_open_read(path, entrybuf+M2I_FATNAME_OFFSET, buf);
+    fat_open_read(path, dent, buf);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -304,12 +306,12 @@ static uint8_t m2i_getlabel(path_t *path, uint8_t *label) {
   return image_read(path->part, 0, label, 16);
 }
 
-static void m2i_open_read(path_t *path, uint8_t *name, buffer_t *buf) {
+static void m2i_open_read(path_t *path, struct cbmdirent *dent, buffer_t *buf) {
   /* The type isn't checked anyway */
-  open_existing(path, name, TYPE_PRG, buf, 0);
+  open_existing(path, dent, TYPE_PRG, buf, 0);
 }
 
-static void m2i_open_write(path_t *path, uint8_t *name, uint8_t type, buffer_t *buf, uint8_t append) {
+static void m2i_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t *buf, uint8_t append) {
   uint16_t offset;
   uint8_t *str;
   uint8_t *nameptr;
@@ -317,9 +319,9 @@ static void m2i_open_write(path_t *path, uint8_t *name, uint8_t type, buffer_t *
   FRESULT res;
 
   if (append) {
-    open_existing(path, name, type, buf, 1);
+    open_existing(path, dent, type, buf, 1);
   } else {
-    if (check_invalid_name(name)) {
+    if (check_invalid_name(dent->name)) {
       set_error(ERROR_SYNTAX_JOKER);
       return;
     }
@@ -385,13 +387,13 @@ static void m2i_open_write(path_t *path, uint8_t *name, uint8_t type, buffer_t *
       return;
 
     /* Copy the CBM file name */
-    nameptr = name;
+    nameptr = dent->name;
     str = entrybuf+M2I_CBMNAME_OFFSET;
     while (*nameptr)
       *str++ = *nameptr++;
 
     /* Overwrite the original name */
-    ustrcpy(name, entrybuf+M2I_FATNAME_OFFSET);
+    ustrcpy(dent->name, entrybuf+M2I_FATNAME_OFFSET);
 
     /* Finish creating the M2I entry */
     entrybuf[M2I_FATNAME_OFFSET+8]  = ' ';
@@ -404,7 +406,7 @@ static void m2i_open_write(path_t *path, uint8_t *name, uint8_t type, buffer_t *
       return;
 
     /* Write the actual file */
-    fat_open_write(path, name, type, buf, append);
+    fat_open_write(path, dent, type, buf, append);
 
     /* Abort on error */
     if (current_error) {
@@ -415,10 +417,10 @@ static void m2i_open_write(path_t *path, uint8_t *name, uint8_t type, buffer_t *
   }
 }
 
-static uint8_t m2i_delete(path_t *path, uint8_t *name) {
+static uint8_t m2i_delete(path_t *path, struct cbmdirent *dent) {
   uint16_t offset;
 
-  offset = find_entry(path->part, name);
+  offset = find_entry(path->part, dent->name);
   if (offset == 1)
     return 255;
 
@@ -426,7 +428,8 @@ static uint8_t m2i_delete(path_t *path, uint8_t *name) {
     return 0;
 
   /* Ignore the result, we'll have to delete the entry anyway */
-  fat_delete(path, entrybuf+M2I_FATNAME_OFFSET);
+  ustrcpy(dent->name, entrybuf+M2I_FATNAME_OFFSET);
+  fat_delete(path, dent);
 
   entrybuf[0] = '-';
   if (image_write(path->part, offset, entrybuf, 1, 1))
@@ -435,13 +438,13 @@ static uint8_t m2i_delete(path_t *path, uint8_t *name) {
     return 1;
 }
 
-static void m2i_rename(path_t *path, uint8_t *oldname, uint8_t *newname) {
+static void m2i_rename(path_t *path, struct cbmdirent *dent, uint8_t *newname) {
   uint16_t offset;
   uint8_t *ptr;
 
   BUSY_LED_ON();
   /* Locate entry in the M2I file */
-  offset = find_entry(path->part, oldname);
+  offset = find_entry(path->part, dent->name);
   if (offset == 1) {
     if (!active_buffers)
       BUSY_LED_OFF();

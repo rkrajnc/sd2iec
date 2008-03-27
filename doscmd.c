@@ -490,7 +490,7 @@ void parse_rename(void) {
   if (first_match(&oldpath, oldname, FLAG_HIDDEN, &dent))
     return;
 
-  rename(&oldpath,oldname,newname);
+  rename(&oldpath, &dent, newname);
 }
 
 
@@ -625,7 +625,8 @@ void parse_doscommand(void) {
       } else {
         path.part = part;
         path.fat  = partition[part].current_dir;
-        i = file_delete(&path, command_buffer+i+1);
+        ustrcpy(dent.name, command_buffer+i+1);
+        i = file_delete(&path, &dent);
         if (i != 255)
           set_error_ts(ERROR_SCRATCHED,i,0);
       }
@@ -823,7 +824,7 @@ void parse_doscommand(void) {
       /* Skip directories */
       if ((dent.typeflags & TYPE_MASK) == TYPE_DIR)
         continue;
-      i = file_delete(&path, dent.name);
+      i = file_delete(&path, &dent);
       if (i != 255)
         count += i;
       else
