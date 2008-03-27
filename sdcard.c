@@ -220,7 +220,6 @@ static int sendCommand(const uint8_t  card,
 // Extended init sequence for SDHC support
 static uint8_t extendedInit(const uint8_t card) {
   uint8_t  i;
-  uint16_t counter;
   uint32_t answer;
 
   // Send CMD8: SEND_IF_COND
@@ -244,8 +243,18 @@ static uint8_t extendedInit(const uint8_t card) {
   // Verify echo-back of check pattern
   if ((answer & 0xff) != 0b10101010) {
     // Check pattern mismatch, working but not SD2.0 compliant
+    // The specs say we should not use the card, but let's try anyway.
     return TRUE;
   }
+
+  return TRUE;
+}
+#endif
+
+// SD common initialisation
+static uint8_t sdInit(const uint8_t card) {
+  uint8_t i;
+  uint16_t counter;
 
   counter = 0xffff;
   do {
@@ -268,7 +277,6 @@ static uint8_t extendedInit(const uint8_t card) {
   else
     return TRUE;
 }
-#endif
 
 /* Detect changes of SD card 0 */
 ISR(SD_CHANGE_VECT) {
@@ -366,16 +374,17 @@ DSTATUS disk_initialize(BYTE drv) {
     return STA_NOINIT | STA_NODISK;
 #endif
 
+  if (!sdInit(drv))
+    return STA_NOINIT | STA_NODISK;
+
   counter = 0xffff;
   // According to the spec READ_OCR should work at this point
   // without retries. One of my Sandisk-cards thinks otherwise.
   do {
     // Send CMD58: READ_OCR
     i = sendCommand(drv, READ_OCR, 0, 0);
-    if (i > 1) {
-      // kills my Sandisk 1G which requires the retries in the first place
-      // deselectCard();
-    }
+    if (i > 1)
+      deselectCard(drv);
   } while (i > 1 && counter-- > 0);
 
   if (counter > 0) {
