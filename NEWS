@@ -1,3 +1,9 @@
+2008-03-27 - release 0.6.4
+        - Change some details of the SD card initialisation
+        - Bugfix: Initialize cards only when sd2iec is accessed to avoid
+                  hogging the bus during this time.
+        - Prepare NKC configuration for bootloader and mega644
+
 2008-03-19 - release 0.6.3
         - Bugfix: Ignore trailing separation characters of B-* parameters
         - Bugfix: Always ignore volume labels while scanning for LFNs
