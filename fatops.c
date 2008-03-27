@@ -26,6 +26,7 @@
 */
 
 #include <avr/pgmspace.h>
+#include <ctype.h>
 #include <string.h>
 #include <stdint.h>
 #include "config.h"
@@ -42,6 +43,10 @@
 #include "ustring.h"
 #include "wrapops.h"
 #include "fatops.h"
+
+#define P00_HEADER_SIZE    26
+#define P00_CBMNAME_OFFSET 8
+static const PROGMEM char p00marker[] = "C64File";
 
 /* ------------------------------------------------------------------------- */
 /*  Utility functions                                                        */
@@ -296,13 +301,23 @@ void fat_open_read(path_t *path, struct cbmdirent *dent, buffer_t *buf) {
   uint8_t *name;
 
   pet2asc(dent->name);
-  name = dent->name;
+  if (dent->realname[0])
+    name = dent->realname;
+  else
+    name = dent->name;
+
   partition[path->part].fatfs.curr_dir = path->fat;
   res = f_open(&partition[path->part].fatfs,&buf->pvt.fh, name, FA_READ | FA_OPEN_EXISTING);
   if (res != FR_OK) {
     parse_error(res,1);
     free_buffer(buf);
     return;
+  }
+
+  if (dent->realname[0]) {
+    /* It's a [PSUR]00 file, skip the header */
+    /* If anything goes wrong here, refill will notice too */
+    f_lseek(&buf->pvt.fh, P00_HEADER_SIZE);
   }
 
   buf->read      = 1;
@@ -316,7 +331,7 @@ void fat_open_read(path_t *path, struct cbmdirent *dent, buffer_t *buf) {
 /**
  * fat_open_write - opens a file for writing
  * @path  : path of the file
- * @dent  : pointer to cbmdirent with name of the file
+ * @dent  : name of the file
  * @type  : type of the file
  * @buf   : buffer to be used
  * @append: Flags if the new data should be appended to the end of file
@@ -329,8 +344,24 @@ void fat_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t
   FRESULT res;
   uint8_t *name;
 
-  name = dent->name;
-  pet2asc(name);
+  if (dent->realname[0])
+    name = dent->realname;
+  else {
+    ustrcpy(entrybuf, dent->name);
+    if (type != TYPE_PRG && type != TYPE_RAW) {
+      /* Append .[PSUR]00 suffix to the file name */
+      name = entrybuf;
+      while (*name) name++;
+      *name++ = '.';
+      *name++ = pgm_read_byte(filetypes+3*type);
+      *name++ = '0';
+      *name++ = '0';
+      *name   = 0;
+    }
+    name = entrybuf;
+    pet2asc(name);
+  }
+
   partition[path->part].fatfs.curr_dir = path->fat;
   if (append) {
     res = f_open(&partition[path->part].fatfs, &buf->pvt.fh, name, FA_WRITE | FA_OPEN_EXISTING);
@@ -343,6 +374,21 @@ void fat_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t
     parse_error(res,0);
     free_buffer(buf);
     return;
+  }
+
+  if (!append && type != TYPE_PRG && type != TYPE_RAW) {
+    /* Write a [PSUR]00 header */
+    UINT byteswritten;
+
+    memset(entrybuf, 0, P00_HEADER_SIZE);
+    ustrcpy_P(entrybuf, p00marker);
+    memcpy(entrybuf+P00_CBMNAME_OFFSET, dent->name, CBM_NAME_LENGTH);
+    res = f_write(&buf->pvt.fh, entrybuf, P00_HEADER_SIZE, &byteswritten);
+    if (res != FR_OK || byteswritten != P00_HEADER_SIZE) {
+      parse_error(res,0);
+      free_buffer(buf);
+      return;
+    }
   }
 
   mark_write_buffer(buf);
@@ -379,6 +425,7 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
   FRESULT res;
   FILINFO finfo;
   uint8_t *ptr;
+  uint8_t typechar;
 
   finfo.lfn = entrybuf;
 
@@ -394,6 +441,93 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
   } while (finfo.fname[0] && (finfo.fattrib & AM_VOL));
 
   if (finfo.fname[0]) {
+    /* Copy name */
+    memset(dent->name, 0, sizeof(dent->name));
+
+    if (!finfo.lfn[0] || ustrlen(finfo.lfn) > CBM_NAME_LENGTH) {
+      ustrcpy(dent->name, finfo.fname);
+
+      ptr = dent->name;
+      while (*ptr) {
+        if (*ptr == '~') *ptr = 0xff;
+        ptr++;
+      }
+    } else {
+      /* Convert only LFNs to PETSCII, 8.3 are always upper-case */
+      ustrcpy(dent->name, finfo.lfn);
+      asc2pet(dent->name);
+    }
+
+    /* File type */
+    if (finfo.fattrib & AM_DIR) {
+      dent->typeflags = TYPE_DIR;
+      /* Hide directories starting with . */
+      if (dent->name[0] == '.')
+        dent->typeflags |= FLAG_HIDDEN;
+    } else
+      dent->typeflags = TYPE_PRG;
+
+    /* Search for the file extension */
+    ptr = ustrrchr(finfo.fname, '.')+1;
+    typechar = *ptr++;
+
+    if (!(finfo.fattrib & AM_DIR) &&
+        (typechar == 'P' || typechar == 'S' ||
+         typechar == 'U' || typechar == 'R') &&
+        isdigit(*ptr++) && isdigit(*ptr++)) {
+      /* [PSRU]00 file - try to read the internal name */
+      UINT bytesread;
+
+      res = l_opencluster(&partition[dh->part].fatfs, &partition[dh->part].imagehandle, finfo.clust);
+      if (res != FR_OK)
+        goto notp00;
+
+      res = f_read(&partition[dh->part].imagehandle, entrybuf, P00_HEADER_SIZE, &bytesread);
+      if (res != FR_OK)
+        goto notp00;
+
+      if (ustrcmp_P(entrybuf, p00marker))
+        goto notp00;
+
+      /* Copy the internal name */
+      memset(dent->name, 0, sizeof(dent->name));
+      ustrcpy(dent->name, entrybuf+P00_CBMNAME_OFFSET);
+
+      /* Remeber the real file name */
+      ustrcpy(dent->realname, finfo.fname);
+
+      /* Some programs pad the name with 0xa0 instead of 0 */
+      ptr = dent->name;
+      for (uint8_t i=0;i<16;i++,ptr++)
+        if (*ptr == 0xa0)
+          *ptr = 0;
+
+      finfo.fsize -= P00_HEADER_SIZE;
+
+      /* Set the file type */
+      switch (typechar) {
+      case 'P':
+        dent->typeflags = TYPE_PRG;
+        break;
+
+      case 'S':
+        dent->typeflags = TYPE_SEQ;
+        break;
+
+      case 'U':
+        dent->typeflags = TYPE_USR;
+        break;
+
+      case 'R':
+        dent->typeflags = TYPE_REL;
+        break;
+      }
+    } else
+      /* Not [PSUR]00 */
+      dent->realname[0] = 0;
+
+  notp00:
+
     if (finfo.fsize > 16255746)
       /* File too large -> size 63999 blocks */
       dent->blocksize = 63999;
@@ -402,30 +536,7 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
 
     dent->remainder = finfo.fsize % 254;
 
-    /* Copy name */
-    memset(dent->name, 0, sizeof(dent->name));
-
-    if (!finfo.lfn[0]) {
-      ptr = finfo.lfn = finfo.fname;
-      while (*ptr) {
-        if (*ptr == '~') *ptr = 0xff;
-        ptr++;
-      }
-    } else
-      /* Convert only LFNs to PETSCII, 8.3 are always upper-case */
-      asc2pet(finfo.lfn);
-
-    ustrcpy(dent->name, finfo.lfn);
-
-    /* Type+Flags */
-    if (finfo.fattrib & AM_DIR) {
-      dent->typeflags = TYPE_DIR;
-      /* Hide directories starting with . */
-      if (finfo.lfn[0] == '.')
-        dent->typeflags |= FLAG_HIDDEN;
-    } else
-      dent->typeflags = TYPE_PRG;
-
+    /* Read-Only and hidden flags */
     if (finfo.fattrib & AM_RDO)
       dent->typeflags |= FLAG_RO;
 
@@ -453,8 +564,12 @@ uint8_t fat_delete(path_t *path, struct cbmdirent *dent) {
   uint8_t *name;
 
   DIRTY_LED_ON();
-  name = dent->name;
-  pet2asc(name);
+  if (dent->realname[0]) {
+    name = dent->realname;
+  } else {
+    name = dent->name;
+    pet2asc(name);
+  }
   partition[path->part].fatfs.curr_dir = path->fat;
   res = f_unlink(&partition[path->part].fatfs, name);
 
@@ -706,11 +821,45 @@ void fat_rename(path_t *path, struct cbmdirent *dent, uint8_t *newname) {
   FRESULT res;
 
   partition[path->part].fatfs.curr_dir = path->fat;
-  pet2asc(dent->name);
-  pet2asc(newname);
-  res = f_rename(&partition[path->part].fatfs, dent->name, newname);
-  if (res != FR_OK)
-    parse_error(res, 0);
+  if (dent->realname[0]) {
+    /* [PSUR]00 rename, just change the internal file name */
+    UINT byteswritten;
+
+    res = f_open(&partition[path->part].fatfs, &partition[path->part].imagehandle, dent->realname, FA_WRITE|FA_OPEN_EXISTING);
+    if (res != FR_OK) {
+      parse_error(res,0);
+      return;
+    }
+
+    res = f_lseek(&partition[path->part].imagehandle, P00_CBMNAME_OFFSET);
+    if (res != FR_OK) {
+      parse_error(res,0);
+      return;
+    }
+
+    /* Copy the new name into dent->name so we can overwrite all 16 bytes */
+    memset(dent->name, 0, CBM_NAME_LENGTH);
+    ustrcpy(dent->name, newname);
+
+    res = f_write(&partition[path->part].imagehandle, newname, CBM_NAME_LENGTH, &byteswritten);
+    if (res != FR_OK || byteswritten != CBM_NAME_LENGTH) {
+      parse_error(res,0);
+      return;
+    }
+
+    res = f_close(&partition[path->part].imagehandle);
+    if (res != FR_OK) {
+      parse_error(res,0);
+      return;
+    }
+  } else {
+    /* Normal rename */
+    pet2asc(dent->name);
+    pet2asc(newname);
+    res = f_rename(&partition[path->part].fatfs, dent->name, newname);
+    if (res != FR_OK)
+      parse_error(res, 0);
+  }
 }
 
 /**

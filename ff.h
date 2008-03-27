@@ -76,7 +76,7 @@
 /* _MAX_LFN_LENGTH+1 characters long!               */
 /* Note that if _USE_LFN_DBCS is set, this value    */
 /* represents the characters needed, not bytes      */
-#define _MAX_LFN_LENGTH 16
+#define _MAX_LFN_LENGTH 20
 
 #define _USE_LFN_DBCS 0
 
@@ -293,6 +293,7 @@ FRESULT f_chdir (const UCHAR*);                             /* Change current di
 
 /* Low Level functions */
 FRESULT l_opendir(FATFS* fs, DWORD cluster, DIR *dirobj);   /* Open an existing directory by its start cluster */
+FRESULT l_opencluster(FATFS *fs, FIL *fp, DWORD clust);     /* Open a cluster by number as a read-only file */
 
 
 /* User defined function to give a current time to fatfs module */

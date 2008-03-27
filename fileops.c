@@ -528,6 +528,7 @@ void file_open(uint8_t secondary) {
       /* Normal write or non-existing rewrite */
       /* Doesn't exist: Copy name to dent */
       ustrcpy(dent.name, fname);
+      dent.realname[0] = 0;
       set_error(ERROR_OK); // because first_match has set FNF
     }
   } else

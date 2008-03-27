@@ -199,7 +199,7 @@ static uint16_t find_empty_entry(uint8_t part) {
 /**
  * open_existing - open an existing file
  * @path      : path handle
- * @dent      : pointer to cbmdirent with name of the file
+ * @dent      : pointer to cbmdirent struct with name of the file
  * @type      : type of the file (not checked)
  * @buf       : buffer to be used
  * @appendflag: Flags if the file should be opened for appending
@@ -263,6 +263,7 @@ static int8_t m2i_readdir(dh_t *dh, struct cbmdirent *dent) {
     /* Copy CBM file name */
     name_repad(' ', 0);
     memset(dent->name, 0, sizeof(dent->name));
+    memset(dent->realname, 0, sizeof(dent->realname));
     memcpy(dent->name, entrybuf+M2I_CBMNAME_OFFSET, CBM_NAME_LENGTH);
 
     /* Get file size */
@@ -308,7 +309,7 @@ static uint8_t m2i_getlabel(path_t *path, uint8_t *label) {
 
 static void m2i_open_read(path_t *path, struct cbmdirent *dent, buffer_t *buf) {
   /* The type isn't checked anyway */
-  open_existing(path, dent, TYPE_PRG, buf, 0);
+  open_existing(path, dent, TYPE_RAW, buf, 0);
 }
 
 static void m2i_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t *buf, uint8_t append) {
@@ -405,8 +406,8 @@ static void m2i_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
     if (image_write(path->part, offset, entrybuf, M2I_ENTRY_LEN, 1))
       return;
 
-    /* Write the actual file */
-    fat_open_write(path, dent, type, buf, append);
+    /* Write the actual file - always without P00 header */
+    fat_open_write(path, dent, TYPE_RAW, buf, append);
 
     /* Abort on error */
     if (current_error) {

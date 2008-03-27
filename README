@@ -209,6 +209,17 @@ frequency error is too big you WILL get wrong data which usually manifests
 as a FILE NOT FOUND error because the name the drive received was already
 garbled.
 
+x00 files:
+==========
+P00/S00/U00/R00 files are transparently supported, that means they show
+up in the directory listing with their internal file name instead of the
+FAT file name. Renaming them only changes the internal name. If you
+create new SEQ/USR/REL files they will automatically stored as
+S00/U00/R00 to preserve the file type; PRG files are stored header-less.
+
+x00 files are recognized by checking both the extension of the file
+(must be one of P00/S00/U00/R00) and the header signature.
+
 M2I files:
 ==========
 M2I files are fully supported. sd2iec supports SEQ and USR files in this
@@ -216,7 +227,8 @@ format in addition to PRG and DEL which were already implemented in MMC2IEC.
 For compatibility reasons the file type is not checked when opening files.
 Inside an M2I file the files are always shown as 0 (DEL) or 1 blocks
 because calling stat for every file was slowing down the directory listing
-too much.
+too much. For compatibility with existing M2I files the data files do not
+use P00 headers even when the file type is SEQ or USR.
 
 Changing Disk Images
 ====================

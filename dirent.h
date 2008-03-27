@@ -34,6 +34,8 @@
 #define TYPE_LENGTH 3
 #define TYPE_MASK 7
 #define EXT_TYPE_MASK 15
+
+/* Standard file types */
 #define TYPE_DEL 0
 #define TYPE_SEQ 1
 #define TYPE_PRG 2
@@ -42,9 +44,13 @@
 #define TYPE_CBM 5
 #define TYPE_DIR 6
 
+/* Internal file types used for the partition directory */
 #define TYPE_SYS 8
 #define TYPE_NAT 9
 #define TYPE_FAT 10
+
+/* Internal file type used to force files without header on FAT */
+#define TYPE_RAW 15
 
 /// Hidden is an unused bit on CBM
 #define FLAG_HIDDEN (1<<5)
@@ -85,6 +91,7 @@ struct cbmdirent {
   uint8_t  typeflags;
   uint32_t fatcluster;
   uint8_t  name[CBM_NAME_LENGTH+1];
+  uint8_t  realname[8+3+1+1];
 };
 
 /**

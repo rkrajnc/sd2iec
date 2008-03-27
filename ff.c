@@ -1509,6 +1509,21 @@ FRESULT f_open (
   return FR_OK;
 }
 
+FRESULT l_opencluster (
+  FATFS *fs,           /* Pointer to file system object */
+  FIL *fp,             /* Pointer to the blank file object */
+  DWORD clust          /* Cluster number to be opened */
+)
+{
+  fp->flag = FA_READ;
+  fp->org_clust = clust;
+  fp->fsize = (DWORD)fs->sects_clust * SS(fs);
+  fp->fptr = 0;
+  fp->sect_clust = 1;
+  fp->fs = fs;
+
+  return FR_OK;
+}
 
 
 

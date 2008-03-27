@@ -27,10 +27,12 @@
 #ifndef FILEOPS_H
 #define FILEOPS_H
 
+#include <avr/pgmspace.h>
 #include "dirent.h"
 #include "buffers.h"
 
 enum open_modes { OPEN_READ, OPEN_WRITE, OPEN_APPEND, OPEN_MODIFY };
+extern const PROGMEM uint8_t filetypes[];
 
 /* Parses a filename in command_buffer and opens that file */
 void file_open(uint8_t secondary);
