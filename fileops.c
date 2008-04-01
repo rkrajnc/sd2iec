@@ -190,20 +190,26 @@ static uint8_t pdir_refill(buffer_t* buf) {
   struct cbmdirent dent;
 
   buf->position = 0;
-  if(buf->pvt.part == max_part) {
-    buf->lastused = 2;
-    buf->sendeoi = 1;
-    memset(buf->data,0,2);
-    return 0;
-  }
   /* read volume name */
-  if (fat_getvolumename(buf->pvt.part, dent.name)) {
-    free_buffer(buf);
+  while(buf->pvt.pdir.part < max_part) {
+    if (fat_getvolumename(buf->pvt.pdir.part, dent.name)) {
+      free_buffer(buf);
+      return 0;
+    }
+    dent.blocksize=++buf->pvt.pdir.part;
+    dent.typeflags = TYPE_FAT;
+
+    /* Parse the name pattern */
+    if (buf->pvt.pdir.matchstr &&
+        !match_name(buf->pvt.pdir.matchstr, &dent))
+      continue;
+
+    addentry(&dent, buf->data);
     return 0;
   }
-  dent.blocksize=++buf->pvt.part;
-  dent.typeflags = TYPE_FAT;
-  addentry(&dent, buf->data);
+  buf->lastused = 2;
+  buf->sendeoi = 1;
+  memset(buf->data,0,2);
   return 0;
 }
 
@@ -256,6 +262,7 @@ static void load_directory(uint8_t secondary) {
   if (!buf)
     return;
 
+  uint8_t *name;
   if (command_length > 2) {
     if(command_buffer[1]=='=' && command_buffer[2]=='P') {
       /* Parse Partition Directory */
@@ -272,11 +279,19 @@ static void load_directory(uint8_t secondary) {
       /* Let the refill callback handly everything else */
       buf->refill = pdir_refill;
 
+      /* Parse the name pattern */
+      if (parse_path(command_buffer+3, &path, &name, 0)) {
+        free_buffer(buf);
+        return;
+      }
+
+      if (ustrlen(name) != 0)
+        buf->pvt.pdir.matchstr = name;
+
       return;
     }
-    /* Parse the name pattern */
-    uint8_t *name;
 
+    /* Parse the name pattern */
     if (parse_path(command_buffer+1, &path, &name, 0)) {
       free_buffer(buf);
       return;

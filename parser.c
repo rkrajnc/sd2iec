@@ -88,7 +88,7 @@ uint8_t parse_partition(uint8_t **buf) {
  * This function tests if matchstr matches name in dent.
  * Returns 1 for a match, 0 otherwise.
  */
-static uint8_t match_name(uint8_t *matchstr, struct cbmdirent *dent) {
+uint8_t match_name(uint8_t *matchstr, struct cbmdirent *dent) {
   uint8_t *filename = dent->name;
   uint8_t *starpos;
 

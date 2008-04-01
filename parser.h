@@ -36,6 +36,9 @@ extern uint8_t max_part;
 
 uint8_t parse_partition(uint8_t **buf);
 
+/* Performs CBM DOS pattern matching */
+uint8_t match_name(uint8_t *matchstr, struct cbmdirent *dent);
+
 /* Returns the next matching dirent */
 int8_t next_match(dh_t *dh, uint8_t *matchstr, uint8_t type, struct cbmdirent *dent);
 

@@ -73,7 +73,10 @@ typedef struct buffer_s {
     } dir;
     FIL fh;              /* File access via FAT */
     d64fh_t d64;         /* File access on D64  */
-    uint8_t part;        /* partition number for $=P */
+    struct {
+      uint8_t part;      /* partition number for $=P */
+      uint8_t *matchstr; /* Pointer to filename pattern */
+    } pdir;
   } pvt;
 } buffer_t;
 
