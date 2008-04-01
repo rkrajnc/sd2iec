@@ -20,7 +20,6 @@
 #include <inttypes.h>
 #include <avr/io.h>
 #include "config.h"
-#include "sdcard.h"
 #include "ata.h"
 #include "diskio.h"
 #include "uart.h"
@@ -40,10 +39,6 @@ void init_disk(void) {
   ATA_PORT_CTRL_OUT=ATA_REG_IDLE;
   ATA_PORT_CTRL_DDR=ATA_REG_IDLE;
   ATA_PORT_RESET_DDR |= ATA_PIN_RESET;
-  ATA_reset();
-}
-
-void ATA_reset(void) {
   uint8_t i=0;
   ATA_PORT_RESET_OUT &= (uint8_t)~ATA_PIN_RESET;
   ATA_PORT_CTRL_OUT=ATA_REG_IDLE; // bring active low lines high
@@ -140,6 +135,8 @@ DSTATUS disk_initialize (BYTE drv) {
   uint8_t status;
   
   if(drv>1) return STA_NOINIT;
+  if(ATA_drv_flags[drv]&STA_NODISK)
+    return STA_NOINIT; // cannot initialize a drive with no disk in it.
   // we need to set the drive.
   ATA_write_reg (ATA_REG_LBA3, 0xe0 | (drv?ATA_DEV_SLAVE:ATA_DEV_MASTER));
   // we should set a timeout on bsy();
@@ -158,17 +155,18 @@ DSTATUS disk_initialize (BYTE drv) {
       //ATA_write_reg (ATA_REG_SECCNT, 1);
       //ATA_send_command (ATA_CMD_FEATURES);
       ATA_send_command(ATA_CMD_IDENTIFY);
-      if(ATA_drq()&ATA_STATUS_ERR) {
-        return STA_NOINIT;
+      if(!(ATA_drq()&ATA_STATUS_ERR)) {
+        ATA_read_data(data,49,83-49+1);
+        if((data[1] & 0x02)) { /* LBA support */
+          if(data[(83-49)*2 + 1]&0x04) /* 48 bit addressing... */
+            ATA_drv_flags[drv] |= ATA_FL_48BIT;
+          ATA_drv_flags[drv]&=(uint8_t)~STA_NOINIT;
+          return ATA_drv_flags[drv]&STA_NOINIT;
+        }
       }
-      ATA_read_data(data,49,83-49+1);
-      if((data[1] & 0x02) == 0) /* no LBA support */
-        return STA_NOINIT;
-      if(data[(83-49)*2 + 1]&0x04) /* 48 bit addressing... */
-        ATA_drv_flags[drv] |= ATA_FL_48BIT;
-      ATA_drv_flags[drv]&=(uint8_t)~STA_NOINIT;
     }
   }
+  ATA_drv_flags[drv]|=STA_NODISK; // no disk in drive
   return ATA_drv_flags[drv]&STA_NOINIT;
 }
 
