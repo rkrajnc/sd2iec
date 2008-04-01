@@ -493,7 +493,7 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
       memset(dent->name, 0, sizeof(dent->name));
       ustrcpy(dent->name, entrybuf+P00_CBMNAME_OFFSET);
 
-      /* Remeber the real file name */
+      /* Remember the real file name */
       ustrcpy(dent->realname, finfo.fname);
 
       /* Some programs pad the name with 0xa0 instead of 0 */
@@ -658,7 +658,7 @@ void fat_mkdir(path_t *path, uint8_t *dirname) {
 }
 
 /**
- * fat_getpartname - Get the partition label
+ * fat_getvolumename - Get the volume label
  * @part : partition to request
  * @label: pointer to the buffer for the label (16 characters)
  *
