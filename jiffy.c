@@ -69,7 +69,7 @@ static inline uint8_t has_timed_out(void) {
 /* =============================================================== */
 
 #define JIFFY_OFFSET_SEND 3
-#define JIFFY_OFFSET_RECV 6
+#define JIFFY_OFFSET_RECV 3
 
 uint8_t jiffy_receive(uint8_t *busstate) {
   uint8_t data,tmp;

@@ -36,7 +36,7 @@
 /* bitpair read/write. They were determined experimentally to center the */
 /* range of working OSCCAL values around the default value.              */
 #define JIFFY_OFFSET_WRITE 10
-#define JIFFY_OFFSET_READ  18
+#define JIFFY_OFFSET_READ  10
 
 	.section .text
 
