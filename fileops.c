@@ -263,12 +263,14 @@ static void load_directory(uint8_t secondary) {
     return;
 
   uint8_t *name;
+
+  buf->secondary = secondary;
+  buf->read      = 1;
+  buf->lastused  = 31;
+
   if (command_length > 2) {
     if(command_buffer[1]=='=' && command_buffer[2]=='P') {
       /* Parse Partition Directory */
-      buf->secondary = secondary;
-      buf->read      = 1;
-      buf->lastused  = 31;
 
       /* copy static header to start of buffer */
       memcpy_P(buf->data, dirheader, sizeof(dirheader));
@@ -276,17 +278,17 @@ static void load_directory(uint8_t secondary) {
       /* set partition number */
       buf->data[HEADER_OFFSET_DRIVE] = max_part;
 
-      /* Let the refill callback handly everything else */
+      /* Let the refill callback handle everything else */
       buf->refill = pdir_refill;
 
-      /* Parse the name pattern */
-      if (parse_path(command_buffer+3, &path, &name, 0)) {
-        free_buffer(buf);
-        return;
-      }
-
-      if (ustrlen(name) != 0)
+      if(command_length>3) {
+        /* Parse the name pattern */
+        if (parse_path(command_buffer+3, &path, &name, 0)) {
+          free_buffer(buf);
+          return;
+        }
         buf->pvt.pdir.matchstr = name;
+      }
 
       return;
     }
@@ -352,10 +354,6 @@ static void load_directory(uint8_t secondary) {
     }
   }
 
-  buf->secondary = secondary;
-  buf->read      = 1;
-  buf->lastused  = 31;
-
   /* copy static header to start of buffer */
   memcpy_P(buf->data, dirheader, sizeof(dirheader));
 
@@ -374,7 +372,7 @@ static void load_directory(uint8_t secondary) {
     return;
   }
 
-  /* Let the refill callback handly everything else */
+  /* Let the refill callback handle everything else */
   buf->refill = dir_refill;
 
   return;
