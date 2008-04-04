@@ -48,6 +48,8 @@
 #define P00_CBMNAME_OFFSET 8
 static const PROGMEM char p00marker[] = "C64File";
 
+typedef enum { EXT_UNKNOWN, EXT_IS_X00, EXT_IS_TYPE } exttype_t;
+
 uint8_t file_extension_mode;
 
 /* ------------------------------------------------------------------------- */
@@ -127,6 +129,38 @@ void parse_error(FRESULT res, uint8_t readflag) {
     set_error_ts(ERROR_SYNTAX_UNABLE,res,99);
     break;
   }
+}
+
+/**
+ * check_extension - check for known file-type-based name extensions
+ * @name: pointer to the file name
+ * @ext : pointer to pointer to the file extension
+ *
+ * This function checks if the given file name has an extension that
+ * indicates a specific file type like PRG/SEQ/P00/S00/... The ext
+ * pointer will be set to the first character of the extension if
+ * any is present or NULL if not. Returns EXT_IS_X00 for x00,
+ * EXT_IS_TYPE for PRG/SEQ/... or EXT_UNKNOWN for an unknown file extension.
+ */
+static exttype_t check_extension(uint8_t *name, uint8_t **ext) {
+  uint8_t f,s,t;
+
+  /* Search for the file extension */
+  if ((*ext = ustrrchr(name, '.')) != NULL) {
+    f = *(++(*ext));
+    s = *(*ext+1);
+    t = *(*ext+2);
+    if ((f == 'P' || f == 'S' ||
+         f == 'U' || f == 'R') &&
+        isdigit(s) && isdigit(t))
+      return EXT_IS_X00;
+    else if ((f=='P' && s == 'R' && t == 'G') ||
+             (f=='S' && s == 'E' && t == 'Q') ||
+             (f=='R' && s == 'E' && t == 'L') ||
+             (f=='U' && s == 'S' && t == 'R'))
+      return EXT_IS_TYPE;
+  }
+  return EXT_UNKNOWN;
 }
 
 /**
@@ -300,7 +334,7 @@ static uint8_t fat_file_close(buffer_t *buf) {
  */
 void fat_open_read(path_t *path, struct cbmdirent *dent, buffer_t *buf) {
   FRESULT res;
-  uint8_t *name;
+  uint8_t *name,*ext;
 
   pet2asc(dent->name);
   if (dent->realname[0])
@@ -316,7 +350,7 @@ void fat_open_read(path_t *path, struct cbmdirent *dent, buffer_t *buf) {
     return;
   }
 
-  if (dent->realname[0]) {
+  if (dent->realname[0] && check_extension(dent->realname, &ext) == EXT_IS_X00) {
     /* It's a [PSUR]00 file, skip the header */
     /* If anything goes wrong here, refill will notice too */
     f_lseek(&buf->pvt.fh, P00_HEADER_SIZE);
@@ -353,27 +387,36 @@ void fat_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t
   else {
     ustrcpy(entrybuf, dent->name);
     pet2asc(entrybuf);
-    if (type != TYPE_RAW && file_extension_mode != 0 && (
-         (file_extension_mode == 1 && type != TYPE_PRG) ||
-         (file_extension_mode == 2)
-        )) {
-      /* Append .[PSUR]00 suffix to the file name */
-      name = entrybuf;
-      while (*name) {
-        if (isalnum(*name) || *name == '!' ||
-            (*name >= '#' && *name <= ')') ||
-            *name == '-') {
-          name++;
-        } else {
-          *name++ = '_';
+    if (type != TYPE_RAW && file_extension_mode != 0) {
+      if ((file_extension_mode == 1 && type != TYPE_PRG) ||
+          (file_extension_mode == 2)
+          ) {
+        /* Append .[PSUR]00 suffix to the file name */
+        name = entrybuf;
+        while (*name) {
+          if (isalnum(*name) || *name == '!' ||
+              (*name >= '#' && *name <= ')') ||
+              *name == '-') {
+            name++;
+          } else {
+            *name++ = '_';
+          }
         }
+        *name++ = '.';
+        *name++ = pgm_read_byte(filetypes+3*type);
+        *name++ = '0';
+        x00ext = name;
+        *name++ = '0';
+        *name   = 0;
+      } else if ((file_extension_mode == 3 && type != TYPE_PRG) ||
+                 (file_extension_mode == 4)) {
+        /* Append type suffix to the file name */
+        name = entrybuf;
+        while (*name) name++;
+        *name++ = '.';
+        memcpy_P(name, filetypes + TYPE_LENGTH * (type & EXT_TYPE_MASK), TYPE_LENGTH);
+        *(name+3) = 0;
       }
-      *name++ = '.';
-      *name++ = pgm_read_byte(filetypes+3*type);
-      *name++ = '0';
-      x00ext = name;
-      *name++ = '0';
-      *name   = 0;
     }
     name = entrybuf;
   }
@@ -494,21 +537,14 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
       /* Hide directories starting with . */
       if (dent->name[0] == '.')
         dent->typeflags |= FLAG_HIDDEN;
-    } else
-      dent->typeflags = TYPE_PRG;
-
-    /* Search for the file extension */
-    ptr = ustrrchr(finfo.fname, '.');
-    if (ptr++ != NULL) {
-      typechar = *ptr++;
-
-      if (!(finfo.fattrib & AM_DIR) &&
-          (typechar == 'P' || typechar == 'S' ||
-           typechar == 'U' || typechar == 'R') &&
-          isdigit(*ptr++) && isdigit(*ptr++)) {
+    } else {
+      /* Search for the file extension */
+      res = check_extension(finfo.fname, &ptr);
+      if (res == EXT_IS_X00) {
         /* [PSRU]00 file - try to read the internal name */
         UINT bytesread;
 
+        typechar = *ptr;
         res = l_opencluster(&partition[dh->part].fatfs, &partition[dh->part].imagehandle, finfo.clust);
         if (res != FR_OK)
           goto notp00;
@@ -535,28 +571,38 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
 
         finfo.fsize -= P00_HEADER_SIZE;
 
-        /* Set the file type */
-        switch (typechar) {
-        case 'P':
-          dent->typeflags = TYPE_PRG;
-          break;
-          
-        case 'S':
-          dent->typeflags = TYPE_SEQ;
-          break;
-          
-        case 'U':
-          dent->typeflags = TYPE_USR;
-          break;
-          
-        case 'R':
-          dent->typeflags = TYPE_REL;
-          break;
-        }
+      } else if (res == EXT_IS_TYPE) {
+        /* Type extension */
+        typechar = *ptr;
+        uint8_t i = ustrlen(dent->name)-4;
+        memset(dent->name+i, 0, sizeof(dent->name)-i);
+        ustrcpy(dent->realname, finfo.fname);
+
+      } else { /* res == EXT_UNKNOWN */
+        /* Unknown extension: PRG */
+        typechar = 'P';
+      }
+
+    notp00:
+      /* Set the file type */
+      switch (typechar) {
+      case 'P':
+        dent->typeflags = TYPE_PRG;
+        break;
+
+      case 'S':
+        dent->typeflags = TYPE_SEQ;
+        break;
+
+      case 'U':
+        dent->typeflags = TYPE_USR;
+        break;
+
+      case 'R':
+        dent->typeflags = TYPE_REL;
+        break;
       }
     }
-
-  notp00:
 
     if (finfo.fsize > 16255746)
       /* File too large -> size 63999 blocks */

@@ -109,6 +109,8 @@ Supported commands:
                0: Never write x00 format files.
                1: Write x00 format files for SEQ/USR/REL, but not for PRG
                2: Always write x00 format files.
+               3: Use SEQ/USR/REL file extensions, no x00 header
+               4: Same as 3, but also for PRG
 
   - XJ+/XJ-  Set or reset the JiffyDOS protocol support flag. Default state
              is disabled for compatibility reasons. This flag can be saved
