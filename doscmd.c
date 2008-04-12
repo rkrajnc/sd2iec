@@ -408,6 +408,13 @@ void parse_user(void) {
   case 'J':
   case ':':
     /* Reset - technically hard-reset */
+    /* Faked because Ultima 5 sends UJ. */
+    free_all_buffers(0);
+    set_error(ERROR_DOSVERSION);
+    break;
+
+  case 202: /* Shift-J */
+    /* The real hard reset command */
     cli();
     restart_call();
     break;

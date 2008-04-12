@@ -93,8 +93,12 @@ Supported commands:
 
 - UI/UJ
   Soft/Hard reset - UI just sets the "73,SD2IEC..." message on the
-  error channel, UJ causes a restart of the AVR processor (skipping
-  the bootloader if installed).
+  error channel, UJ closes all active buffers but doesn't reset the
+  currect directory, mounted image, swap list or anything else.
+
+- U<Shift-J>
+  Real hard reset - this command causes a restart of the AVR processor
+  (skipping the bootloader if installed). <Shift-J> is character code 202.
 
 - X: Extended commands. If you use JiffyDOS, you can send them by using
   @"X..." - without quotes you'll just receive an error.
