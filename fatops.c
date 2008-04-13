@@ -353,7 +353,10 @@ void fat_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t
   else {
     ustrcpy(entrybuf, dent->name);
     pet2asc(entrybuf);
-    if (type != TYPE_PRG && type != TYPE_RAW) {
+    if (type != TYPE_RAW && file_extension_mode != 0 && (
+         (file_extension_mode == 1 && type != TYPE_PRG) ||
+         (file_extension_mode == 2)
+        )) {
       /* Append .[PSUR]00 suffix to the file name */
       name = entrybuf;
       while (*name) {

@@ -243,7 +243,7 @@ static void parse_xcommand(void) {
     /* Change file extension mode */
     str = command_buffer+2;
     num = parse_number(&str);
-    if (num > 1) {
+    if (num > 2) {
       set_error(ERROR_SYNTAX_UNKNOWN);
     } else {
       file_extension_mode = num;

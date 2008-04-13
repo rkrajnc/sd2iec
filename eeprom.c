@@ -66,8 +66,9 @@ void read_configuration(void) {
   uint16_t i,size;
   uint8_t checksum;
 
-  /* Enable Jiffy by default */
-  iec_data.iecflags |= JIFFY_ENABLED;
+  /* Set default values */
+  iec_data.iecflags   |= JIFFY_ENABLED;  /* JiffyDos enabled */
+  file_extension_mode  = 1;              /* Store x00 extensions except for PRG */
 
   size = eeprom_read_word(&storedconfig.structsize);
 

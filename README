@@ -103,6 +103,13 @@ Supported commands:
 - X: Extended commands. If you use JiffyDOS, you can send them by using
   @"X..." - without quotes you'll just receive an error.
 
+  - XEnum    Sets the "file extension mode". This setting controls if
+             files on FAT are written with an x00 header and extension or not.
+             Possible values for num are:
+               0: Never write x00 format files.
+               1: Write x00 format files for SEQ/USR/REL, but not for PRG
+               2: Always write x00 format files.
+
   - XJ+/XJ-  Set or reset the JiffyDOS protocol support flag. Default state
              is disabled for compatibility reasons. This flag can be saved
              in the EEPROM using XW.
@@ -217,12 +224,13 @@ x00 files:
 ==========
 P00/S00/U00/R00 files are transparently supported, that means they show
 up in the directory listing with their internal file name instead of the
-FAT file name. Renaming them only changes the internal name. If you
-create new SEQ/USR/REL files they will automatically stored as
-S00/U00/R00 to preserve the file type; PRG files are stored header-less.
+FAT file name. Renaming them only changes the internal name. The XE
+command defines if x00 extensions are used when writing files, by
+default sd2iec uses them for SEQ/USR/REL files but not for PRG.
+Parsing of x00 files is always enabled even when writing them is not.
 
 x00 files are recognized by checking both the extension of the file
-(must be one of P00/S00/U00/R00) and the header signature.
+(P/S/U/R with a two-digit suffix) and the header signature.
 
 Disk Images:
 ============
