@@ -224,6 +224,15 @@ S00/U00/R00 to preserve the file type; PRG files are stored header-less.
 x00 files are recognized by checking both the extension of the file
 (must be one of P00/S00/U00/R00) and the header signature.
 
+Disk Images:
+============
+Disk images are recognized by their file extension (.D64, .D71) and
+their file size (must be one of 174848, 175531, 349696, 351062).
+If the image has an error info block appended it will be used to simulate
+read errors. Writing to a sector with an error will always work, but
+it will not clear the indicated error. D71 images are only used
+single-sided for now, as if such a disk was used in a 1541.
+
 M2I files:
 ==========
 M2I files are fully supported. sd2iec supports SEQ and USR files in this

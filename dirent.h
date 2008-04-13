@@ -154,6 +154,7 @@ typedef struct dh_s {
  * @current_dir: current directory on FAT as seen by sd2iec
  * @fop        : pointer to the fileops structure for this partition
  * @imagehandle: file handle of a mounted image file on this partition
+ * @imagetype  : disk image type mounted on this partition
  *
  * This data structure holds per-partition data.
  */
@@ -162,6 +163,7 @@ typedef struct partition_s {
   uint32_t               current_dir;
   const struct fileops_s *fop;
   FIL                    imagehandle;
+  uint8_t                imagetype;
 } partition_t;
 
 #endif

@@ -31,4 +31,6 @@
 
 extern const fileops_t d64ops;
 
+uint8_t d64_mount(uint8_t part);
+
 #endif

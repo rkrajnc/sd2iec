@@ -625,7 +625,8 @@ uint8_t fat_chdir(path_t *path, uint8_t *dirname) {
     uint8_t *ext = ustrrchr(dirname, '.');
 
     if (ext && (!ustrcasecmp_P(ext, PSTR(".m2i")) ||
-                !ustrcasecmp_P(ext, PSTR(".d64")))) {
+                !ustrcasecmp_P(ext, PSTR(".d64")) ||
+                !ustrcasecmp_P(ext, PSTR(".d71")) )) {
       /* D64/M2I mount request */
       free_all_buffers(1);
       /* Open image file */
@@ -637,8 +638,11 @@ uint8_t fat_chdir(path_t *path, uint8_t *dirname) {
 
       if (!ustrcasecmp_P(ext, PSTR(".m2i")))
         partition[path->part].fop = &m2iops;
-      else
+      else {
+        if (d64_mount(path->part))
+          return 1;
         partition[path->part].fop = &d64ops;
+      }
 
       partition[path->part].current_dir = partition[path->part].fatfs.curr_dir;
       return 0;

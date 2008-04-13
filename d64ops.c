@@ -33,6 +33,7 @@
 #include "errormsg.h"
 #include "fatops.h"
 #include "ff.h"
+#include "parser.h"
 #include "wrapops.h"
 #include "d64ops.h"
 
@@ -53,6 +54,14 @@
 #define BAM_BYTES_PER_TRACK 4
 #define FILE_INTERLEAVE 10
 #define DIR_INTERLEAVE 3
+
+#define D64_TYPE_MASK 3
+#define D64_TYPE_NONE 0
+#define D64_TYPE_D64  1
+#define D64_TYPE_D71  2
+#define D64_TYPE_D81  3
+
+#define D64_HAS_ERRORINFO 128
 
 /* ------------------------------------------------------------------------- */
 /*  Utility functions                                                        */
@@ -516,6 +525,41 @@ static uint8_t d64_write_cleanup(buffer_t *buf) {
 /* ------------------------------------------------------------------------- */
 /*  fileops-API                                                              */
 /* ------------------------------------------------------------------------- */
+
+uint8_t d64_mount(uint8_t part) {
+  uint32_t fsize = partition[part].imagehandle.fsize;
+
+  switch (fsize) {
+  case 174848:
+    partition[part].imagetype = D64_TYPE_D64;
+    break;
+
+  case 175531:
+    partition[part].imagetype = D64_TYPE_D64 | D64_HAS_ERRORINFO;
+    break;
+
+  case 349696:
+    partition[part].imagetype = D64_TYPE_D71;
+    break;
+
+  case 351062:
+    partition[part].imagetype = D64_TYPE_D71 | D64_HAS_ERRORINFO;
+    break;
+    /*
+  case 819200:
+    partition[part].imagetype = D64_TYPE_D81;
+    break;
+
+  case 822400:
+    partition[part].imagetype = D64_TYPE_D81 | D64_HAS_ERRORINFO;
+    break;
+    */
+  default:
+    set_error(ERROR_IMAGE_INVALID);
+    return 1;
+  }
+  return 0;
+}
 
 static uint8_t d64_opendir(dh_t *dh, path_t *path) {
   dh->part = path->part;
