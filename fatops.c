@@ -350,10 +350,19 @@ void fat_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t
     name = dent->realname;
   else {
     ustrcpy(entrybuf, dent->name);
+    pet2asc(entrybuf);
     if (type != TYPE_PRG && type != TYPE_RAW) {
       /* Append .[PSUR]00 suffix to the file name */
       name = entrybuf;
-      while (*name) name++;
+      while (*name) {
+        if (isalnum(*name) || *name == '!' ||
+            (*name >= '#' && *name <= ')') ||
+            *name == '-') {
+          name++;
+        } else {
+          *name++ = '_';
+        }
+      }
       *name++ = '.';
       *name++ = pgm_read_byte(filetypes+3*type);
       *name++ = '0';
@@ -361,7 +370,6 @@ void fat_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t
       *name   = 0;
     }
     name = entrybuf;
-    pet2asc(name);
   }
 
   partition[path->part].fatfs.curr_dir = path->fat;
