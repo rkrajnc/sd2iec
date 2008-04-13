@@ -344,7 +344,9 @@ void fat_open_read(path_t *path, struct cbmdirent *dent, buffer_t *buf) {
  */
 void fat_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t *buf, uint8_t append) {
   FRESULT res;
-  uint8_t *name;
+  uint8_t *name, *x00ext;
+
+  x00ext = NULL;
 
   if (dent->realname[0])
     name = dent->realname;
@@ -366,6 +368,7 @@ void fat_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t
       *name++ = '.';
       *name++ = pgm_read_byte(filetypes+3*type);
       *name++ = '0';
+      x00ext = name;
       *name++ = '0';
       *name   = 0;
     }
@@ -377,8 +380,21 @@ void fat_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t
     res = f_open(&partition[path->part].fatfs, &buf->pvt.fh, name, FA_WRITE | FA_OPEN_EXISTING);
     if (res == FR_OK)
       res = f_lseek(&buf->pvt.fh, buf->pvt.fh.fsize);
-  } else
-    res = f_open(&partition[path->part].fatfs, &buf->pvt.fh, name, FA_WRITE | FA_CREATE_NEW);
+  } else {
+    do {
+      res = f_open(&partition[path->part].fatfs, &buf->pvt.fh, name, FA_WRITE | FA_CREATE_NEW);
+      if (res == FR_EXIST && x00ext != NULL) {
+        /* File exists, increment extension */
+        *x00ext += 1;
+        if (*x00ext == '9'+1) {
+          *x00ext = '0';
+          *(x00ext-1) += 1;
+          if (*(x00ext-1) == '9'+1)
+            break;
+        }
+      }
+    } while (res == FR_EXIST);
+  }
 
   if (res != FR_OK) {
     parse_error(res,0);
@@ -386,7 +402,7 @@ void fat_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t
     return;
   }
 
-  if (!append && type != TYPE_PRG && type != TYPE_RAW) {
+  if (!append && x00ext != NULL) {
     /* Write a [PSUR]00 header */
     UINT byteswritten;
 
