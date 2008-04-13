@@ -234,10 +234,23 @@ static void handle_memwrite(void) {
 /* ------------ */
 
 static void parse_xcommand(void) {
+  uint8_t num;
   uint8_t *str;
   path_t path; // FIXME: use global? Dupe in parse_command
 
   switch (command_buffer[1]) {
+  case 'E':
+    /* Change file extension mode */
+    str = command_buffer+2;
+    num = parse_number(&str);
+    if (num > 1) {
+      set_error(ERROR_SYNTAX_UNKNOWN);
+    } else {
+      file_extension_mode = num;
+      set_error_ts(ERROR_STATUS,iec_data.device_address,0);
+    }
+    break;
+
   case 'J':
     /* Jiffy enable/disable */
     switch (command_buffer[2]) {

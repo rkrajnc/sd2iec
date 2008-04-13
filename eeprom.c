@@ -27,6 +27,7 @@
 #include <avr/eeprom.h>
 #include <avr/io.h>
 #include "config.h"
+#include "fatops.h"
 #include "iec.h"
 #include "eeprom.h"
 
@@ -34,20 +35,24 @@
  * struct storedconfig - in-eeprom data structure
  * @dummy      : EEPROM position 0 is unused
  * @checksum   : Checksum over the EEPROM contents
+ * @structsize : size of the eeprom structure
  * @osccal     : stored value of OSCCAL
  * @jiffyflag  : stored value of jiffy_enabled
  * @address    : device address set by software
  * @hardaddress: device address set by jumpers
+ * @fileexts   : file extension mapping mode
  *
  * This is the data structure for the contents of the EEPROM.
  */
 static EEMEM struct {
-  uint8_t dummy;
-  uint8_t checksum;
-  uint8_t osccal;
-  uint8_t jiffyflag;
-  uint8_t address;
-  uint8_t hardaddress;
+  uint8_t  dummy;
+  uint8_t  checksum;
+  uint16_t structsize;
+  uint8_t  osccal;
+  uint8_t  jiffyflag;
+  uint8_t  address;
+  uint8_t  hardaddress;
+  uint8_t  fileexts;
 } storedconfig;
 
 /**
@@ -58,15 +63,17 @@ static EEMEM struct {
  * be changed.
  */
 void read_configuration(void) {
-  uint16_t i;
+  uint16_t i,size;
   uint8_t checksum;
 
   /* Enable Jiffy by default */
   iec_data.iecflags |= JIFFY_ENABLED;
 
+  size = eeprom_read_word(&storedconfig.structsize);
+
   /* Calculate checksum of EEPROM contents */
   checksum = 0;
-  for (i=2; i<sizeof(storedconfig); i++)
+  for (i=2; i<size; i++)
     checksum += eeprom_read_byte((uint8_t *)i);
 
   /* Abort if the checksum doesn't match */
@@ -79,6 +86,8 @@ void read_configuration(void) {
     iec_data.iecflags &= (uint8_t)~JIFFY_ENABLED;
   if (eeprom_read_byte(&storedconfig.hardaddress) == DEVICE_SELECT)
     iec_data.device_address = eeprom_read_byte(&storedconfig.address);
+
+  file_extension_mode = eeprom_read_byte(&storedconfig.fileexts);
 
   /* Paranoia: Set EEPROM address register to the dummy entry */
   EEAR = 0;
@@ -94,10 +103,12 @@ void write_configuration(void) {
   uint8_t checksum;
 
   /* Write configuration to EEPROM */
+  eeprom_write_word(&storedconfig.structsize, sizeof(storedconfig));
   eeprom_write_byte(&storedconfig.osccal, OSCCAL);
   eeprom_write_byte(&storedconfig.jiffyflag, iec_data.iecflags & JIFFY_ENABLED);
   eeprom_write_byte(&storedconfig.address, iec_data.device_address);
   eeprom_write_byte(&storedconfig.hardaddress, DEVICE_SELECT);
+  eeprom_write_byte(&storedconfig.fileexts, file_extension_mode);
 
   /* Calculate checksum over EEPROM contents */
   checksum = 0;

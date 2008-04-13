@@ -30,6 +30,7 @@
 #include <string.h>
 #include "config.h"
 #include "buffers.h"
+#include "fatops.h"
 #include "iec.h"
 #include "errormsg.h"
 
@@ -188,6 +189,9 @@ void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
     *msg++ = ':';
     *msg++ = 'C';
     msg = appendnumber(msg, OSCCAL);
+    *msg++ = ':';
+    *msg++ = 'E';
+    msg = appendnumber(msg, file_extension_mode);
   } else {
     msg = appendmsg(msg,messages,errornum);
     if (errornum == ERROR_DOSVERSION) {

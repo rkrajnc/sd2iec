@@ -49,6 +49,7 @@ int8_t   fat_readdir(dh_t *dh, struct cbmdirent *dent);
 void     fat_sectordummy(buffer_t *buf, uint8_t part, uint8_t track, uint8_t sector);
 
 extern const fileops_t fatops;
+extern uint8_t file_extension_mode;
 
 /* Generic helpers */
 uint8_t image_unmount(uint8_t part);

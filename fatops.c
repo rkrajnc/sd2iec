@@ -48,6 +48,8 @@
 #define P00_CBMNAME_OFFSET 8
 static const PROGMEM char p00marker[] = "C64File";
 
+uint8_t file_extension_mode;
+
 /* ------------------------------------------------------------------------- */
 /*  Utility functions                                                        */
 /* ------------------------------------------------------------------------- */
