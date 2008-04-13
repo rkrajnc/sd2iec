@@ -32,10 +32,12 @@
 
 /**
  * struct storedconfig - in-eeprom data structure
- * @dummy    : EEPROM position 0 is unused
- * @checksum : Checksum over the EEPROM contents
- * @osccal   : stored value of OSCCAL
- * @jiffyflag: stored value of jiffy_enabled
+ * @dummy      : EEPROM position 0 is unused
+ * @checksum   : Checksum over the EEPROM contents
+ * @osccal     : stored value of OSCCAL
+ * @jiffyflag  : stored value of jiffy_enabled
+ * @address    : device address set by software
+ * @hardaddress: device address set by jumpers
  *
  * This is the data structure for the contents of the EEPROM.
  */
@@ -59,6 +61,9 @@ void read_configuration(void) {
   uint16_t i;
   uint8_t checksum;
 
+  /* Enable Jiffy by default */
+  iec_data.iecflags |= JIFFY_ENABLED;
+
   /* Calculate checksum of EEPROM contents */
   checksum = 0;
   for (i=2; i<sizeof(storedconfig); i++)
@@ -70,8 +75,8 @@ void read_configuration(void) {
 
   /* Read data from EEPROM */
   OSCCAL = eeprom_read_byte(&storedconfig.osccal);
-  if(eeprom_read_byte(&storedconfig.jiffyflag))
-    iec_data.iecflags |= JIFFY_ENABLED;
+  if(!eeprom_read_byte(&storedconfig.jiffyflag))
+    iec_data.iecflags &= (uint8_t)~JIFFY_ENABLED;
   if (eeprom_read_byte(&storedconfig.hardaddress) == DEVICE_SELECT)
     iec_data.device_address = eeprom_read_byte(&storedconfig.address);
 
