@@ -443,6 +443,7 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
   if (finfo.fname[0]) {
     /* Copy name */
     memset(dent->name, 0, sizeof(dent->name));
+    memset(dent->realname, 0, sizeof(dent->realname));
 
     if (!finfo.lfn[0] || ustrlen(finfo.lfn) > CBM_NAME_LENGTH) {
       ustrcpy(dent->name, finfo.fname);
@@ -468,63 +469,63 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
       dent->typeflags = TYPE_PRG;
 
     /* Search for the file extension */
-    ptr = ustrrchr(finfo.fname, '.')+1;
-    typechar = *ptr++;
+    ptr = ustrrchr(finfo.fname, '.');
+    if (ptr++ != NULL) {
+      typechar = *ptr++;
 
-    if (!(finfo.fattrib & AM_DIR) &&
-        (typechar == 'P' || typechar == 'S' ||
-         typechar == 'U' || typechar == 'R') &&
-        isdigit(*ptr++) && isdigit(*ptr++)) {
-      /* [PSRU]00 file - try to read the internal name */
-      UINT bytesread;
+      if (!(finfo.fattrib & AM_DIR) &&
+          (typechar == 'P' || typechar == 'S' ||
+           typechar == 'U' || typechar == 'R') &&
+          isdigit(*ptr++) && isdigit(*ptr++)) {
+        /* [PSRU]00 file - try to read the internal name */
+        UINT bytesread;
 
-      res = l_opencluster(&partition[dh->part].fatfs, &partition[dh->part].imagehandle, finfo.clust);
-      if (res != FR_OK)
-        goto notp00;
+        res = l_opencluster(&partition[dh->part].fatfs, &partition[dh->part].imagehandle, finfo.clust);
+        if (res != FR_OK)
+          goto notp00;
 
-      res = f_read(&partition[dh->part].imagehandle, entrybuf, P00_HEADER_SIZE, &bytesread);
-      if (res != FR_OK)
-        goto notp00;
+        res = f_read(&partition[dh->part].imagehandle, entrybuf, P00_HEADER_SIZE, &bytesread);
+        if (res != FR_OK)
+          goto notp00;
 
-      if (ustrcmp_P(entrybuf, p00marker))
-        goto notp00;
+        if (ustrcmp_P(entrybuf, p00marker))
+          goto notp00;
 
-      /* Copy the internal name */
-      memset(dent->name, 0, sizeof(dent->name));
-      ustrcpy(dent->name, entrybuf+P00_CBMNAME_OFFSET);
+        /* Copy the internal name */
+        memset(dent->name, 0, sizeof(dent->name));
+        ustrcpy(dent->name, entrybuf+P00_CBMNAME_OFFSET);
 
-      /* Remember the real file name */
-      ustrcpy(dent->realname, finfo.fname);
+        /* Remember the real file name */
+        ustrcpy(dent->realname, finfo.fname);
 
-      /* Some programs pad the name with 0xa0 instead of 0 */
-      ptr = dent->name;
-      for (uint8_t i=0;i<16;i++,ptr++)
-        if (*ptr == 0xa0)
-          *ptr = 0;
+        /* Some programs pad the name with 0xa0 instead of 0 */
+        ptr = dent->name;
+        for (uint8_t i=0;i<16;i++,ptr++)
+          if (*ptr == 0xa0)
+            *ptr = 0;
 
-      finfo.fsize -= P00_HEADER_SIZE;
+        finfo.fsize -= P00_HEADER_SIZE;
 
-      /* Set the file type */
-      switch (typechar) {
-      case 'P':
-        dent->typeflags = TYPE_PRG;
-        break;
-
-      case 'S':
-        dent->typeflags = TYPE_SEQ;
-        break;
-
-      case 'U':
-        dent->typeflags = TYPE_USR;
-        break;
-
-      case 'R':
-        dent->typeflags = TYPE_REL;
-        break;
+        /* Set the file type */
+        switch (typechar) {
+        case 'P':
+          dent->typeflags = TYPE_PRG;
+          break;
+          
+        case 'S':
+          dent->typeflags = TYPE_SEQ;
+          break;
+          
+        case 'U':
+          dent->typeflags = TYPE_USR;
+          break;
+          
+        case 'R':
+          dent->typeflags = TYPE_REL;
+          break;
+        }
       }
-    } else
-      /* Not [PSUR]00 */
-      dent->realname[0] = 0;
+    }
 
   notp00:
 
