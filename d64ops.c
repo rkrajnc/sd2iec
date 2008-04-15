@@ -48,7 +48,10 @@
 #define OFS_FILE_NAME    5
 #define OFS_SIZE_LOW     0x1e
 #define OFS_SIZE_HI      0x1f
+#define D64_ERROR_OFFSET 174848
+#define D71_ERROR_OFFSET 349696
 
+#define MAX_SECTORS_PER_TRACK 21
 #define BAM_TRACK 18
 #define BAM_SECTOR 0
 #define BAM_BYTES_PER_TRACK 4
@@ -63,9 +66,34 @@
 
 #define D64_HAS_ERRORINFO 128
 
+struct {
+  uint8_t part;
+  uint8_t track;
+  uint8_t errors[MAX_SECTORS_PER_TRACK];
+} errorcache;
+
 /* ------------------------------------------------------------------------- */
 /*  Utility functions                                                        */
 /* ------------------------------------------------------------------------- */
+
+/**
+ * sector_lba - Transform a track/sector pair into a LBA sector number
+ * @track : Track number
+ * @sector: Sector number
+ *
+ * Calculates an LBA-style sector number for a given track/sector pair.
+ */
+/* This version used the least code of all tested variants. */
+static uint16_t sector_lba(uint8_t track, const uint8_t sector) {
+  track--; /* Track numbers are 1-based */
+  if (track < 17)
+    return track*21 + sector;
+  if (track < 24)
+    return 17*21 + (track-17)*19 + sector;
+  if (track < 30)
+    return 17*21 + 7*19 + (track-24)*18 + sector;
+  return 17*21 + 7*19 + 6*18 + (track-30)*17 + sector;
+}
 
 /**
  * sector_offset - Transform a track/sector pair into a D64 offset
@@ -74,16 +102,8 @@
  *
  * Calculates an offset into a D64 file from a track and sector number.
  */
-/* This version used the least code of all tested variants. */
 static uint32_t sector_offset(uint8_t track, const uint8_t sector) {
-  track--; /* Track numbers are 1-based */
-  if (track < 17)
-    return 256L * (track*21 + sector);
-  if (track < 24)
-    return 256L * (17*21 + (track-17)*19 + sector);
-  if (track < 30)
-    return 256L * (17*21 + 7*19 + (track-24)*18 + sector);
-  return 256L * (17*21 + 7*19 + 6*18 + (track-30)*17 + sector);
+  return 256L * sector_lba(track,sector);
 }
 
 /**
@@ -123,6 +143,32 @@ static uint8_t checked_read(uint8_t part, uint8_t track, uint8_t sector, uint8_t
     set_error_ts(error,track,sector);
     return 2;
   }
+  if (partition[part].imagetype & D64_HAS_ERRORINFO) {
+    /* Check if the sector is marked as bad */
+    if (errorcache.part != part || errorcache.track != track) {
+      /* Read the error info for this track */
+      memset(errorcache.errors, 1, sizeof(errorcache.errors));
+      if (image_read(part, D64_ERROR_OFFSET+sector_lba(track,0),
+                     errorcache.errors, sectors_per_track(track)) >= 2)
+        return 2;
+      errorcache.part  = part;
+      errorcache.track = track;
+    }
+
+    /* Calculate error message from the code */
+    if (errorcache.errors[sector] >= 2 && errorcache.errors[sector] <= 11) {
+      /* Most codes can be mapped directly */
+      set_error_ts(errorcache.errors[sector]-2+20,track,sector);
+      return 2;
+    }
+    if (errorcache.errors[sector] == 15) {
+      /* Drive not ready */
+      set_error(74);
+      return 2;
+    }
+    /* 1 is OK, unknown values are accepted too */
+  }
+
   return image_read(part, sector_offset(track,sector), buf, len);
 }
 
@@ -498,24 +544,25 @@ static uint8_t d64_write_cleanup(buffer_t *buf) {
 /* ------------------------------------------------------------------------- */
 
 uint8_t d64_mount(uint8_t part) {
+  uint8_t imagetype;
   buffer_t *buf;
   uint32_t fsize = partition[part].imagehandle.fsize;
 
   switch (fsize) {
   case 174848:
-    partition[part].imagetype = D64_TYPE_D64;
+    imagetype = D64_TYPE_D64;
     break;
 
   case 175531:
-    partition[part].imagetype = D64_TYPE_D64 | D64_HAS_ERRORINFO;
+    imagetype = D64_TYPE_D64 | D64_HAS_ERRORINFO;
     break;
 
   case 349696:
-    partition[part].imagetype = D64_TYPE_D71;
+    imagetype = D64_TYPE_D71;
     break;
 
   case 351062:
-    partition[part].imagetype = D64_TYPE_D71 | D64_HAS_ERRORINFO;
+    imagetype = D64_TYPE_D71 | D64_HAS_ERRORINFO;
     break;
     /*
   case 819200:
@@ -544,6 +591,11 @@ uint8_t d64_mount(uint8_t part) {
   buf->secondary    = BUFFER_SEC_SYSTEM + part;
   buf->cleanup      = d64_bam_flush;
   buf->pvt.d64.part = part;
+
+  partition[part].imagetype = imagetype;
+  if (imagetype & D64_HAS_ERRORINFO)
+    /* Invalidate error cache */
+    errorcache.part = 255;
 
   return 0;
 }
