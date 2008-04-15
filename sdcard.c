@@ -286,7 +286,7 @@ ISR(SD_CHANGE_VECT) {
 #ifdef CONFIG_TWINSD
 /* Detect changes of SD card 1 */
 ISR(SD2_CHANGE_VECT) {
-  if (!(SD2_PIN & SD2_DETECT))
+  if (SD2_DETECT)
     disk_state = DISK_CHANGED;
   else
     disk_state = DISK_REMOVED;
@@ -303,9 +303,7 @@ void init_disk(void) {
   SD_CHANGE_SETUP();
 #ifdef CONFIG_TWINSD
   /* Initialize the control lines for card 2 */
-  SD2_DDR  |= SD2_CS;
-  SD2_DDR  &= (uint8_t)~(SD2_DETECT|SD2_WP);
-  SD2_PORT |= SD2_DETECT|SD2_WP|SD2_CS;
+  SD2_SETUP();
   SD2_CHANGE_SETUP();
 #endif
 }
@@ -314,7 +312,7 @@ void init_disk(void) {
 DSTATUS disk_status(BYTE drv) {
 #ifdef CONFIG_TWINSD
   if (drv != 0) {
-    if (!(SD2_PIN & SD2_DETECT)) {
+    if (SD2_DETECT) {
       if (SD2_PIN & SD2_WP) {
         return STA_PROTECT;
       } else {
