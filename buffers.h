@@ -29,6 +29,8 @@
 #include <stdint.h>
 #include "dirent.h"
 
+#define BUFFER_SEC_SYSTEM 100
+
 /**
  * struct buffer_s - buffer handling structire
  * @data     : Pointer to the data area of the buffer, MUST be the first field
@@ -88,7 +90,10 @@ extern uint8_t entrybuf[33]; /// Buffer for directory entries to be parsed
 /* Initializes the buffer structures */
 void init_buffers(void);
 
-/* Allocates a buffer - Returns pointer to buffer or NULL of failure */
+/* Allocates a buffer for internal use */
+buffer_t *alloc_system_buffer(void);
+
+/* Allocates a buffer - returns pointer to buffer or NULL if failure */
 buffer_t *alloc_buffer(void);
 
 /* Deallocates a buffer */

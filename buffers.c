@@ -66,13 +66,12 @@ void init_buffers(void) {
 }
 
 /**
- * alloc_buffer - allocates a buffer
+ * alloc_system_buffer - allocate a buffer for system use
  *
- * This function allocates a buffer and marks it as used. It will also
- * turn on the busy LED to notify the user. Returns a pointer to the
- * buffer structure or NULL if no buffer is free.
+ * This function allocates a buffer and marks it as used. Returns a
+ * pointer to the buffer structure or NULL of no buffer is free.
  */
-buffer_t *alloc_buffer(void) {
+buffer_t *alloc_system_buffer(void) {
   uint8_t i;
 
   for (i=0;i<CONFIG_BUFFER_COUNT;i++) {
@@ -80,14 +79,30 @@ buffer_t *alloc_buffer(void) {
       /* Clear everything except the data pointer */
       memset(sizeof(uint8_t *)+(char *)&(buffers[i]),0,sizeof(buffer_t)-sizeof(uint8_t *));
       buffers[i].allocated = 1;
-      active_buffers++;
-      BUSY_LED_ON();
+      buffers[i].secondary = BUFFER_SEC_SYSTEM;
       return &buffers[i];
     }
   }
 
   set_error(ERROR_NO_CHANNEL);
   return NULL;
+}
+
+/**
+ * alloc_buffer - allocates a buffer
+ *
+ * This function allocates a buffer and marks it as used. It will also
+ * turn on the busy LED to notify the user. Returns a pointer to the
+ * buffer structure or NULL if no buffer is free.
+ */
+buffer_t *alloc_buffer(void) {
+  buffer_t *buf = alloc_system_buffer();
+  if (buf != NULL) {
+    buf->secondary = 0;
+    active_buffers++;
+    BUSY_LED_ON();
+  }
+  return buf;
 }
 
 /**
@@ -112,7 +127,7 @@ void free_buffer(buffer_t *buffer) {
   if (!(active_buffers & 0xf0))
     DIRTY_LED_OFF();
 
-  if (! --active_buffers)
+  if (buffer->secondary < BUFFER_SEC_SYSTEM && ! --active_buffers)
     BUSY_LED_OFF();
 }
 
@@ -132,7 +147,8 @@ uint8_t free_all_buffers(uint8_t cleanup) {
 
   for (i=0;i<CONFIG_BUFFER_COUNT;i++)
     if (buffers[i].allocated) {
-      if (cleanup && buffers[i].cleanup)
+      if (buffers[i].secondary >= BUFFER_SEC_SYSTEM ||
+          (cleanup && buffers[i].cleanup))
         res = res || buffers[i].cleanup(&buffers[i]);
       free_buffer(&buffers[i]);
     }

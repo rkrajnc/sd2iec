@@ -957,6 +957,14 @@ void init_fatops(uint8_t preserve_path) {
  */
 uint8_t image_unmount(uint8_t part) {
   FRESULT res;
+  buffer_t *buf;
+
+  buf = find_buffer(BUFFER_SEC_SYSTEM + part);
+  if (buf) {
+    if (buf->cleanup)
+      buf->cleanup(buf);
+    free_buffer(buf);
+  }
 
   free_all_buffers(1);
   partition[part].fop = &fatops;

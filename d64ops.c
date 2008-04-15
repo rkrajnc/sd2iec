@@ -147,44 +147,21 @@ static void strnsubst(uint8_t *buffer, uint8_t len, uint8_t oldchar, uint8_t new
 }
 
 /**
- * read_bam - return a pointer to a buffer with the current BAM
- * @part: partition number
- *
- * This function returns a pointer to a buffer containing the
- * BAM of the D64 image. Returns NULL on failure.
- */
-static buffer_t* read_bam(uint8_t part) {
-  buffer_t *buf;
-
-  buf = alloc_buffer();
-  if (!buf)
-    return NULL;;
-
-  mark_write_buffer(buf);
-
-  if (image_read(part, sector_offset(BAM_TRACK,BAM_SECTOR), buf->data, 256)) {
-    free_buffer(buf);
-    return NULL;
-  }
-
-  buf->pvt.d64.part = part;
-
-  return buf;
-}
-
-/**
- * write_bam - write BAM buffer to disk
+ * d64_bam_flush - write BAM buffer to disk
  * @buf: pointer to the BAM buffer
  *
  * This function writes the contents of the BAM buffer to the disk image.
  * Returns 0 if successful, != 0 otherwise.
  */
-static uint8_t write_bam(buffer_t *buf) {
+static uint8_t d64_bam_flush(buffer_t *buf) {
   uint8_t res;
 
-  res = image_write(buf->pvt.d64.part, sector_offset(BAM_TRACK,BAM_SECTOR), buf->data, 256, 1);
-  free_buffer(buf);
-  return res;
+  if (buf->mustflush) {
+    res = image_write(buf->pvt.d64.part, sector_offset(BAM_TRACK,BAM_SECTOR), buf->data, 256, 1);
+    buf->mustflush = 0;
+    return res;
+  } else
+    return 0;
 }
 
 /**
@@ -231,6 +208,7 @@ static void allocate_sector(uint8_t track, uint8_t sector, buffer_t *bambuf) {
       trackmap[0]--;
 
     trackmap[1+(sector>>3)] &= (uint8_t)~(1<<(sector&7));
+    bambuf->mustflush = 1;
   }
 }
 
@@ -250,6 +228,7 @@ static void free_sector(uint8_t track, uint8_t sector, buffer_t *bambuf) {
     trackmap[0]++;
 
     trackmap[1+(sector>>3)] |= 1<<(sector&7);
+    bambuf->mustflush = 1;
   }
 }
 
@@ -439,13 +418,8 @@ static uint8_t d64_write(buffer_t *buf) {
   buf->data[0] = 0;
   buf->data[1] = buf->lastused;
 
-  /* Read BAM */
-  /* Yes, this means writing can suddenly fail with NO CHANNEL. */
-  bambuf = read_bam(buf->pvt.d64.part);
-  if (!bambuf) {
-    savederror = current_error;
-    goto storedata;
-  }
+  /* Locate BAM */
+  bambuf = find_buffer(BUFFER_SEC_SYSTEM + buf->pvt.d64.part);
 
   /* Find another free sector */
   if (get_next_sector(&t, &s, bambuf)) {
@@ -459,13 +433,10 @@ static uint8_t d64_write(buffer_t *buf) {
 
   /* Allocate it */
   allocate_sector(t,s,bambuf);
-  if (write_bam(bambuf))
+  if (bambuf->cleanup(bambuf))
     return 1;
 
  storedata:
-  /* Free BAM buffer - free will accept an already-freed buffer */
-  free_buffer(bambuf);
-
   /* Store data in the already-reserved sector */
   if (image_write(buf->pvt.d64.part, sector_offset(buf->pvt.d64.track,buf->pvt.d64.sector),
                   buf->data, 256, 1))
@@ -527,6 +498,7 @@ static uint8_t d64_write_cleanup(buffer_t *buf) {
 /* ------------------------------------------------------------------------- */
 
 uint8_t d64_mount(uint8_t part) {
+  buffer_t *buf;
   uint32_t fsize = partition[part].imagehandle.fsize;
 
   switch (fsize) {
@@ -558,6 +530,21 @@ uint8_t d64_mount(uint8_t part) {
     set_error(ERROR_IMAGE_INVALID);
     return 1;
   }
+
+  /* Read the BAM into memory */
+  buf = alloc_system_buffer();
+  if (!buf)
+    return 1;
+
+  if (image_read(part, sector_offset(BAM_TRACK, BAM_SECTOR), buf->data, 256)) {
+    free_buffer(buf);
+    return 1;
+  }
+
+  buf->secondary    = BUFFER_SEC_SYSTEM + part;
+  buf->cleanup      = d64_bam_flush;
+  buf->pvt.d64.part = part;
+
   return 0;
 }
 
@@ -689,28 +676,22 @@ static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
       return;
   } while (res == 0 && entrybuf[OFS_FILE_TYPE] != 0);
 
-  /* Load the BAM */
-  bambuf = read_bam(path->part);
-  if (!bambuf)
-    return;
+  /* Locate the BAM */
+  bambuf = find_buffer(BUFFER_SEC_SYSTEM + path->part);
 
   /* Allocate a new directory sector if no empty entries were found */
   if (res < 0) {
     t = dh.dir.d64.track;
     s = dh.dir.d64.sector;
 
-    if (get_next_sector(&dh.dir.d64.track, &dh.dir.d64.sector, bambuf)) {
-      free_buffer(bambuf);
+    if (get_next_sector(&dh.dir.d64.track, &dh.dir.d64.sector, bambuf))
       return;
-    }
 
     /* Link the old sector to the new */
     entrybuf[0] = dh.dir.d64.track;
     entrybuf[1] = dh.dir.d64.sector;
-    if (image_write(path->part, sector_offset(t,s), entrybuf, 2, 0)) {
-      free_buffer(bambuf);
+    if (image_write(path->part, sector_offset(t,s), entrybuf, 2, 0))
       return;
-    }
 
     allocate_sector(dh.dir.d64.track, dh.dir.d64.sector, bambuf);
 
@@ -719,10 +700,9 @@ static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
     entrybuf[1] = 0xff;
     for (uint8_t i=0;i<256/32;i++) {
       if (image_write(path->part, sector_offset(dh.dir.d64.track, dh.dir.d64.sector)+32*i,
-                      entrybuf, 32, 0)) {
-        free_buffer(bambuf);
+                      entrybuf, 32, 0))
         return;
-      }
+
       entrybuf[1] = 0;
     }
 
@@ -745,14 +725,13 @@ static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
   entrybuf[OFS_FILE_TYPE] = type;
 
   /* Find a free sector and allocate it */
-  if (get_first_sector(&t,&s,bambuf)) {
-    free_buffer(bambuf);
+  if (get_first_sector(&t,&s,bambuf))
     return;
-  }
+
   entrybuf[OFS_TRACK]  = t;
   entrybuf[OFS_SECTOR] = s;
   allocate_sector(t,s,bambuf);
-  if (write_bam(bambuf))
+  if (bambuf->cleanup(bambuf))
     return;
 
   /* Write the directory entry */
@@ -776,36 +755,30 @@ static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
 static uint8_t d64_delete(path_t *path, struct cbmdirent *dent) {
   /* At this point entrybuf will contain the directory entry and    */
   /* matchdh will almost point to it (entry incremented in readdir) */
-  buffer_t *buf;
+  buffer_t *bambuf;
   uint8_t linkbuf[2];
 
   /* Read BAM */
-  buf = read_bam(path->part);
-  if (!buf)
-    return 255;
+  bambuf = find_buffer(BUFFER_SEC_SYSTEM + path->part);
 
   /* Free the sector chain in the BAM */
   linkbuf[0] = entrybuf[OFS_TRACK];
   linkbuf[1] = entrybuf[OFS_SECTOR];
   do {
-    free_sector(linkbuf[0], linkbuf[1], buf);
+    free_sector(linkbuf[0], linkbuf[1], bambuf);
 
-    if (checked_read(path->part, linkbuf[0], linkbuf[1], linkbuf, 2, ERROR_ILLEGAL_TS_LINK)) {
-      free_buffer(buf);
+    if (checked_read(path->part, linkbuf[0], linkbuf[1], linkbuf, 2, ERROR_ILLEGAL_TS_LINK))
       return 255;
-    }
   } while (linkbuf[0]);
 
   /* Clear directory entry */
   entrybuf[OFS_FILE_TYPE] = 0;
   if (image_write(path->part, sector_offset(matchdh.dir.d64.track,matchdh.dir.d64.sector)
-                 +32*(matchdh.dir.d64.entry-1), entrybuf, 32, 1)) {
-    free_buffer(buf);
+                 +32*(matchdh.dir.d64.entry-1), entrybuf, 32, 1))
     return 255;
-  }
 
   /* Write new BAM */
-  if (write_bam(buf))
+  if (bambuf->cleanup(bambuf))
     return 255;
   else
     return 1;
