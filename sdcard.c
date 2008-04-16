@@ -187,6 +187,11 @@ static int sendCommand(const uint8_t  card,
   while (errorcount < CONFIG_SD_AUTO_RETRIES) {
     // Select card
     SPI_SS_LOW(card);
+#ifdef CONFIG_TWINSD
+    if (card == 0 && command == GO_IDLE_STATE)
+      /* Force both cards to SPI mode simultaneously */
+      SPI_SS_LOW(1);
+#endif
 
     // Transfer command
     spiTransferByte(0x40+command);
@@ -199,6 +204,11 @@ static int sendCommand(const uint8_t  card,
       i = spiTransferByte(0xff);
       counter++;
     } while (i & 0x80 && counter < 0x1000);
+
+#ifdef CONFIG_TWINSD
+    if (card == 0 && command == GO_IDLE_STATE)
+      SPI_SS_HIGH(1);
+#endif
 
     // Check for CRC error
     // can't reliably retry unless deselect is allowed
