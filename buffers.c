@@ -132,6 +132,30 @@ void free_buffer(buffer_t *buffer) {
 }
 
 /**
+ * free_all_user_buffers - deallocates all non-system buffers
+ * @cleanup: Flags if the cleanup callback should be called
+ *
+ * This function calls free_buffer on all allocated buffers that have
+ * a secondary smaller than BUFFER_SEC_SYSTEM, optionally calling the
+ * cleanup callback if desired. Returns 0 if all cleanup calls were
+ * successful (or no cleanup call was performed), non-zero otherwise.
+ */
+uint8_t free_all_user_buffers(uint8_t cleanup) {
+  uint8_t i,res;
+
+  res = 0;
+
+  for (i=0;i<CONFIG_BUFFER_COUNT;i++)
+    if (buffers[i].allocated && buffers[i].secondary < BUFFER_SEC_SYSTEM) {
+      if (cleanup && buffers[i].cleanup)
+        res = res || buffers[i].cleanup(&buffers[i]);
+      free_buffer(&buffers[i]);
+    }
+
+  return res;
+}
+
+/**
  * free_all_buffers - deallocates all buffers
  * @cleanup: Flags if the cleanup callback should be called
  *
@@ -147,8 +171,7 @@ uint8_t free_all_buffers(uint8_t cleanup) {
 
   for (i=0;i<CONFIG_BUFFER_COUNT;i++)
     if (buffers[i].allocated) {
-      if (buffers[i].secondary >= BUFFER_SEC_SYSTEM ||
-          (cleanup && buffers[i].cleanup))
+      if (cleanup && buffers[i].cleanup)
         res = res || buffers[i].cleanup(&buffers[i]);
       free_buffer(&buffers[i]);
     }

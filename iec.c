@@ -657,7 +657,7 @@ void iec_mainloop(void) {
         if ((cmd & 0xf0) == 0xe0) {
           if (cmd == 0xef) {
             /* Close all buffers if sec. 15 is closed */
-            if (free_all_buffers(1)) {
+            if (free_all_user_buffers(1)) {
               /* The 1571 error generator/handler always jumps to BUS_CLEANUP */
               iec_data.bus_state = BUS_CLEANUP;
               break;

@@ -60,10 +60,12 @@ static void mount_line(void) {
   uint16_t curpos;
 
   /* Kill all buffers */
-  free_all_buffers(0);
+  free_all_user_buffers(1);
 
-  /* Grab some scratch memory - this won't fail */
+  /* Grab some scratch memory */
   buf = alloc_buffer();
+  if (buf == NULL)
+    return;
 
   curpos = 0;
   strend = NULL;

@@ -704,7 +704,7 @@ uint8_t fat_chdir(path_t *path, uint8_t *dirname) {
                 !ustrcasecmp_P(ext, PSTR(".d64")) ||
                 !ustrcasecmp_P(ext, PSTR(".d71")) )) {
       /* D64/M2I mount request */
-      free_all_buffers(1);
+      free_all_user_buffers(1);
       /* Open image file */
       res = f_open(&partition[path->part].fatfs, &partition[path->part].imagehandle, dirname, FA_OPEN_EXISTING|FA_READ|FA_WRITE);
       if (res != FR_OK) {
@@ -1005,6 +1005,7 @@ uint8_t image_unmount(uint8_t part) {
   FRESULT res;
   buffer_t *buf;
 
+  /* Free the associated system buffer if present */
   buf = find_buffer(BUFFER_SEC_SYSTEM + part);
   if (buf) {
     if (buf->cleanup)
@@ -1012,7 +1013,7 @@ uint8_t image_unmount(uint8_t part) {
     free_buffer(buf);
   }
 
-  free_all_buffers(1);
+  free_all_user_buffers(1);
   partition[part].fop = &fatops;
   res = f_close(&partition[part].imagehandle);
   if (res != FR_OK) {

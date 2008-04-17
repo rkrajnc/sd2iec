@@ -422,7 +422,7 @@ void parse_user(void) {
   case ':':
     /* Reset - technically hard-reset */
     /* Faked because Ultima 5 sends UJ. */
-    free_all_buffers(0);
+    free_all_user_buffers(0);
     set_error(ERROR_DOSVERSION);
     break;
 
@@ -781,7 +781,7 @@ void parse_doscommand(void) {
     if (disk_state != DISK_OK)
       set_error_ts(ERROR_READ_NOSYNC,18,0);
     else
-      free_all_buffers(1);
+      free_all_user_buffers(1);
     break;
 
   case 'M':

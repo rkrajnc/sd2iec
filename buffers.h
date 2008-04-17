@@ -99,6 +99,9 @@ buffer_t *alloc_buffer(void);
 /* Deallocates a buffer */
 void free_buffer(buffer_t *buffer);
 
+/* Deallocates all user buffers, cleanup optional */
+uint8_t free_all_user_buffers(uint8_t cleanup);
+
 /* Deallocates all buffers, cleanup optional */
 uint8_t free_all_buffers(uint8_t cleanup);
 
