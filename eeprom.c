@@ -88,8 +88,10 @@ void read_configuration(void) {
     globalflags &= (uint8_t)~JIFFY_ENABLED;
   if (eeprom_read_byte(&storedconfig.hardaddress) == DEVICE_SELECT)
     device_address = eeprom_read_byte(&storedconfig.address);
+  if (eeprom_read_byte(&storedconfig.fileexts) & 0x80)
+    globalflags |= EXTENSION_HIDING;
 
-  file_extension_mode = eeprom_read_byte(&storedconfig.fileexts);
+  file_extension_mode = eeprom_read_byte(&storedconfig.fileexts) & 0x7f;
 
   /* Paranoia: Set EEPROM address register to the dummy entry */
   EEAR = 0;
@@ -110,7 +112,8 @@ void write_configuration(void) {
   eeprom_write_byte(&storedconfig.jiffyflag, globalflags & JIFFY_ENABLED);
   eeprom_write_byte(&storedconfig.address, device_address);
   eeprom_write_byte(&storedconfig.hardaddress, DEVICE_SELECT);
-  eeprom_write_byte(&storedconfig.fileexts, file_extension_mode);
+  eeprom_write_byte(&storedconfig.fileexts,
+                    file_extension_mode + ((globalflags & EXTENSION_HIDING)?0x80:0));
 
   /* Calculate checksum over EEPROM contents */
   checksum = 0;

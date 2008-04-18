@@ -192,6 +192,10 @@ void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
     *msg++ = ':';
     *msg++ = 'E';
     msg = appendnumber(msg, file_extension_mode);
+    if (globalflags & EXTENSION_HIDING)
+      *msg++ = '+';
+    else
+      *msg++ = '-';
   } else {
     msg = appendmsg(msg,messages,errornum);
     if (errornum == ERROR_DOSVERSION) {

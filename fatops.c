@@ -37,6 +37,7 @@
 #include "errormsg.h"
 #include "ff.h"
 #include "fileops.h"
+#include "flags.h"
 #include "m2iops.h"
 #include "parser.h"
 #include "uart.h"
@@ -571,14 +572,14 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
 
         finfo.fsize -= P00_HEADER_SIZE;
 
-      } else if (res == EXT_IS_TYPE) {
+      } else if (res == EXT_IS_TYPE && (globalflags & EXTENSION_HIDING)) {
         /* Type extension */
         typechar = *ptr;
         uint8_t i = ustrlen(dent->name)-4;
         memset(dent->name+i, 0, sizeof(dent->name)-i);
         ustrcpy(dent->realname, finfo.fname);
 
-      } else { /* res == EXT_UNKNOWN */
+      } else { /* res == EXT_UNKNOWN or EXT_IS_TYPE but hiding disabled */
         /* Unknown extension: PRG */
         typechar = 'P';
       }

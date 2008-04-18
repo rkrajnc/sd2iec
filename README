@@ -111,10 +111,20 @@ Supported commands:
                2: Always write x00 format files.
                3: Use SEQ/USR/REL file extensions, no x00 header
                4: Same as 3, but also for PRG
+             This setting can be saved in the EEPROM using XW, the default
+             value is 1.
+
+  - XE+/XE-  Enable/disable extension hiding. If enabled, files in FAT with
+             a PRG/SEQ/USR/REL extension will have their extension removed
+             and the file type changed to the type specified by the file
+             extension - e.g. APPLICATION.PRG will become a PRG file named
+             "APPLICATION", "README.SEQ" will become a SEQ file named "README".
+             This flag can be saved in the EEPROM using XW, the default
+             value is disabled (-).
 
   - XJ+/XJ-  Set or reset the JiffyDOS protocol support flag. Default state
              is disabled for compatibility reasons. This flag can be saved
-             in the EEPROM using XW.
+             in the EEPROM using XW, the default value is enabled (+).
 
   - XCnum    Set oscillator calibration value to num (must be between
              0 and 255). Default is whatever your chip defaults to. This
@@ -135,10 +145,10 @@ Supported commands:
              the hardware.
 
              The stored configuration includes the oscillator calibration
-             value, the JiffyDOS protocol support flag and the current
-             device address. If you have changed the device address by
-             software, sd2iec will power up with that address unless you
-             have changed the device address jumpers (if available) to
+             value, the JiffyDOS protocol support flag, the extension mode
+             and the current device address. If you have changed the device
+             address by software, sd2iec will power up with that address unless
+             you have changed the device address jumpers (if available) to
              a different setting than the one active at the time the
              configuration was saved. You can think of this feature as
              changing the meaning of one specific setting of the jumpers
@@ -149,9 +159,6 @@ Supported commands:
              configured for a device number that is already taken by
              another device on the bus without having to remove that
              device to reconfigure sd2iec (e.g. when using a C128D).
-
- Currently the only things saved are the
-             oscillator calibration, the JiffyDOS protocol support flag
 
 - M-R, M-W, M-E
   Memory reading returns random data of the requested length. Memory writing

@@ -245,13 +245,19 @@ static void parse_xcommand(void) {
   case 'E':
     /* Change file extension mode */
     str = command_buffer+2;
-    num = parse_number(&str);
-    if (num > 4) {
-      set_error(ERROR_SYNTAX_UNKNOWN);
+    if (*str == '+') {
+      globalflags |= EXTENSION_HIDING;
+    } else if (*str == '-') {
+      globalflags &= (uint8_t)~EXTENSION_HIDING;
     } else {
-      file_extension_mode = num;
-      set_error_ts(ERROR_STATUS,device_address,0);
+      num = parse_number(&str);
+      if (num > 4) {
+        set_error(ERROR_SYNTAX_UNKNOWN);
+      } else {
+        file_extension_mode = num;
+      }
     }
+    set_error_ts(ERROR_STATUS,device_address,0);
     break;
 
   case 'J':
