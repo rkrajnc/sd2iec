@@ -44,6 +44,7 @@
 #include "errormsg.h"
 #include "fastloader-ll.h"
 #include "fatops.h"
+#include "flags.h"
 #include "fileops.h"
 #include "iec-ll.h"
 #include "diskio.h"
@@ -54,8 +55,30 @@
 /*  Global variables                                                         */
 /* ------------------------------------------------------------------------- */
 
+/* Current device address */
+uint8_t device_address;
 
-iec_t iec_data;
+/**
+ * struct iecflags_t - Bitfield of various flags, mostly IEC-related
+ * @eoi_recvd      : Received EOI with the last byte read
+ * @command_recvd  : Command or filename received
+ * @jiffy_active   : JiffyDOS-capable master detected
+ * @jiffy_load     : JiffyDOS LOAD operation detected
+ *
+ * This is a bitfield for a number of boolean variables used 
+ */
+
+#define EOI_RECVD       (1<<0)
+#define COMMAND_RECVD   (1<<1)
+#define JIFFY_ACTIVE    (1<<2)
+#define JIFFY_LOAD      (1<<3)
+
+struct {
+  uint8_t iecflags;
+  enum { BUS_IDLE = 0, BUS_ATNACTIVE, BUS_FOUNDATN, BUS_FORME, BUS_NOTFORME, BUS_ATNFINISH, BUS_ATNPROCESS, BUS_CLEANUP } bus_state;
+  enum { DEVICE_IDLE = 0, DEVICE_LISTEN, DEVICE_TALK } device_state;
+  uint8_t secondary_address;
+} iec_data;
 
 
 /* ------------------------------------------------------------------------- */
@@ -209,7 +232,7 @@ static int16_t _iec_getc(void) {
   for (i=0;i<8;i++) {
     /* Check for JiffyDOS                                       */
     /*   Source: http://home.arcor.de/jochen.adler/ajnjil-t.htm */
-    if (iec_data.bus_state == BUS_ATNACTIVE && (iec_data.iecflags & JIFFY_ENABLED) && i == 7) {
+    if (iec_data.bus_state == BUS_ATNACTIVE && (globalflags & JIFFY_ENABLED) && i == 7) {
       start_timeout(TIMEOUT_US(218));
 
       do {
@@ -217,7 +240,7 @@ static int16_t _iec_getc(void) {
 
         /* If there is a delay before the last bit, the controller uses JiffyDOS */
         if (!(iec_data.iecflags & JIFFY_ACTIVE) && has_timed_out()) {
-          if ((val>>1) < 0x60 && ((val>>1) & 0x1f) == iec_data.device_address) {
+          if ((val>>1) < 0x60 && ((val>>1) & 0x1f) == device_address) {
             /* If it's for us, notify controller that we support Jiffy too */
             set_data(0);
             _delay_us(101); // nlq says 405us, but the code shows only 101
@@ -324,7 +347,7 @@ static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
     set_data(data & 1<<i);
     _delay_us(70);    // Implicid delay, fudged
     set_clock(1);
-    if (iec_data.iecflags & VC20MODE)
+    if (globalflags & VC20MODE)
       _delay_us(34);  // Calculated delay
     else
       _delay_us(69);  // Calculated delay
@@ -427,7 +450,7 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
   if (buf == NULL)
     return 0; /* 0 because we didn't change the state here */
 
-  if (iec_data.iecflags & JIFFY_ENABLED)
+  if (globalflags & JIFFY_ENABLED)
     /* wait 360us (J1541 E781) to make sure the C64 is at fbb7/fb0c */
     _delay_ms(0.36);
 
@@ -557,7 +580,7 @@ void init_iec(void) {
   /* Read the hardware-set device address */
   DEVICE_SELECT_SETUP();
   _delay_ms(1);
-  iec_data.device_address = DEVICE_SELECT;
+  device_address = DEVICE_SELECT;
 
   /* Set up disk change key */
   DISKCHANGE_DDR  &= ~DISKCHANGE_BIT;
@@ -632,10 +655,10 @@ void iec_mainloop(void) {
         if (iec_data.device_state == DEVICE_TALK)
           iec_data.device_state = DEVICE_IDLE;
         iec_data.bus_state = BUS_ATNFINISH;
-      } else if (cmd == 0x40+iec_data.device_address) { /* Talk */
+      } else if (cmd == 0x40+device_address) { /* Talk */
         iec_data.device_state = DEVICE_TALK;
         iec_data.bus_state = BUS_FORME;
-      } else if (cmd == 0x20+iec_data.device_address) { /* Listen */
+      } else if (cmd == 0x20+device_address) { /* Listen */
         iec_data.device_state = DEVICE_LISTEN;
         iec_data.bus_state = BUS_FORME;
       } else if ((cmd & 0x60) == 0x60) {

@@ -28,6 +28,7 @@
 #include <avr/io.h>
 #include "config.h"
 #include "fatops.h"
+#include "flags.h"
 #include "iec.h"
 #include "eeprom.h"
 
@@ -67,7 +68,7 @@ void read_configuration(void) {
   uint8_t checksum;
 
   /* Set default values */
-  iec_data.iecflags   |= JIFFY_ENABLED;  /* JiffyDos enabled */
+  globalflags         |= JIFFY_ENABLED;  /* JiffyDos enabled */
   file_extension_mode  = 1;              /* Store x00 extensions except for PRG */
 
   size = eeprom_read_word(&storedconfig.structsize);
@@ -84,9 +85,9 @@ void read_configuration(void) {
   /* Read data from EEPROM */
   OSCCAL = eeprom_read_byte(&storedconfig.osccal);
   if(!eeprom_read_byte(&storedconfig.jiffyflag))
-    iec_data.iecflags &= (uint8_t)~JIFFY_ENABLED;
+    globalflags &= (uint8_t)~JIFFY_ENABLED;
   if (eeprom_read_byte(&storedconfig.hardaddress) == DEVICE_SELECT)
-    iec_data.device_address = eeprom_read_byte(&storedconfig.address);
+    device_address = eeprom_read_byte(&storedconfig.address);
 
   file_extension_mode = eeprom_read_byte(&storedconfig.fileexts);
 
@@ -106,8 +107,8 @@ void write_configuration(void) {
   /* Write configuration to EEPROM */
   eeprom_write_word(&storedconfig.structsize, sizeof(storedconfig));
   eeprom_write_byte(&storedconfig.osccal, OSCCAL);
-  eeprom_write_byte(&storedconfig.jiffyflag, iec_data.iecflags & JIFFY_ENABLED);
-  eeprom_write_byte(&storedconfig.address, iec_data.device_address);
+  eeprom_write_byte(&storedconfig.jiffyflag, globalflags & JIFFY_ENABLED);
+  eeprom_write_byte(&storedconfig.address, device_address);
   eeprom_write_byte(&storedconfig.hardaddress, DEVICE_SELECT);
   eeprom_write_byte(&storedconfig.fileexts, file_extension_mode);
 

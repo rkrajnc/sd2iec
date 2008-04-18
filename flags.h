@@ -20,16 +20,20 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
-   iec.h: Definitions for the IEC handling code
+   flags.h: Definitions for some global flags
 
 */
 
-#ifndef IEC_H
-#define IEC_H
+#ifndef FLAGS_H
+#define FLAGS_H
 
-extern uint8_t device_address;
+/* Global flags, variable defined in doscmd.c */
+extern uint8_t globalflags;
 
-void init_iec(void);
-void iec_mainloop(void);
+/* Values for those flags */
+#define VC20MODE         (1<<0)
+#define JIFFY_ENABLED    (1<<1)
+#define AUTOSWAP_ACTIVE  (1<<2)
+#define EXTENSION_HIDING (1<<3)
 
 #endif

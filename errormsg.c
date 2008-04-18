@@ -31,7 +31,7 @@
 #include "config.h"
 #include "buffers.h"
 #include "fatops.h"
-#include "iec.h"
+#include "flags.h"
 #include "errormsg.h"
 
 uint8_t current_error;
@@ -182,7 +182,7 @@ void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
 
   if (errornum == ERROR_STATUS) {
     *msg++ = 'J';
-    if (iec_data.iecflags & JIFFY_ENABLED)
+    if (globalflags & JIFFY_ENABLED)
       *msg++ = '+';
     else
       *msg++ = '-';

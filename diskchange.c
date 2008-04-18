@@ -31,8 +31,8 @@
 #include "buffers.h"
 #include "errormsg.h"
 #include "fatops.h"
+#include "flags.h"
 #include "ff.h"
-#include "iec.h"
 #include "parser.h"
 #include "ustring.h"
 #include "diskchange.h"
@@ -149,7 +149,7 @@ void set_changelist(path_t *path, uint8_t *filename) {
   FRESULT res;
 
   /* Assume this isn't the auto-swap list */
-  iec_data.iecflags &= (uint8_t)~AUTOSWAP_ACTIVE;
+  globalflags &= (uint8_t)~AUTOSWAP_ACTIVE;
 
   /* Remove the old swaplist */
   if (linenum != 255) {
@@ -197,7 +197,7 @@ void change_disk(void) {
     } else {
       /* Autoswaplist found, mark it as active                */
       /* and exit because the first image is already mounted. */
-      iec_data.iecflags |= AUTOSWAP_ACTIVE;
+      globalflags |= AUTOSWAP_ACTIVE;
       return;
     }
   }
@@ -213,5 +213,5 @@ void init_change(void) {
 
   memset(&swaplist,0,sizeof(swaplist));
   linenum = 255;
-  iec_data.iecflags &= (uint8_t)~AUTOSWAP_ACTIVE;
+  globalflags &= (uint8_t)~AUTOSWAP_ACTIVE;
 }

@@ -39,6 +39,7 @@
 #include "errormsg.h"
 #include "fastloader.h"
 #include "fatops.h"
+#include "flags.h"
 #include "iec.h"
 #include "m2iops.h"
 #include "parser.h"
@@ -51,6 +52,8 @@
 #define CURSOR_RIGHT 0x1d
 
 static void (*restart_call)(void) = 0;
+
+uint8_t globalflags;
 
 uint8_t command_buffer[CONFIG_COMMAND_BUFFER_SIZE+2];
 uint8_t command_length;
@@ -200,7 +203,7 @@ static void handle_memwrite(void) {
 
   if (address == 119) {
     /* Change device address, 1541 style */
-    iec_data.device_address = command_buffer[6] & 0x1f;
+    device_address = command_buffer[6] & 0x1f;
     return;
   }
 
@@ -247,7 +250,7 @@ static void parse_xcommand(void) {
       set_error(ERROR_SYNTAX_UNKNOWN);
     } else {
       file_extension_mode = num;
-      set_error_ts(ERROR_STATUS,iec_data.device_address,0);
+      set_error_ts(ERROR_STATUS,device_address,0);
     }
     break;
 
@@ -255,30 +258,30 @@ static void parse_xcommand(void) {
     /* Jiffy enable/disable */
     switch (command_buffer[2]) {
     case '+':
-      iec_data.iecflags |= JIFFY_ENABLED;
+      globalflags |= JIFFY_ENABLED;
       break;
 
     case '-':
-      iec_data.iecflags &= (uint8_t)~JIFFY_ENABLED;
+      globalflags &= (uint8_t)~JIFFY_ENABLED;
       break;
 
     default:
       set_error(ERROR_SYNTAX_UNKNOWN);
     }
-    set_error_ts(ERROR_STATUS,iec_data.device_address,0);
+    set_error_ts(ERROR_STATUS,device_address,0);
     break;
 
   case 'C':
     /* Calibration */
     str = command_buffer+2;
     OSCCAL = parse_number(&str);
-    set_error_ts(ERROR_STATUS,iec_data.device_address,0);
+    set_error_ts(ERROR_STATUS,device_address,0);
     break;
 
   case 'W':
     /* Write configuration */
     write_configuration();
-    set_error_ts(ERROR_STATUS,iec_data.device_address,0);
+    set_error_ts(ERROR_STATUS,device_address,0);
     break;
 
   case 'S':
@@ -298,7 +301,7 @@ static void parse_xcommand(void) {
 
   default:
     /* Unknown command, just show the status */
-    set_error_ts(ERROR_STATUS,iec_data.device_address,0);
+    set_error_ts(ERROR_STATUS,device_address,0);
     break;
   }
 }
@@ -405,11 +408,11 @@ void parse_user(void) {
       break;
       
     case '+':
-      iec_data.iecflags &= (uint8_t)~VC20MODE;
+      globalflags &= (uint8_t)~VC20MODE;
       break;
       
     case '-':
-      iec_data.iecflags |= VC20MODE;
+      globalflags |= VC20MODE;
       break;
       
     default:
@@ -437,7 +440,7 @@ void parse_user(void) {
     if ((command_buffer[2] & 0x1f) == 0x1e &&
         command_buffer[3] >= 4 &&
         command_buffer[3] <= 30) {
-      iec_data.device_address = command_buffer[3];
+      device_address = command_buffer[3];
       break;
     }
     /* Fall through */
@@ -618,7 +621,7 @@ void parse_doscommand(void) {
         }
       }
 
-      if (iec_data.iecflags & AUTOSWAP_ACTIVE)
+      if (globalflags & AUTOSWAP_ACTIVE)
         set_changelist(NULL, NULLSTRING);
 
       break;
@@ -679,7 +682,7 @@ void parse_doscommand(void) {
       }
       
       current_part=part;
-      if (iec_data.iecflags & AUTOSWAP_ACTIVE)
+      if (globalflags & AUTOSWAP_ACTIVE)
         set_changelist(NULL, NULLSTRING);
       
       break;
@@ -693,7 +696,7 @@ void parse_doscommand(void) {
       
       if (command_buffer[2]) {
         current_part = command_buffer[2]-1;
-        if (iec_data.iecflags & AUTOSWAP_ACTIVE)
+        if (globalflags & AUTOSWAP_ACTIVE)
           set_changelist(NULL, NULLSTRING);
       }
       break;

@@ -124,7 +124,7 @@ int main(void) {
   read_configuration();
 
   uart_puts_P(PSTR("\nsd2iec " VERSION " #"));
-  uart_puthex(iec_data.device_address);
+  uart_puthex(device_address);
   uart_putcrlf();
 
   BUSY_LED_OFF();
