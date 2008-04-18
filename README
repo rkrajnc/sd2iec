@@ -111,6 +111,7 @@ Supported commands:
                2: Always write x00 format files.
                3: Use SEQ/USR/REL file extensions, no x00 header
                4: Same as 3, but also for PRG
+             If you set mode 3 or 4, extension hiding is automatically enabled.
              This setting can be saved in the EEPROM using XW, the default
              value is 1.
 

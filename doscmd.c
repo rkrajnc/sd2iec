@@ -255,6 +255,8 @@ static void parse_xcommand(void) {
         set_error(ERROR_SYNTAX_UNKNOWN);
       } else {
         file_extension_mode = num;
+        if (num >= 3)
+          globalflags |= EXTENSION_HIDING;
       }
     }
     set_error_ts(ERROR_STATUS,device_address,0);
