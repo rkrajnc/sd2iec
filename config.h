@@ -312,7 +312,7 @@
 #  define BLINKTIMER_MAX        200
 
 #elif CONFIG_HARDWARE_VARIANT==5
-/* Hardware configuration: Shadowolf 2 aka sd2iec 1.0 */
+/* Hardware configuration: Shadowolf 2 aka sd2iec 1.x */
 #  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
 #  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
 #  if defined __AVR_ATmega32__

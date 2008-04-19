@@ -22,7 +22,7 @@
 #  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 #  config-sw2: sd2iec configuration for Shadowolf's sd2iec PCBs
-#              version 1.0
+#              version 1.x
 #
 #
 # This file is included in the main sd2iec Makefile and also parsed
