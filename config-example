@@ -72,6 +72,9 @@ CONFIG_TURBODISK=y
 # its timing may be slightly off and it compiles to a larger binary.
 CONFIG_JIFFY_ASM=y
 
+# Enable Final Cartridge III fast loader
+CONFIG_FC3=y
+
 # Select which hardware to compile for
 # Valid values:
 #   1 - custom configuration in config.h

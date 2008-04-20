@@ -26,6 +26,7 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <util/delay.h>
 #include "config.h"
 #include "buffers.h"
 #include "doscmd.h"
@@ -109,5 +110,70 @@ void load_turbodisk(void) {
   free_buffer(buf);
 
   set_clock(1);
+}
+#endif
+
+#ifdef CONFIG_FC3
+void load_fc3(void) {
+  buffer_t *buf;
+  unsigned char step;
+  unsigned char sector_counter = 0;
+  unsigned char block[4];
+
+  buf = find_buffer(0);
+
+  if (!buf) {
+    /* error, abort and pull down CLOCK and DATA to inform the host */
+    IEC_OUT |= IEC_OBIT_CLOCK | IEC_OBIT_DATA;
+    return;
+  }
+
+  /* FC3 reads the first two bytes before starting the speeder, rewind */
+  buf->position -= 2;
+
+  /* to make sure the C64 VIC DMA is off */
+  _delay_ms(20);
+
+  for(;;) {
+    clk_data_handshake();
+
+    /* construct first 4-byte block */
+    block[0] = 7;          /* any meaning? Why not 42? */
+    block[1] = sector_counter++;
+    if (buf->sendeoi) {
+      /* Last sector, send number of bytes */
+      block[2] = buf->lastused;
+    } else {
+      /* Send 0 for full sector */
+      block[2] = 0;
+    }
+    block[3] = buf->data[buf->position++];
+
+    _delay_ms(0.15);
+    fastloader_fc3_send_block(block);
+
+    /* send the next 64 4-byte-blocks, the last 3 bytes are read behind
+       the buffer, good that we don't have an MMU ;) */
+    for (step = 0; step < 64; step++) {
+      _delay_ms(0.15);
+      fastloader_fc3_send_block(buf->data + buf->position);
+      buf->position += 4;
+    }
+
+    if (buf->sendeoi) {
+      /* pull down DATA to inform the host about the last sector */
+      set_data(0);
+      break;
+    } else {
+      if (buf->refill(buf)) {
+        /* error, abort and pull down CLOCK and DATA to inform the host */
+        IEC_OUT |= IEC_OBIT_CLOCK | IEC_OBIT_DATA;
+        break;
+      }
+    }
+  }
+
+  buf->cleanup(buf);
+  free_buffer(buf);
 }
 #endif

@@ -64,6 +64,7 @@ CONFIG_COMMAND_CHANNEL_DUMP=y
 # This option requires an external crystal oscillator!
 CONFIG_TURBODISK=y
 CONFIG_JIFFY_ASM=n
+CONFIG_FC3=y
 
 # Select which hardware to compile for
 # Valid values:

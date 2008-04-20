@@ -175,6 +175,12 @@ static void handle_memexec(void) {
     load_turbodisk();
   }
 #endif
+#ifdef CONFIG_FC3
+  if (detected_loader == FL_FC3 && address == 0x059A) {
+    detected_loader = FL_NONE;
+    load_fc3();
+  }
+#endif
 }
 
 static void handle_memread(void) {
@@ -223,6 +229,12 @@ static void handle_memwrite(void) {
 
   for (i=0;i<command_length;i++)
     datacrc = _crc16_update(datacrc, command_buffer[i]);
+
+#ifdef CONFIG_FC3
+  if (datacrc == 0xf1bd) {
+    detected_loader = FL_FC3;
+  }
+#endif
 
   if (detected_loader == FL_NONE) {
     uart_puts_P(PSTR("M-W CRC result: "));
@@ -575,12 +587,15 @@ void parse_doscommand(void) {
     return;
   }
 
-  if (detected_loader != FL_TURBODISK) {
-    /* Clear the remainder of the command buffer, simplifies parsing */
-    memset(command_buffer+command_length, 0, sizeof(command_buffer)-command_length);
-  } else {
+#ifdef CONFIG_TURBODISK
+  if (detected_loader == FL_TURBODISK) {
     /* Don't overwrite the file name in the final M-W command of Turbodisk */
     command_buffer[command_length] = 0;
+  } else
+#endif
+  {
+    /* Clear the remainder of the command buffer, simplifies parsing */
+    memset(command_buffer+command_length, 0, sizeof(command_buffer)-command_length);
   }
 
   /* MD/CD/RD clash with other commands, so they're checked first */

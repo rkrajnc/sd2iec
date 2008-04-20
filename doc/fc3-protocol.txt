@@ -1,0 +1,106 @@
+The Final Cartridge III Fast Loader Protocol
+============================================
+
+analysed by Skoe/Expression
+
+This document does roughly describe the fast loader protocol of the FC3. The
+description may not be accurate in any point.
+
+First of all the FC3 opens the file and reads the first two bytes to check the
+load address. It does not close the file before starting the fast loader, so
+that one just starts with the last sector loaded.
+
+The FC3 does always transfer whole blocks, even if not all bytes are used.
+Each block is transferred in 65 bunches with 4 bytes each.
+
+Before sending a block the drives pulls CLOCK low and waits for the host to
+respond by pulling DATA low. Then drive and host release these lines.
+
+The first bunch is sent about 180 us after this handshake. As each bunch has
+its own synchronization this timing doesn't need to be accurate. Between two
+bunches there are about 190 us. In sd2iec these to delays are reduced to 150
+ms, which seems to work.
+
+1st bunch:
+0: not used (always 7?)
+1: block counter, starting at 0
+2: 0 if all bytes must be used, number of bytes otherwise
+3: First byte of block
+
+2nd..64th bunch:
+4 bytes from block
+
+65th bunch:
+0: last byte of block
+1..3: not used
+
+Each bunch is syncronized by the drive pulling CLOCK low, then 2 bits are
+transfered at once until the 4 bytes are done. Bit 0 is on CLOCK, Bit 1 on
+DATA and so on. Electrical 0 means binary 0. Finally CLOCK and DATA are
+released to high level.
+
+EOF is marked by pulling DATA low instead of starting a new handshake.
+I/O errors are marked by pulling DATA and CLOCK low.
+
+The "|" marks are the point of time when the bus is written or read.
+
+===============================================================================
+C64 read (PAL)
+ 1   (+12)   13  (+12)   25  (+12)    37  (+12)   49   (+14)    63 (+12)  cycle
+-|||||||-----|||||||-----|||||||------|||||||-----|||||||-------|||||||--
+ 1..7        13.2..19.2  25.4..31.4   37.6..43.6  49.7..55.7    63.9..69.9   us
+ (sync)
+
+1541 write
+|-----------|-----------|------------|-----------|------------|----------
+0   (+12)   12  (+12)   24   (+13)   37  (+12)   49   (+13)   62  (+12)      us
+CLK low     1st pair    2nd pair     3rd pair    4th pair     5th pair
+
+sd2iec write
+|-----------|-----------|-----------|-----------|-------------|----------
+0  (+12)    12  (+12)   24  (+12)   36  (+12)   48   (+14)    62  (+12)      us
+
+===============================================================================
+C64 read (PAL) cont'd
+     75  (+12)   87  (+12)   99   (+14)     113  (+12)   125   (+12)      cycle
+...--|||||||-----|||||||-----|||||||--------|||||||------|||||||---------
+     76.1..82.1  88.3..94.3  00.5..06.5     14.7..20.7   26.9..32.9          us
+
+1541 write
+..-|------------|-----------|------------|-----------|-------------------
+   74   (+13)   87   (+12)  99   (+13)   112  (+12)  124  (+13)              us
+   6th pair     7th pair    8th pair     9th pair    10th pair
+
+sd2iec write
+..-|-----------|-----------|-------------|-----------|-------------------
+   74  (+12)   86  (+12)   98   (+14)    112  (+12)  124  (+12)              us
+
+===============================================================================
+C64 read (PAL) cont'd
+        137  (+12)  149   (+14)   163  (+12)   175  (+12)  187  (+12)     cycle
+...-----|||||||-----|||||||-------|||||||------|||||||-----|||||||-------
+        39.1..45.1  51.2..57.2    65.4..71.4   77.6..83.6  89.8..95.8        us
+
+1541 write
+...---|-----------|------------|-----------|------------|----------------
+      137  (+12)  149  (+13)   162  (+12)  174  (+13)   187  (+12)           us
+      11th pair   12th pair    13th pair   14th pair    15th pair
+
+sd2iec write
+...--|-----------|-------------|-----------|-----------|----------------
+     136  (+12)  148  (+14)    162  (+12)  174  (+12)  186  (+12)            us
+
+===============================================================================
+C64 read (PAL) cont'd
+           199                                                            cycle
+...--------|||||||-------------------------------------------------------
+           02.0..08.0                                                        us
+
+1541 write
+...-----|----------------------------------------------------------------
+        199  (+16)                                                           us
+        16th pair
+
+sd2iec write
+...----|----------------------------------------------------------------
+       198   (+14)                                                           us

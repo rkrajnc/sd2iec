@@ -488,4 +488,74 @@ tdbitloop2:
         ret
 #endif
 
+#ifdef CONFIG_FC3
+        ;;
+        ;; Do this kind of handshake:
+        ;; set CLOCK low, wait for DATA going low,
+        ;; release CLOCK, wait for DATA going high
+        ;;
+        .global clk_data_handshake
+clk_data_handshake:
+        sbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_CLOCK
+1:
+        sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_DATA
+        rjmp    1b
+        cbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_CLOCK
+1:
+        sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_DATA
+        rjmp    1b
+        ret
+
+        ;;
+        ;; Sends four bytes at r24/r25 using the FC3 protocol
+        ;;
+        .global fastloader_fc3_send_block
+fastloader_fc3_send_block:
+        cli
+        movw    r30,r24         ; Z = output pointer
+
+        ; pull CLOCK low for sync
+        sbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_CLOCK ; 1
+
+        ; 12 us between sync and bitpair
+        delay_cycles 12 * 8 - 13 ; 83
+
+        ldi     r21, 4          ; 1 - byte counter
+fc3_byteloop:
+        ld      r0, Z+          ; 2 - load byte
+
+        com     r0              ; 1 - negate all bits
+
+        ldi     r20, 4          ; 1 - bitpair counter
+fc3_bitloop:
+        ldi r19, IEC_PULLUPS    ; 1 - prepare output register
+        bst r0, 0               ; 1 - take bit 0 (lsb)
+        bld r19, IEC_OPIN_CLOCK ; 1 - for CLOCK line
+        bst r0, 1               ; 1 - take bit 1
+        bld r19, IEC_OPIN_DATA  ; 1 - for DATA line
+        lsr r0                  ; 1
+        lsr r0                  ; 1 - prepare next two bits
+
+        out     _SFR_IO_ADDR(IEC_OUT), r19 ; 1 - output the bit pair
+
+        ; wait 12 us between bitpair
+        delay_cycles 12*8-11    ; 85
+
+        dec     r20             ; 1 - decrement bitpair counter
+        brne    fc3_bitloop     ; 2/1 - loop until done
+fc3_next_byte:
+        ; wait 2 us more between two bytes (16 cycles = -1 + 17)
+        rcall   delay1us        ; 8
+        rjmp    0f              ; 2
+0:
+        dec     r21             ; 1 - decrement byte counter
+        brne    fc3_byteloop    ; 2/1 - loop until done
+
+        ; release CLOCK and DATA
+        ldi r19, IEC_PULLUPS    ; prepare output register
+        out     _SFR_IO_ADDR(IEC_OUT), r19      ; release CLOCK and DATA
+
+        sei
+        ret
+#endif
         .end
