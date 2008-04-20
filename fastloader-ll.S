@@ -35,21 +35,52 @@
 /* These values are added to the delayloop counter before the first      */
 /* bitpair read/write. They were determined experimentally to center the */
 /* range of working OSCCAL values around the default value.              */
-#define JIFFY_OFFSET_WRITE 10
-#define JIFFY_OFFSET_READ  10
+#define JIFFY_OFFSET_WRITE 30
+#define JIFFY_OFFSET_READ  30
 
         .section .text
 
+#if defined(CONFIG_JIFFY_ASM) || defined(CONFIG_TURBODISK) || defined(CONFIG_FC3)
         ;; ===================================================================
         ;;  Utility routines
         ;; ===================================================================
 
-        ;; Counts r18 down to zero
-        ;; Takes (r18-1)*3 + 6 cycles, not including the rcall
-delayloop:
-        dec     r18             ; 1
-        brne    delayloop       ; 2/1
+        ;; waits the number of cycles given in r18 plus 18, including rcall
+        ;; this works for 19 to 255 cycles, r18 will be changed
+        ;; Please use the delay_cycles macro instead of calling directly.
+cycleloop:
+        ; rcall                 ; 3
+1:
+        cpi     r18, 5          ; 1 - less than one loop left?
+        brcs    2f              ; 2/1 - then go to the final part
+        subi    r18, 5          ; 1 - minus cycles for one loop
+        rjmp    1b              ; 2
+2:
+        ; r18 is 0..4 now and we have 12..16 cycles to waste, DELTA see above
+        bst     r18, 0          ; 1 - take lowest bit
+        brts    3f              ; 1/2 - waste 1 cycle more if set
+3:
+        bst     r18, 1          ; 1 - take bit with value 2
+        brtc    5f              ; 1/2 - waste 2 cycles more if set
+        rjmp    4f              ; 2
+4:
+        nop                     ; 1
+5:
+        bst     r18, 2          ; 1 - take bit with value 4
+        brtc    7f              ; 1/2 - waste 4 cycles more if set
+        nop                     ; 1
+        rjmp    6f              ; 2
+6:
+        rjmp    7f              ; 2
+7:
         ret                     ; 4
+
+        ;; Convenience-wrapper for cycleloop
+        .macro delay_cycles num
+        ldi     r18, \num-19     ; 1 - minus cycles for ldi, rcall, sbi, cpi, brcc+, DELTA
+        rcall   cycleloop       ; 3
+        .endm
+
 
         ;; Including the rcall this will delay for 8 cycles
 delay1us:
@@ -59,20 +90,21 @@ delay1us:
         ;; Variable-delay macros to compensate for the additional instructions
         ;; when using separate output lines
 #ifdef IEC_SEPARATE_OUT
-#  define JIFFY_SUB_LOOPS 1
+#  define JIFFY_SUB_CYCLES 3
         
         ;; Nibble-swap the given register
         .macro swapwait reg
         swap    \reg            ; 1
         .endm
 #else
-#  define JIFFY_SUB_LOOPS 0
+#  define JIFFY_SUB_CYCLES 0
         
         ;; Wait one cycle
         .macro swapwait reg
         nop                     ; 1
         .endm
 #endif
+#endif // ifdef any fast loader
 
 #ifdef CONFIG_JIFFY_ASM
         ;; ====================================================================
@@ -102,10 +134,7 @@ jiffy_receive:
         rjmp    0b
 
         ;; Wait for 13us from clock high -> 104 cycles
-        ldi     r18,32+JIFFY_OFFSET_READ
-                                ; 1 - see comments at offset definition
-        rcall   delayloop       ; 102
-        nop                     ; 1
+        delay_cycles 104 + JIFFY_OFFSET_READ ; 104 + Offset
 
         ;; Read bit 5+4
         in      r0, _SFR_IO_ADDR(IEC_PIN) ; 1
@@ -121,9 +150,7 @@ jiffy_receive:
         or      r24, r25        ; 1 - merge
 
         ;; Wait 13us -> 104-9=95 cycles
-        ldi     r18, 29         ; 1
-        rcall   delayloop       ; 93
-        nop                     ; 1
+        delay_cycles 95         ; 95
 
         ;; Read bit 7+6
         in      r0, _SFR_IO_ADDR(IEC_PIN) ; 1
@@ -140,10 +167,7 @@ jiffy_receive:
         or      r24, r25        ; 1 - merge
 
         ;; Wait 11us -> 88-10=78 cycles
-        ldi     r18, 23         ; 1
-        rcall   delayloop       ; 75
-        rjmp    1f              ; 2
-1:
+        delay_cycles 78         ; 78
 
         ;; Read bit 3+1 [sic]
         in      r0, _SFR_IO_ADDR(IEC_PIN) ; 1
@@ -156,10 +180,7 @@ jiffy_receive:
         or      r24, r25        ; 1 - merge
 
         ;; Wait 13us -> 104-8=96 cycles
-        ldi     r18, 29         ; 1
-        rcall   delayloop       ; 93
-        rjmp    1f              ; 2
-1:
+        delay_cycles 96         ; 96
 
         ;; Read Bit 2+0
         in      r0, _SFR_IO_ADDR(IEC_PIN) ; 1
@@ -173,16 +194,13 @@ jiffy_receive:
         clr     r25             ; 1 - clear high byte of return value
 
         ;; Wait 13us -> 104-9=95 cycles
-        ldi     r18, 29         ; 1
-        rcall   delayloop       ; 93
-        nop                     ; 1
+        delay_cycles 95         ; 95
 
         ;; Read EOI mark
         in      r19, _SFR_IO_ADDR(IEC_PIN) ; 1
 
         ;; Wait 6us -> 48-1=47 cycles
-        ldi     r18, 13         ; 1
-        rcall   delayloop       ; 45
+        delay_cycles 47         ; 47
 
         ;; Data low
         sbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA ; 1
@@ -282,38 +300,33 @@ jiffy_send:
 
         ;; Output the first bitpair 6us (48 cycles) after the start
         ;; 6us is the best-case time from bus check to transmission in J1541
-        ldi     r18,8+JIFFY_OFFSET_WRITE - JIFFY_SUB_LOOPS
-                                ; 1 - see comments at offset definition
-        rcall   delayloop       ; ((8-1)*3+6 + 3 = 30 = 48-17-1 (NOP omitted)
+        delay_cycles 28 + JIFFY_OFFSET_WRITE - JIFFY_SUB_CYCLES
+                                ; 28 + 2 = 30 = 48-17-1 (NOP omitted)
         rcall   jiffy_sendbits  ; 10+4 - [FFBD]
 
         ;; Output the second bitpair 10us (80 cycles) after the first
-        ldi     r18,19 - JIFFY_SUB_LOOPS        ; 1
-        rcall   delayloop       ; ((19-1)*3+6) + 3 = 63 = 80-15-2
-        rjmp    0f              ; 2
-0:      rcall   jiffy_sendbits  ; 10+4 - [FFC4]
+        delay_cycles 63 - JIFFY_SUB_CYCLES
+                                ; 63 = 80-15-2
+        rcall   jiffy_sendbits  ; 10+4 - [FFC4]
 
         ;; Output the third bitpair 11us (88 cycles) after the second
-        ldi     r18,22 - JIFFY_SUB_LOOPS        ; 1
-        rcall   delayloop       ; ((22-1)*3+6) + 3 = 72 = 88-15-1
-        nop                     ; 1
+        delay_cycles 72 - JIFFY_SUB_CYCLES
+                                ; 72 = 88-15-1
         rcall   jiffy_sendbits  ; 10+4 - [FFCC]
 
         ;; Output the fourth bitpair 10us (80 cycles) after the third
-        ldi     r18,19 - JIFFY_SUB_LOOPS        ; 1
-        rcall   delayloop       ; ((19-1)*3+6) + 3 = 63 = 80-15-2
-        rjmp    0f              ; 2
-0:      rcall   jiffy_sendbits  ; 10+4 - [FFD3]
+        delay_cycles 63 - JIFFY_SUB_CYCLES
+                                ; 63 = 80-15-2
+        rcall   jiffy_sendbits  ; 10+4 - [FFD3]
 
         ;; Skip sending EOI for LOAD code path
         tst     r20             ; 1
         brne    js_finish       ; 1
 
         ;; Output EOI marker 11us (88 cycles) after the last bitpair
-        ldi     r18,24          ; 1
-        rcall   delayloop       ; ((24-1)*3+6) + 3 = 78 = 88-8-2
-        rjmp    0f              ; 2
-0:      out     _SFR_IO_ADDR(IEC_OUT), r22 ; 1 - output EOI marker [FFDB]
+        delay_cycles 78         ; 78 = 88-8-2
+
+        out     _SFR_IO_ADDR(IEC_OUT), r22 ; 1 - output EOI marker [FFDB]
 
         ;; Wait 1us to allow the bus to settle (J1541 needs 4us here)
         rcall   delay1us
@@ -384,9 +397,7 @@ tdbitloop:
 #endif
         
         ;; Wait for 28us from data high -> 224-8=216 cycles
-        ldi     r18,69          ; 1
-        rcall   delayloop       ; 213
-
+        delay_cycles 214        ; 214
         swapwait r19            ; 1
 
         out     _SFR_IO_ADDR(IEC_OUT), r19      ; 1 - output the bit pair
@@ -397,8 +408,7 @@ tdbitloop:
         brne    tdbitloop       ; 2/1 - loop until done
 
         ;; Wait for 26us from last bitpair -> 208-12=196 cycles
-        ldi     r18,63          ; 1
-        rcall   delayloop       ; 195
+        delay_cycles 196        ; 196
 
         ;; Data high, Clock low
         ldi     r18, IEC_PULLUPS | IEC_OBIT_CLOCK
@@ -427,11 +437,8 @@ turbodisk_buffer:
 0:      sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_DATA ; 2
         rjmp    0b
 
-        rcall   delay1us        ; Move the timing window slightly
-
-        ;; Initial delay of 4 us
-        ldi     r18,8           ; 1
-        rcall   delayloop       ; 30
+        ;; Initial delay of 4 us + move the timing window by 1 us for stability
+        delay_cycles (4+1)*8    ; 40
 
         ;; 287 AVR cycles from here to first LDA $DD00 on C64 side ($F822)
 tdbyteloop:
@@ -440,9 +447,7 @@ tdbyteloop:
         eor     r0,r21          ; 1 - invert byte
 
         ;; Waste another 12 us -> 96-4=92 cycles
-        ldi     r18,28          ; 1
-        rcall   delayloop       ; 90
-        nop                     ; 1
+        delay_cycles 92         ; 92
 
 tdbitloop2:
         clr     r19             ; 1 - Clear output register
@@ -457,36 +462,30 @@ tdbitloop2:
 #endif
 
         ;; Wait another 24 us -> 192-7=185 cycles
-        ldi     r18,59          ; 1
-        rcall   delayloop       ; 183
+        delay_cycles 184        ; 184
         swapwait r19            ; 1
         out     _SFR_IO_ADDR(IEC_OUT), r19      ; 1 - output the bit pair
 
         ;; 5 us -> 40-3=37 cycles
-        ldi     r18,10          ; 1
-        rcall   delayloop       ; 36
+        delay_cycles 37         ; 37
 
         dec     r20             ; 1 - Decrement bitpair counter
         brne    tdbitloop2      ; 2/1 - loop until done
 
         ;; Wait 10 us -> 80-3+1=78 cycles
-        ldi     r18,23          ; 1
-        rcall   delayloop       ; 75
-        rjmp    1f              ; 2
-1:
+        delay_cycles 78         ; 78
 
         dec     r22             ; 1 - Decrement byte counter
         brne    tdbyteloop      ; 2/1 - loop until done
 
-        ;; Final delay: 11 us -> 88-2+1=87 cycles
-        ldi     r18,27          ; 1
-        rcall   delayloop       ; 87
+        ;; Final delay: 11 us -> 88 cycles
+        delay_cycles 88         ; 88
 
         ;; Data high, Clock low
         ldi     r18, IEC_PULLUPS | IEC_OBIT_CLOCK
         out     _SFR_IO_ADDR(IEC_OUT), r18
 
         ret
-#endif  
+#endif
 
         .end
