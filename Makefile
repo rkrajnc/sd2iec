@@ -8,7 +8,7 @@ BOOT_VERSION = 62
 
 
 #----------------------------------------------------------------------------
-# WinAVR Makefile Template written by Eric B. Weddington, Jörg Wunsch, et al.
+# WinAVR Makefile Template written by Eric B. Weddington, Joerg Wunsch, et al.
 #
 # Released to the Public Domain
 #

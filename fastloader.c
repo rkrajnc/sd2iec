@@ -44,7 +44,7 @@ void load_turbodisk(void) {
   set_clock(0);
 
   /* Copy filename to beginning of buffer */
-  // FIXME: Das ist dämlich. fat_open um Zeiger auf Dateinamen erweitern?
+  // FIXME: Das ist daemlich. fat_open um Zeiger auf Dateinamen erweitern?
   len = command_buffer[9];
   for (i=0;i<len;i++)
     command_buffer[i] = command_buffer[10+i];
@@ -52,7 +52,7 @@ void load_turbodisk(void) {
   command_buffer[len] = 0;
   command_length = len;
 
-  // FIXME: Rückgabewert mit Status, evtl. direkt fat_open_read nehmen
+  // FIXME: Rueckgabewert mit Status, evtl. direkt fat_open_read nehmen
   file_open(0);
   buf = find_buffer(0);
   if (!buf) {
