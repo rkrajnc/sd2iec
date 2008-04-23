@@ -129,8 +129,7 @@
 #  define IEC_DDR  DDRA
 #  define IEC_PORT PORTA
 
-/* Please note that you'll have to change the assembler modules if these */
-/* pins aren't defined as Px0-Px3 in this order.                         */
+/* Pins assigned for the IEC lines */
 #  define IEC_PIN_ATN   PA0
 #  define IEC_PIN_DATA  PA1
 #  define IEC_PIN_CLOCK PA2

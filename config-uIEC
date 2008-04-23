@@ -63,7 +63,7 @@ CONFIG_COMMAND_CHANNEL_DUMP=y
 # Enable Turbodisk soft fastloader support
 # This option requires an external crystal oscillator!
 CONFIG_TURBODISK=y
-CONFIG_JIFFY_ASM=n
+CONFIG_JIFFY_ASM=y
 CONFIG_FC3=y
 
 # Select which hardware to compile for
