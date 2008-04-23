@@ -216,13 +216,15 @@
 #  define IEC_PIN_CLOCK         PA2
 #  define IEC_PIN_SRQ           PA3
 #  define IEC_PULLUPS           0
-#  define ATN_INT_SETUP()       do {} while (0)
+#  define ATN_INT_VECT          PCINT0_vect
+#  define ATN_INT_SETUP()       do { PCMSK0 = _BV(PCINT0); PCIFR |= _BV(PCIF0); } while (0)
+#  define set_atnack(x)         if (x) { PCICR |= _BV(PCIE0); } else { PCICR &= (uint8_t)~_BV(PCIE0); }
 #  define DISKCHANGE_PIN        PINC
 #  define DISKCHANGE_DDR        DDRC
 #  define DISKCHANGE_PORT       PORTC
 #  define DISKCHANGE_BIT        _BV(PC4)
-#  define DISKCHANGE_MAX        128
-#  define BLINKTIMER_MAX        200
+#  define DISKCHANGE_MAX        6
+#  define BLINKTIMER_MAX        10
 
 #elif CONFIG_HARDWARE_VARIANT == 3
 /* Hardware configuration: LarsP */
@@ -265,13 +267,15 @@
 #  define IEC_PIN_CLOCK         PC2
 #  define IEC_PIN_SRQ           PC3
 #  define IEC_PULLUPS           0
-#  define ATN_INT_SETUP()       do {} while (0)
+#  define ATN_INT_VECT          PCINT2_vect
+#  define ATN_INT_SETUP()       do { PCMSK2 = _BV(PCINT16); PCIFR |= _BV(PCIF2); } while (0)
+#  define set_atnack(x)         if (x) { PCICR |= _BV(PCIE2); } else { PCICR &= (uint8_t)~_BV(PCIE2); }
 #  define DISKCHANGE_PIN        PINA
 #  define DISKCHANGE_DDR        DDRA
 #  define DISKCHANGE_PORT       PORTA
 #  define DISKCHANGE_BIT        _BV(PA4)
-#  define DISKCHANGE_MAX        128
-#  define BLINKTIMER_MAX        200
+#  define DISKCHANGE_MAX        6
+#  define BLINKTIMER_MAX        10
 
 #elif CONFIG_HARDWARE_VARIANT == 4
 /* Hardware configuration: uIEC */
@@ -307,8 +311,8 @@
 #  define DISKCHANGE_DDR        DDRG
 #  define DISKCHANGE_PORT       PORTG
 #  define DISKCHANGE_BIT        _BV(PG1)
-#  define DISKCHANGE_MAX        128
-#  define BLINKTIMER_MAX        200
+#  define DISKCHANGE_MAX        6
+#  define BLINKTIMER_MAX        10
 
 #elif CONFIG_HARDWARE_VARIANT==5
 /* Hardware configuration: Shadowolf 2 aka sd2iec 1.x */
@@ -421,13 +425,15 @@
 #  define IEC_PIN_CLOCK         PB2
 #  define IEC_PIN_SRQ           PB3
 #  define IEC_PULLUPS           (_BV(PB7) | _BV(PB6) | _BV(PB4))
-#  define ATN_INT_SETUP()       do {} while (0)
+#  define ATN_INT_VECT          PCINT1_vect
+#  define ATN_INT_SETUP()       do { PCMSK1 = _BV(PCINT8); PCIFR |= _BV(PCIF1); } while (0)
+#  define set_atnack(x)         if (x) { PCICR |= _BV(PCIE1); } else { PCICR &= (uint8_t)~_BV(PCIE1); }
 #  define DISKCHANGE_PIN        PINA
 #  define DISKCHANGE_DDR        DDRA
 #  define DISKCHANGE_PORT       PORTA
 #  define DISKCHANGE_BIT        _BV(PA4)
-#  define DISKCHANGE_MAX        128
-#  define BLINKTIMER_MAX        200
+#  define DISKCHANGE_MAX        6
+#  define BLINKTIMER_MAX        10
 
 #else
 #  error "CONFIG_HARDWARE_VARIANT is unset or set to an unknown value."
