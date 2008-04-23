@@ -92,6 +92,10 @@ uint8_t match_name(uint8_t *matchstr, struct cbmdirent *dent) {
   uint8_t *filename = dent->name;
   uint8_t *starpos;
 
+  /* Shortcut for chaining fastloaders ("!*file") */
+  if (*filename == *matchstr && matchstr[1] == '*')
+    return 1;
+
   while (*filename) {
     switch (*matchstr) {
     case '?':
