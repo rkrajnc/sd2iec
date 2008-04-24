@@ -633,6 +633,15 @@ static int8_t d64_readdir(dh_t *dh, struct cbmdirent *dent) {
   dent->name[16] = 0;
   dent->realname[0] = 0;
 
+  /* Fake Date/Time */
+  dent->year  = 82;
+  dent->month = 8;
+  dent->day   = 31;
+
+  dent->hour   = 0;
+  dent->minute = 0;
+  dent->second = 0;
+
   return 0;
 }
 

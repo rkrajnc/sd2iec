@@ -77,6 +77,13 @@ typedef struct {
  * @typeflags : OR of file type and flags
  * @fatcluster: Start cluster of the entry (if on FAT)
  * @name      : 0-padded commodore file name
+ * @realname  : Actual 8.3 name of the file (if on FAT and different from name)
+ * @year      : 1900-based year
+ * @month     : month
+ * @day       : day
+ * @hour      : hour (24 hours, 0-based)
+ * @minute    : minute
+ * @second    : second
  *
  * This structure holds a CBM filename, its type and its size. The typeflags
  * are almost compatible to the file type byte in a D64 image, but the splat
@@ -84,6 +91,12 @@ typedef struct {
  * zero-terminated. If it was read from a D64 file, it may contain valid
  * characters beyond the first 0-byte which should be displayed in the
  * directory, but ignored for name matching purposes.
+ * realname is either an empty string or the actual ASCII 8.3 file name
+ * of the file if the data in the name field was modified compared
+ * to the on-disk name (e.g. extension hiding or x00).
+ * year/month/day/hour/minute/second specify the time stamp of the file.
+ * It is recommended to set it to 1982-08-31 00:00:00 if unknown because
+ * this is currently the value used by FatFs for new files.
  */
 struct cbmdirent {
   uint16_t blocksize;
@@ -92,6 +105,12 @@ struct cbmdirent {
   uint32_t fatcluster;
   uint8_t  name[CBM_NAME_LENGTH+1];
   uint8_t  realname[8+3+1+1];
+  uint8_t  year;
+  uint8_t  month;
+  uint8_t  day;
+  uint8_t  hour;
+  uint8_t  minute;
+  uint8_t  second;
 };
 
 /**
