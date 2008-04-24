@@ -469,7 +469,8 @@ void file_open(uint8_t secondary) {
   /* Assume everything will go well unless proven otherwise */
   set_error(ERROR_OK);
 
-  command_buffer[command_length] = 0;
+  /* Clear the remainder of the command buffer, simplifies parsing */
+  memset(command_buffer+command_length, 0, sizeof(command_buffer)-command_length);
 
   uart_trace(command_buffer,0,command_length);
 

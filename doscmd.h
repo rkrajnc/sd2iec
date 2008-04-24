@@ -27,7 +27,7 @@
 #ifndef DOSCMD_H
 #define DOSCMD_H
 
-extern uint8_t command_buffer[];
+extern uint8_t command_buffer[CONFIG_COMMAND_BUFFER_SIZE+2];
 extern uint8_t command_length;
 
 extern uint16_t datacrc;
