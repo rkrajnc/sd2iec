@@ -31,6 +31,8 @@
 
 #define BUFFER_SEC_SYSTEM 100
 
+typedef enum { DIR_FMT_CBM, DIR_FMT_CMD_SHORT, DIR_FMT_CMD_LONG } dirformat_t;
+
 /**
  * struct buffer_s - buffer handling structire
  * @data     : Pointer to the data area of the buffer, MUST be the first field
@@ -69,15 +71,16 @@ typedef struct buffer_s {
   /* private: */
   union {
     struct {
-      dh_t dh;           /* Directory handle */
-      uint8_t filetype;  /* File type */
-      uint8_t *matchstr; /* Pointer to filename pattern */
+      dh_t dh;            /* Directory handle */
+      uint8_t filetype;   /* File type */
+      dirformat_t format; /* Dir format */
+      uint8_t *matchstr;  /* Pointer to filename pattern */
     } dir;
-    FIL fh;              /* File access via FAT */
-    d64fh_t d64;         /* File access on D64  */
+    FIL fh;               /* File access via FAT */
+    d64fh_t d64;          /* File access on D64  */
     struct {
-      uint8_t part;      /* partition number for $=P */
-      uint8_t *matchstr; /* Pointer to filename pattern */
+      uint8_t part;       /* partition number for $=P */
+      uint8_t *matchstr;  /* Pointer to filename pattern */
     } pdir;
   } pvt;
 } buffer_t;

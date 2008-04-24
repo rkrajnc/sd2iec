@@ -88,73 +88,137 @@ const PROGMEM uint8_t filetypes[] = {
 /*  Utility functions                                                        */
 /* ------------------------------------------------------------------------- */
 
+static void addnum(uint8_t *data,uint8_t num) {
+  num%=100;
+  *data++ = (num/10) + '0';
+  *data = (num % 10) + '0';
+}
+
 /**
- * addentry - create a single directory entry in buf
+ * createentry - create a single directory entry in buf
  * @dent: directory entry to be added
  * @buf : buffer to be used
  *
  * This function creates a directory entry for dent in 15x1 compatible format
  * in the given buffer.
  */
-static void addentry(struct cbmdirent *dent, uint8_t *buf) {
+static void createentry(struct cbmdirent *dent, buffer_t *buf, dirformat_t format) {
   uint8_t i;
+  uint8_t *data = buf->data;
 
+  if(format & DIR_FMT_CMD_LONG)
+    i=63;
+  else if(format & DIR_FMT_CMD_SHORT)
+    i=41;
+  else
+    i=31;
+
+  buf->lastused  = i;
   /* Clear the line */
-  memset(buf, ' ', 31);
+  memset(data, ' ', i);
   /* Line end marker */
-  buf[31] = 0;
+  data[i] = 0;
 
   /* Next line pointer, 1571-compatible =) */
   if (dent->remainder != 0xff)
     /* store remainder in low byte of link pointer          */
     /* +2 so it is never 0 (end-marker) or 1 (normal value) */
-    *buf++ = dent->remainder+2;
+    *data++ = dent->remainder+2;
   else
-    *buf++ = 1;
-  *buf++ = 1;
+    *data++ = 1;
+  *data++ = 1;
 
-  *buf++ = dent->blocksize & 0xff;
-  *buf++ = dent->blocksize >> 8;
+  *data++ = dent->blocksize & 0xff;
+  *data++ = dent->blocksize >> 8;
 
   /* Filler before file name */
   if (dent->blocksize < 1000)
-    buf++;
+    data++;
   if (dent->blocksize < 100)
-    buf++;
+    data++;
   if (dent->blocksize < 10)
-    buf++;
-  *buf++ = '"';
+    data++;
+  *data++ = '"';
 
   /* copy and adjust the filename - C783 */
-  memcpy(buf, dent->name, CBM_NAME_LENGTH);
+  memcpy(data, dent->name, CBM_NAME_LENGTH);
   for (i=0;i<=CBM_NAME_LENGTH;i++)
     if (dent->name[i] == 0x22 || dent->name[i] == 0 || i == 16) {
-      buf[i] = '"';
+      data[i] = '"';
       while (i<=CBM_NAME_LENGTH) {
-        if (buf[i] == 0)
-          buf[i] = ' ';
+        if (data[i] == 0)
+          data[i] = ' ';
         else
-          buf[i] &= 0x7f;
+          data[i] &= 0x7f;
         i++;
       }
     }
 
   /* Skip name and final quote */
-  buf += CBM_NAME_LENGTH+1;
+  data += CBM_NAME_LENGTH+1;
 
   if (dent->typeflags & FLAG_SPLAT)
-    *buf = '*';
+    *data = '*';
 
-  /* File type */
-  memcpy_P(buf+1, filetypes + TYPE_LENGTH * (dent->typeflags & EXT_TYPE_MASK), TYPE_LENGTH);
+  if(format & DIR_FMT_CMD_LONG) {
+    /* File type */
+    memcpy_P(data+1, filetypes + TYPE_LENGTH * (dent->typeflags & EXT_TYPE_MASK), TYPE_LENGTH);
 
-  /* RO marker */
-  if (dent->typeflags & FLAG_RO)
-    buf[4] = '<';
+    /* RO marker */
+    if (dent->typeflags & FLAG_RO)
+      data[4] = '<';
 
-  /* Extension: Hidden marker */
-  if (dent->typeflags & FLAG_HIDDEN)
-    buf[5] = 'H';
+    data+=7;
+    addnum(data,dent->month);
+    data += 2;
+    *data++ = '/';
+    addnum(data,dent->day);
+    data += 2;
+    *data++ = '/';
+    addnum(data,dent->year);
+    data+=5;
+    addnum(data,(dent->hour>12?dent->hour-12:dent->hour));
+    data+=2;
+    *data++ = '.';
+    addnum(data,dent->minute);
+    data+=3;
+    *data++ = (dent->hour>11?'P':'A');
+    *data++ = 'M';
+    while (*data)
+      *data++ = 1;
+  } else if(format & DIR_FMT_CMD_SHORT) {
+    /* File type */
+    memcpy_P(data+1, filetypes + TYPE_LENGTH * (dent->typeflags & EXT_TYPE_MASK), 1);
+    if (dent->typeflags & FLAG_RO)
+      data[2] = '<';
+
+    /* Add date/time stamp */
+    data+=3;
+    addnum(data,dent->month);
+    data += 2;
+    *data++ = '/';
+    addnum(data,dent->day);
+    data+=3;
+    addnum(data,(dent->hour>12?dent->hour-12:dent->hour));
+    data+=2;
+    *data++ = '.';
+    addnum(data,dent->minute);
+    data+=3;
+    *data++ = (dent->hour>11?'P':'A');
+    while(*data)
+      *data++ = 1;
+  } else {
+    /* File type */
+    memcpy_P(data+1, filetypes + TYPE_LENGTH * (dent->typeflags & EXT_TYPE_MASK), TYPE_LENGTH);
+
+    /* RO marker */
+    if (dent->typeflags & FLAG_RO)
+      data[4] = '<';
+
+    /* Extension: Hidden marker */
+    if (dent->typeflags & FLAG_HIDDEN)
+      data[5] = 'H';
+  }
 }
 
 /* ------------------------------------------------------------------------- */
@@ -180,6 +244,7 @@ static uint8_t dir_footer(buffer_t *buf) {
   buf->data[3] = blocks >> 8;
 
   buf->position = 0;
+  buf->lastused = 31;
   buf->sendeoi  = 1;
 
   return 0;
@@ -204,10 +269,10 @@ static uint8_t pdir_refill(buffer_t* buf) {
         !match_name(buf->pvt.pdir.matchstr, &dent))
       continue;
 
-    addentry(&dent, buf->data);
+    createentry(&dent, buf, DIR_FMT_CBM);
     return 0;
   }
-  buf->lastused = 2;
+  buf->lastused = 1;
   buf->sendeoi = 1;
   memset(buf->data,0,2);
   return 0;
@@ -231,7 +296,7 @@ static uint8_t dir_refill(buffer_t *buf) {
   switch (next_match(&buf->pvt.dir.dh, buf->pvt.dir.matchstr,
                      buf->pvt.dir.filetype, &dent)) {
   case 0:
-    addentry(&dent, buf->data);
+    createentry(&dent, buf, buf->pvt.dir.format);
     return 0;
 
   case -1:
@@ -257,6 +322,7 @@ static uint8_t dir_refill(buffer_t *buf) {
 static void load_directory(uint8_t secondary) {
   buffer_t *buf;
   path_t path;
+  uint8_t pos=1;
 
   buf = alloc_buffer();
   if (!buf)
@@ -269,32 +335,39 @@ static void load_directory(uint8_t secondary) {
   buf->lastused  = 31;
 
   if (command_length > 2) {
-    if(command_buffer[1]=='=' && command_buffer[2]=='P') {
-      /* Parse Partition Directory */
+    if(command_buffer[1]=='=') {
+      if(command_buffer[2]=='P') {
+        /* Parse Partition Directory */
 
-      /* copy static header to start of buffer */
-      memcpy_P(buf->data, dirheader, sizeof(dirheader));
+        /* copy static header to start of buffer */
+        memcpy_P(buf->data, dirheader, sizeof(dirheader));
 
-      /* set partition number */
-      buf->data[HEADER_OFFSET_DRIVE] = max_part;
+        /* set partition number */
+        buf->data[HEADER_OFFSET_DRIVE] = max_part;
 
-      /* Let the refill callback handle everything else */
-      buf->refill = pdir_refill;
+        /* Let the refill callback handle everything else */
+        buf->refill = pdir_refill;
 
-      if(command_length>3) {
-        /* Parse the name pattern */
-        if (parse_path(command_buffer+3, &path, &name, 0)) {
-          free_buffer(buf);
-          return;
+        if(command_length>3) {
+          /* Parse the name pattern */
+          if (parse_path(command_buffer+3, &path, &name, 0)) {
+            free_buffer(buf);
+            return;
+          }
+          buf->pvt.pdir.matchstr = name;
         }
-        buf->pvt.pdir.matchstr = name;
+
+        return;
+      } else if(command_buffer[2]=='T') {
+        buf->pvt.dir.format = DIR_FMT_CMD_SHORT;
+        pos=4;
       }
-
-      return;
     }
+  }
 
+  if(command_buffer[pos]) { /* do we have a path to scan? */
     /* Parse the name pattern */
-    if (parse_path(command_buffer+1, &path, &name, 0)) {
+    if (parse_path(command_buffer+pos, &path, &name, 0)) {
       free_buffer(buf);
       return;
     }
