@@ -598,18 +598,7 @@ void parse_doscommand(void) {
   if (detected_loader == FL_NONE) {
     /* Dump only if no loader was detected because it may ruin the timing */
     uart_flush();
-    uart_putc('>');
-
-    for (i=0;i<command_length;i++) {
-      uart_puthex(command_buffer[i]);
-      uart_putc(' ');
-      if ((i & 0x0f) == 0x0f) {
-        uart_putcrlf();
-        uart_putc('>');
-      }
-      uart_flush();
-    }
-    uart_putcrlf();
+    uart_trace(command_buffer,0,command_length);
   }
 #endif
 
