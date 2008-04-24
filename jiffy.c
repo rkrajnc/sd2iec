@@ -33,40 +33,8 @@
 #include "avrcompat.h"
 #include "iec-ll.h"
 #include "fastloader-ll.h"
+#include "timer.h"
 
-/* ------------------------------------------------------------------------- */
-/*  Timing helpers - direct copy from iec.c because they are inlined         */
-/* ------------------------------------------------------------------------- */
-
-/// Calculate timer start value for given timeout in microseconds
-#define TIMEOUT_US(x) (256-((float)F_CPU/8.0*((x)/1000000.0)))
-
-/**
- * start_timeout - start a timeout using timer1
- * @startval: starting value for timer
- *
- * This function sets timer 0 to the specified value and clears its overflow
- * flag. Use in conjunction with TIMEOUT_US to cause a timer overflow after
- * a specified number of microseconds. DON'T use a variable as a parameter to
- * the TIMEOUT_US macro because that would require run-time float calculations.
- */
-static inline void start_timeout(uint8_t startval) {
-  TCNT0 = startval;
-  TIFR0 |= _BV(TOV0);
-}
-
-/**
- * has_timed_out - returns true if timeout was reached
- *
- * This function returns true if the overflow flag of timer 0 is set which
- * (together with start_timeout and TIMEOUT_US) will happen when the
- * specified time has elapsed.
- */
-static inline uint8_t has_timed_out(void) {
-  return TIFR0 & _BV(TOV0);
-}
-
-/* =============================================================== */
 
 #define JIFFY_OFFSET_SEND 3
 #define JIFFY_OFFSET_RECV 3

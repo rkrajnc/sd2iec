@@ -40,6 +40,7 @@
 #include "avrcompat.h"
 #include "buffers.h"
 #include "diskchange.h"
+#include "diskio.h"
 #include "doscmd.h"
 #include "errormsg.h"
 #include "fastloader-ll.h"
@@ -47,7 +48,7 @@
 #include "flags.h"
 #include "fileops.h"
 #include "iec-ll.h"
-#include "diskio.h"
+#include "timer.h"
 #include "uart.h"
 #include "iec.h"
 
@@ -82,39 +83,6 @@ struct {
 
 
 /* ------------------------------------------------------------------------- */
-/*  Utility stuff                                                            */
-/* ------------------------------------------------------------------------- */
-
-/// Calculate timer start value for given timeout in microseconds
-#define TIMEOUT_US(x) (256-((float)F_CPU/8.0*(x/1000000.0)))
-
-/**
- * start_timeout - start a timeout using timer0
- * @startval: starting value for timer
- *
- * This function sets timer 0 to the specified value and clears its overflow
- * flag. Use in conjunction with TIMEOUT_US to cause a timer overflow after
- * a specified number of microseconds. DON'T use a variable as a parameter to
- * the TIMEOUT_US macro because that would require run-time float calculations.
- */
-static void start_timeout(uint8_t startval) {
-  TCNT0 = startval;
-  TIFR0 |= _BV(TOV0);
-}
-
-/**
- * has_timed_out - returns true if timeout was reached
- *
- * This function returns true if the overflow flag of timer 0 is set which
- * (together with start_timeout and TIMEOUT_US) will happen when the
- * specified time has elapsed.
- */
-static uint8_t has_timed_out(void) {
-  return TIFR0 & _BV(TOV0);
-}
-
-
-/* ------------------------------------------------------------------------- */
 /*  Very low-level bus handling                                              */
 /* ------------------------------------------------------------------------- */
 
@@ -145,40 +113,25 @@ static uint8_t check_atn(void) {
       return 0;
 }
 
-/// Interrupt routine that simulates the hardware-auto-acknowledge of ATN
-/* This currently runs once every 500 microseconds, keep small! */
-ISR(TIMER2_COMPA_vect) {
-  static uint8_t blinktimer;
-
-#ifndef ATN_INT_VECT
-  if (!IEC_ATN) {
-    set_data(0);
-  }
-#endif
-
-  if (error_blink_active) {
-    blinktimer++;
-    if (blinktimer == BLINKTIMER_MAX) {
-      DIRTY_LED_PORT ^= DIRTY_LED_BIT();
-      blinktimer = 0;
-    }
-  }
-
-  if (!(DISKCHANGE_PIN & DISKCHANGE_BIT)) {
-    if (keycounter < DISKCHANGE_MAX)
-      keycounter++;
-  } else {
-    keycounter = 0;
-  }
-}
-
 #ifdef ATN_INT_VECT
+
 /// Actual interrupt-based ATN handling
 ISR(ATN_INT_VECT) {
   if (!IEC_ATN) {
     set_data(0);
   }
 }
+
+#else
+
+/// Interrupt routine that simulates the hardware-auto-acknowledge of ATN
+/* This currently runs once every 500 microseconds, keep small! */
+ISR(TIMER2_COMPA_vect) {
+  if (!IEC_ATN) {
+    set_data(0);
+  }
+}
+
 #endif
 
 /* ------------------------------------------------------------------------- */
@@ -551,21 +504,10 @@ void init_iec(void) {
   IEC_PORT = ~(IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA);
 #endif
 
-  /* Prepare ATN interrupt (if any */
+  /* Prepare ATN interrupt (if any) */
   ATN_INT_SETUP();
 
-  /* Count F_CPU/8 in timer 0 */
-  TCCR0B = _BV(CS01);
-
-#ifdef ATN_INT_VECT
-  /* Timer interrupt every 9.984ms for time-keeping and the error LED */
-  OCR2A  = 78;
-  TCNT2  = 0;
-  TCCR2B = 0;
-  TCCR2A |= _BV(WGM21);
-  TCCR2B |= _BV(CS20) | _BV(CS21) | _BV(CS22);
-  TIMSK2 |= _BV(OCIE2A);
-#else
+#ifndef ATN_INT_VECT
   /* Issue an interrupt every 500us with timer 2 for ATN-Acknowledge.    */
   /* The exact timing isn't critical, it just has to be faster than 1ms. */
   /* Every 800us was too slow in rare situations.                        */

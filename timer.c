@@ -1,0 +1,64 @@
+/* sd2iec - SD/MMC to Commodore serial bus interface/controller
+   Copyright (C) 2007,2008  Ingo Korb <ingo@akana.de>
+
+   Inspiration and low-level SD/MMC access based on code from MMC2IEC
+     by Lars Pontoppidan et al., see sdcard.c|h and config.h.
+
+   FAT filesystem access based on code from ChaN and Jim Brain, see ff.c|h.
+
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; version 2 of the License only.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+
+   timer.c: System timer (and button debouncer)
+
+*/
+
+#include "config.h"
+#include <avr/interrupt.h>
+#include <avr/io.h>
+#include "avrcompat.h"
+#include "diskchange.h"
+#include "errormsg.h"
+#include "timer.h"
+
+volatile tick_t ticks;
+
+/* The main timer interrupt */
+ISR(TIMER1_COMPA_vect) {
+  ticks++;
+
+  if (error_blink_active) {
+    if ((ticks & 15) == 0)
+      DIRTY_LED_PORT ^= DIRTY_LED_BIT();
+  }
+
+  if (!(DISKCHANGE_PIN & DISKCHANGE_BIT)) {
+    if (keycounter < DISKCHANGE_MAX)
+      keycounter++;
+  } else {
+    keycounter = 0;
+  }
+}
+
+void init_timer(void) {
+  /* Count F_CPU/8 in timer 0 */
+  TCCR0B = _BV(CS01);
+
+  /* Set up a 100Hz interrupt using timer 1 */
+  OCR1A  = 1249;
+  TCNT1  = 0;
+  TCCR1A = 0;
+  TCCR1B = _BV(WGM12) | _BV(CS10) | _BV(CS11);
+  TIMSK1 |= _BV(OCIE1A);
+}

@@ -168,10 +168,6 @@
 /* If the ATN interrupt is used, the timer interrupt is called every 9.984 milliseconds.  */
 /* Accept disk change key press after this many interrupts */
 #  define DISKCHANGE_MAX  128
-/* Toggle error LED blink after this many interrupts  */
-/* The default is the nervous 1541 blink rate of 5 Hz */
-#  define BLINKTIMER_MAX  200
-
 
 
 /* Pre-configurated hardware variants */
@@ -224,7 +220,7 @@
 #  define DISKCHANGE_PORT       PORTC
 #  define DISKCHANGE_BIT        _BV(PC4)
 #  define DISKCHANGE_MAX        6
-#  define BLINKTIMER_MAX        10
+
 
 #elif CONFIG_HARDWARE_VARIANT == 3
 /* Hardware configuration: LarsP */
@@ -275,7 +271,7 @@
 #  define DISKCHANGE_PORT       PORTA
 #  define DISKCHANGE_BIT        _BV(PA4)
 #  define DISKCHANGE_MAX        6
-#  define BLINKTIMER_MAX        10
+
 
 #elif CONFIG_HARDWARE_VARIANT == 4
 /* Hardware configuration: uIEC */
@@ -311,7 +307,7 @@
 #  define DISKCHANGE_PORT       PORTG
 #  define DISKCHANGE_BIT        _BV(PG1)
 #  define DISKCHANGE_MAX        6
-#  define BLINKTIMER_MAX        10
+
 
 #elif CONFIG_HARDWARE_VARIANT==5
 /* Hardware configuration: Shadowolf 2 aka sd2iec 1.x */
@@ -364,8 +360,6 @@
 #  define DISKCHANGE_PORT       PORTC
 #  define DISKCHANGE_BIT        _BV(PC3)
 #  define DISKCHANGE_MAX        6
-#  define BLINKTIMER_MAX        10
-
 
 #  ifdef CONFIG_TWINSD
 /* Support for multiple SD cards */
@@ -382,6 +376,7 @@
 #  else
 #   define MAX_DRIVES           1
 #  endif
+
 
 #elif CONFIG_HARDWARE_VARIANT == 6
 /* Hardware configuration: NKC MMC2IEC */
@@ -432,11 +427,12 @@
 #  define DISKCHANGE_PORT       PORTA
 #  define DISKCHANGE_BIT        _BV(PA4)
 #  define DISKCHANGE_MAX        6
-#  define BLINKTIMER_MAX        10
+
 
 #else
 #  error "CONFIG_HARDWARE_VARIANT is unset or set to an unknown value."
 #endif
+
 
 #define IEC_BIT_ATN      _BV(IEC_PIN_ATN)
 #define IEC_BIT_DATA     _BV(IEC_PIN_DATA)

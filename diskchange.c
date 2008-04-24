@@ -34,6 +34,7 @@
 #include "flags.h"
 #include "ff.h"
 #include "parser.h"
+#include "timer.h"
 #include "ustring.h"
 #include "diskchange.h"
 
@@ -44,13 +45,6 @@ volatile uint8_t keycounter;
 static FIL     swaplist;
 static path_t  swappath;
 static uint8_t linenum;
-
-/* Timer-polling delay */
-#define TICKS_PER_MS (F_CPU/(1000*1024.0))
-static void tdelay(uint16_t ticks) {
-  TCNT1 = 0;
-  while (TCNT1 < ticks) ;
-}
 
 static void mount_line(void) {
   FRESULT res;
@@ -136,12 +130,17 @@ static void mount_line(void) {
 
   /* Confirmation blink */
   for (i=0;i<2;i++) {
+    tick_t targettime;
+
     DIRTY_LED_ON();
     BUSY_LED_ON();
-    tdelay(100 * TICKS_PER_MS);
+    targettime = ticks + MS_TO_TICKS(100);
+    while (time_before(ticks,targettime)) ;
+
     DIRTY_LED_OFF();
     BUSY_LED_OFF();
-    tdelay(100 * TICKS_PER_MS);
+    targettime = ticks + MS_TO_TICKS(100);
+    while (time_before(ticks,targettime)) ;
   }
 }
 
@@ -208,9 +207,6 @@ void change_disk(void) {
 }
 
 void init_change(void) {
-  /* Timer 1 counts F_CPU/1024, i.e. 1/8ths of a millisecond */
-  TCCR1B = _BV(CS12) | _BV(CS10);
-
   memset(&swaplist,0,sizeof(swaplist));
   linenum = 255;
   globalflags &= (uint8_t)~AUTOSWAP_ACTIVE;

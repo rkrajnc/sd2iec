@@ -66,6 +66,7 @@
 #  define TCCR2A TCCR2
 #  define TCCR2B TCCR2
 #  define TIFR0  TIFR
+#  define TIMSK1 TIMSK
 #  define TIMSK2 TIMSK
 #  define OCIE2A OCIE2
 #  define OCR2A  OCR2
