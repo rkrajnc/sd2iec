@@ -68,9 +68,10 @@ void read_configuration(void) {
   uint8_t checksum, tmp;
 
   /* Set default values */
-  globalflags         |= JIFFY_ENABLED;  /* JiffyDos enabled */
-  globalflags         |= POSTMATCH;      /* Post-* matching enabled */
-  file_extension_mode  = 1;              /* Store x00 extensions except for PRG */
+  globalflags         |= JIFFY_ENABLED;    /* JiffyDos enabled */
+  globalflags         |= POSTMATCH;        /* Post-* matching enabled */
+  globalflags         |= FAT32_FREEBLOCKS; /* Calculate the number of free blocks on FAT32 */
+  file_extension_mode  = 1;                /* Store x00 extensions except for PRG */
 
   size = eeprom_read_word(&storedconfig.structsize);
 
@@ -87,7 +88,8 @@ void read_configuration(void) {
   OSCCAL = eeprom_read_byte(&storedconfig.osccal);
 
   tmp = eeprom_read_byte(&storedconfig.globalflags);
-  globalflags &= (uint8_t)~(JIFFY_ENABLED | POSTMATCH | EXTENSION_HIDING);
+  globalflags &= (uint8_t)~(JIFFY_ENABLED | POSTMATCH |
+                            EXTENSION_HIDING | FAT32_FREEBLOCKS);
   globalflags |= tmp;
 
   if (eeprom_read_byte(&storedconfig.hardaddress) == DEVICE_SELECT)
@@ -112,7 +114,8 @@ void write_configuration(void) {
   eeprom_write_word(&storedconfig.structsize, sizeof(storedconfig));
   eeprom_write_byte(&storedconfig.osccal, OSCCAL);
   eeprom_write_byte(&storedconfig.globalflags,
-                    globalflags & (JIFFY_ENABLED | POSTMATCH | EXTENSION_HIDING));
+                    globalflags & (JIFFY_ENABLED | POSTMATCH |
+                                   EXTENSION_HIDING | FAT32_FREEBLOCKS));
   eeprom_write_byte(&storedconfig.address, device_address);
   eeprom_write_byte(&storedconfig.hardaddress, DEVICE_SELECT);
   eeprom_write_byte(&storedconfig.fileexts, file_extension_mode);

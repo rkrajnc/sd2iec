@@ -268,6 +268,19 @@ static void parse_xcommand(void) {
   path_t path; // FIXME: use global? Dupe in parse_command
 
   switch (command_buffer[1]) {
+  case 'B':
+    /* Free-block count faking */
+    num = parse_bool();
+    if (num != 255) {
+      if (num)
+        globalflags |= FAT32_FREEBLOCKS;
+      else
+        globalflags &= (uint8_t)~FAT32_FREEBLOCKS;
+
+      set_error_ts(ERROR_STATUS,device_address,0);
+    }
+    break;
+
   case 'E':
     /* Change file extension mode */
     str = command_buffer+2;

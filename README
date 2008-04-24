@@ -124,6 +124,14 @@ Supported commands:
              This flag can be saved in the EEPROM using XW, the default
              value is disabled (-).
 
+  - XB+/XB-  Enable/disable free block calculation for FAT32 drives.
+             As the free block calculation for FAT32 can take a lot of time
+             it can be disabled using XB-. If it is disabled, sd2iec will
+             always report "1 BLOCKS FREE" for FAT32 drives. The free block
+             calculation on FAT12/FAT16 isn't affected because it takes just
+             two seconds at most. This flag can be saved in the EEPROM using
+             XW, the default value is enabled (+).
+
   - XJ+/XJ-  Set or reset the JiffyDOS protocol support flag. Default state
              is disabled for compatibility reasons. This flag can be saved
              in the EEPROM using XW, the default value is enabled (+).

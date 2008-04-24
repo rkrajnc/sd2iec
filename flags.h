@@ -36,5 +36,6 @@ extern uint8_t globalflags;
 #define AUTOSWAP_ACTIVE  (1<<2)
 #define EXTENSION_HIDING (1<<3)
 #define POSTMATCH        (1<<4)
+#define FAT32_FREEBLOCKS (1<<5)
 
 #endif

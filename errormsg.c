@@ -163,6 +163,19 @@ static uint8_t *appendnumber(uint8_t *msg, uint8_t value) {
   return msg;
 }
 
+static uint8_t *appendbool(uint8_t *msg, uint8_t ch, uint8_t value) {
+  if (ch)
+    *msg++ = ch;
+
+  if (value)
+    *msg++ = '+';
+  else
+    *msg++ = '-';
+
+  *msg++ = ':';
+
+  return msg;
+}
 
 void set_error(uint8_t errornum) {
   set_error_ts(errornum,0,0);
@@ -181,27 +194,21 @@ void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
   *msg++ = ',';
 
   if (errornum == ERROR_STATUS) {
-    *msg++ = 'J';
-    if (globalflags & JIFFY_ENABLED)
-      *msg++ = '+';
-    else
-      *msg++ = '-';
-    *msg++ = ':';
+    msg = appendbool(msg, 'J', globalflags & JIFFY_ENABLED);
+
     *msg++ = 'C';
     msg = appendnumber(msg, OSCCAL);
     *msg++ = ':';
+
     *msg++ = 'E';
     msg = appendnumber(msg, file_extension_mode);
-    if (globalflags & EXTENSION_HIDING)
-      *msg++ = '+';
-    else
-      *msg++ = '-';
-    *msg++ = ':';
-    *msg++ = '*';
-    if (globalflags & POSTMATCH)
-      *msg++ = '+';
-    else
-      *msg++ = '-';
+    msg = appendbool(msg, 0, globalflags & EXTENSION_HIDING);
+
+    msg = appendbool(msg, '*', globalflags & POSTMATCH);
+
+    msg = appendbool(msg, 'B', globalflags & FAT32_FREEBLOCKS);
+
+    msg--;
   } else {
     msg = appendmsg(msg,messages,errornum);
     if (errornum == ERROR_DOSVERSION) {
