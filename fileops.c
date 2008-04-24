@@ -398,6 +398,8 @@ void file_open(uint8_t secondary) {
 
   command_buffer[command_length] = 0;
 
+  uart_trace(command_buffer,0,command_length);
+
   /* Load directory? */
   if (command_buffer[0] == '$') {
     // FIXME: Secondary != 0? Compare D7F7-D7FF
