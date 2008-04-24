@@ -38,7 +38,7 @@
  * @checksum   : Checksum over the EEPROM contents
  * @structsize : size of the eeprom structure
  * @osccal     : stored value of OSCCAL
- * @jiffyflag  : stored value of jiffy_enabled
+ * @globalflags: subset of the globalflags variable
  * @address    : device address set by software
  * @hardaddress: device address set by jumpers
  * @fileexts   : file extension mapping mode
@@ -50,7 +50,7 @@ static EEMEM struct {
   uint8_t  checksum;
   uint16_t structsize;
   uint8_t  osccal;
-  uint8_t  jiffyflag;
+  uint8_t  globalflags;
   uint8_t  address;
   uint8_t  hardaddress;
   uint8_t  fileexts;
@@ -65,10 +65,11 @@ static EEMEM struct {
  */
 void read_configuration(void) {
   uint16_t i,size;
-  uint8_t checksum;
+  uint8_t checksum, tmp;
 
   /* Set default values */
   globalflags         |= JIFFY_ENABLED;  /* JiffyDos enabled */
+  globalflags         |= POSTMATCH;      /* Post-* matching enabled */
   file_extension_mode  = 1;              /* Store x00 extensions except for PRG */
 
   size = eeprom_read_word(&storedconfig.structsize);
@@ -84,14 +85,15 @@ void read_configuration(void) {
 
   /* Read data from EEPROM */
   OSCCAL = eeprom_read_byte(&storedconfig.osccal);
-  if(!eeprom_read_byte(&storedconfig.jiffyflag))
-    globalflags &= (uint8_t)~JIFFY_ENABLED;
+
+  tmp = eeprom_read_byte(&storedconfig.globalflags);
+  globalflags &= (uint8_t)~(JIFFY_ENABLED | POSTMATCH | EXTENSION_HIDING);
+  globalflags |= tmp;
+
   if (eeprom_read_byte(&storedconfig.hardaddress) == DEVICE_SELECT)
     device_address = eeprom_read_byte(&storedconfig.address);
-  if (eeprom_read_byte(&storedconfig.fileexts) & 0x80)
-    globalflags |= EXTENSION_HIDING;
 
-  file_extension_mode = eeprom_read_byte(&storedconfig.fileexts) & 0x7f;
+  file_extension_mode = eeprom_read_byte(&storedconfig.fileexts);
 
   /* Paranoia: Set EEPROM address register to the dummy entry */
   EEAR = 0;
@@ -109,11 +111,11 @@ void write_configuration(void) {
   /* Write configuration to EEPROM */
   eeprom_write_word(&storedconfig.structsize, sizeof(storedconfig));
   eeprom_write_byte(&storedconfig.osccal, OSCCAL);
-  eeprom_write_byte(&storedconfig.jiffyflag, globalflags & JIFFY_ENABLED);
+  eeprom_write_byte(&storedconfig.globalflags,
+                    globalflags & (JIFFY_ENABLED | POSTMATCH | EXTENSION_HIDING));
   eeprom_write_byte(&storedconfig.address, device_address);
   eeprom_write_byte(&storedconfig.hardaddress, DEVICE_SELECT);
-  eeprom_write_byte(&storedconfig.fileexts,
-                    file_extension_mode + ((globalflags & EXTENSION_HIDING)?0x80:0));
+  eeprom_write_byte(&storedconfig.fileexts, file_extension_mode);
 
   /* Calculate checksum over EEPROM contents */
   checksum = 0;

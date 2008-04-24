@@ -35,5 +35,6 @@ extern uint8_t globalflags;
 #define JIFFY_ENABLED    (1<<1)
 #define AUTOSWAP_ACTIVE  (1<<2)
 #define EXTENSION_HIDING (1<<3)
+#define POSTMATCH        (1<<4)
 
 #endif

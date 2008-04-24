@@ -31,6 +31,7 @@
 #include "dirent.h"
 #include "errormsg.h"
 #include "fatops.h"
+#include "flags.h"
 #include "ustring.h"
 #include "parser.h"
 
@@ -93,8 +94,10 @@ uint8_t match_name(uint8_t *matchstr, struct cbmdirent *dent) {
   uint8_t *starpos;
 
   /* Shortcut for chaining fastloaders ("!*file") */
+  /*
   if (*filename == *matchstr && matchstr[1] == '*')
     return 1;
+  */
 
   while (*filename) {
     switch (*matchstr) {
@@ -104,14 +107,16 @@ uint8_t match_name(uint8_t *matchstr, struct cbmdirent *dent) {
       break;
 
     case '*':
-      starpos = matchstr;
-      matchstr += ustrlen(matchstr)-1;
-      filename += ustrlen(filename)-1;
-      while (matchstr != starpos) {
-        if (*matchstr != *filename && *matchstr != '?')
-          return 0;
-        filename--;
-        matchstr--;
+      if (globalflags & POSTMATCH) {
+        starpos = matchstr;
+        matchstr += ustrlen(matchstr)-1;
+        filename += ustrlen(filename)-1;
+        while (matchstr != starpos) {
+          if (*matchstr != *filename && *matchstr != '?')
+            return 0;
+          filename--;
+          matchstr--;
+        }
       }
       return 1;
 

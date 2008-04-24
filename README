@@ -128,6 +128,12 @@ Supported commands:
              is disabled for compatibility reasons. This flag can be saved
              in the EEPROM using XW, the default value is enabled (+).
 
+  - X*+/X*-  Enable/disable 1581-style * matching. If enabled, characters
+             after a * will be matched against the end of the file name.
+             If disabled, any characters after a * will be ignored.
+             This flag can be saved in the EEPROM using XW, the default value
+             is enabled (+).
+
   - XCnum    Set oscillator calibration value to num (must be between
              0 and 255). Default is whatever your chip defaults to. This
              value can be saved in the EEPROM using XW.

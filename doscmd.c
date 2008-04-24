@@ -118,6 +118,20 @@ static int8_t parse_blockparam(uint8_t values[]) {
   return paramcount;
 }
 
+static uint8_t parse_bool(void) {
+  switch (command_buffer[2]) {
+  case '+':
+    return 1;
+
+  case '-':
+    return 0;
+
+  default:
+    set_error(ERROR_SYNTAX_UNKNOWN);
+    return 255;
+  }
+}
+
 /* ------------------------------------------------------------------------- */
 /*  Command handlers                                                         */
 /* ------------------------------------------------------------------------- */
@@ -276,19 +290,15 @@ static void parse_xcommand(void) {
 
   case 'J':
     /* Jiffy enable/disable */
-    switch (command_buffer[2]) {
-    case '+':
-      globalflags |= JIFFY_ENABLED;
-      break;
+    num = parse_bool();
+    if (num != 255) {
+      if (num)
+        globalflags |= JIFFY_ENABLED;
+      else
+        globalflags &= (uint8_t)~JIFFY_ENABLED;
 
-    case '-':
-      globalflags &= (uint8_t)~JIFFY_ENABLED;
-      break;
-
-    default:
-      set_error(ERROR_SYNTAX_UNKNOWN);
+      set_error_ts(ERROR_STATUS,device_address,0);
     }
-    set_error_ts(ERROR_STATUS,device_address,0);
     break;
 
   case 'C':
@@ -310,6 +320,19 @@ static void parse_xcommand(void) {
       return;
 
     set_changelist(&path, str);
+    break;
+
+  case '*':
+    /* Post-* matching */
+    num = parse_bool();
+    if (num != 255) {
+      if (num)
+        globalflags |= POSTMATCH;
+      else
+        globalflags &= (uint8_t)~POSTMATCH;
+
+      set_error_ts(ERROR_STATUS,device_address,0);
+    }
     break;
 
 #ifdef CONFIG_STACK_TRACKING
