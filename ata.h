@@ -19,7 +19,6 @@
 #define ATA_PIN_RESET     (1<<PIN5)
 #define ATA_PIN_WR        (1<<PIN7)
 #define ATA_PIN_RD        (1<<PIN6)
-//#define ATA_PIN_IRQ       (1<<PIN2)
 #define ATA_PIN_A0        (1<<PIN2)
 #define ATA_PIN_A1        (1<<PIN3)
 #define ATA_PIN_A2        (1<<PIN4)
@@ -52,9 +51,6 @@
 
 #define ATA_DEV_MASTER    0x00
 #define ATA_DEV_SLAVE     0x10
-
-#define ATA_PART_ACTIVE   0x80
-#define ATA_PART_INACTIVE 0x00
 
 #define ATA_CMD_SPINDOWN  0xe0
 #define ATA_CMD_SPINUP    0xe1
