@@ -261,6 +261,7 @@ FRESULT f_opendir (FATFS*, DIR*, const UCHAR*);             /* Open an existing 
 FRESULT f_readdir (DIR*, FILINFO*);                         /* Read a directory item */
 FRESULT f_stat (FATFS*, const UCHAR*, FILINFO*);            /* Get file status */
 FRESULT f_getfree (FATFS*, const UCHAR*, DWORD*);           /* Get number of free clusters on the drive */
+FRESULT l_getfree (FATFS*, const UCHAR*, DWORD*, DWORD);    /* Get number of free clusters on the drive, limited */
 FRESULT f_sync (FIL*);                                      /* Flush cached data of a writing file */
 FRESULT f_unlink (FATFS*, const UCHAR*);                    /* Delete an existing file or directory */
 FRESULT f_mkdir (FATFS*, const UCHAR*);                     /* Create a new directory */
@@ -281,6 +282,7 @@ FRESULT f_opendir (DIR*, const UCHAR*);                     /* Open an existing 
 FRESULT f_readdir (DIR*, FILINFO*);                         /* Read a directory item */
 FRESULT f_stat (const UCHAR*, FILINFO*);                    /* Get file status */
 FRESULT f_getfree (const UCHAR*, DWORD*, FATFS**);          /* Get number of free clusters on the drive */
+FRESULT l_getfree (const UCHAR*, DWORD*, DWORD, FATFS**);   /* Get number of free clusters on the drive, limited */
 FRESULT f_sync (FIL*);                                      /* Flush cached data of a writing file */
 FRESULT f_unlink (const UCHAR*);                            /* Delete an existing file or directory */
 FRESULT f_mkdir (const UCHAR*);                             /* Create a new directory */

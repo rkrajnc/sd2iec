@@ -2169,12 +2169,14 @@ ft_error: /* Abort this file due to an unrecoverable error */
 /* Get Number of Free Clusters                                           */
 /*-----------------------------------------------------------------------*/
 
-FRESULT f_getfree (
+/* Get the number of free clusters on the drive, stop searching after maxclust were found */
+FRESULT l_getfree (
 #if _USE_DRIVE_PREFIX == 0
   FATFS *fs,          /* Pointer to file system object */
 #endif
   const UCHAR *drv,   /* Logical drive number */
-  DWORD *nclust       /* Pointer to the double word to return number of free clusters */
+  DWORD *nclust,      /* Pointer to the double word to return number of free clusters */
+  DWORD maxclust      /* Stop after maxclust free clusters were found (0 = no limit) */
 #if _USE_DRIVE_PREFIX != 0
   ,FATFS **fatfs      /* Pointer to pointer to the file system object to return */
 #endif
@@ -2214,6 +2216,10 @@ FRESULT f_getfree (
     sect = fs->fatbase;
     f = 0; p = 0;
     do {
+      if (maxclust && n >= maxclust) {
+        n = maxclust;
+        break;
+      }
       if (!f) {
         if (!move_fs_window(fs, sect++)) return FR_RW_ERROR;
         p = FSBUF.data;
@@ -2227,15 +2233,41 @@ FRESULT f_getfree (
       }
     } while (--clust);
   }
-  fs->free_clust = n;
+  if (n < maxclust) {
+    fs->free_clust = n;
 #if _USE_FSINFO
-  if (fat == FS_FAT32) fs->fsi_flag = 1;
+    if (fat == FS_FAT32) fs->fsi_flag = 1;
 #endif
+  }
 
   *nclust = n;
   return FR_OK;
 }
 
+/* Get the number of free clusters on the drive, no limit */
+FRESULT f_getfree (
+#if _USE_DRIVE_PREFIX == 0
+  FATFS *fs,          /* Pointer to file system object */
+#endif
+  const UCHAR *drv,   /* Logical drive number */
+  DWORD *nclust       /* Pointer to the double word to return number of free clusters */
+#if _USE_DRIVE_PREFIX != 0
+  ,FATFS **fatfs      /* Pointer to pointer to the file system object to return */
+#endif
+)
+{
+  return l_getfree(
+#if _USE_DRIVE_PREFIX == 0
+                   fs,
+#endif
+                   drv,
+                   nclust,
+                   0
+#if _USE_DRIVE_PREFIX != 0
+                   ,fatfs
+#endif
+                   );
+}
 
 
 

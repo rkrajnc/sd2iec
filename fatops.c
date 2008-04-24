@@ -873,11 +873,8 @@ uint16_t fat_freeblocks(uint8_t part) {
   FATFS *fs = &partition[part].fatfs;
   DWORD clusters;
 
-  if (f_getfree(fs, NULLSTRING, &clusters) == FR_OK) {
-    if (clusters < 64000)
-      return clusters;
-    else
-      return 63999;
+  if (l_getfree(fs, NULLSTRING, &clusters, 65535) == FR_OK) {
+    return clusters;
   } else
     return 0;
 }
