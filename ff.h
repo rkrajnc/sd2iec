@@ -261,7 +261,6 @@ FRESULT f_opendir (FATFS*, DIR*, const UCHAR*);             /* Open an existing 
 FRESULT f_readdir (DIR*, FILINFO*);                         /* Read a directory item */
 FRESULT f_stat (FATFS*, const UCHAR*, FILINFO*);            /* Get file status */
 FRESULT f_getfree (FATFS*, const UCHAR*, DWORD*);           /* Get number of free clusters on the drive */
-FRESULT l_getfree (FATFS*, const UCHAR*, DWORD*, DWORD);    /* Get number of free clusters on the drive, limited */
 FRESULT f_sync (FIL*);                                      /* Flush cached data of a writing file */
 FRESULT f_unlink (FATFS*, const UCHAR*);                    /* Delete an existing file or directory */
 FRESULT f_mkdir (FATFS*, const UCHAR*);                     /* Create a new directory */
@@ -282,7 +281,6 @@ FRESULT f_opendir (DIR*, const UCHAR*);                     /* Open an existing 
 FRESULT f_readdir (DIR*, FILINFO*);                         /* Read a directory item */
 FRESULT f_stat (const UCHAR*, FILINFO*);                    /* Get file status */
 FRESULT f_getfree (const UCHAR*, DWORD*, FATFS**);          /* Get number of free clusters on the drive */
-FRESULT l_getfree (const UCHAR*, DWORD*, DWORD, FATFS**);   /* Get number of free clusters on the drive, limited */
 FRESULT f_sync (FIL*);                                      /* Flush cached data of a writing file */
 FRESULT f_unlink (const UCHAR*);                            /* Delete an existing file or directory */
 FRESULT f_mkdir (const UCHAR*);                             /* Create a new directory */
@@ -296,7 +294,11 @@ FRESULT f_chdir (const UCHAR*);                             /* Change current di
 /* Low Level functions */
 FRESULT l_opendir(FATFS* fs, DWORD cluster, DIR *dirobj);   /* Open an existing directory by its start cluster */
 FRESULT l_opencluster(FATFS *fs, FIL *fp, DWORD clust);     /* Open a cluster by number as a read-only file */
-
+#if _USE_DRIVE_PREFIX == 0
+FRESULT l_getfree (FATFS*, const UCHAR*, DWORD*, DWORD);    /* Get number of free clusters on the drive, limited */
+#else
+FRESULT l_getfree (const UCHAR*, DWORD*, DWORD, FATFS**);   /* Get number of free clusters on the drive, limited */
+#endif
 
 /* User defined function to give a current time to fatfs module */
 

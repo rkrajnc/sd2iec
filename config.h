@@ -297,7 +297,6 @@
 #  define IEC_PIN               PINE
 #  define IEC_DDR               DDRE
 #  define IEC_PORT              PORTE
-/* JLB - I'm debating whether to just punt and rearrange the wires or rewrite the code to compensate */
 #  define IEC_PIN_ATN           PE6
 #  define IEC_PIN_DATA          PE4
 #  define IEC_PIN_CLOCK         PE5

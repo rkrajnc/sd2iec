@@ -60,9 +60,9 @@ uint8_t ATA_read_reg(uint8_t reg) {
 }
 
 void ATA_write_reg(uint8_t reg, unsigned char data) {
-  ATA_PORT_DATA_LO_DDR=0xff;  // bring to output
-  ATA_PORT_DATA_LO_OUT=data;
-  ATA_PORT_CTRL_OUT=reg ;
+  ATA_PORT_DATA_LO_DDR = 0xff;  // bring to output
+  ATA_PORT_DATA_LO_OUT = data;
+  ATA_PORT_CTRL_OUT = reg;
   ATA_PORT_CTRL_OUT&=(uint8_t)~ATA_PIN_WR;
   DELAY();
   ATA_PORT_CTRL_OUT|=ATA_PIN_WR;
@@ -185,7 +185,7 @@ DRESULT disk_read (BYTE drv, BYTE* data, DWORD sec, BYTE count) {
   if (ATA_drv_flags[drv] & STA_NOINIT) return RES_NOTRDY;
   
   ATA_bsy();
-  ATA_select_sector(drv, sec,count);
+  ATA_select_sector(drv, sec, count);
   ATA_send_command((ATA_drv_flags[drv]&ATA_FL_48BIT?ATA_CMD_READ_EXT:ATA_CMD_READ));
   ATA_drq();
   ATA_PORT_CTRL_OUT=ATA_REG_DATA;

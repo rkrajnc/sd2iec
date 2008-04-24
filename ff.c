@@ -2166,10 +2166,9 @@ ft_error: /* Abort this file due to an unrecoverable error */
 
 
 /*-----------------------------------------------------------------------*/
-/* Get Number of Free Clusters                                           */
+/* Get Number of Free Clusters, stop if maxclust found                   */
 /*-----------------------------------------------------------------------*/
 
-/* Get the number of free clusters on the drive, stop searching after maxclust were found */
 FRESULT l_getfree (
 #if _USE_DRIVE_PREFIX == 0
   FATFS *fs,          /* Pointer to file system object */
@@ -2244,7 +2243,9 @@ FRESULT l_getfree (
   return FR_OK;
 }
 
-/* Get the number of free clusters on the drive, no limit */
+/*-----------------------------------------------------------------------*/
+/* Get Number of Free Clusters                                           */
+/*-----------------------------------------------------------------------*/
 FRESULT f_getfree (
 #if _USE_DRIVE_PREFIX == 0
   FATFS *fs,          /* Pointer to file system object */
