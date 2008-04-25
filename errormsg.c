@@ -32,6 +32,7 @@
 #include "buffers.h"
 #include "fatops.h"
 #include "flags.h"
+#include "utils.h"
 #include "errormsg.h"
 
 uint8_t current_error;
@@ -147,18 +148,6 @@ static uint8_t *appendmsg(uint8_t *msg, const prog_uint8_t *table, const uint8_t
         *msg++ = tmp;
     } while (tmp < EC(0));
   }
-
-  return msg;
-}
-
-static uint8_t *appendnumber(uint8_t *msg, uint8_t value) {
-  if (value >= 100) {
-    *msg++ = '0' + value/100;
-    value %= 100;
-  }
-
-  *msg++ = '0' + value/10;
-  *msg++ = '0' + value%10;
 
   return msg;
 }

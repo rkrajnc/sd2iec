@@ -38,6 +38,7 @@
 #include "parser.h"
 #include "uart.h"
 #include "ustring.h"
+#include "utils.h"
 #include "wrapops.h"
 #include "fileops.h"
 
@@ -87,12 +88,6 @@ const PROGMEM uint8_t filetypes[] = {
 /* ------------------------------------------------------------------------- */
 /*  Utility functions                                                        */
 /* ------------------------------------------------------------------------- */
-
-static void addnum(uint8_t *data,uint8_t num) {
-  num%=100;
-  *data++ = (num/10) + '0';
-  *data = (num % 10) + '0';
-}
 
 /**
  * createentry - create a single directory entry in buf
@@ -168,20 +163,15 @@ static void createentry(struct cbmdirent *dent, buffer_t *buf, dirformat_t forma
     if (dent->typeflags & FLAG_RO)
       data[4] = '<';
 
-    data+=7;
-    addnum(data,dent->month);
-    data += 2;
+    data += 7;
+    data = appendnumber(data,dent->month);
     *data++ = '/';
-    addnum(data,dent->day);
-    data += 2;
+    data = appendnumber(data,dent->day);
     *data++ = '/';
-    addnum(data,dent->year);
-    data+=5;
-    addnum(data,(dent->hour>12?dent->hour-12:dent->hour));
-    data+=2;
+    data = appendnumber(data,dent->year) + 3;
+    data = appendnumber(data,(dent->hour>12?dent->hour-12:dent->hour));
     *data++ = '.';
-    addnum(data,dent->minute);
-    data+=3;
+    data = appendnumber(data,dent->minute) + 1;
     *data++ = (dent->hour>11?'P':'A');
     *data++ = 'M';
     while (*data)
@@ -194,16 +184,12 @@ static void createentry(struct cbmdirent *dent, buffer_t *buf, dirformat_t forma
 
     /* Add date/time stamp */
     data+=3;
-    addnum(data,dent->month);
-    data += 2;
+    data = appendnumber(data,dent->month);
     *data++ = '/';
-    addnum(data,dent->day);
-    data+=3;
-    addnum(data,(dent->hour>12?dent->hour-12:dent->hour));
-    data+=2;
+    data = appendnumber(data,dent->day) + 1;
+    data = appendnumber(data,(dent->hour>12?dent->hour-12:dent->hour));
     *data++ = '.';
-    addnum(data,dent->minute);
-    data+=3;
+    data = appendnumber(data,dent->minute) + 1;
     *data++ = (dent->hour>11?'P':'A');
     while(*data)
       *data++ = 1;
