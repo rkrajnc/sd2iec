@@ -515,6 +515,8 @@ clean_list :
 # Include the dependency files.
 -include $(shell mkdir .dep 2>/dev/null) $(wildcard .dep/*)
 
+# Manual dependency for the assembler module
+$(OBJDIR)/fastloader-ll.o: config.h $(OBJDIR)/autoconf.h
 
 # Listing of phony targets.
 .PHONY : all begin finish end sizebefore sizeafter gccversion \
