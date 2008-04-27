@@ -175,7 +175,8 @@ void load_fc3(void) {
     }
   }
 
-  buf->cleanup(buf);
+  if (buf->cleanup)
+    buf->cleanup(buf);
   free_buffer(buf);
 }
 #endif
