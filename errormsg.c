@@ -97,8 +97,6 @@ static const prog_uint8_t messages[] = {
     'D','I','R',3,
   EC(72),
     5,'F','U','L','L',
-  EC(73),
-    'S','D','2','I','E','C',' ','V',
   EC(74),
     'D','R','I','V','E',4,1,'Y',
   EC(77),
@@ -115,7 +113,7 @@ static const prog_uint8_t messages[] = {
 #endif
 
 /// Version number string, will be added to message 73
-static const prog_uint8_t versionstr[] = VERSION;
+static const prog_uint8_t versionstr[] = HW_NAME " V" VERSION;
 
 /// Long version string, used for message 9
 static const prog_uint8_t longverstr[] = LONGVERSION;
@@ -202,18 +200,20 @@ void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
     msg = appendbool(msg, 'B', globalflags & FAT32_FREEBLOCKS);
 
     msg--;
-  } else if (errornum == ERROR_LONGVERSION) {
+  } else if (errornum == ERROR_LONGVERSION || errornum == ERROR_DOSVERSION) {
     uint8_t i = 0;
-    while ((*msg++ = pgm_read_byte(longverstr+i++))) ;
+    /* Start with the name and version number */
+    while ((*msg++ = pgm_read_byte(versionstr+i++))) ;
+
+    /* Append the long version if requested */
+    if (errornum == ERROR_LONGVERSION) {
+      i = 0;
+      while ((*msg++ = toupper(pgm_read_byte(longverstr+i++)))) ;
+    }
+
     msg--;
   } else {
     msg = appendmsg(msg,messages,errornum);
-    if (errornum == ERROR_DOSVERSION) {
-      /* Append the version string */
-      uint8_t i = 0;
-      while ((*msg++ = toupper(pgm_read_byte(versionstr+i++)))) ;
-      msg--;
-    }
   }
   *msg++ = ',';
 

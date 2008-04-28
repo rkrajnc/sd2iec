@@ -93,7 +93,8 @@ CONFIG_SD_AUTO_RETRIES=10
 CONFIG_SD_DATACRC=y
 
 # Length of error message buffer - 1571 uses 36 bytes
-CONFIG_ERROR_BUFFER_SIZE=36
+# Increased to 46 because the long version message can be a bit long
+CONFIG_ERROR_BUFFER_SIZE=46
 
 # Length of command/filename buffer - 1571 uses 42 bytes
 # The buffer is actually 2 bytes larger to simplify parsing.

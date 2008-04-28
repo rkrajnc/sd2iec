@@ -54,6 +54,10 @@
 /* Configure for your own hardware                     */
 /* Example values are for the "Shadowolf 1.x" variant. */
 
+/* Name the software should return in the Dos version messate (73) */
+/* This should be upper-case because it isn't PETSCII-converted.   */
+#  define HW_NAME "SD2IEC"
+
 /*** SD card signals ***/
 /* CARD_DETECT must return non-zero when card is inserted */
 /* This must be a pin capable of generating interrupts.   */
@@ -174,6 +178,7 @@
 
 #elif CONFIG_HARDWARE_VARIANT==2
 /* Hardware configuration: Shadowolf 1 */
+#  define HW_NAME "SD2IEC"
 #  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
 #  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
 #  if defined __AVR_ATmega32__
@@ -224,6 +229,7 @@
 
 #elif CONFIG_HARDWARE_VARIANT == 3
 /* Hardware configuration: LarsP */
+#  define HW_NAME "SD2IEC"
 #  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
 #  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
 #  if defined __AVR_ATmega32__
@@ -275,6 +281,7 @@
 
 #elif CONFIG_HARDWARE_VARIANT == 4
 /* Hardware configuration: uIEC */
+#  define HW_NAME "UIEC"
 #  define MAX_DRIVES            2
 /* No device jumpers on uIEC */
 #  define DEVICE_SELECT         10
@@ -311,6 +318,7 @@
 
 #elif CONFIG_HARDWARE_VARIANT==5
 /* Hardware configuration: Shadowolf 2 aka sd2iec 1.x */
+#  define HW_NAME "SD2IEC"
 #  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
 #  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
 #  if defined __AVR_ATmega32__
@@ -380,6 +388,7 @@
 
 #elif CONFIG_HARDWARE_VARIANT == 6
 /* Hardware configuration: NKC MMC2IEC */
+#  define HW_NAME "SD2IEC"
 #  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
 #  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
 #  if defined __AVR_ATmega32__
