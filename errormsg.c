@@ -26,6 +26,7 @@
 
 #include <avr/pgmspace.h>
 #include <avr/io.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include "config.h"
@@ -116,6 +117,9 @@ static const prog_uint8_t messages[] = {
 /// Version number string, will be added to message 73
 static const prog_uint8_t versionstr[] = VERSION;
 
+/// Long version string, used for message 9
+static const prog_uint8_t longverstr[] = LONGVERSION;
+
 static uint8_t *appendmsg(uint8_t *msg, const prog_uint8_t *table, const uint8_t entry) {
   uint8_t i,tmp;
 
@@ -198,12 +202,16 @@ void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
     msg = appendbool(msg, 'B', globalflags & FAT32_FREEBLOCKS);
 
     msg--;
+  } else if (errornum == ERROR_LONGVERSION) {
+    uint8_t i = 0;
+    while ((*msg++ = pgm_read_byte(longverstr+i++))) ;
+    msg--;
   } else {
     msg = appendmsg(msg,messages,errornum);
     if (errornum == ERROR_DOSVERSION) {
       /* Append the version string */
       uint8_t i = 0;
-      while ((*msg++ = pgm_read_byte(versionstr+i++))) ;
+      while ((*msg++ = toupper(pgm_read_byte(versionstr+i++)))) ;
       msg--;
     }
   }

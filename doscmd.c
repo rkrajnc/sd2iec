@@ -351,7 +351,12 @@ static void parse_xcommand(void) {
 #ifdef CONFIG_STACK_TRACKING
   case '?':
     /* Output the largest stack size seen */
-    set_error_ts(ERROR_OK,(RAMEND-minstack)>>8,(RAMEND-minstack)&0xff);
+    set_error_ts(ERROR_LONGVERSION,(RAMEND-minstack)>>8,(RAMEND-minstack)&0xff);
+    break;
+#else
+  case '?':
+    /* Output the long version string */
+    set_error(ERROR_LONGVERSION);
     break;
 #endif
 

@@ -43,6 +43,7 @@ uint8_t set_ok_message(buffer_t *buf);
 #define ERROR_OK                  0
 #define ERROR_SCRATCHED           1
 #define ERROR_STATUS              3
+#define ERROR_LONGVERSION         9
 #define ERROR_READ_NOHEADER      20
 #define ERROR_READ_NOSYNC        21
 #define ERROR_READ_NODATA        22

@@ -181,6 +181,12 @@ Supported commands:
              another device on the bus without having to remove that
              device to reconfigure sd2iec (e.g. when using a C128D).
 
+  - X?       Extended version query
+             This commands returns the extended version string which
+             consists of the version, the processor type set at build time
+             and the suffix of the configuration file (usually corresponds
+             to the short name of the hardware sd2iec was compiled for).
+
 - M-R, M-W, M-E
   Memory reading returns random data of the requested length. Memory writing
   knows about the address used for changing the device address on a 1541 and
