@@ -423,7 +423,7 @@ void fat_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t
     ustrcpy(entrybuf, dent->name);
     pet2asc(entrybuf);
     if (type != TYPE_RAW && file_extension_mode != 0 &&
-        check_imageext(entrybuf) == IMG_UNKNOWN) {
+        !(type == TYPE_PRG && check_imageext(entrybuf) != IMG_UNKNOWN)) {
       if ((file_extension_mode == 1 && type != TYPE_PRG) ||
           (file_extension_mode == 2)
           ) {
