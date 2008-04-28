@@ -29,6 +29,7 @@
 #include <string.h>
 #include "config.h"
 #include "buffers.h"
+#include "doscmd.h"
 #include "errormsg.h"
 #include "fatops.h"
 #include "flags.h"
@@ -49,40 +50,32 @@ static uint8_t linenum;
 static void mount_line(void) {
   FRESULT res;
   UINT bytesread;
-  buffer_t *buf;
   uint8_t i,*str,*strend;
   uint16_t curpos;
 
   /* Kill all buffers */
   free_all_user_buffers(1);
 
-  /* Grab some scratch memory */
-  buf = alloc_buffer();
-  if (buf == NULL)
-    return;
-
   curpos = 0;
   strend = NULL;
 
   for (i=0;i<=linenum;i++) {
-    str = buf->data;
+    str = command_buffer;
 
     res = f_lseek(&swaplist,curpos);
     if (res != FR_OK) {
       parse_error(res,1);
-      free_buffer(buf);
       return;
     }
 
-    res = f_read(&swaplist, str, 256, &bytesread);
+    res = f_read(&swaplist, str, CONFIG_COMMAND_BUFFER_SIZE, &bytesread);
     if (res != FR_OK) {
       parse_error(res,1);
-      free_buffer(buf);
       return;
     }
 
     /* Terminate string in buffer */
-    if (bytesread < 256)
+    if (bytesread < CONFIG_COMMAND_BUFFER_SIZE)
       str[bytesread] = 0;
 
     if (bytesread == 0) {
@@ -101,7 +94,7 @@ static void mount_line(void) {
     /* Skip line terminator */
     while (*str == '\r' || *str == '\n') str++;
 
-    curpos += str-buf->data;
+    curpos += str - command_buffer;
   }
 
   /* Terminate file name */
@@ -117,13 +110,11 @@ static void mount_line(void) {
   current_part = swappath.part;
   partition[current_part].current_dir = swappath.fat;
 
-  if (parse_path(buf->data, &path, &str, 0))
+  if (parse_path(command_buffer, &path, &str, 0))
     return;
 
   /* Mount the disk image */
   fat_chdir(&path, str);
-
-  free_buffer(buf);
 
   if (current_error != 0 && current_error != ERROR_DOSVERSION)
     return;
