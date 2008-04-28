@@ -35,5 +35,6 @@ uint8_t jiffy_send(uint8_t value, uint8_t eoi, uint8_t loadflags);
 
 void clk_data_handshake(void);
 void fastloader_fc3_send_block(uint8_t *data);
+uint8_t fc3_get_byte(void);
 
 #endif

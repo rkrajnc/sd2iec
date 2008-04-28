@@ -511,5 +511,74 @@ fc3_next_byte:
 
         sei
         ret
+
+        ;;
+        ;; Receive one byte using the FC3 save protocol
+        ;;
+        .global fc3_get_byte
+fc3_get_byte:
+        cli
+
+        clr     r24     ; clear data byte
+
+        ; wait a moment before releasing data, otherwise the loop would run
+        ; too fast. I confess that this value is guessed.
+        delay_cycles 10 * 8
+
+        ; release DATA
+        cbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA
+
+        ; wait until CLOCK goes high
+1:
+        sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK ; 1/2?
+        rjmp    1b
+
+        ; 17 us later...
+        delay_cycles 17 * 8 - 2
+
+        ; get bits 5 and 7
+        in      r19, _SFR_IO_ADDR(IEC_PIN)  ; 1
+        bst     r19, IEC_PIN_DATA       ; 1
+        bld     r24, 5                  ; 1
+        bst     r19, IEC_PIN_CLOCK      ; 1
+        bld     r24, 7                  ; 1
+
+        ; 13 us later...
+        delay_cycles 13 * 8 - 5
+
+        ; get bits 4 and 6
+        in      r19, _SFR_IO_ADDR(IEC_PIN)  ; 1
+        bst     r19, IEC_PIN_DATA       ; 1
+        bld     r24, 4                  ; 1
+        bst     r19, IEC_PIN_CLOCK      ; 1
+        bld     r24, 6                  ; 1
+
+        ; 12 us later...
+        delay_cycles 12 * 8 - 5
+
+        ; get bits 1 and 3
+        in      r19, _SFR_IO_ADDR(IEC_PIN)  ; 1
+        bst     r19, IEC_PIN_DATA       ; 1
+        bld     r24, 1                  ; 1
+        bst     r19, IEC_PIN_CLOCK      ; 1
+        bld     r24, 3                  ; 1
+
+        ; 10 us later...
+        delay_cycles 10 * 8 - 5
+
+        ; get bits 0 and 2
+        in      r19, _SFR_IO_ADDR(IEC_PIN)  ; 1
+        bst     r19, IEC_PIN_DATA       ; 1
+        bld     r24, 0                  ; 1
+        bst     r19, IEC_PIN_CLOCK      ; 1
+        bld     r24, 2                  ; 1
+
+        ; Pull DATA down
+        sbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA
+
+        sei
+        com     r24     ; negate all bits
+        clr     r25     ; clear hi-byte of return val
+        ret
 #endif
         .end

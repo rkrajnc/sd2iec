@@ -176,6 +176,60 @@ void load_fc3(void) {
   }
 
   buf->cleanup(buf);
+
+  free_buffer(buf);
+}
+
+void save_fc3(void) {
+  unsigned char n;
+  unsigned char size;
+  unsigned char eof = 0;
+  buffer_t *buf;
+
+  buf = find_buffer(1);
+  /* Check if this is a writable file */
+  if (!buf || !buf->allocated || !buf->write)
+      return;
+
+  /* to make sure the host pulled DATA low and is ready */
+  _delay_ms(5);
+
+  do {
+    set_data(0);
+
+    size = fc3_get_byte();
+
+    if (size == 0) {
+      /* a full block is coming, no EOF */
+      size = 254;
+    }
+    else {
+      /* this will be the last block */
+      size--;
+      eof = 1;
+    }
+
+    for (n = 0; n < size; n++) {
+      /* Flush buffer if full */
+      if (buf->mustflush) {
+        buf->refill(buf);
+        /* the FC3 just ignores things like "disk full", so do we */
+      }
+
+      buf->data[buf->position] = fc3_get_byte();
+
+      if (buf->lastused < buf->position)
+        buf->lastused = buf->position;
+      buf->position++;
+
+      /* Mark buffer for flushing if position wrapped */
+      if (buf->position == 0)
+        buf->mustflush = 1;
+    }
+  }
+  while (!eof);
+
+  buf->cleanup(buf);
   free_buffer(buf);
 }
 #endif

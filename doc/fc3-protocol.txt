@@ -1,10 +1,13 @@
-The Final Cartridge III Fast Loader Protocol
-============================================
+The Final Cartridge III Fast Loader and Saver Protocol
+======================================================
 
-analysed by Skoe/Expression
+analysed by Thomas Giesel
 
-This document does roughly describe the fast loader protocol of the FC3. The
+This document describes the fast loader and saver protocol of the FC3. The
 description may not be accurate in any point.
+
+LOADING
+=======
 
 First of all the FC3 opens the file and reads the first two bytes to check the
 load address. It does not close the file before starting the fast loader, so
@@ -104,3 +107,36 @@ C64 read (PAL) cont'd
 sd2iec write
 ...----|----------------------------------------------------------------
        198   (+14)                                                           us
+
+
+SAVING
+======
+
+The FC3 first opens the file for writing, if this works well, it starts its
+drive code. This code receives and saves the data.
+
+The first byte marks the size of the block. If this byte is 0, a full block of
+254 bytes follows which is not the last one. If other numbers are received,
+n - 1 bytes will follow and this will be the last block. Note that transferred
+blocks do not correspond to disk sectors, as each full block has 254 bytes,
+also the first one which contains the start address.
+
+The drive releases DATA to show that it's ready to receive data. Then the C64
+releases CLOCK to synchronize the file transfer.
+
+The following diagram shows the position of each bit being transfered. The bits
+are send low-active.
+
+C64 write (PAL)
+0   (+12)   12  (+10) 22    (+16)    38  (+10) 48  (+10) 58               cycle
+|-----------|---------|--------------|---------|---------|---------------
+0           11.8      21.7           37.4      47.3      57.1                us
+CLOCK high  D=5       D=4            D=1       D=0       CLOCK low
+(sync)      C=7       C=6            C=3       C=2       (busy)
+
+sd2iec read
+|----------------|------------|-----------|---------|--------------------
+0     (+17)      17   (+13)   30  (+12)   42  (+10) 52                       us
+
+After reading the last pair of bits the drive pulls DATA down to show it's
+busy. Apparently there's no mechanism to signal situations like "disk full".
