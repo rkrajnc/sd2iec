@@ -1019,8 +1019,7 @@ uint8_t image_unmount(uint8_t part) {
   /* Free the associated system buffer if present */
   buf = find_buffer(BUFFER_SEC_SYSTEM + part);
   if (buf) {
-    if (buf->cleanup)
-      buf->cleanup(buf);
+    buf->cleanup(buf);
     free_buffer(buf);
   }
 

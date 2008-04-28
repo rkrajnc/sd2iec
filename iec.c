@@ -371,7 +371,7 @@ static uint8_t iec_listen_handler(const uint8_t cmd) {
         iec_data.iecflags |= COMMAND_RECVD;
     } else {
       /* Flush buffer if full */
-      if (buf->mustflush && buf->refill)
+      if (buf->mustflush)
         if (buf->refill(buf))
           return 1;
 
@@ -474,11 +474,10 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
     if (buf->sendeoi && (cmd & 0x0f) != 0x0f)
       break;
 
-    if (buf->refill)
-      if (buf->refill(buf)) {
-        iec_data.bus_state = BUS_CLEANUP;
-        return 1;
-      }
+    if (buf->refill(buf)) {
+      iec_data.bus_state = BUS_CLEANUP;
+      return 1;
+    }
   }
 
   return 0;
@@ -633,7 +632,7 @@ void iec_mainloop(void) {
             buffer_t *buf;
             buf = find_buffer(iec_data.secondary_address);
             if (buf != NULL) {
-              if (buf->cleanup && buf->cleanup(buf)) {
+              if (buf->cleanup(buf)) {
                 free_buffer(buf);
                 iec_data.bus_state = BUS_CLEANUP;
                 break;

@@ -93,6 +93,9 @@ extern uint8_t entrybuf[33]; /// Buffer for directory entries to be parsed
 /* Initializes the buffer structures */
 void init_buffers(void);
 
+/* Dummy callback */
+uint8_t callback_dummy(buffer_t *buf);
+
 /* Allocates a buffer for internal use */
 buffer_t *alloc_system_buffer(void);
 

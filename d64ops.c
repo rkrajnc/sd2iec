@@ -532,7 +532,7 @@ static uint8_t d64_write_cleanup(buffer_t *buf) {
   if (image_write(buf->pvt.d64.part, sector_offset(t,s)+32*buf->pvt.d64.dh.entry, entrybuf, 32, 1))
     return 1;
 
-  buf->cleanup = NULL;
+  buf->cleanup = callback_dummy;
   free_buffer(buf);
 
   return 0;

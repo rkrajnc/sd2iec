@@ -45,6 +45,18 @@ static uint8_t bufferdata[CONFIG_BUFFER_COUNT*256];
 uint8_t active_buffers;
 
 /**
+ * callback_dummy - dummy function for the buffer callbacks
+ * @buf: pointer to a buffer
+ *
+ * This is the default function used for all buffer callbacks so
+ * the caller doesn't need to check if the callbacks are valid.
+ * It always returns 0 for success.
+ */
+uint8_t callback_dummy(buffer_t *buf) {
+  return 0;
+}
+
+/**
  * init_buffers - initializes the buffer data structures
  *
  * This function initialized all the buffer-related data structures.
@@ -63,6 +75,7 @@ void init_buffers(void) {
   buffers[CONFIG_BUFFER_COUNT].write     = 1;
   buffers[CONFIG_BUFFER_COUNT].sendeoi   = 1;
   buffers[CONFIG_BUFFER_COUNT].refill    = set_ok_message;
+  buffers[CONFIG_BUFFER_COUNT].cleanup   = callback_dummy;
 }
 
 /**
@@ -80,6 +93,8 @@ buffer_t *alloc_system_buffer(void) {
       memset(sizeof(uint8_t *)+(char *)&(buffers[i]),0,sizeof(buffer_t)-sizeof(uint8_t *));
       buffers[i].allocated = 1;
       buffers[i].secondary = BUFFER_SEC_SYSTEM;
+      buffers[i].refill    = callback_dummy;
+      buffers[i].cleanup   = callback_dummy;
       return &buffers[i];
     }
   }
@@ -147,7 +162,7 @@ uint8_t free_all_user_buffers(uint8_t cleanup) {
 
   for (i=0;i<CONFIG_BUFFER_COUNT;i++)
     if (buffers[i].allocated && buffers[i].secondary < BUFFER_SEC_SYSTEM) {
-      if (cleanup && buffers[i].cleanup)
+      if (cleanup)
         res = res || buffers[i].cleanup(&buffers[i]);
       free_buffer(&buffers[i]);
     }
@@ -171,7 +186,7 @@ uint8_t free_all_buffers(uint8_t cleanup) {
 
   for (i=0;i<CONFIG_BUFFER_COUNT;i++)
     if (buffers[i].allocated) {
-      if (cleanup && buffers[i].cleanup)
+      if (cleanup)
         res = res || buffers[i].cleanup(&buffers[i]);
       free_buffer(&buffers[i]);
     }
