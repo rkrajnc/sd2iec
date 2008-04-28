@@ -51,6 +51,8 @@ static const PROGMEM char p00marker[] = "C64File";
 
 typedef enum { EXT_UNKNOWN, EXT_IS_X00, EXT_IS_TYPE } exttype_t;
 
+typedef enum { IMG_UNKNOWN, IMG_IS_M2I, IMG_IS_DISK } imgtype_t;
+
 uint8_t file_extension_mode;
 
 /* ------------------------------------------------------------------------- */
@@ -162,6 +164,38 @@ static exttype_t check_extension(uint8_t *name, uint8_t **ext) {
       return EXT_IS_TYPE;
   }
   return EXT_UNKNOWN;
+}
+
+/**
+ * check_imageext - check for a known image file extension
+ * @name: pointer to the file name
+ *
+ * This function checks if the given file name has an extension that
+ * indicates a known image file type. Returns IMG_IS_M2I for M2I files,
+ * IMG_IS_DISK for D64/D41/D71/D81 files or IMG_UNKNOWN for an unknown
+ * file extension.
+ */
+static imgtype_t check_imageext(uint8_t *name) {
+  uint8_t f,s,t;
+  uint8_t *ext = ustrrchr(name, '.');
+
+  if (ext == NULL)
+    return IMG_UNKNOWN;
+
+  f = toupper(*++ext);
+  s = toupper(*++ext);
+  t = toupper(*++ext);
+
+  if (f == 'M' && s == '2' && t == 'I')
+    return IMG_IS_M2I;
+
+  if (f == 'D')
+    if ((s == '6' && t == '4') ||
+        ((s == '4' /* || s == '7' || s == '8' */) &&
+         (t == '1')))
+      return IMG_IS_DISK;
+ 
+ return IMG_UNKNOWN;
 }
 
 /**
@@ -388,7 +422,8 @@ void fat_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t
   else {
     ustrcpy(entrybuf, dent->name);
     pet2asc(entrybuf);
-    if (type != TYPE_RAW && file_extension_mode != 0) {
+    if (type != TYPE_RAW && file_extension_mode != 0 &&
+        check_imageext(entrybuf) == IMG_UNKNOWN) {
       if ((file_extension_mode == 1 && type != TYPE_PRG) ||
           (file_extension_mode == 2)
           ) {
@@ -708,11 +743,7 @@ uint8_t fat_chdir(path_t *path, uint8_t *dirname) {
     partition[path->part].current_dir= finfo.clust;
   } else {
     /* Changing into a file, could be a mount request */
-    uint8_t *ext = ustrrchr(dirname, '.');
-
-    if (ext && (!ustrcasecmp_P(ext, PSTR(".m2i")) ||
-                !ustrcasecmp_P(ext, PSTR(".d64")) ||
-                !ustrcasecmp_P(ext, PSTR(".d71")) )) {
+    if (check_imageext(dirname) != IMG_UNKNOWN) {
       /* D64/M2I mount request */
       free_all_user_buffers(1);
       /* Open image file */
@@ -722,7 +753,7 @@ uint8_t fat_chdir(path_t *path, uint8_t *dirname) {
         return 1;
       }
 
-      if (!ustrcasecmp_P(ext, PSTR(".m2i")))
+      if (check_imageext(dirname) == IMG_IS_M2I)
         partition[path->part].fop = &m2iops;
       else {
         if (d64_mount(path->part))

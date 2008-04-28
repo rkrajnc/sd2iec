@@ -116,6 +116,11 @@ Supported commands:
              This setting can be saved in the EEPROM using XW, the default
              value is 1.
 
+             For compatibility with existing programs that write D64 files,
+             all files that have D64, D41, D71, D81 or M2I as an extension
+             will always be written without an x00 header and without
+             any additional PRG/... file extension.
+
   - XE+/XE-  Enable/disable extension hiding. If enabled, files in FAT with
              a PRG/SEQ/USR/REL extension will have their extension removed
              and the file type changed to the type specified by the file
