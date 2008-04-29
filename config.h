@@ -161,17 +161,22 @@
 #  define ATN_INT_SETUP() do {} while (0)
 
 /*** User interface ***/
-/* Disk image change key */
-#  define DISKCHANGE_PIN  PINC
-#  define DISKCHANGE_DDR  DDRC
-#  define DISKCHANGE_PORT PORTC
-#  define DISKCHANGE_BIT  _BV(PC4)
+/* Macros for the registers of the port where the buttons are connected */
+/* All buttons must be on the same port. */
+#  define BUTTON_PIN  PINC
+#  define BUTTON_PORT PORTC
+#  define BUTTON_DDR  DDRC
 
-/* Both of the following values are defined in terms of timer interrupts */
-/* If there is no ATN interrupt, the timer interrupt is called every 500 microseconds. */
-/* If the ATN interrupt is used, the timer interrupt is called every 9.984 milliseconds.  */
-/* Accept disk change key press after this many interrupts */
-#  define DISKCHANGE_MAX  128
+/* Mask value to isolate the button bits */
+#  define BUTTON_MASK (_BV(PC3)|_BV(PC4))
+
+/* Button NEXT changes to the next disk image and enables sleep mode (held) */
+#  define BUTTON_NEXT _BV(PC4)
+
+/* Button PREV changes to the previous disk image */
+/* If you don't have/need this button, define it as 0. */
+#  define BUTTON_PREV _BV(PC3)
+
 
 
 /* Pre-configurated hardware variants */
@@ -220,11 +225,12 @@
 #  define ATN_INT_VECT          PCINT0_vect
 #  define ATN_INT_SETUP()       do { PCMSK0 = _BV(PCINT0); PCIFR |= _BV(PCIF0); } while (0)
 #  define set_atnack(x)         if (x) { PCICR |= _BV(PCIE0); } else { PCICR &= (uint8_t)~_BV(PCIE0); }
-#  define DISKCHANGE_PIN        PINC
-#  define DISKCHANGE_DDR        DDRC
-#  define DISKCHANGE_PORT       PORTC
-#  define DISKCHANGE_BIT        _BV(PC4)
-#  define DISKCHANGE_MAX        6
+#  define BUTTON_PIN            PINC
+#  define BUTTON_PORT           PORTC
+#  define BUTTON_DDR            DDRC
+#  define BUTTON_MASK           (_BV(PC3)|_BV(PC4))
+#  define BUTTON_NEXT           _BV(PC4)
+#  define BUTTON_PREV           _BV(PC3)
 
 
 #elif CONFIG_HARDWARE_VARIANT == 3
@@ -272,11 +278,12 @@
 #  define ATN_INT_VECT          PCINT2_vect
 #  define ATN_INT_SETUP()       do { PCMSK2 = _BV(PCINT16); PCIFR |= _BV(PCIF2); } while (0)
 #  define set_atnack(x)         if (x) { PCICR |= _BV(PCIE2); } else { PCICR &= (uint8_t)~_BV(PCIE2); }
-#  define DISKCHANGE_PIN        PINA
-#  define DISKCHANGE_DDR        DDRA
-#  define DISKCHANGE_PORT       PORTA
-#  define DISKCHANGE_BIT        _BV(PA4)
-#  define DISKCHANGE_MAX        6
+#  define BUTTON_PIN            PINA
+#  define BUTTON_PORT           PORTA
+#  define BUTTON_DDR            DDRA
+#  define BUTTON_MASK           (_BV(PA4)|_BV(PA5))
+#  define BUTTON_NEXT           _BV(PA4)
+#  define BUTTON_PREV           _BV(PA5)
 
 
 #elif CONFIG_HARDWARE_VARIANT == 4
@@ -308,12 +315,14 @@
 #  define ATN_INT_VECT          INT6_vect
 #  define ATN_INT_SETUP()       do { EICRB |= _BV(ISC60); } while (0)
 #  define set_atnack(x)         if (x) { EIMSK |= _BV(INT6); } else { EIMSK &= ~(uint8_t)~_BV(INT6); }
-/* This should really be on a INT pin, but I need to find one.  Use G1 for now. */
-#  define DISKCHANGE_PIN        PING
-#  define DISKCHANGE_DDR        DDRG
-#  define DISKCHANGE_PORT       PORTG
-#  define DISKCHANGE_BIT        _BV(PG1)
-#  define DISKCHANGE_MAX        6
+/* JLB: This should really be on a INT pin, but I need to find one.  Use G1 for now. */
+/*   Only if the button is hardware-debounced, otherwise it doesn't help a bit. -ik */
+#  define BUTTON_PIN            PING
+#  define BUTTON_PORT           PORTG
+#  define BUTTON_DDR            DDRG
+#  define BUTTON_MASK           (_BV(PG0)|_BV(PG1))
+#  define BUTTON_NEXT           _BV(PG1)
+#  define BUTTON_PREV           _BV(PG0)
 
 
 #elif CONFIG_HARDWARE_VARIANT==5
@@ -363,11 +372,12 @@
 #  define ATN_INT_VECT          PCINT0_vect
 #  define ATN_INT_SETUP()       do { PCMSK0 = _BV(PCINT0); PCIFR |= _BV(PCIF0); } while (0)
 #  define set_atnack(x)         if (x) { PCICR |= _BV(PCIE0); } else { PCICR &= (uint8_t)~_BV(PCIE0); }
-#  define DISKCHANGE_PIN        PINC
-#  define DISKCHANGE_DDR        DDRC
-#  define DISKCHANGE_PORT       PORTC
-#  define DISKCHANGE_BIT        _BV(PC3)
-#  define DISKCHANGE_MAX        6
+#  define BUTTON_PIN            PINC
+#  define BUTTON_PORT           PORTC
+#  define BUTTON_DDR            DDRC
+#  define BUTTON_MASK           (_BV(PC2)|_BV(PC3))
+#  define BUTTON_NEXT           _BV(PC3)
+#  define BUTTON_PREV           _BV(PC2)
 
 #  ifdef CONFIG_TWINSD
 /* Support for multiple SD cards */
@@ -431,11 +441,12 @@
 #  define ATN_INT_VECT          PCINT1_vect
 #  define ATN_INT_SETUP()       do { PCMSK1 = _BV(PCINT8); PCIFR |= _BV(PCIF1); } while (0)
 #  define set_atnack(x)         if (x) { PCICR |= _BV(PCIE1); } else { PCICR &= (uint8_t)~_BV(PCIE1); }
-#  define DISKCHANGE_PIN        PINA
-#  define DISKCHANGE_DDR        DDRA
-#  define DISKCHANGE_PORT       PORTA
-#  define DISKCHANGE_BIT        _BV(PA4)
-#  define DISKCHANGE_MAX        6
+#  define BUTTON_PIN            PINA
+#  define BUTTON_PORT           PORTA
+#  define BUTTON_DDR            DDRA
+#  define BUTTON_MASK           (_BV(PA4)|_BV(PA5))
+#  define BUTTON_NEXT           _BV(PA4)
+#  define BUTTON_PREV           _BV(PA5)
 
 
 #else

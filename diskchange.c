@@ -41,8 +41,6 @@
 
 static const char PROGMEM autoswap_name[] = "AUTOSWAP.LST";
 
-volatile uint8_t keycounter;
-
 static FIL     swaplist;
 static path_t  swappath;
 static uint8_t linenum;
@@ -169,9 +167,6 @@ void set_changelist(path_t *path, uint8_t *filename) {
 
 void change_disk(void) {
   path_t path;
-
-  /* Wait until the button is released */
-  while (keycounter == DISKCHANGE_MAX) ;
 
   if (linenum == 255) {
     /* No swaplist active, try using AUTOSWAP.LST */

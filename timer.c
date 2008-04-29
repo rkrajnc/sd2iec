@@ -33,9 +33,42 @@
 #include "timer.h"
 
 volatile tick_t ticks;
+// Logical buttons
+volatile uint8_t active_keys;
+
+// Physical buttons
+uint8_t buttonstate;
+tick_t lastbuttonchange;
+
+/* Called by the timer interrupt when the button state has changed */
+static void buttons_changed(void) {
+  /* Check if the previous state was stable for two ticks */
+  if (time_after(ticks, lastbuttonchange+2)) {
+    if (!(buttonstate & (BUTTON_PREV|BUTTON_NEXT))) {
+      /* Both buttons held down */
+      active_keys |= KEY_HOME;
+    } else if (!(buttonstate & BUTTON_NEXT) &&
+               (BUTTON_PIN & BUTTON_NEXT)) {
+      /* "Next" button released */
+      active_keys |= KEY_NEXT;
+    } else if (!(buttonstate & BUTTON_PREV) &&
+               (BUTTON_PIN & BUTTON_NEXT)) {
+      active_keys |= KEY_PREV;
+    }
+  }
+
+  lastbuttonchange = ticks;
+  buttonstate = BUTTON_PIN & BUTTON_MASK;
+}
 
 /* The main timer interrupt */
 ISR(TIMER1_COMPA_vect) {
+  uint8_t tmp = BUTTON_PIN & BUTTON_MASK;
+
+  if (tmp != buttonstate) {
+    buttons_changed();
+  }
+
   ticks++;
 
   if (error_blink_active) {
@@ -43,11 +76,14 @@ ISR(TIMER1_COMPA_vect) {
       DIRTY_LED_PORT ^= DIRTY_LED_BIT();
   }
 
-  if (!(DISKCHANGE_PIN & DISKCHANGE_BIT)) {
-    if (keycounter < DISKCHANGE_MAX)
-      keycounter++;
-  } else {
-    keycounter = 0;
+  /* Sleep button triggers when held down for 2sec */
+  if (time_after(ticks, lastbuttonchange+2)) {
+    if (!(buttonstate & BUTTON_NEXT) &&
+        (buttonstate & BUTTON_PREV) &&
+        time_after(ticks, lastbuttonchange+2*HZ) &&
+        !key_pressed(KEY_SLEEP)) {
+      active_keys |= KEY_SLEEP;
+    }
   }
 }
 
@@ -61,4 +97,8 @@ void init_timer(void) {
   TCCR1A = 0;
   TCCR1B = _BV(WGM12) | _BV(CS10) | _BV(CS11);
   TIMSK1 |= _BV(OCIE1A);
+
+  /* Buttons */
+  BUTTON_DDR  &= (uint8_t)~BUTTON_MASK;
+  BUTTON_PORT |= BUTTON_MASK;
 }

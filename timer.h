@@ -27,10 +27,24 @@
 #ifndef TIMER_H
 #define TIMER_H
 
+// Bit masks for the (simulated) keys
+#define KEY_NEXT  (1<<0)
+#define KEY_PREV  (1<<1)
+#define KEY_HOME  (1<<2)
+#define KEY_SLEEP (1<<3)
+
+/// Logical keys that were pressed - must be reset by the reader.
+extern volatile uint8_t active_keys;
+
+#define key_pressed(x) (active_keys & (x))
+#define reset_key(x) active_keys &= (uint8_t)~(x)
+
+
 typedef uint16_t tick_t;
 
 /// Global timing variable, 100 ticks per second
 extern volatile tick_t ticks;
+#define HZ 100
 
 #define MS_TO_TICKS(x) (x/10)
 
@@ -49,9 +63,9 @@ extern volatile tick_t ticks;
  * wouldn't care). Gcc is currently neither.
  * (">=0" refers to the time_after_eq macro which wasn't copied)
  */
-#define time_after(a,b)		\
-	 ((int16_t)(b) - (int16_t)(a) < 0)
-#define time_before(a,b)	time_after(b,a)
+#define time_after(a,b)         \
+         ((int16_t)(b) - (int16_t)(a) < 0)
+#define time_before(a,b)        time_after(b,a)
 
 
 /// Calculate timer start value for given timeout in microseconds

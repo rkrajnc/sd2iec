@@ -523,10 +523,6 @@ void init_iec(void) {
   _delay_ms(1);
   device_address = DEVICE_SELECT;
 
-  /* Set up disk change key */
-  DISKCHANGE_DDR  &= ~DISKCHANGE_BIT;
-  DISKCHANGE_PORT |=  DISKCHANGE_BIT;
-
   set_error(ERROR_DOSVERSION);
 }
 
@@ -541,7 +537,8 @@ void iec_mainloop(void) {
       /* Wait for ATN */
       set_atnack(1);
       while (IEC_ATN) {
-        if (keycounter == DISKCHANGE_MAX) {
+        if (key_pressed(KEY_NEXT)) {
+          reset_key(KEY_NEXT);
           change_disk();
         }
       }
