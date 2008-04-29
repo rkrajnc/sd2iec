@@ -335,6 +335,19 @@ as the current swap list until you deactivate it or manually change
 the directory (otherwise an AUTOSWAP.LST in the new directory would be
 ignored until you send XS, killing the nice "it just works" feeling).
 
+Sleep Mode:
+===========
+If you hold the disk change button down for two seconds, sd2iec will
+enter "sleep mode". In this mode it doesn't listen to the bus at all
+until you hold down the disk change button for two seconds again
+which resumes normal operation. Sleep mode allows you to keep
+sd2iec connected to the serial bus even when you load something
+from a different drive that uses a fast loader that doesn't
+work with more than one device on the bus.
+
+While sleep mode is active, the red LED will be on and the green LED
+will be off.
+
 Other important notes:
 ======================
 - File overwrite (@foo) is implemented by deleting the file first.

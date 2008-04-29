@@ -76,7 +76,7 @@ uint8_t device_address;
 
 struct {
   uint8_t iecflags;
-  enum { BUS_IDLE = 0, BUS_ATNACTIVE, BUS_FOUNDATN, BUS_FORME, BUS_NOTFORME, BUS_ATNFINISH, BUS_ATNPROCESS, BUS_CLEANUP } bus_state;
+  enum { BUS_IDLE = 0, BUS_ATNACTIVE, BUS_FOUNDATN, BUS_FORME, BUS_NOTFORME, BUS_ATNFINISH, BUS_ATNPROCESS, BUS_CLEANUP, BUS_SLEEP } bus_state;
   enum { DEVICE_IDLE = 0, DEVICE_LISTEN, DEVICE_TALK } device_state;
   uint8_t secondary_address;
 } iec_data;
@@ -533,6 +533,34 @@ void iec_mainloop(void) {
 
   while (1) {
     switch (iec_data.bus_state) {
+    case BUS_SLEEP:
+      set_atnack(0);
+      set_data(1);
+      set_clock(1);
+      set_error(ERROR_OK);
+      BUSY_LED_OFF();
+      DIRTY_LED_ON();
+
+      /* Releasing the button creates an additional "NEXT" event, wait for that */
+      while (!key_pressed(KEY_NEXT))  ;
+      reset_key(0xff);  /* Ignore all other keys */
+
+      /* Wait until the sleep key is used again */
+      while (!key_pressed(KEY_SLEEP)) ;
+      reset_key(0xff);
+
+      if (active_buffers)
+        BUSY_LED_ON();
+      if (!check_write_buf_count())
+        DIRTY_LED_OFF();
+
+      /* Eat the KEY_NEXT event too */
+      while (!key_pressed(KEY_NEXT)) ;
+      reset_key(0xff);
+
+      iec_data.bus_state = BUS_IDLE;
+      break;
+
     case BUS_IDLE:  // EBFF
       /* Wait for ATN */
       set_atnack(1);
@@ -540,10 +568,15 @@ void iec_mainloop(void) {
         if (key_pressed(KEY_NEXT)) {
           reset_key(KEY_NEXT);
           change_disk();
+        } else if (key_pressed(KEY_SLEEP)) {
+          reset_key(KEY_SLEEP);
+          iec_data.bus_state = BUS_SLEEP;
+          break;
         }
       }
 
-      iec_data.bus_state = BUS_FOUNDATN;
+      if (iec_data.bus_state != BUS_SLEEP)
+        iec_data.bus_state = BUS_FOUNDATN;
       break;
 
     case BUS_FOUNDATN: // E85B
