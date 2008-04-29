@@ -335,6 +335,24 @@ as the current swap list until you deactivate it or manually change
 the directory (otherwise an AUTOSWAP.LST in the new directory would be
 ignored until you send XS, killing the nice "it just works" feeling).
 
+FIXME: Integrate the following into the preceding
+
+The second disk change button is on
+- PA5 for LarsP/NKC
+- PC3 for Shadowolf's MMC2IEC 1.x
+- PC2 for Shadowolf's sd2iec 1.x ("Reserve" on the header)
+- PG0 for uIEC
+
+Either of those buttons will trigger the use of AUTOSWAP.LST.
+If a swap list is already active, the first button will switch
+to the next image in the list, the second button will switch
+to the previous image in the list and pushing both buttons
+together will switch to the first image in the list.
+
+The confirmation blink is red+green followed by
+green for "next", by red for "previous" and by
+red+green for "first".
+
 Sleep Mode:
 ===========
 If you hold the disk change button down for two seconds, sd2iec will

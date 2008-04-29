@@ -565,8 +565,7 @@ void iec_mainloop(void) {
       /* Wait for ATN */
       set_atnack(1);
       while (IEC_ATN) {
-        if (key_pressed(KEY_NEXT)) {
-          reset_key(KEY_NEXT);
+        if (key_pressed(KEY_NEXT | KEY_PREV | KEY_HOME)) {
           change_disk();
         } else if (key_pressed(KEY_SLEEP)) {
           reset_key(KEY_SLEEP);

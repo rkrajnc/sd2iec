@@ -45,7 +45,31 @@ static FIL     swaplist;
 static path_t  swappath;
 static uint8_t linenum;
 
-static void mount_line(void) {
+#define BLINK_BACKWARD 1
+#define BLINK_FORWARD  2
+#define BLINK_HOME     3
+
+static void confirm_blink(uint8_t type) {
+  uint8_t i;
+
+  for (i=0;i<2;i++) {
+    tick_t targettime;
+
+    if (!i || type & 1)
+      DIRTY_LED_ON();
+    if (!i || type & 2)
+      BUSY_LED_ON();
+    targettime = ticks + MS_TO_TICKS(100);
+    while (time_before(ticks,targettime)) ;
+
+    DIRTY_LED_OFF();
+    BUSY_LED_OFF();
+    targettime = ticks + MS_TO_TICKS(100);
+    while (time_before(ticks,targettime)) ;
+  }
+}
+
+static uint8_t mount_line(void) {
   FRESULT res;
   UINT bytesread;
   uint8_t i,*str,*strend;
@@ -63,13 +87,13 @@ static void mount_line(void) {
     res = f_lseek(&swaplist,curpos);
     if (res != FR_OK) {
       parse_error(res,1);
-      return;
+      return 0;
     }
 
     res = f_read(&swaplist, str, CONFIG_COMMAND_BUFFER_SIZE, &bytesread);
     if (res != FR_OK) {
       parse_error(res,1);
-      return;
+      return 0;
     }
 
     /* Terminate string in buffer */
@@ -77,9 +101,14 @@ static void mount_line(void) {
       str[bytesread] = 0;
 
     if (bytesread == 0) {
-      /* End of file - restart loop to read the first entry */
+      if (linenum == 255) {
+        /* Last entry requested, found it */
+        linenum = i-1;
+      } else {
+        /* End of file - restart loop to read the first entry */
+        linenum = 0;
+      }
       i = -1; /* I could've used goto instead... */
-      linenum = 0;
       curpos = 0;
       continue;
     }
@@ -109,28 +138,15 @@ static void mount_line(void) {
   partition[current_part].current_dir = swappath.fat;
 
   if (parse_path(command_buffer, &path, &str, 0))
-    return;
+    return 0;
 
   /* Mount the disk image */
   fat_chdir(&path, str);
 
   if (current_error != 0 && current_error != ERROR_DOSVERSION)
-    return;
+    return 0;
 
-  /* Confirmation blink */
-  for (i=0;i<2;i++) {
-    tick_t targettime;
-
-    DIRTY_LED_ON();
-    BUSY_LED_ON();
-    targettime = ticks + MS_TO_TICKS(100);
-    while (time_before(ticks,targettime)) ;
-
-    DIRTY_LED_OFF();
-    BUSY_LED_OFF();
-    targettime = ticks + MS_TO_TICKS(100);
-    while (time_before(ticks,targettime)) ;
-  }
+  return 1;
 }
 
 void set_changelist(path_t *path, uint8_t *filename) {
@@ -140,10 +156,9 @@ void set_changelist(path_t *path, uint8_t *filename) {
   globalflags &= (uint8_t)~AUTOSWAP_ACTIVE;
 
   /* Remove the old swaplist */
-  if (linenum != 255) {
+  if (swaplist.fs != NULL) {
     f_close(&swaplist);
     memset(&swaplist,0,sizeof(swaplist));
-    linenum = 255;
   }
 
   if (ustrlen(filename) == 0)
@@ -161,21 +176,23 @@ void set_changelist(path_t *path, uint8_t *filename) {
   swappath = *path;
 
   linenum = 0;
-  mount_line();
+  if (mount_line())
+    confirm_blink(BLINK_HOME);
 }
 
 
 void change_disk(void) {
   path_t path;
 
-  if (linenum == 255) {
+  if (swaplist.fs == NULL) {
     /* No swaplist active, try using AUTOSWAP.LST */
     /* change_disk is called from the IEC idle loop, so entrybuf is free */
+    reset_key(0xff); // <- lazy
     ustrcpy_P(entrybuf, autoswap_name);
     path.fat  = partition[current_part].current_dir;
     path.part = current_part;
     set_changelist(&path, entrybuf);
-    if (linenum == 255) {
+    if (swaplist.fs == NULL) {
       /* No swap list found, clear error and exit */
       set_error(ERROR_OK);
       return;
@@ -188,12 +205,25 @@ void change_disk(void) {
   }
 
   /* Mount the next image in the list */
-  linenum++;
-  mount_line();
+  if (key_pressed(KEY_NEXT)) {
+    linenum++;
+    reset_key(KEY_NEXT);
+    if (mount_line())
+      confirm_blink(BLINK_FORWARD);
+  } else if (key_pressed(KEY_PREV)) {
+    linenum--;
+    reset_key(KEY_PREV);
+    if (mount_line())
+      confirm_blink(BLINK_BACKWARD);
+  } else if (key_pressed(KEY_HOME)) {
+    linenum = 0;
+    reset_key(KEY_HOME);
+    if (mount_line())
+      confirm_blink(BLINK_HOME);
+  }
 }
 
 void init_change(void) {
   memset(&swaplist,0,sizeof(swaplist));
-  linenum = 255;
   globalflags &= (uint8_t)~AUTOSWAP_ACTIVE;
 }
