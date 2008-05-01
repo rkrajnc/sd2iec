@@ -164,15 +164,15 @@ static void createentry(struct cbmdirent *dent, buffer_t *buf, dirformat_t forma
       data[4] = '<';
 
     data += 7;
-    data = appendnumber(data,dent->month);
+    data = appendnumber(data,dent->date.month);
     *data++ = '/';
-    data = appendnumber(data,dent->day);
+    data = appendnumber(data,dent->date.day);
     *data++ = '/';
-    data = appendnumber(data,dent->year) + 3;
-    data = appendnumber(data,(dent->hour>12?dent->hour-12:dent->hour));
+    data = appendnumber(data,dent->date.year) + 3;
+    data = appendnumber(data,(dent->date.hour>12?dent->date.hour-12:dent->date.hour));
     *data++ = '.';
-    data = appendnumber(data,dent->minute) + 1;
-    *data++ = (dent->hour>11?'P':'A');
+    data = appendnumber(data,dent->date.minute) + 1;
+    *data++ = (dent->date.hour>11?'P':'A');
     *data++ = 'M';
     while (*data)
       *data++ = 1;
@@ -184,13 +184,13 @@ static void createentry(struct cbmdirent *dent, buffer_t *buf, dirformat_t forma
 
     /* Add date/time stamp */
     data+=3;
-    data = appendnumber(data,dent->month);
+    data = appendnumber(data,dent->date.month);
     *data++ = '/';
-    data = appendnumber(data,dent->day) + 1;
-    data = appendnumber(data,(dent->hour>12?dent->hour-12:dent->hour));
+    data = appendnumber(data,dent->date.day) + 1;
+    data = appendnumber(data,(dent->date.hour>12?dent->date.hour-12:dent->date.hour));
     *data++ = '.';
-    data = appendnumber(data,dent->minute) + 1;
-    *data++ = (dent->hour>11?'P':'A');
+    data = appendnumber(data,dent->date.minute) + 1;
+    *data++ = (dent->date.hour>11?'P':'A');
     while(*data)
       *data++ = 1;
   } else {

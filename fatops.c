@@ -659,13 +659,13 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
     dent->fatcluster = finfo.clust;
 
     /* Date/Time */
-    dent->year  = (finfo.fdate >> 9) + 80;
-    dent->month = (finfo.fdate >> 5) & 0x0f;
-    dent->day   = finfo.fdate & 0x1f;
+    dent->date.year  = (finfo.fdate >> 9) + 80;
+    dent->date.month = (finfo.fdate >> 5) & 0x0f;
+    dent->date.day   = finfo.fdate & 0x1f;
 
-    dent->hour   = finfo.ftime >> 11;
-    dent->minute = (finfo.ftime >> 5) & 0x3f;
-    dent->second = (finfo.ftime & 0x1f) << 1;
+    dent->date.hour   = finfo.ftime >> 11;
+    dent->date.minute = (finfo.ftime >> 5) & 0x3f;
+    dent->date.second = (finfo.ftime & 0x1f) << 1;
 
     return 0;
   } else

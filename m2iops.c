@@ -300,13 +300,13 @@ static int8_t m2i_readdir(dh_t *dh, struct cbmdirent *dent) {
       dent->blocksize = 0;
 
     /* Fake Date/Time */
-    dent->year  = 82;
-    dent->month = 8;
-    dent->day   = 31;
+    dent->date.year  = 82;
+    dent->date.month = 8;
+    dent->date.day   = 31;
 
-    dent->hour   = 0;
-    dent->minute = 0;
-    dent->second = 0;
+    dent->date.hour   = 0;
+    dent->date.minute = 0;
+    dent->date.second = 0;
 
     return 0;
   }

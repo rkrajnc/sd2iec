@@ -58,6 +58,24 @@
 #define FLAG_SPLAT  (1<<7)
 
 /**
+ * @date      : 1900-based year
+ * @month     : month
+ * @day       : day
+ * @hour      : hour (24 hours, 0-based)
+ * @minute    : minute
+ * @second    : second
+ */
+
+typedef struct date {
+  uint8_t  year;
+  uint8_t  month;
+  uint8_t  day;
+  uint8_t  hour;
+  uint8_t  minute;
+  uint8_t  second;
+} date_t;
+
+/**
  * struct path_t - struct to reference a directory
  * @part: partition number (0-based)
  * @fat : cluster number of the directory start
@@ -78,12 +96,7 @@ typedef struct {
  * @fatcluster: Start cluster of the entry (if on FAT)
  * @name      : 0-padded commodore file name
  * @realname  : Actual 8.3 name of the file (if on FAT and different from name)
- * @year      : 1900-based year
- * @month     : month
- * @day       : day
- * @hour      : hour (24 hours, 0-based)
- * @minute    : minute
- * @second    : second
+ * @date      : Last modified date
  *
  * This structure holds a CBM filename, its type and its size. The typeflags
  * are almost compatible to the file type byte in a D64 image, but the splat
@@ -105,12 +118,7 @@ struct cbmdirent {
   uint32_t fatcluster;
   uint8_t  name[CBM_NAME_LENGTH+1];
   uint8_t  realname[8+3+1+1];
-  uint8_t  year;
-  uint8_t  month;
-  uint8_t  day;
-  uint8_t  hour;
-  uint8_t  minute;
-  uint8_t  second;
+  date_t   date;
 };
 
 /**
