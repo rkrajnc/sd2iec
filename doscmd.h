@@ -29,6 +29,8 @@
 
 extern uint8_t command_buffer[CONFIG_COMMAND_BUFFER_SIZE+2];
 extern uint8_t command_length;
+extern date_t date_match_start;
+extern date_t date_match_end;
 
 extern uint16_t datacrc;
 

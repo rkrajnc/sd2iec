@@ -58,6 +58,9 @@ uint8_t globalflags;
 uint8_t command_buffer[CONFIG_COMMAND_BUFFER_SIZE+2];
 uint8_t command_length;
 
+date_t date_match_start;
+date_t date_match_end;
+
 uint16_t datacrc = 0xffff;
 
 #ifdef CONFIG_STACK_TRACKING
@@ -74,22 +77,6 @@ void __cyg_profile_func_enter (void *this_fn, void *call_site) {
 /* ------------------------------------------------------------------------- */
 /*  Parsing helpers                                                          */
 /* ------------------------------------------------------------------------- */
-
-/* Parse a decimal number at str and return a pointer to the following char */
-static uint8_t parse_number(uint8_t **str) {
-  uint8_t res = 0;
-
-  /* Skip leading spaces */
-  while (**str == ' ') (*str)++;
-
-  /* Parse decimal number */
-  while (isdigit(**str)) {
-    res *= 10;
-    res += (*(*str)++) - '0';
-  }
-
-  return res;
-}
 
 /* Parse parameters of block commands in the command buffer */
 /* Returns number of parameters (up to 4) or <0 on error    */
@@ -922,7 +909,7 @@ void parse_doscommand(void) {
 
     i = 255;
     count = 0;
-    while (!next_match(&matchdh, buf, FLAG_HIDDEN, &dent)) {
+    while (!next_match(&matchdh, buf, NULL, NULL, FLAG_HIDDEN, &dent)) {
       /* Skip directories */
       if ((dent.typeflags & TYPE_MASK) == TYPE_DIR)
         continue;

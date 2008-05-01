@@ -93,11 +93,11 @@ uint8_t match_name(uint8_t *matchstr, struct cbmdirent *dent) {
   uint8_t *filename = dent->name;
   uint8_t *starpos;
 
+#if 0
   /* Shortcut for chaining fastloaders ("!*file") */
-  /*
   if (*filename == *matchstr && matchstr[1] == '*')
     return 1;
-  */
+#endif
 
   while (*filename) {
     switch (*matchstr) {
@@ -132,10 +132,18 @@ uint8_t match_name(uint8_t *matchstr, struct cbmdirent *dent) {
     return 1;
 }
 
+// JLB this is rather brute force, but it seemed the quickest way
+static int8_t cmp_date(date_t *d1, date_t *d2) {
+  /* This requires that date_t has the packed attribute! */
+  return memcmp(d1, d2, sizeof(date_t));
+}
+
 /**
  * next_match - get next matching directory entry
  * @dh      : directory handle
  * @matchstr: pattern to be matched
+ * @start   : start date
+ * @end     : end date
  * @type    : required file type (0 for any)
  * @dent    : pointer to a directory entry for returning the match
  *
@@ -144,7 +152,7 @@ uint8_t match_name(uint8_t *matchstr, struct cbmdirent *dent) {
  * -1 if no match could be found, 1 if an error occured or 0 if a match was
  * found.
  */
-int8_t next_match(dh_t *dh, uint8_t *matchstr, uint8_t type, struct cbmdirent *dent) {
+int8_t next_match(dh_t *dh, uint8_t *matchstr, date_t *start, date_t *end, uint8_t type, struct cbmdirent *dent) {
   int8_t res;
 
   while (1) {
@@ -163,6 +171,16 @@ int8_t next_match(dh_t *dh, uint8_t *matchstr, uint8_t type, struct cbmdirent *d
       /* Skip if the name doesn't match */
       if (matchstr &&
           !match_name(matchstr, dent))
+        continue;
+
+      /* skip if earlier than start date */
+      if (start &&
+          cmp_date(&dent->date, start) < 0)
+        continue;
+
+      /* skip if later than end date */
+      if (end &&
+          cmp_date(&dent->date, end) > 0)
         continue;
     }
 
@@ -189,7 +207,7 @@ int8_t first_match(path_t *path, uint8_t *matchstr, uint8_t type, struct cbmdire
   if (opendir(&matchdh, path))
     return 1;
 
-  res = next_match(&matchdh, matchstr, type, dent);
+  res = next_match(&matchdh, matchstr, NULL, NULL, type, dent);
   if (res < 0)
     set_error(ERROR_FILE_NOT_FOUND);
   return res;
@@ -299,5 +317,93 @@ uint8_t parse_path(uint8_t *in, path_t *path, uint8_t **name, uint8_t parse_alwa
   }
 
   *name = in;
+  return 0;
+}
+
+
+
+/* Parse a decimal number at str and return a pointer to the following char */
+uint8_t parse_number(uint8_t **str) {
+  uint8_t res = 0;
+
+  /* Skip leading spaces */
+  while (**str == ' ') (*str)++;
+
+  /* Parse decimal number */
+  while (isdigit(**str)) {
+    res *= 10;
+    res += (*(*str)++) - '0';
+  }
+
+  return res;
+}
+
+/* Parse a CMD-style date and return a pointer to the following char */
+uint8_t parse_date(date_t *date, uint8_t **str) {
+  uint8_t ch;
+
+  date->month = parse_number(str);
+  if (date->month > 12 || *(*str)++ != '/') return 1;
+
+  date->day = parse_number(str);
+  if (date->day > 31 || *(*str)++ != '/') return 1;
+
+  date->year = parse_number(str);
+  /* Y2K */
+  if (date->year < 80)
+    date->year += 100;
+
+  /* Shortcut: Just a date without time */
+  if (!**str || *(*str) == ',') {
+    date->hour = 0;
+    date->minute = 0;
+    date->second = 0;
+    return 0;
+  }
+  if (*(*str)++ != ' ') return 1;
+
+  date->hour = parse_number(str);
+  ch = *(*str)++;
+  if (date->hour > 23 || (ch != ':' && ch != '.')) return 1;
+
+  date->minute = parse_number(str);
+  ch = *(*str)++;
+  if (date->minute > 59) return 1;
+
+  switch (ch) {
+  case ':':
+  case '.':
+    date->second = parse_number(str);
+    if (date->second > 59 || *(*str)++ != ' ') return 1;
+    break;
+
+  case ' ':
+    date->second = 0;
+    break;
+
+  case ',':
+  case 0:
+    /* No AM/PM */
+    (*str)--;
+    date->second = 0;
+    return 0;
+
+  default:
+    return 1;
+  }
+
+  switch(*(*str)++) {
+  case 'A':
+    break;
+  case 'P':
+    date->hour+=12;
+    break;
+  default:
+    return 1;
+  }
+  if (date->hour > 23)
+    return 1;
+
+  if (*(*str)++ != 'M') return 1; // JLB need to check to see if CMD is this anal
   return 0;
 }

@@ -73,7 +73,7 @@ typedef struct date {
   uint8_t  hour;
   uint8_t  minute;
   uint8_t  second;
-} date_t;
+}  __attribute__((packed)) date_t;
 
 /**
  * struct path_t - struct to reference a directory

@@ -40,7 +40,7 @@ uint8_t parse_partition(uint8_t **buf);
 uint8_t match_name(uint8_t *matchstr, struct cbmdirent *dent);
 
 /* Returns the next matching dirent */
-int8_t next_match(dh_t *dh, uint8_t *matchstr, uint8_t type, struct cbmdirent *dent);
+int8_t next_match(dh_t *dh, uint8_t *matchstr, date_t *start, date_t *end, uint8_t type, struct cbmdirent *dent);
 
 /* Returns the first matching dirent */
 int8_t first_match(path_t *path, uint8_t *matchstr, uint8_t type, struct cbmdirent *dent);
@@ -50,5 +50,11 @@ uint8_t parse_path(uint8_t *in, path_t *path, uint8_t **name, uint8_t parse_alwa
 
 /* Check for invalid characters in a name */
 uint8_t check_invalid_name(uint8_t *name);
+
+/* Parse a decimal number at str and return a pointer to the following char */
+uint8_t parse_number(uint8_t **str);
+
+/* parse CMD-style dates */
+uint8_t parse_date(date_t *date, uint8_t **str);
 
 #endif

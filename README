@@ -36,8 +36,9 @@ Supported commands:
   do anything. sd2iec marks hidden files with an H after the lock mark,
   i.e. "PRG<H" or "PRG H".
 
-  CMD-style "short" directory listings with timestamps are supported ("$=T"),
-  but timestamp filters are not understood yet.
+  CMD-style "short" and "long" directory listings with timestamps are supported
+  ("$=T"), including timestamp filters. Please read a CMD manual for the syntax
+  until this file is updated.
 
 - Partition directory:
   The CMD-style partition directory ($=P) is supported, including filters
