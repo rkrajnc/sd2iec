@@ -519,6 +519,30 @@ void parse_user(void) {
   }
 }
 
+/* --------- */
+/*  N - New  */
+/* --------- */
+void parse_new(void) {
+  uint8_t *name, *id;
+  uint8_t part;
+
+  name = command_buffer+1;
+  part = parse_partition(&name);
+  name = ustrchr(command_buffer, ':');
+  if (name++ == NULL) {
+    set_error(ERROR_SYNTAX_NONAME);
+    return;
+  }
+
+  id = ustrchr(name, ',');
+  if (id != NULL) {
+    *id = 0;
+    id++;
+  }
+
+  format(part, name, id);
+}
+
 /* ------------ */
 /*  R - Rename  */
 /* ------------ */
@@ -875,13 +899,8 @@ void parse_doscommand(void) {
     break;
 
   case 'N':
-    // FIXME: HACK! Sonst bleibt der 64'er Speed-Test mit Division by Zero stehen
-    /* mkdir+chdir may be a nice substitute for FAT */
-    _delay_ms(100);
-    _delay_ms(100);
-    _delay_ms(100);
-    _delay_ms(100);
-    _delay_ms(100);
+    /* New */
+    parse_new();
     break;
 
   case 'R':

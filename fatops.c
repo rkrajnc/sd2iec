@@ -1167,6 +1167,11 @@ uint8_t image_write(uint8_t part, DWORD offset, void *buffer, uint16_t bytes, ui
   return 0;
 }
 
+/* Dummy function for format */
+void format_dummy(uint8_t drive, uint8_t *name, uint8_t *id) {
+  set_error(ERROR_SYNTAX_UNKNOWN);
+}
+
 const PROGMEM fileops_t fatops = {  // These should be at bottom, to be consistent with d64ops and m2iops
   &fat_open_read,
   &fat_open_write,
@@ -1176,6 +1181,7 @@ const PROGMEM fileops_t fatops = {  // These should be at bottom, to be consiste
   &fat_freeblocks,
   &fat_sectordummy,
   &fat_sectordummy,
+  &format_dummy,
   &fat_opendir,
   &fat_readdir,
   &fat_mkdir,

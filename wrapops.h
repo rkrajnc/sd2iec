@@ -46,6 +46,7 @@
  * @disk_free   : read free space of disk
  * @read_sector : read a sector from the disk
  * @write_sector: write a sector to the disk
+ * @format      : format the disk
  * @opendir     : open a directory
  * @readdir     : read an entry from a directory
  * @mkdir       : create a directory
@@ -66,6 +67,7 @@ typedef struct fileops_s {
   uint16_t (*disk_free)(uint8_t part);
   void     (*read_sector)(buffer_t *buf, uint8_t part, uint8_t track, uint8_t sector);
   void     (*write_sector)(buffer_t *buf, uint8_t part, uint8_t track, uint8_t sector);
+  void     (*format)(uint8_t drv, uint8_t *name, uint8_t *id);
   uint8_t  (*opendir)(dh_t *dh, path_t *path);
   int8_t   (*readdir)(dh_t *dh, struct cbmdirent *dent);
   void     (*mkdir)(path_t *path, uint8_t *dirname);
@@ -85,6 +87,7 @@ typedef struct fileops_s {
 #define disk_free(drv) ((pgmcall(partition[drv].fop->disk_free))(drv))
 #define read_sector(buf,drv,t,s) ((pgmcall(partition[(drv)].fop->read_sector))(buf,drv,t,s))
 #define write_sector(buf,drv,t,s) ((pgmcall(partition[(drv)].fop->write_sector))(buf,drv,t,s))
+#define format(drv,name,id) ((pgmcall(partition[(drv)].fop->format))(drv,name,id))
 #define opendir(dh,path) ((pgmcall(partition[(path)->part].fop->opendir))(dh,path))
 #define readdir(dh,dent) ((pgmcall(partition[(dh)->part].fop->readdir))(dh,dent))
 #define mkdir(path,dir) ((pgmcall(partition[(path)->part].fop->mkdir))(path,dir))

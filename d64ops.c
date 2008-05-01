@@ -55,6 +55,7 @@
 #define BAM_TRACK 18
 #define BAM_SECTOR 0
 #define BAM_BYTES_PER_TRACK 4
+#define TOTAL_SECTORS 683
 #define FILE_INTERLEAVE 10
 #define DIR_INTERLEAVE 3
 
@@ -872,6 +873,93 @@ static void d64_rename(path_t *path, struct cbmdirent *dent, uint8_t *newname) {
               (matchdh.dir.d64.entry-1)*32, entrybuf, 32, 1);
 }
 
+static void d64_format(uint8_t part, uint8_t *name, uint8_t *id) {
+  buffer_t *buf;
+  uint8_t  *ptr;
+  uint8_t  idbuf[2];
+  uint8_t  t,s;
+
+  buf = alloc_buffer();
+  if (buf == NULL)
+    return;
+
+  mark_write_buffer(buf);
+  memset(buf->data, 0, 256);
+
+  if (id != NULL) {
+    uint16_t i;
+
+    /* Clear the data area of the disk image */
+    for (i=0;i<TOTAL_SECTORS;i++) {
+      if (image_write(part, 256L * i, buf->data, 256, 0)) {
+        free_buffer(buf);
+        return;
+      }
+    }
+
+    /* Copy the new ID into the buffer */
+    idbuf[0] = id[0];
+    idbuf[1] = id[1];
+  } else {
+    /* Read the old ID into the buffer */
+    if (image_read(part, sector_offset(DIR_TRACK,0) + ID_OFFSET, idbuf, 2))
+      return;
+  }
+
+  /* Clear the second to final directory sectors */
+  for (s=2;s<sectors_per_track(DIR_TRACK);s++) {
+    if (image_write(part, sector_offset(DIR_TRACK, s), buf->data, 256, 0)) {
+      free_buffer(buf);
+      return;
+    }
+  }
+
+  /* Clear the first directory sector */
+  buf->data[1] = 0xff;
+  if (image_write(part, sector_offset(DIR_TRACK, 1), buf->data, 256, 0)) {
+    free_buffer(buf);
+    return;
+  }
+
+  /* Create a new BAM */
+  ptr = buf->data;
+  ptr[0] = DIR_TRACK;
+  ptr[1] = 1;
+  ptr[2] = 0x41;
+  memset(ptr+0x90, 0xa0, 0xaa-0x90+1);
+
+  /* Copy the disk label */
+  ptr += 0x90;
+  t = 16;
+  while (*name && t--)
+    *ptr++ = *name++;
+
+  /* Set the ID */
+  buf->data[ID_OFFSET  ] = idbuf[0];
+  buf->data[ID_OFFSET+1] = idbuf[1];
+  buf->data[ID_OFFSET+3] = '2';
+  buf->data[ID_OFFSET+4] = 'A';
+
+  /* Mark all sectors as free */
+  for (t=1; t<=LAST_TRACK; t++)
+    for (s=0; s<sectors_per_track(t); s++)
+      free_sector(t,s,buf);
+
+  /* Write the new BAM */
+  if (image_write(part, sector_offset(BAM_TRACK, BAM_SECTOR), buf->data, 256, 1)) {
+    free_buffer(buf);
+    return;
+  }
+
+  /* Replace the in-memory BAM with our new version */
+  free_buffer(buf);
+  buf = find_buffer(BUFFER_SEC_SYSTEM + part);
+  // Assume that reading the data we just wrote always works
+  image_read(part, sector_offset(BAM_TRACK, BAM_SECTOR), buf->data, 256);
+
+  /* FIXME: Clear the error info block */
+}
+
 const PROGMEM fileops_t d64ops = {
   d64_open_read,
   d64_open_write,
@@ -881,6 +969,7 @@ const PROGMEM fileops_t d64ops = {
   d64_freeblocks,
   d64_read_sector,
   d64_write_sector,
+  d64_format,
   d64_opendir,
   d64_readdir,
   image_mkdir,

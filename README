@@ -71,6 +71,9 @@ Supported commands:
 - CP, C<Shift-P>
   This changes the current partition, see "Partitions" below for details.
 
+- N:
+  Format works only if a D64 image is already mounted.
+
 - S:
   Name matching is fully supported, directories are ignored.
 

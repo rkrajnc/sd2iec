@@ -494,6 +494,7 @@ const PROGMEM fileops_t m2iops = {
   fat_freeblocks,
   fat_sectordummy,
   fat_sectordummy,
+  format_dummy,
   m2i_opendir,
   m2i_readdir,
   image_mkdir,
