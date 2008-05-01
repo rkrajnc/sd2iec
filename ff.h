@@ -1,15 +1,15 @@
 /*--------------------------------------------------------------------------/
-/  FatFs - FAT file system module include file  R0.05        (C)ChaN, 2007
+/  FatFs - FAT file system module include file  R0.06        (C)ChaN, 2008
 /---------------------------------------------------------------------------/
 / FatFs module is an experimenal project to implement FAT file system to
 / cheap microcontrollers. This is a free software and is opened for education,
 / research and development under license policy of following trems.
 /
-/  Copyright (C) 2007, ChaN, all right reserved.
+/  Copyright (C) 2008, ChaN, all right reserved.
 /
 / * The FatFs module is a free software and there is no warranty.
 / * You can use, modify and/or redistribute it for personal, non-profit or
-/   profit use without any restriction under your responsibility.
+/   commercial use without any restriction under your responsibility.
 / * Redistributions of source code must retain the above copyright notice.
 /
 /---------------------------------------------------------------------------*/
@@ -26,15 +26,18 @@
 
 #define _FS_READONLY    0
 /* Setting _FS_READONLY to 1 defines read only configuration. This removes
-/  writing functions, f_write, f_sync, f_unlink, f_mkdir, f_chmod, f_rename
-/  and useless f_getfree. */
+/  writing functions, f_write, f_sync, f_unlink, f_mkdir, f_chmod, f_rename,
+/  f_truncate and useless f_getfree. */
 
 #define _FS_MINIMIZE    0
 /* The _FS_MINIMIZE option defines minimization level to remove some functions.
 /  0: Full function.
-/  1: f_stat, f_getfree, f_unlink, f_mkdir, f_chmod and f_rename are removed.
+/  1: f_stat, f_getfree, f_unlink, f_mkdir, f_chmod, f_truncate and f_rename are removed.
 /  2: f_opendir and f_readdir are removed in addition to level 1.
 /  3: f_lseek is removed in addition to level 2. */
+
+#define _USE_STRFUNC    0
+/* To enable string functions, set _USE_STRFUNC to 1 or 2. */
 
 #define _DRIVES     CONFIG_MAX_PARTITIONS
 /* Number of physical drives to be used. This affects the size of internal
@@ -103,11 +106,11 @@
 #endif
 
 /* Definitions corresponds to multiple sector size (not tested) */
-#define S_MAX_SIZ 512     /* Do not change */
-#if S_MAX_SIZ > 512
+#define S_MAX_SIZ   512U            /* Do not change */
+#if S_MAX_SIZ > 512U
 #define SS(fs)  ((fs)->s_size)
 #else
-#define SS(fs)  512
+#define SS(fs)  512U
 #endif
 
 #if _USE_1_BUF == 1 && _USE_FS_BUF == 0
@@ -147,8 +150,8 @@ typedef struct _FATFS {
 #endif
 #endif
     BYTE    fs_type;        /* FAT sub type */
-    BYTE    sects_clust;    /* Sectors per cluster */
-#if S_MAX_SIZ > 512
+    BYTE    csize;          /* Number of sectors per cluster */
+#if S_MAX_SIZ > 512U
     WORD    s_size;         /* Sector size */
 #endif
     BYTE    n_fats;         /* Number of FAT copies */
@@ -173,7 +176,7 @@ typedef struct _DIR {
 typedef struct _FIL {
   //WORD    id;             /* Owner file system mount ID */
     BYTE    flag;           /* File status flags */
-    BYTE    sect_clust;     /* Left sectors in cluster */
+    BYTE    csect;          /* Sector address in the cluster */
     FATFS*  fs;             /* Pointer to the owner file system object */
     DWORD   fptr;           /* File R/W pointer */
     DWORD   fsize;          /* File size */
@@ -199,7 +202,7 @@ typedef struct _FILINFO {
     DWORD clust;            /* Start cluster */
     UCHAR fname[8+1+3+1];   /* Name (8.3 format) */
 #if _USE_LFN != 0
-    BYTE* lfn;
+    UCHAR* lfn;
 #endif
 } FILINFO;
 
@@ -294,10 +297,15 @@ FRESULT f_chdir (const UCHAR*);                             /* Change current di
 /* Low Level functions */
 FRESULT l_opendir(FATFS* fs, DWORD cluster, DIR *dirobj);   /* Open an existing directory by its start cluster */
 FRESULT l_opencluster(FATFS *fs, FIL *fp, DWORD clust);     /* Open a cluster by number as a read-only file */
-#if _USE_DRIVE_PREFIX == 0
 FRESULT l_getfree (FATFS*, const UCHAR*, DWORD*, DWORD);    /* Get number of free clusters on the drive, limited */
-#else
-FRESULT l_getfree (const UCHAR*, DWORD*, DWORD, FATFS**);   /* Get number of free clusters on the drive, limited */
+
+#if _USE_STRFUNC
+#define feof(fp) ((fp)->fptr == (fp)->fsize)
+#define EOF -1
+int fputc (int, FIL*);                              /* Put a character to the file */
+int fputs (const char*, FIL*);                      /* Put a string to the file */
+int fprintf (FIL*, const char*, ...);               /* Put a formatted string to the file */
+char* fgets (char*, int, FIL*);                     /* Get a string from the file */
 #endif
 
 /* User defined function to give a current time to fatfs module */
@@ -406,15 +414,13 @@ FRESULT l_getfree (const UCHAR*, DWORD*, DWORD, FATFS**);   /* Get number of fre
 #define LD_DWORD(ptr)       (DWORD)(*(DWORD*)(BYTE*)(ptr))
 #define ST_WORD(ptr,val)    *(WORD*)(BYTE*)(ptr)=(WORD)(val)
 #define ST_DWORD(ptr,val)   *(DWORD*)(BYTE*)(ptr)=(DWORD)(val)
-#else
-#if _MCU_ENDIAN == 2    /* Use byte-by-byte access */
+#elif _MCU_ENDIAN == 2  /* Use byte-by-byte access */
 #define LD_WORD(ptr)        (WORD)(((WORD)*(volatile BYTE*)((ptr)+1)<<8)|(WORD)*(volatile BYTE*)(ptr))
 #define LD_DWORD(ptr)       (DWORD)(((DWORD)*(volatile BYTE*)((ptr)+3)<<24)|((DWORD)*(volatile BYTE*)((ptr)+2)<<16)|((WORD)*(volatile BYTE*)((ptr)+1)<<8)|*(volatile BYTE*)(ptr))
 #define ST_WORD(ptr,val)    *(volatile BYTE*)(ptr)=(BYTE)(val); *(volatile BYTE*)((ptr)+1)=(BYTE)((WORD)(val)>>8)
 #define ST_DWORD(ptr,val)   *(volatile BYTE*)(ptr)=(BYTE)(val); *(volatile BYTE*)((ptr)+1)=(BYTE)((WORD)(val)>>8); *(volatile BYTE*)((ptr)+2)=(BYTE)((DWORD)(val)>>16); *(volatile BYTE*)((ptr)+3)=(BYTE)((DWORD)(val)>>24)
 #else
 #error Do not forget to set _MCU_ENDIAN properly!
-#endif
 #endif
 
 #define _FATFS

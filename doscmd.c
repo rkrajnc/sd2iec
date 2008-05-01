@@ -856,7 +856,7 @@ void parse_doscommand(void) {
     *(buf++) = (partition[path.part].fatfs.fatbase & 0xff);
     buf++;
 
-    uint32_t size = (partition[path.part].fatfs.max_clust - 1) * partition[path.part].fatfs.sects_clust;
+    uint32_t size = (partition[path.part].fatfs.max_clust - 1) * partition[path.part].fatfs.csize;
     *(buf++) = size>>16;
     *(buf++) = size>>8;
     *(buf++) = size;
