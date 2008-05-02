@@ -1,3 +1,6 @@
+2008-05-02 - release 0.6.5
+        - Modify the JiffyDos timing for improved NTSC compatibility
+
 2008-03-27 - release 0.6.4
         - Change some details of the SD card initialisation
         - Bugfix: Initialize cards only when sd2iec is accessed to avoid
