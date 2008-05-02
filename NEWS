@@ -1,10 +1,46 @@
-2008-xx-xx - release x.x
-        - Bugfix: Ignore trailing separation characters of B-* parameters
+2008-05-02 - release 0.7.0
+        - does not support the ATmega32 anymore
         - Match trailing part of names after * too
+          + option to disable that
         - Multi-drive/partition support
+        - Dual SD card support (some configurations)
         - Rename
-        - transparent support for P/S/U/R00 files
+        - transparent support for P/S/U/R00 files (read+create)
+          + option to disable x00 writing
+        - file-type suffix detection+generation
+          + option to disable that
+        - Final Cartridge III fast-load/save
+        - Sleep mode
+        - Extended swaplist navigation (next/prev/home)
+        - extended version query
+        - CMD-style timestamped short directory listings
+        - CMD-style partition directory
+        - CMD-style G-P command (get partition info)
+        - FAT32 free block count can be disabled
+        - D64 error info block parsing
+        - stricter, but better parser (supports wildcards in path names)
 
+2008-03-27 - release 0.6.4
+        - Change some details of the SD card initialisation
+        - Bugfix: Initialize cards only when sd2iec is accessed to avoid
+                  hogging the bus during this time.
+        - Prepare NKC configuration for bootloader and mega644
+
+2008-03-19 - release 0.6.3
+        - Bugfix: Ignore trailing separation characters of B-* parameters
+        - Bugfix: Always ignore volume labels while scanning for LFNs
+        - Bugfix: SDHC was always disabled in 0.6.x
+        - Bugfix: Ignore spaces in drive number
+        - Bugfix: Fix possible error after changing partitioned cards
+        - Bugfix: Case-insensitive name matching in the FAT library
+                  (but not in sd2iec)
+        - Bugfix: Fix compile error with larsp configuration on mega644
+        - Wait for the release of the disk change key before trying to
+          access a swap list
+        - Remove some ancient not-true-anymore statements from README
+        - Improve sector read performance
+        - Reduce unecessary reads during seeking
+ 
 2008-02-24 - release 0.6.2
         - Bugfix: Read the correct pins when determining the device
                   address in LarsP and NKC configurations

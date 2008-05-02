@@ -36,6 +36,14 @@ Supported commands:
   do anything. sd2iec marks hidden files with an H after the lock mark,
   i.e. "PRG<H" or "PRG H".
 
+  CMD-style "short" directory listings with timestamps are supported ("$=T"),
+  but timestamp filters are not understood yet.
+
+- Partition directory:
+  The CMD-style partition directory ($=P) is supported, including filters
+  ($=P:S*). All partitions are listed with type "FAT", although this could
+  change to "NAT" later for compatibility.
+
 - CD/MD/RD:
   Subdirectory access is compatible to the syntax used by the CMD drives,
   although drive/partition numbers are completely ignored.
@@ -70,6 +78,10 @@ Supported commands:
 
 - CP, C<Shift-P>
   This changes the current partition, see "Partitions" below for details.
+
+- G-P
+  Get partition info, see CMD FD/HD manual for details. The reported
+  information is partially faked, feedback is welcome.
 
 - N:
   Format works only if a D64 image is already mounted.
@@ -241,13 +253,23 @@ the command.
 
 Software fastloaders:
 =====================
-There is currently support for one software fastloader in the code. It is
-detected by the CRC of its 493 byte long floppy code and the M-E address
-0x0303. I've seen the same code under multiple names, among them
-"Turbodisk" (both 2.1 and 2.2) and "Fast-Load". Unfortunately the timing
-requirements are extremely tight and cannot be met with the internal RC
-oscillator of the AVR even if calibrated. You really need an external
-8MHz crystal or the data read by the C64 will be gibberish.
+  Turbodisk
+  ---------
+  Turbodisk is detected by the CRC of its 493 byte long floppy code and
+  the M-E address 0x0303. The same code seems to be used under various names,
+  among them "Turbodisk" (both 2.1 and 2.2) and "Fast-Load". Unfortunately
+  the timing requirements are extremely tight and cannot be met with the
+  internal RC oscillator of the AVR even if calibrated. You really need an
+  external 8MHz crystal or the data read by the C64 will be gibberish.
+  It is not known if there is an NTSC-compatible version of this fastloader.
+
+  Final Cartridge III
+  -------------------
+  Both the fast loader and the fast saver of Final Cartridge III are supported.
+  The fast loader seems to work without a crystal, the fast saver was not
+  tested. It is not known if there is an NTSC-compatible version using the
+  same drive code, but at least for the fastloader the FC3 rom seems to
+  contain two different C64-side implementations.
 
 JiffyDOS:
 =========
@@ -273,12 +295,11 @@ x00 files are recognized by checking both the extension of the file
 
 Disk Images:
 ============
-Disk images are recognized by their file extension (.D64, .D71) and
-their file size (must be one of 174848, 175531, 349696, 351062).
+Disk images are recognized by their file extension (.D64, .D41) and
+their file size (must be one of 174848, 175531).
 If the image has an error info block appended it will be used to simulate
 read errors. Writing to a sector with an error will always work, but
-it will not clear the indicated error. D71 images are only used
-single-sided for now, as if such a disk was used in a 1541.
+it will not clear the indicated error.
 
 M2I files:
 ==========
