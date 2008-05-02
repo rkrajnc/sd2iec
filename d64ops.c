@@ -906,14 +906,6 @@ static void d64_format(uint8_t part, uint8_t *name, uint8_t *id) {
       return;
   }
 
-  /* Clear the second to final directory sectors */
-  for (s=2;s<sectors_per_track(DIR_TRACK);s++) {
-    if (image_write(part, sector_offset(DIR_TRACK, s), buf->data, 256, 0)) {
-      free_buffer(buf);
-      return;
-    }
-  }
-
   /* Clear the first directory sector */
   buf->data[1] = 0xff;
   if (image_write(part, sector_offset(DIR_TRACK, 1), buf->data, 256, 0)) {
