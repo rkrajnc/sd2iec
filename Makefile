@@ -439,7 +439,7 @@ $(OBJDIR)/autoconf.h: $(CONFIG) | $(OBJDIR)
 ifeq ($(CONFIG_BOOTLOADER),y)
 $(OBJDIR)/%.bin: $(OBJDIR)/%.elf
 	$(OBJCOPY) -O binary -R .eeprom $< $@
-	crcgen-new $@ $(BINARY_LENGTH) $(CONFIG_BOOT_DEVID) $(BOOT_VERSION)
+	-crcgen-new $@ $(BINARY_LENGTH) $(CONFIG_BOOT_DEVID) $(BOOT_VERSION)
 else
 $(OBJDIR)/%.bin: $(OBJDIR)/%.elf
 	$(OBJCOPY) -O binary -R .eeprom $< $@
