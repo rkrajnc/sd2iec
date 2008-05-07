@@ -65,8 +65,9 @@
  * @minute    : minute
  * @second    : second
  *
- * This struct holds a file timestamp. Its fields must be in this order
- * because it is compared using memcmp.
+ * This struct holds a file timestamp. It must have the "packed" attribute
+ * with the fields in descending order of magnitude because it is compared
+ * using memcmp.
  */
 typedef struct date {
   uint8_t  year;
