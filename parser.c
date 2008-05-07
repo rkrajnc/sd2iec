@@ -132,12 +132,6 @@ uint8_t match_name(uint8_t *matchstr, struct cbmdirent *dent) {
     return 1;
 }
 
-/* Compare two date_t structures */
-static int8_t cmp_date(date_t *d1, date_t *d2) {
-  /* This requires that date_t has the packed attribute! */
-  return memcmp(d1, d2, sizeof(date_t));
-}
-
 /**
  * next_match - get next matching directory entry
  * @dh      : directory handle
@@ -175,12 +169,12 @@ int8_t next_match(dh_t *dh, uint8_t *matchstr, date_t *start, date_t *end, uint8
 
       /* skip if earlier than start date */
       if (start &&
-          cmp_date(&dent->date, start) < 0)
+          memcmp(&dent->date, start, sizeof(date_t)) < 0)
         continue;
 
       /* skip if later than end date */
       if (end &&
-          cmp_date(&dent->date, end) > 0)
+          memcmp(&dent->date, end, sizeof(date_t)) > 0)
         continue;
     }
 
