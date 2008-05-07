@@ -132,7 +132,7 @@ uint8_t match_name(uint8_t *matchstr, struct cbmdirent *dent) {
     return 1;
 }
 
-// JLB this is rather brute force, but it seemed the quickest way
+/* Compare two date_t structures */
 static int8_t cmp_date(date_t *d1, date_t *d2) {
   /* This requires that date_t has the packed attribute! */
   return memcmp(d1, d2, sizeof(date_t));

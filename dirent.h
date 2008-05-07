@@ -64,8 +64,10 @@
  * @hour      : hour (24 hours, 0-based)
  * @minute    : minute
  * @second    : second
+ *
+ * This struct holds a file timestamp. Its fields must be in this order
+ * because it is compared using memcmp.
  */
-
 typedef struct date {
   uint8_t  year;
   uint8_t  month;
