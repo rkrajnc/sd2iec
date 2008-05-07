@@ -357,86 +357,104 @@ static void load_directory(uint8_t secondary) {
     }
   }
 
-  if(command_buffer[pos]) { /* do we have a path to scan? */
-    /* Parse the name pattern */
-    if (parse_path(command_buffer+pos, &path, &name, 0)) {
-      free_buffer(buf);
-      return;
-    }
-
-    if (opendir(&buf->pvt.dir.dh, &path)) {
-      free_buffer(buf);
-      return;
-    }
-
-    buf->pvt.dir.matchstr = name;
-
-    /* Check for a filetype match */
-    name = ustrchr(name, '=');
-    if (name != NULL) {
-      *name++ = 0;
-      switch (*name) {
-      case 'S':
-        buf->pvt.dir.filetype = TYPE_SEQ;
-        break;
-
-      case 'P':
-        buf->pvt.dir.filetype = TYPE_PRG;
-        break;
-
-      case 'U':
-        buf->pvt.dir.filetype = TYPE_USR;
-        break;
-
-      case 'R':
-        buf->pvt.dir.filetype = TYPE_REL;
-        break;
-
-      case 'C': /* This is guessed, not verified */
-        buf->pvt.dir.filetype = TYPE_CBM;
-        break;
-
-      case 'B': /* CMD compatibility */
-      case 'D': /* Specifying DEL matches everything anyway */
-        buf->pvt.dir.filetype = TYPE_DIR;
-        break;
-
-      case 'H': /* Extension: Also show hidden files */
-        buf->pvt.dir.filetype = FLAG_HIDDEN;
-        break;
+  if (command_buffer[pos]) { /* do we have a path to scan? */
+    if (command_length > 2) {
+      /* Parse the name pattern */
+      if (parse_path(command_buffer+pos, &path, &name, 0)) {
+        free_buffer(buf);
+        return;
       }
-      if(buf->pvt.dir.filetype) {
-        name++;
-        if(*name++ != ',') {
-          goto parseerror;
+
+      if (opendir(&buf->pvt.dir.dh, &path)) {
+        free_buffer(buf);
+        return;
+      }
+
+      buf->pvt.dir.matchstr = name;
+
+      /* Check for a filetype match */
+      name = ustrchr(name, '=');
+      if (name != NULL) {
+        *name++ = 0;
+        switch (*name) {
+        case 'S':
+          buf->pvt.dir.filetype = TYPE_SEQ;
+          break;
+
+        case 'P':
+          buf->pvt.dir.filetype = TYPE_PRG;
+          break;
+
+        case 'U':
+          buf->pvt.dir.filetype = TYPE_USR;
+          break;
+
+        case 'R':
+          buf->pvt.dir.filetype = TYPE_REL;
+          break;
+
+        case 'C': /* This is guessed, not verified */
+          buf->pvt.dir.filetype = TYPE_CBM;
+          break;
+
+        case 'B': /* CMD compatibility */
+        case 'D': /* Specifying DEL matches everything anyway */
+          buf->pvt.dir.filetype = TYPE_DIR;
+          break;
+
+        case 'H': /* Extension: Also show hidden files */
+          buf->pvt.dir.filetype = FLAG_HIDDEN;
+          break;
+        }
+        if(buf->pvt.dir.filetype) {
+          name++;
+          if(*name++ != ',') {
+            goto parseerror;
+          }
+        }
+        while(*name) {
+          switch(*name++) {
+          case '>':
+            if(parse_date(&date_match_start,&name))
+              goto parseerror;
+            buf->pvt.dir.match_start = &date_match_start;
+            break;
+          case '<':
+            if(parse_date(&date_match_end,&name))
+              goto parseerror;
+            buf->pvt.dir.match_end = &date_match_end;
+            break;
+          case 'L':
+            /* don't switch to long format if 'N' has already been sent */
+            if(buf->pvt.dir.format != DIR_FMT_CBM)
+              buf->pvt.dir.format = DIR_FMT_CMD_LONG;
+            break;
+          case 'N':
+            buf->pvt.dir.format=DIR_FMT_CBM; /* turn off extended listing */
+            break;
+          default:
+            goto parseerror;
+          }
+          if(*name && *name++ != ',') {
+            goto parseerror;
+          }
         }
       }
-      while(*name) {
-        switch(*name++) {
-        case '>':
-          if(parse_date(&date_match_start,&name))
-            goto parseerror;
-          buf->pvt.dir.match_start = &date_match_start;
-          break;
-        case '<':
-          if(parse_date(&date_match_end,&name))
-            goto parseerror;
-          buf->pvt.dir.match_end = &date_match_end;
-          break;
-        case 'L':
-          /* don't switch to long format if 'N' has already been sent */
-          if(buf->pvt.dir.format != DIR_FMT_CBM)
-            buf->pvt.dir.format = DIR_FMT_CMD_LONG;
-          break;
-        case 'N':
-          buf->pvt.dir.format=DIR_FMT_CBM; /* turn off extended listing */
-          break;
-        default:
-          goto parseerror;
-        }
-        if(*name && *name++ != ',') {
-          goto parseerror;
-        }
+    } else {
+      /* Command string is two characters long, parse the drive */
+      if (command_buffer[1] == '0')
+        path.part = current_part;
+      else
+        path.part = command_buffer[1] - '0' - 1;
+      if (path.part >= max_part) {
+        set_error(ERROR_DRIVE_NOT_READY);
+        free_buffer(buf);
+        return;
+      }
+      path.fat  = partition[path.part].current_dir;
+      if (opendir(&buf->pvt.dir.dh, &path)) {
+        free_buffer(buf);
+        return;
       }
     }
   } else {
