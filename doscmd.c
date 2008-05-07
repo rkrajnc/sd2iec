@@ -274,14 +274,23 @@ static void handle_memread(void) {
   if (command_length < 6)
     return;
 
-  /* Return the contents of the first buffer for now.     */
-  /* Simply reading the requested address in AVR ram here */
-  /* could cause problems with some IO registers.         */
-  /* FIXME: Check for signature addresses and return      */
-  /*        something fixed there.                        */
-  buffers[CONFIG_BUFFER_COUNT].data = buffers[0].data;
   buffers[CONFIG_BUFFER_COUNT].position = 0;
-  buffers[CONFIG_BUFFER_COUNT].lastused = command_buffer[5]-1;
+  if (command_buffer[3] == 0xfe &&
+      command_buffer[4] == 0xff &&
+      command_buffer[5] == 0x01) {
+    /* AR6 drive detection */
+    /* Returning 0 here disables the fastloader on my cart, other AR6-variants not tested */
+    error_buffer[0] = 0;
+    buffers[CONFIG_BUFFER_COUNT].lastused = 0;
+  } else {
+    /* Return the contents of the first buffer for now.     */
+    /* Simply reading the requested address in AVR ram here */
+    /* could cause problems with some IO registers.         */
+    /* FIXME: Check for signature addresses and return      */
+    /*        something fixed there.                        */
+    buffers[CONFIG_BUFFER_COUNT].data = buffers[0].data;
+    buffers[CONFIG_BUFFER_COUNT].lastused = command_buffer[5]-1;
+  }
 }
 
 static void handle_memwrite(void) {
