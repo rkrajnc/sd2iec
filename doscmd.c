@@ -268,6 +268,16 @@ static void handle_memexec(void) {
     load_turbodisk();
   }
 #endif
+#ifdef CONFIG_FC3
+  if (detected_loader == FL_FC3_LOAD && address == 0x059a) {
+    detected_loader = FL_NONE;
+    load_fc3();
+  }
+  if (detected_loader == FL_FC3_SAVE && address == 0x059c) {
+    detected_loader = FL_NONE;
+    save_fc3();
+  }
+#endif
 }
 
 static void handle_memread(void) {
@@ -325,6 +335,15 @@ static void handle_memwrite(void) {
 
   for (i=0;i<command_length;i++)
     datacrc = _crc16_update(datacrc, command_buffer[i]);
+
+#ifdef CONFIG_FC3
+  if (datacrc == 0xf1bd) {
+    detected_loader = FL_FC3_LOAD;
+  }
+  else if (datacrc == 0xbe56) {
+    detected_loader = FL_FC3_SAVE;
+  }
+#endif
 
   if (detected_loader == FL_NONE) {
     uart_puts_P(PSTR("M-W CRC result: "));

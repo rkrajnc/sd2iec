@@ -32,9 +32,15 @@ enum fastloaders {
 #ifdef CONFIG_TURBODISK
   FL_TURBODISK,
 #endif
+#ifdef CONFIG_FC3
+  FL_FC3_LOAD,
+  FL_FC3_SAVE,
+#endif
 };
 extern enum fastloaders detected_loader;
 
 void load_turbodisk(void);
+void load_fc3(void);
+void save_fc3(void);
 
 #endif
