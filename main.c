@@ -96,6 +96,4 @@ int main(void) {
   BUSY_LED_OFF();
 
   iec_mainloop();
-
-  while (1);
 }

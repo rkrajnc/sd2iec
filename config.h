@@ -148,13 +148,21 @@
 #  define IEC_PULLUPS     0
 
 /*** User interface ***/
-/* Disk image change key */
-#  define DISKCHANGE_PIN  PINC
-#  define DISKCHANGE_DDR  DDRC
-#  define DISKCHANGE_PORT PORTC
-#  define DISKCHANGE_BIT  _BV(PC4)
-/* Target value of the debounce counter */
-#  define DISKCHANGE_MAX  128
+/* Macros for the registers of the port where the buttons are connected */
+/* All buttons must be on the same port. */
+#  define BUTTON_PIN  PINC
+#  define BUTTON_PORT PORTC
+#  define BUTTON_DDR  DDRC
+
+/* Mask value to isolate the button bits */
+#  define BUTTON_MASK (_BV(PC3)|_BV(PC4))
+
+/* Button NEXT changes to the next disk image and enables sleep mode (held) */
+#  define BUTTON_NEXT _BV(PC4)
+
+/* Button PREV changes to the previous disk image */
+/* If you don't have/need this button, define it as 0. */
+#  define BUTTON_PREV _BV(PC3)
 
 
 
@@ -199,11 +207,13 @@
 #  define IEC_PIN_CLOCK         PA2
 #  define IEC_PIN_SRQ           PA3
 #  define IEC_PULLUPS           0
-#  define DISKCHANGE_PIN        PINC
-#  define DISKCHANGE_DDR        DDRC
-#  define DISKCHANGE_PORT       PORTC
-#  define DISKCHANGE_BIT        _BV(PC4)
-#  define DISKCHANGE_MAX        128
+#  define BUTTON_PIN            PINC
+#  define BUTTON_PORT           PORTC
+#  define BUTTON_DDR            DDRC
+#  define BUTTON_MASK           (_BV(PC3)|_BV(PC4))
+#  define BUTTON_NEXT           _BV(PC4)
+#  define BUTTON_PREV           _BV(PC3)
+
 
 #elif CONFIG_HARDWARE_VARIANT == 3
 /* Hardware configuration: LarsP */
@@ -245,11 +255,12 @@
 #  define IEC_PIN_CLOCK         PC2
 #  define IEC_PIN_SRQ           PC3
 #  define IEC_PULLUPS           0
-#  define DISKCHANGE_PIN        PINA
-#  define DISKCHANGE_DDR        DDRA
-#  define DISKCHANGE_PORT       PORTA
-#  define DISKCHANGE_BIT        _BV(PA4)
-#  define DISKCHANGE_MAX        128
+#  define BUTTON_PIN            PINA
+#  define BUTTON_PORT           PORTA
+#  define BUTTON_DDR            DDRA
+#  define BUTTON_MASK           (_BV(PA4)|_BV(PA5))
+#  define BUTTON_NEXT           _BV(PA4)
+#  define BUTTON_PREV           _BV(PA5)
 
 #elif CONFIG_HARDWARE_VARIANT == 4
 /* Hardware configuration: uIEC (incomplete) */
@@ -380,11 +391,13 @@
 #  define IEC_PIN_CLOCK         PB2
 #  define IEC_PIN_SRQ           PB3
 #  define IEC_PULLUPS           (_BV(PB7) | _BV(PB6) | _BV(PB4))
-#  define DISKCHANGE_PIN        PINA
-#  define DISKCHANGE_DDR        DDRA
-#  define DISKCHANGE_PORT       PORTA
-#  define DISKCHANGE_BIT        _BV(PA4)
-#  define DISKCHANGE_MAX        128
+#  define BUTTON_PIN            PINA
+#  define BUTTON_PORT           PORTA
+#  define BUTTON_DDR            DDRA
+#  define BUTTON_MASK           (_BV(PA4)|_BV(PA5))
+#  define BUTTON_NEXT           _BV(PA4)
+#  define BUTTON_PREV           _BV(PA5)
+
 
 #else
 #  error "CONFIG_HARDWARE_VARIANT is unset or set to an unknown value."

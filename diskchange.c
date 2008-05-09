@@ -29,67 +29,83 @@
 #include <string.h>
 #include "config.h"
 #include "buffers.h"
+#include "doscmd.h"
 #include "errormsg.h"
 #include "fatops.h"
 #include "iec.h"
 #include "ff.h"
+#include "timer.h"
 #include "diskchange.h"
 
 static const char PROGMEM autoswap_name[] = "AUTOSWAP.LST";
 
-volatile uint8_t keycounter;
-
 static FIL     swaplist;
 static uint8_t linenum;
 
-/* Timer-polling delay */
-#define TICKS_PER_MS (F_CPU/(1000*1024.0))
-static void tdelay(uint16_t ticks) {
-  TCNT1 = 0;
-  while (TCNT1 < ticks) ;
+#define BLINK_BACKWARD 1
+#define BLINK_FORWARD  2
+#define BLINK_HOME     3
+
+static void confirm_blink(uint8_t type) {
+  uint8_t i;
+
+  for (i=0;i<2;i++) {
+    tick_t targettime;
+
+    if (!i || type & 1)
+      DIRTY_LED_ON();
+    if (!i || type & 2)
+      BUSY_LED_ON();
+    targettime = ticks + MS_TO_TICKS(100);
+    while (time_before(ticks,targettime)) ;
+
+    DIRTY_LED_OFF();
+    BUSY_LED_OFF();
+    targettime = ticks + MS_TO_TICKS(100);
+    while (time_before(ticks,targettime)) ;
+  }
 }
 
-static void mount_line(void) {
+static uint8_t mount_line(void) {
   FRESULT res;
   UINT bytesread;
-  buffer_t *buf;
   uint8_t i,*str,*strend;
   uint16_t curpos;
 
   /* Kill all buffers */
   free_all_buffers(0);
 
-  /* Grab some scratch memory - this won't fail */
-  buf = alloc_buffer();
-
   curpos = 0;
   strend = NULL;
 
   for (i=0;i<=linenum;i++) {
-    str = buf->data;
+    str = command_buffer;
 
     res = f_lseek(&swaplist,curpos);
     if (res != FR_OK) {
       parse_error(res,1);
-      free_buffer(buf);
-      return;
+      return 0;
     }
 
-    res = f_read(&swaplist, str, 256, &bytesread);
+    res = f_read(&swaplist, str, CONFIG_COMMAND_BUFFER_SIZE, &bytesread);
     if (res != FR_OK) {
       parse_error(res,1);
-      free_buffer(buf);
-      return;
+      return 0;
     }
 
     /* Terminate string in buffer */
-    if (bytesread < 256)
+    if (bytesread < CONFIG_COMMAND_BUFFER_SIZE)
       str[bytesread] = 0;
 
     if (bytesread == 0) {
-      /* End of file - restart loop to read the first entry */
+      if (linenum == 255) {
+        /* Last entry requested, found it */
+        linenum = i-1;
+      } else {
+        /* End of file - restart loop to read the first entry */
+        linenum = 0;
+      }
       i = -1; /* I could've used goto instead... */
-      linenum = 0;
       curpos = 0;
       continue;
     }
@@ -102,7 +118,7 @@ static void mount_line(void) {
     /* Skip line terminator */
     while (*str == '\r' || *str == '\n') str++;
 
-    curpos += str-buf->data;
+    curpos += str - command_buffer;
   }
 
   /* Terminate file name */
@@ -112,22 +128,12 @@ static void mount_line(void) {
     image_unmount();
 
   /* Mount the disk image */
-  fat_chdir((char *)buf->data);
-
-  free_buffer(buf);
+  fat_chdir((char *)command_buffer);
 
   if (current_error != 0)
-    return;
+    return 0;
 
-  /* Confirmation blink */
-  for (i=0;i<2;i++) {
-    DIRTY_LED_ON();
-    BUSY_LED_ON();
-    tdelay(100 * TICKS_PER_MS);
-    DIRTY_LED_OFF();
-    BUSY_LED_OFF();
-    tdelay(100 * TICKS_PER_MS);
-  }
+  return 1;
 }
 
 void set_changelist(char *filename) {
@@ -137,11 +143,13 @@ void set_changelist(char *filename) {
   iecflags.autoswap_active = 0;
 
   /* Remove the old swaplist */
-  if (linenum != 255) {
+  if (swaplist.fs != NULL) {
     f_close(&swaplist);
     memset(&swaplist,0,sizeof(swaplist));
-    linenum = 255;
   }
+
+  if (strlen(filename) == 0)
+    return;
 
   /* Open a new swaplist */
   res = f_open(&swaplist, filename, FA_READ | FA_OPEN_EXISTING);
@@ -151,20 +159,19 @@ void set_changelist(char *filename) {
   }
 
   linenum = 0;
-  mount_line();
+  if (mount_line())
+    confirm_blink(BLINK_HOME);
 }
 
 
 void change_disk(void) {
-  /* Wait until the button is released */
-  while (keycounter == DISKCHANGE_MAX) ;
-
-  if (linenum == 255) {
+  if (swaplist.fs == NULL) {
     /* No swaplist active, try using AUTOSWAP.LST */
+    reset_keys();
     /* change_disk is called from the IEC idle loop, so entrybuf is free */
     strcpy_P((char *)entrybuf, autoswap_name);
     set_changelist((char *)entrybuf);
-    if (linenum == 255) {
+    if (swaplist.fs == NULL) {
       /* No swap list found, clear error and exit */
       set_error(ERROR_OK);
       return;
@@ -177,15 +184,25 @@ void change_disk(void) {
   }
 
   /* Mount the next image in the list */
-  linenum++;
-  mount_line();
+  if (key_pressed(KEY_NEXT)) {
+    linenum++;
+    if (mount_line())
+      confirm_blink(BLINK_FORWARD);
+    reset_keys();
+  } else if (key_pressed(KEY_PREV)) {
+    linenum--;
+    if (mount_line())
+      confirm_blink(BLINK_BACKWARD);
+    reset_keys();
+  } else if (key_pressed(KEY_HOME)) {
+    linenum = 0;
+    if (mount_line())
+      confirm_blink(BLINK_HOME);
+    reset_keys();
+  }
 }
 
 void init_change(void) {
-  /* Timer 1 counts F_CPU/1024, i.e. 1/8ths of a millisecond */
-  TCCR1B = _BV(CS12) | _BV(CS10);
-
   memset(&swaplist,0,sizeof(swaplist));
-  linenum = 255;
   iecflags.autoswap_active = 0;
 }

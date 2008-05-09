@@ -49,6 +49,7 @@ typedef struct {
   int jiffy_active:1;
   int jiffy_load:1;
   int autoswap_active:1;
+  int do_atnack:1;
 } iecflags_t;
 
 extern iecflags_t iecflags;

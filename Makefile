@@ -73,7 +73,7 @@ FORMAT = ihex
 TARGET = $(OBJDIR)/sd2iec
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = buffers.c fatops.c fileops.c iec.c main.c errormsg.c doscmd.c ff.c fastloader.c m2iops.c d64ops.c diskchange.c eeprom.c
+SRC = buffers.c fatops.c fileops.c iec.c main.c errormsg.c doscmd.c ff.c fastloader.c m2iops.c d64ops.c diskchange.c eeprom.c timer.c
 
 # uIEC needs the ATA module, all others use SD (for now)
 ifeq ($(CONFIG_HARDWARE_VARIANT),4)
@@ -152,7 +152,7 @@ CINCS =
 #    -adhlns...: create assembler listing
 CFLAGS = -g$(DEBUG)
 CFLAGS += $(CDEFS) $(CINCS)
-CFLAGS += -O$(OPT)
+CFLAGS += -O$(OPT) -mcall-prologues
 CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 CFLAGS += -Wall -Wstrict-prototypes -Werror
 CFLAGS += -Wa,-adhlns=$(OBJDIR)/$(<:.c=.lst)

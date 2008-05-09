@@ -47,6 +47,7 @@
 #include "fileops.h"
 #include "iec-ll.h"
 #include "diskio.h"
+#include "timer.h"
 #include "uart.h"
 #include "iec.h"
 
@@ -59,7 +60,7 @@ uint8_t secondary_address;
 
 iecflags_t iecflags;
 
-enum { BUS_IDLE = 0, BUS_ATNACTIVE, BUS_FOUNDATN, BUS_FORME, BUS_NOTFORME, BUS_ATNFINISH, BUS_ATNPROCESS, BUS_CLEANUP } bus_state;
+enum { BUS_IDLE = 0, BUS_ATNACTIVE, BUS_FOUNDATN, BUS_FORME, BUS_NOTFORME, BUS_ATNFINISH, BUS_ATNPROCESS, BUS_CLEANUP, BUS_SLEEP } bus_state;
 
 enum { DEVICE_IDLE = 0, DEVICE_LISTEN, DEVICE_TALK } device_state;
 
@@ -125,31 +126,6 @@ static uint8_t check_atn(void) {
       return 1;
     } else
       return 0;
-}
-
-/// Interrupt routine that simulates the hardware-auto-acknowledge of ATN
-/* This currently runs once every 500 microseconds, keep small! */
-ISR(TIMER2_COMPA_vect) {
-  static uint8_t blinktimer;
-
-  if (!IEC_ATN) {
-    set_data(0);
-  }
-
-  if (error_blink_active) {
-    blinktimer++;
-    if (blinktimer == 200) {
-      DIRTY_LED_PORT ^= DIRTY_LED_BIT();
-      blinktimer = 0;
-    }
-  }
-
-  if (!(DISKCHANGE_PIN & DISKCHANGE_BIT)) {
-    if (keycounter < DISKCHANGE_MAX)
-      keycounter++;
-  } else {
-    keycounter = 0;
-  }
 }
 
 /* ------------------------------------------------------------------------- */
@@ -537,13 +513,14 @@ void init_iec(void) {
   _delay_ms(1);
   device_address = DEVICE_SELECT;
 
-  /* Set up disk change key */
-  DISKCHANGE_DDR  &= ~DISKCHANGE_BIT;
-  DISKCHANGE_PORT |=  DISKCHANGE_BIT;
+  /* Buttons */
+  BUTTON_DDR  &= (uint8_t)~BUTTON_MASK;
+  BUTTON_PORT |= BUTTON_MASK;
 
   set_error(ERROR_DOSVERSION);
 }
 
+void iec_mainloop(void) __attribute__((noreturn));
 void iec_mainloop(void) {
   int16_t cmd = 0; // make gcc happy...
 
@@ -557,19 +534,53 @@ void iec_mainloop(void) {
   iecflags.vc20mode      = 0;
 
   bus_state = BUS_IDLE;
+  TIMSK2 |= _BV(OCIE2A);
 
   while (1) {
     switch (bus_state) {
+    case BUS_SLEEP:
+      set_atnack(0);
+      set_data(1);
+      set_clock(1);
+      set_error(ERROR_OK);
+      BUSY_LED_OFF();
+      DIRTY_LED_ON();
+
+      /* Releasing the button creates an additional "NEXT" event, wait for that */
+      while (!key_pressed(KEY_NEXT))  ;
+      reset_keys();
+
+      /* Wait until the sleep key is used again */
+      while (!key_pressed(KEY_SLEEP)) ;
+      reset_keys();
+
+      if (active_buffers)
+        BUSY_LED_ON();
+      if (!(active_buffers & 0xf0))
+        DIRTY_LED_OFF();
+
+      /* Eat the KEY_NEXT event too */
+      while (!key_pressed(KEY_NEXT)) ;
+      reset_keys();
+
+      bus_state = BUS_IDLE;
+      break;
+
     case BUS_IDLE:  // EBFF
       /* Wait for ATN */
       set_atnack(1);
       while (IEC_ATN) {
-	if (keycounter == DISKCHANGE_MAX) {
-	  change_disk();
-	}
+        if (key_pressed(KEY_NEXT | KEY_PREV | KEY_HOME)) {
+          change_disk();
+        } else if (key_pressed(KEY_SLEEP)) {
+          reset_keys();
+          bus_state = BUS_SLEEP;
+          break;
+        }
       }
 
-      bus_state = BUS_FOUNDATN;
+      if (bus_state != BUS_SLEEP)
+        bus_state = BUS_FOUNDATN;
       break;
 
     case BUS_FOUNDATN: // E85B
