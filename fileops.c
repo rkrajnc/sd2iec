@@ -63,6 +63,16 @@ const PROGMEM uint8_t dirheader[] = {
   00                               /* line-end marker */
 };
 
+const PROGMEM uint8_t syspart_line[] = {
+    1, 1, /* next line pointer */
+    0, 0, /* number of free blocks (to be filled later) */
+    ' ',' ',' ',
+    '"','S','Y','S','T','E','M','"',
+    ' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',
+    'S','Y','S',
+    0x20, 0x20, 0x00 /* Filler and end marker */
+  };
+
 const PROGMEM uint8_t dirfooter[] = {
   1, 1, /* next line pointer */
   0, 0, /* number of free blocks (to be filled later */
@@ -331,6 +341,8 @@ static void load_directory(uint8_t secondary) {
 
         /* copy static header to start of buffer */
         memcpy_P(buf->data, dirheader, sizeof(dirheader));
+        memcpy_P(buf->data + 32, syspart_line, sizeof(syspart_line));
+        buf->lastused  = 63;
 
         /* set partition number */
         buf->data[HEADER_OFFSET_DRIVE] = max_part;
