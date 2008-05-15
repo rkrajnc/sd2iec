@@ -163,22 +163,21 @@ static void createentry(struct cbmdirent *dent, buffer_t *buf, dirformat_t forma
   if (dent->typeflags & FLAG_SPLAT)
     *data = '*';
 
-  if(format == DIR_FMT_CMD_LONG) {
-    /* File type */
-    memcpy_P(data+1, filetypes + TYPE_LENGTH * (dent->typeflags & EXT_TYPE_MASK), TYPE_LENGTH);
+  /* File type */
+  memcpy_P(data+1, filetypes + TYPE_LENGTH * (dent->typeflags & EXT_TYPE_MASK),
+           (format & DIR_FMT_CMD_SHORT) ? 1 : TYPE_LENGTH);
 
-    /* RO marker */
-    if (dent->typeflags & FLAG_RO)
-      data[4] = '<';
+  /* RO marker */
+  if (dent->typeflags & FLAG_RO)
+    data[4] = '<';
 
+  if(format & DIR_FMT_CMD_LONG) {
     data += 7;
     data = appendnumber(data,dent->date.month);
     *data++ = '/';
     data = appendnumber(data,dent->date.day);
     *data++ = '/';
-    if (dent->date.year >= 100)
-      dent->date.year -= 100;
-    data = appendnumber(data,dent->date.year) + 3;
+    data = appendnumber(data,dent->date.year % 100) + 3;
     data = appendnumber(data,(dent->date.hour>12?dent->date.hour-12:dent->date.hour));
     *data++ = '.';
     data = appendnumber(data,dent->date.minute) + 1;
@@ -187,11 +186,6 @@ static void createentry(struct cbmdirent *dent, buffer_t *buf, dirformat_t forma
     while (*data)
       *data++ = 1;
   } else if(format == DIR_FMT_CMD_SHORT) {
-    /* File type */
-    memcpy_P(data+1, filetypes + TYPE_LENGTH * (dent->typeflags & EXT_TYPE_MASK), 1);
-    if (dent->typeflags & FLAG_RO)
-      data[2] = '<';
-
     /* Add date/time stamp */
     data+=3;
     data = appendnumber(data,dent->date.month);
@@ -204,13 +198,6 @@ static void createentry(struct cbmdirent *dent, buffer_t *buf, dirformat_t forma
     while(*data)
       *data++ = 1;
   } else {
-    /* File type */
-    memcpy_P(data+1, filetypes + TYPE_LENGTH * (dent->typeflags & EXT_TYPE_MASK), TYPE_LENGTH);
-
-    /* RO marker */
-    if (dent->typeflags & FLAG_RO)
-      data[4] = '<';
-
     /* Extension: Hidden marker */
     if (dent->typeflags & FLAG_HIDDEN)
       data[5] = 'H';
