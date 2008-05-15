@@ -861,7 +861,7 @@ void parse_doscommand(void) {
     buffers[CONFIG_BUFFER_COUNT].lastused = 31;
     buf=buffers[CONFIG_BUFFER_COUNT].data;
     memset(buf,0,32);
-    *(buf++) = 7;
+    *(buf++) = 1; /* Partition type: native */
     buf++;
 
     *(buf++) = path.part+1;

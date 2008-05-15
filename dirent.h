@@ -45,9 +45,7 @@
 #define TYPE_DIR 6
 
 /* Internal file types used for the partition directory */
-#define TYPE_SYS 8
-#define TYPE_NAT 9
-#define TYPE_FAT 10
+#define TYPE_NAT 8
 
 /* Internal file type used to force files without header on FAT */
 #define TYPE_RAW 15

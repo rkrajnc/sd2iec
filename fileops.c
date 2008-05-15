@@ -80,9 +80,7 @@ const PROGMEM uint8_t filetypes[] = {
   'C','B','M', // 5
   'D','I','R', // 6
   '?','?','?', // 7
-  'S','Y','S', // 8
-  'N','A','T', // 9
-  'F','A','T' // 10
+  'N','A','T', // 8
 };
 
 /* ------------------------------------------------------------------------- */
@@ -250,7 +248,7 @@ static uint8_t pdir_refill(buffer_t* buf) {
       return 0;
     }
     dent.blocksize=++buf->pvt.pdir.part;
-    dent.typeflags = TYPE_FAT;
+    dent.typeflags = TYPE_NAT;
 
     /* Parse the name pattern */
     if (buf->pvt.pdir.matchstr &&
