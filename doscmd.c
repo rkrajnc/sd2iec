@@ -785,6 +785,7 @@ void parse_doscommand(void) {
       if (globalflags & AUTOSWAP_ACTIVE)
         set_changelist(NULL, NULLSTRING);
       
+      set_error_ts(ERROR_PARTITION_SELECTED, part+1, 0);
       break;
       
     case 0xd0: /* Shift-P */
@@ -799,6 +800,7 @@ void parse_doscommand(void) {
         if (globalflags & AUTOSWAP_ACTIVE)
           set_changelist(NULL, NULLSTRING);
       }
+      set_error_ts(ERROR_PARTITION_SELECTED, command_buffer[2], 0);
       break;
 
     default:
