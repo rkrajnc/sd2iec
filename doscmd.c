@@ -53,6 +53,21 @@
 
 static void (*restart_call)(void) = 0;
 
+typedef struct magic_value_s {
+  uint16_t address;
+  uint8_t  val[2];
+}
+magic_value_t;
+
+/* These are address/value pairs used by some programs to detect a 1541. */
+/* Currently we remember two bytes per address since that's the longest  */
+/* block required. */
+static const PROGMEM magic_value_t c1541_magics[] = {
+  { 0xfea0, { 0x0d, 0xed } }, /* used by DreamLoad */
+  { 0xe5c6, { 0x34, 0xb1 } }, /* used by DreamLoad */
+  { 0,      { 0, 0 } }        /* end mark */
+};
+
 uint8_t globalflags;
 
 uint8_t command_buffer[CONFIG_COMMAND_BUFFER_SIZE+2];
@@ -189,15 +204,28 @@ static void handle_memexec(void) {
 }
 
 static void handle_memread(void) {
+  uint16_t address, check;
+  magic_value_t *p;
+
   if (command_length < 6)
     return;
 
-  /* Return the contents of the first buffer for now.     */
-  /* Simply reading the requested address in AVR ram here */
-  /* could cause problems with some IO registers.         */
-  /* FIXME: Check for signature addresses and return      */
-  /*        something fixed there.                        */
-  buffers[CONFIG_BUFFER_COUNT].data = buffers[0].data;
+  address = command_buffer[3] + (command_buffer[4]<<8);
+
+  /* Check some special addresses used for drive detection. */
+  p = (magic_value_t*) c1541_magics;
+  while ( (check = pgm_read_word(&p->address)) ) {
+    if (check == address) {
+      error_buffer[0] = pgm_read_byte(p->val);
+      error_buffer[1] = pgm_read_byte(p->val + 1);
+      break;
+    }
+    p++;
+  }
+
+  /* possibly the host wants to read more bytes than error_buffer size */
+  /* we ignore this knowing that we return nonsense in this case       */
+  buffers[CONFIG_BUFFER_COUNT].data     = error_buffer;
   buffers[CONFIG_BUFFER_COUNT].position = 0;
   buffers[CONFIG_BUFFER_COUNT].lastused = command_buffer[5]-1;
 }
