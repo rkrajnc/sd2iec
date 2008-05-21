@@ -65,6 +65,7 @@ magic_value_t;
 static const PROGMEM magic_value_t c1541_magics[] = {
   { 0xfea0, { 0x0d, 0xed } }, /* used by DreamLoad */
   { 0xe5c6, { 0x34, 0xb1 } }, /* used by DreamLoad */
+  { 0xfffe, { 0x00, 0x00 } }, /* Disable AR6 fastloader */
   { 0,      { 0, 0 } }        /* end mark */
 };
 
