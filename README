@@ -173,6 +173,14 @@ requirements are extremely tight and cannot be met with the internal RC
 oscillator of the AVR even if calibrated. You really need an external
 8MHz crystal or the data read by the C64 will be gibberish.
 
+The Final Cartridge III fastloader and fastsaver are both supported and
+might work without a crystal. The fastloader used by programs freezed
+with the "Fast Disk" option of FC3 is NOT supported.
+
+The software fastloader used by the Action Replay 6 is disabled by
+returning an unknown value when the cartridge tries to determine the
+drive type.
+
 JiffyDOS:
 =========
 The JiffyDOS protocol has very relaxed timing constraints compared to
@@ -238,6 +246,10 @@ file called AUTOSWAP.LST in the current (FAT-)directory and use this
 as the current swap list until you deactivate it or manually change
 the directory (otherwise an AUTOSWAP.LST in the new directory would be
 ignored until you send XS, killing the nice "it just works" feeling).
+
+Please note: The extended swap list navigation and sleep mode
+features introduced in 0.7 were backported to 0.6.6. Please check
+the documentation of sd2iec 0.7 for details.
 
 Other important notes:
 ======================

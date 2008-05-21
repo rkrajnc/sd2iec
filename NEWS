@@ -1,3 +1,9 @@
+2008-05-22 - release 0.6.6
+        - Tell AR6 to disable its fastloader
+        - Backported FC3 fastload/-save
+        - Backported dual-button swaplist management
+        - Backported sleep-mode
+
 2008-05-02 - release 0.6.5
         - Modify the JiffyDos timing for improved NTSC compatibility
 
