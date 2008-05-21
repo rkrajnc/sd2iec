@@ -101,9 +101,9 @@ static void createentry(struct cbmdirent *dent, buffer_t *buf, dirformat_t forma
   uint8_t i;
   uint8_t *data = buf->data;
 
-  if(format & DIR_FMT_CMD_LONG)
+  if(format == DIR_FMT_CMD_LONG)
     i=63;
-  else if(format & DIR_FMT_CMD_SHORT)
+  else if(format == DIR_FMT_CMD_SHORT)
     i=41;
   else
     i=31;
@@ -155,7 +155,7 @@ static void createentry(struct cbmdirent *dent, buffer_t *buf, dirformat_t forma
   if (dent->typeflags & FLAG_SPLAT)
     *data = '*';
 
-  if(format & DIR_FMT_CMD_LONG) {
+  if(format == DIR_FMT_CMD_LONG) {
     /* File type */
     memcpy_P(data+1, filetypes + TYPE_LENGTH * (dent->typeflags & EXT_TYPE_MASK), TYPE_LENGTH);
 
@@ -176,7 +176,7 @@ static void createentry(struct cbmdirent *dent, buffer_t *buf, dirformat_t forma
     *data++ = 'M';
     while (*data)
       *data++ = 1;
-  } else if(format & DIR_FMT_CMD_SHORT) {
+  } else if(format == DIR_FMT_CMD_SHORT) {
     /* File type */
     memcpy_P(data+1, filetypes + TYPE_LENGTH * (dent->typeflags & EXT_TYPE_MASK), 1);
     if (dent->typeflags & FLAG_RO)
