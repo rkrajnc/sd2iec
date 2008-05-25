@@ -621,6 +621,8 @@ static int8_t d64_readdir(dh_t *dh, struct cbmdirent *dent) {
       break;
   } while (1);
 
+  memset(dent, 0, sizeof(struct cbmdirent));
+
   dent->typeflags = entrybuf[OFS_FILE_TYPE] ^ FLAG_SPLAT;
 
   if ((dent->typeflags & TYPE_MASK) >= TYPE_DIR)
@@ -631,17 +633,11 @@ static int8_t d64_readdir(dh_t *dh, struct cbmdirent *dent) {
   dent->remainder = 0xff;
   memcpy(dent->name, entrybuf+OFS_FILE_NAME, CBM_NAME_LENGTH);
   strnsubst(dent->name, 16, 0xa0, 0);
-  dent->name[16] = 0;
-  dent->realname[0] = 0;
 
   /* Fake Date/Time */
   dent->year  = 82;
   dent->month = 8;
   dent->day   = 31;
-
-  dent->hour   = 0;
-  dent->minute = 0;
-  dent->second = 0;
 
   return 0;
 }

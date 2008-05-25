@@ -1,8 +1,10 @@
+2008-06-10 - release 0.7.2
+        - case-insensitive matching of FAT filenames
+
 2008-06-05 - release 0.7.1
         - Bugfix: Mark sectors 18/0 and 18/1 as used during D64 format
         - Bugfix: Single-char dir patterns are directory numbers
         - Bugfix: Short N: on D64 should clean only the first dir sector
-        - case-insensitive matching of FAT filenames
         - ask the AR6 to not use its fastloader/-saver
 
 2008-05-02 - release 0.7.0
