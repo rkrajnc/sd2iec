@@ -59,6 +59,15 @@ uint8_t check_invalid_name(uint8_t *name) {
   return 0;
 }
 
+/* Convert a PETSCII character to lower-case */
+static uint8_t tolower_pet(uint8_t c) {
+  if (c >= 0x61 && c <= 0x7a)
+    c -= 0x20;
+  else if (c >= 0xc1 && c <= 0xda)
+    c -= 0x80;
+  return c;
+}
+
 /**
  * parse_partition - parse a partition number from a file name
  * @buf     : pointer to pointer to filename
@@ -83,15 +92,17 @@ uint8_t parse_partition(uint8_t **buf) {
 
 /**
  * match_name - Match a pattern against a file name
- * @matchstr: pattern to be matched
- * @dent    : pointer to the directory entry to be matched against
+ * @matchstr  : pattern to be matched
+ * @dent      : pointer to the directory entry to be matched against
+ * @ignorecase: ignore the case of the file names
  *
  * This function tests if matchstr matches name in dent.
  * Returns 1 for a match, 0 otherwise.
  */
-uint8_t match_name(uint8_t *matchstr, struct cbmdirent *dent) {
+uint8_t match_name(uint8_t *matchstr, struct cbmdirent *dent, uint8_t ignorecase) {
   uint8_t *filename = dent->name;
   uint8_t *starpos;
+  uint8_t m,f;
 
 #if 0
   /* Shortcut for chaining fastloaders ("!*file") */
@@ -100,7 +111,14 @@ uint8_t match_name(uint8_t *matchstr, struct cbmdirent *dent) {
 #endif
 
   while (*filename) {
-    switch (*matchstr) {
+    if (ignorecase) {
+      m = tolower_pet(*matchstr);
+      f = tolower_pet(*filename);
+    } else {
+      m = *matchstr;
+      f = *filename;
+    }
+    switch (m) {
     case '?':
       filename++;
       matchstr++;
@@ -112,7 +130,14 @@ uint8_t match_name(uint8_t *matchstr, struct cbmdirent *dent) {
         matchstr += ustrlen(matchstr)-1;
         filename += ustrlen(filename)-1;
         while (matchstr != starpos) {
-          if (*matchstr != *filename && *matchstr != '?')
+          if (ignorecase) {
+            m = tolower_pet(*matchstr);
+            f = tolower_pet(*filename);
+          } else {
+            m = *matchstr;
+            f = *filename;
+          }
+          if (m != f && m != '?')
             return 0;
           filename--;
           matchstr--;
@@ -121,8 +146,10 @@ uint8_t match_name(uint8_t *matchstr, struct cbmdirent *dent) {
       return 1;
 
     default:
-      if (*filename++ != *matchstr++)
+      if (m != f)
         return 0;
+      matchstr++;
+      filename++;
       break;
     }
   }
@@ -134,12 +161,12 @@ uint8_t match_name(uint8_t *matchstr, struct cbmdirent *dent) {
 
 /**
  * next_match - get next matching directory entry
- * @dh      : directory handle
- * @matchstr: pattern to be matched
- * @start   : start date
- * @end     : end date
- * @type    : required file type (0 for any)
- * @dent    : pointer to a directory entry for returning the match
+ * @dh        : directory handle
+ * @matchstr  : pattern to be matched
+ * @start     : start date
+ * @end       : end date
+ * @type      : required file type (0 for any)
+ * @dent      : pointer to a directory entry for returning the match
  *
  * This function looks for the next directory entry matching matchstr and
  * type (if != 0) and returns it in dent. Return values of the function are
@@ -163,9 +190,17 @@ int8_t next_match(dh_t *dh, uint8_t *matchstr, date_t *start, date_t *end, uint8
         continue;
 
       /* Skip if the name doesn't match */
-      if (matchstr &&
-          !match_name(matchstr, dent))
-        continue;
+      if (matchstr) {
+        if (dent->fatcluster != 0 && dent->realname[0] == 0) {
+          /* FAT: Ignore case */
+          if (!match_name(matchstr, dent, 1))
+            continue;
+        } else {
+          /* Honor case */
+          if (!match_name(matchstr, dent, 0))
+            continue;
+        }
+      }
 
       /* skip if earlier than start date */
       if (start &&

@@ -249,7 +249,7 @@ static uint8_t pdir_refill(buffer_t* buf) {
 
     /* Parse the name pattern */
     if (buf->pvt.pdir.matchstr &&
-        !match_name(buf->pvt.pdir.matchstr, &dent))
+        !match_name(buf->pvt.pdir.matchstr, &dent, 0))
       continue;
 
     createentry(&dent, buf, DIR_FMT_CBM);

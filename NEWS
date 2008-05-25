@@ -1,3 +1,6 @@
+2008-xx-xx - release x.x.x
+        - case-insensitive matching of FAT filenames
+
 2008-05-02 - release 0.7.0
         - does not support the ATmega32 anymore
         - Match trailing part of names after * too

@@ -258,12 +258,12 @@ static int8_t m2i_readdir(dh_t *dh, struct cbmdirent *dent) {
     if (parsetype())
       continue;
 
+    memset(dent, 0, sizeof(struct cbmdirent));
+
     dent->typeflags = entrybuf[0];
 
     /* Copy CBM file name */
     name_repad(' ', 0);
-    memset(dent->name, 0, sizeof(dent->name));
-    memset(dent->realname, 0, sizeof(dent->realname));
     memcpy(dent->name, entrybuf+M2I_CBMNAME_OFFSET, CBM_NAME_LENGTH);
 
     /* Get file size */
@@ -303,10 +303,6 @@ static int8_t m2i_readdir(dh_t *dh, struct cbmdirent *dent) {
     dent->date.year  = 82;
     dent->date.month = 8;
     dent->date.day   = 31;
-
-    dent->date.hour   = 0;
-    dent->date.minute = 0;
-    dent->date.second = 0;
 
     return 0;
   }
