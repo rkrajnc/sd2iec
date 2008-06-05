@@ -1,4 +1,5 @@
 2008-xx-xx - release x.x.x
+        - Bugfix: Mark sectors 18/0 and 18/1 as used during D64 format
         - case-insensitive matching of FAT filenames
 
 2008-05-02 - release 0.7.0

@@ -930,8 +930,10 @@ static void d64_format(uint8_t part, uint8_t *name, uint8_t *id) {
 
   /* Mark all sectors as free */
   for (t=1; t<=LAST_TRACK; t++)
-    for (s=0; s<sectors_per_track(t); s++)
-      free_sector(t,s,buf);
+    for (s=0; s<sectors_per_track(t); s++) {
+      if (t != 18 || s > 1)
+        free_sector(t,s,buf);
+    }
 
   /* Write the new BAM */
   if (image_write(part, sector_offset(BAM_TRACK, BAM_SECTOR), buf->data, 256, 1)) {
