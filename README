@@ -272,6 +272,12 @@ Software fastloaders:
   same drive code, but at least for the fastloader the FC3 rom seems to
   contain two different C64-side implementations.
 
+  Action Replay 6
+  ---------------
+  The AR6 reads a byte from the drive rom to check which fastloader it should
+  use. sd2iec returns a value that should force the cartridge to use
+  the standard kernal loader instead of its (still unsupported) fastloader.
+
 JiffyDOS:
 =========
 The JiffyDOS protocol has very relaxed timing constraints compared to

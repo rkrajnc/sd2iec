@@ -3,8 +3,8 @@
 # Define version number
 MAJOR = 0
 MINOR = 7
-PATCHLEVEL = 0
-BOOT_VERSION = 70
+PATCHLEVEL = 1
+BOOT_VERSION = 71
 
 
 #----------------------------------------------------------------------------
