@@ -31,6 +31,8 @@
 
 extern const fileops_t d64ops;
 
+extern buffer_t *bam_buffer;
+
 uint8_t d64_mount(uint8_t part);
 
 #endif

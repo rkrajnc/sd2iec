@@ -84,6 +84,11 @@ typedef struct buffer_s {
       uint8_t part;        /* partition number for $=P */
       uint8_t *matchstr;   /* Pointer to filename pattern */
     } pdir;
+    struct {
+      uint8_t refcount;    /* Reference counter, buffer is free if == 0 */
+      uint8_t part;        /* partition number where the BAM came from */
+      uint8_t sector;      /* BAM-sector (if more than one) */
+    } bam;
   } pvt;
 } buffer_t;
 

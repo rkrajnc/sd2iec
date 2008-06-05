@@ -1026,6 +1026,10 @@ void init_fatops(uint8_t preserve_path) {
     set_changelist(NULL, NULLSTRING);
   }
 
+  /* Remove BAM buffer */
+  free_buffer(bam_buffer);
+  bam_buffer = NULL;
+
 #ifndef HAVE_HOTPLUG
   if (!max_part) {
     set_error_ts(ERROR_DRIVE_NOT_READY,0,0);
@@ -1047,14 +1051,25 @@ uint8_t image_unmount(uint8_t part) {
   FRESULT res;
   buffer_t *buf;
 
-  /* Free the associated system buffer if present */
-  buf = find_buffer(BUFFER_SEC_SYSTEM + part);
-  if (buf) {
-    buf->cleanup(buf);
-    free_buffer(buf);
+  free_all_user_buffers(1);
+
+  /* Free the BAM buffer if this was the last D64 */
+  // FIXME: Move to d64ops.c/d64_unmount
+  if (partition[part].fop == &d64ops) {
+    buf = find_buffer(BUFFER_SEC_SYSTEM);
+    if (buf) {
+      buf->cleanup(buf);
+      if (--buf->pvt.bam.refcount) {
+        /* Invalidate the BAM buffer contents */
+        buf->pvt.bam.part = 255;
+      } else {
+        /* Last image unmounted */
+        free_buffer(buf);
+        bam_buffer = NULL;
+      }
+    }
   }
 
-  free_all_user_buffers(1);
   partition[part].fop = &fatops;
   res = f_close(&partition[part].imagehandle);
   if (res != FR_OK) {

@@ -73,6 +73,8 @@ struct {
   uint8_t errors[MAX_SECTORS_PER_TRACK];
 } errorcache;
 
+buffer_t *bam_buffer;
+
 /* ------------------------------------------------------------------------- */
 /*  Utility functions                                                        */
 /* ------------------------------------------------------------------------- */
@@ -203,8 +205,8 @@ static void strnsubst(uint8_t *buffer, uint8_t len, uint8_t oldchar, uint8_t new
 static uint8_t d64_bam_flush(buffer_t *buf) {
   uint8_t res;
 
-  if (buf->mustflush) {
-    res = image_write(buf->pvt.d64.part, sector_offset(BAM_TRACK,BAM_SECTOR), buf->data, 256, 1);
+  if (buf->mustflush && buf->pvt.bam.part < max_part) {
+    res = image_write(buf->pvt.bam.part, sector_offset(BAM_TRACK,BAM_SECTOR), buf->data, 256, 1);
     buf->mustflush = 0;
     return res;
   } else
@@ -213,89 +215,119 @@ static uint8_t d64_bam_flush(buffer_t *buf) {
 
 /**
  * is_free - checks if the given sector is marked as free
+ * @part  : partition
  * @track : track number
  * @sector: sector number
- * @bambuf: pointer to a buffer holding the current BAM
  *
  * This function checks if the given sector is marked as free in
- * the supplied BAM buffer. Returns 0 if allocated, != 0 if free.
+ * the BAM of drive "part". Returns 0 if allocated, >0 if free, <0 on error.
+ * Will read the necessary BAM buffer into memory if it isn't present.
  */
-static uint8_t is_free(uint8_t track, uint8_t sector, buffer_t *bambuf) {
-  return bambuf->data[4*track+1+(sector>>3)] & (1<<(sector&7));
+static int8_t is_free(uint8_t part, uint8_t track, uint8_t sector) {
+  /* Note: Defining a read_bam function instead of (ab)using is_free increased the code size. */
+  if (bam_buffer->pvt.bam.part != part) {
+    /* Need to read the BAM sector */
+    if (bam_buffer->cleanup(bam_buffer))
+      return -1;
+
+    if (image_read(part, sector_offset(BAM_TRACK, BAM_SECTOR), bam_buffer->data, 256))
+      return -1;
+
+    bam_buffer->pvt.bam.part = part;
+  }
+
+  return (bam_buffer->data[4*track+1+(sector>>3)] & (1<<(sector&7))) != 0;
 }
 
 /**
  * sectors_free - returns the number of free sectors on a given track
+ * @part  : partition
  * @track : track number
- * @bambuf: pointer to a buffer holding the current BAM
  *
  * This function returns the number of free sectors on the given track
- * as stored in the supplied BAM buffer.
+ * of partition part.
  */
-static uint8_t sectors_free(uint8_t track, buffer_t *bambuf) {
+static uint8_t sectors_free(uint8_t part, uint8_t track) {
+  /* Use is_free to pull the BAM sector into memory */
+  if (is_free(part,track,0) < 0)
+    return 0;
+
   if (track < 1 || track > LAST_TRACK)
     return 0;
-  return bambuf->data[4*track];
+
+  return bam_buffer->data[4*track];
 }
 
 /**
  * allocate_sector - mark a sector as used
+ * @part  : partitoin
  * @track : track number
  * @sector: sector number
- * @bambuf: pointer to a buffer holding the current BAM
  *
- * This function marks the given sector as used in the supplied BAM
- * buffer. If the sector was already marked as used nothing is changed.
+ * This function marks the given sector as used in the BAM of drive part.
+ * If the sector was already marked as used nothing is changed.
+ * Returns 0 if successful, 1 on error.
  */
-static void allocate_sector(uint8_t track, uint8_t sector, buffer_t *bambuf) {
-  uint8_t *trackmap = bambuf->data+4*track;
+static uint8_t allocate_sector(uint8_t part, uint8_t track, uint8_t sector) {
+  uint8_t *trackmap = bam_buffer->data+4*track;
+  int8_t res = is_free(part,track,sector);
 
-  if (is_free(track,sector,bambuf)) {
+  if (res < 0)
+    return 1;
+
+  if (res != 0) {
     if (trackmap[0] > 0)
       trackmap[0]--;
 
     trackmap[1+(sector>>3)] &= (uint8_t)~(1<<(sector&7));
-    bambuf->mustflush = 1;
+    bam_buffer->mustflush = 1;
   }
+  return 0;
 }
 
 /**
  * free_sector - mark a sector as free
+ * @part  : partition
  * @track : track number
  * @sector: sector number
- * @bambuf: pointer to a buffer holding the current BAM
  *
- * This function marks the given sector as free in the supplied BAM
- * buffer. If the sector was already marked as free nothing is changed.
+ * This function marks the given sector as free in the BAM of partition
+ * part. If the sector was already marked as free nothing is changed.
+ * Returns 0 if successful, 1 on error.
  */
-static void free_sector(uint8_t track, uint8_t sector, buffer_t *bambuf) {
-  uint8_t *trackmap = bambuf->data+4*track;
+static uint8_t free_sector(uint8_t part, uint8_t track, uint8_t sector) {
+  uint8_t *trackmap = bam_buffer->data+4*track;
+  int8_t res = is_free(part,track,sector);
 
-  if (!is_free(track,sector,bambuf)) {
+  if (res < 0)
+    return 1;
+
+  if (res == 0) {
     trackmap[0]++;
 
     trackmap[1+(sector>>3)] |= 1<<(sector&7);
-    bambuf->mustflush = 1;
+    bam_buffer->mustflush = 1;
   }
+  return 0;
 }
 
 /**
  * get_first_sector - calculate the first sector for a new file
+ * @part  : partition
  * @track : pointer to a variable holding the track
  * @sector: pointer to a variable holding the sector
- * @bambuf: pointer to a buffer holding the current BAM
  *
  * This function calculates the first sector to be allocated for a new
  * file. The algorithm is based on the description found at
  * http://ist.uwaterloo.ca/~schepers/formats/DISK.TXT
  * Returns 0 if successful or 1 if any error occured.
  */
-static uint8_t get_first_sector(uint8_t *track, uint8_t *sector, buffer_t *bambuf) {
+static uint8_t get_first_sector(uint8_t part, uint8_t *track, uint8_t *sector) {
   int8_t distance = 1;
 
   /* Look for a track with free sectors close to the directory */
   while (distance < LAST_TRACK) {
-    if (sectors_free(DIR_TRACK-distance, bambuf))
+    if (sectors_free(part, DIR_TRACK-distance))
       break;
 
     /* Invert sign */
@@ -307,26 +339,28 @@ static uint8_t get_first_sector(uint8_t *track, uint8_t *sector, buffer_t *bambu
   }
 
   if (distance == LAST_TRACK) {
-    set_error(ERROR_DISK_FULL);
+    if (current_error == ERROR_OK)
+      set_error(ERROR_DISK_FULL);
     return 1;
   }
 
   /* Search for the first free sector on this track */
   *track = DIR_TRACK-distance;
   for (*sector = 0;*sector < sectors_per_track(*track); *sector += 1)
-    if (is_free(*track, *sector, bambuf))
+    if (is_free(part, *track, *sector) > 0)
       return 0;
 
-  /* If we're here the BAM is invalid */
-  set_error(ERROR_DISK_FULL);
+  /* If we're here the BAM is invalid or couldn't be read */
+  if (current_error == ERROR_OK)
+    set_error(ERROR_DISK_FULL);
   return 1;
 }
 
 /**
  * get_next_sector - calculate the next sector for a file
+ * @part  : partition
  * @track : pointer to a variable holding the track
  * @sector: pointer to a variable holding the sector
- * @bambuf: pointer to a buffer holding the current BAM
  *
  * This function calculates the next sector to be allocated for a file
  * based on the current sector in the variables pointed to by track/sector.
@@ -334,12 +368,13 @@ static uint8_t get_first_sector(uint8_t *track, uint8_t *sector, buffer_t *bambu
  * http://ist.uwaterloo.ca/~schepers/formats/DISK.TXT
  * Returns 0 if successful or 1 if any error occured.
  */
-static uint8_t get_next_sector(uint8_t *track, uint8_t *sector, buffer_t *bambuf) {
+static uint8_t get_next_sector(uint8_t part, uint8_t *track, uint8_t *sector) {
   uint8_t interleave,tries;
 
   if (*track == DIR_TRACK) {
-    if (sectors_free(DIR_TRACK,bambuf) == 0) {
-      set_error(ERROR_DISK_FULL);
+    if (sectors_free(part, DIR_TRACK) == 0) {
+      if (current_error == ERROR_OK)
+        set_error(ERROR_DISK_FULL);
       return 1;
     }
     interleave = DIR_INTERLEAVE;
@@ -348,7 +383,7 @@ static uint8_t get_next_sector(uint8_t *track, uint8_t *sector, buffer_t *bambuf
 
   /* Look for a track with free sectors */
   tries = 0;
-  while (tries < 3 && !sectors_free(*track,bambuf)) {
+  while (tries < 3 && !sectors_free(part, *track)) {
     /* No more space on current track, try another */
     if (*track < DIR_TRACK)
       *track -= 1;
@@ -368,7 +403,8 @@ static uint8_t get_next_sector(uint8_t *track, uint8_t *sector, buffer_t *bambuf
   }
 
   if (tries == 3) {
-    set_error(ERROR_DISK_FULL);
+    if (current_error == ERROR_OK)
+      set_error(ERROR_DISK_FULL);
     return 1;
   }
 
@@ -382,7 +418,7 @@ static uint8_t get_next_sector(uint8_t *track, uint8_t *sector, buffer_t *bambuf
 
   /* Increase distance until an empty sector is found */
   tries = 99;
-  while (!is_free(*track,*sector,bambuf) && tries--) {
+  while (is_free(part,*track,*sector) <= 0 && tries--) {
     *sector += 1;
     if (*sector >= sectors_per_track(*track))
       *sector = 0;
@@ -391,7 +427,8 @@ static uint8_t get_next_sector(uint8_t *track, uint8_t *sector, buffer_t *bambuf
   if (tries)
     return 0;
 
-  set_error(ERROR_DISK_FULL);
+  if (current_error == ERROR_OK)
+    set_error(ERROR_DISK_FULL);
   return 1;
 }
 
@@ -453,7 +490,6 @@ static uint8_t d64_read(buffer_t *buf) {
 
 static uint8_t d64_write(buffer_t *buf) {
   uint8_t t,s,savederror;
-  buffer_t *bambuf;
 
   savederror = 0;
   t = buf->pvt.d64.track;
@@ -465,11 +501,8 @@ static uint8_t d64_write(buffer_t *buf) {
   buf->data[0] = 0;
   buf->data[1] = buf->lastused;
 
-  /* Locate BAM */
-  bambuf = find_buffer(BUFFER_SEC_SYSTEM + buf->pvt.d64.part);
-
   /* Find another free sector */
-  if (get_next_sector(&t, &s, bambuf)) {
+  if (get_next_sector(buf->pvt.d64.part, &t, &s)) {
     t = 0;
     savederror = current_error;
     goto storedata;
@@ -479,13 +512,15 @@ static uint8_t d64_write(buffer_t *buf) {
   buf->data[1] = s;
 
   /* Allocate it */
-  allocate_sector(t,s,bambuf);
-  if (bambuf->cleanup(bambuf))
+  if (allocate_sector(buf->pvt.d64.part, t, s))
+    return 1;
+  if (bam_buffer->cleanup(bam_buffer))
     return 1;
 
  storedata:
   /* Store data in the already-reserved sector */
-  if (image_write(buf->pvt.d64.part, sector_offset(buf->pvt.d64.track,buf->pvt.d64.sector),
+  if (image_write(buf->pvt.d64.part,
+                  sector_offset(buf->pvt.d64.track,buf->pvt.d64.sector),
                   buf->data, 256, 1))
     return 1;
 
@@ -546,7 +581,6 @@ static uint8_t d64_write_cleanup(buffer_t *buf) {
 
 uint8_t d64_mount(uint8_t part) {
   uint8_t imagetype;
-  buffer_t *buf;
   uint32_t fsize = partition[part].imagehandle.fsize;
 
   switch (fsize) {
@@ -579,21 +613,21 @@ uint8_t d64_mount(uint8_t part) {
     return 1;
   }
 
-  /* Read the BAM into memory */
-  buf = alloc_system_buffer();
-  if (!buf)
-    return 1;
+  /* Allocate a BAM buffer if required */
+  if (bam_buffer == NULL) {
+    bam_buffer = alloc_system_buffer();
+    if (!bam_buffer)
+      return 1;
 
-  if (image_read(part, sector_offset(BAM_TRACK, BAM_SECTOR), buf->data, 256)) {
-    free_buffer(buf);
-    return 1;
+    bam_buffer->secondary        = BUFFER_SEC_SYSTEM;
+    bam_buffer->pvt.bam.part     = 255;
+    bam_buffer->cleanup          = d64_bam_flush;
+
+    partition[part].imagetype = imagetype;
   }
 
-  buf->secondary    = BUFFER_SEC_SYSTEM + part;
-  buf->cleanup      = d64_bam_flush;
-  buf->pvt.d64.part = part;
+  bam_buffer->pvt.bam.refcount++;
 
-  partition[part].imagetype = imagetype;
   if (imagetype & D64_HAS_ERRORINFO)
     /* Invalidate error cache */
     errorcache.part = 255;
@@ -666,9 +700,8 @@ static uint16_t d64_freeblocks(uint8_t part) {
     /* Skip directory track */
     if (i == 18)
       continue;
-    if (image_read(part, sector_offset(DIR_TRACK,0) + 4*i, entrybuf, 1))
-      return 0;
-    blocks += entrybuf[0];
+
+    blocks += sectors_free(part,i);
   }
 
   return blocks;
@@ -682,8 +715,6 @@ static void d64_open_read(path_t *path, struct cbmdirent *dent, buffer_t *buf) {
 
   buf->pvt.d64.part = path->part;
 
-  // FIXME: Check the file type
-
   buf->read    = 1;
   buf->refill  = d64_read;
 
@@ -695,7 +726,6 @@ static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
   int8_t res;
   uint8_t t,s;
   uint8_t *ptr;
-  buffer_t *bambuf;
 
   if (append) {
     /* Append case: Open the file and read the last sector */
@@ -734,15 +764,12 @@ static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
       return;
   } while (res == 0 && entrybuf[OFS_FILE_TYPE] != 0);
 
-  /* Locate the BAM */
-  bambuf = find_buffer(BUFFER_SEC_SYSTEM + path->part);
-
   /* Allocate a new directory sector if no empty entries were found */
   if (res < 0) {
     t = dh.dir.d64.track;
     s = dh.dir.d64.sector;
 
-    if (get_next_sector(&dh.dir.d64.track, &dh.dir.d64.sector, bambuf))
+    if (get_next_sector(path->part, &dh.dir.d64.track, &dh.dir.d64.sector))
       return;
 
     /* Link the old sector to the new */
@@ -751,7 +778,7 @@ static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
     if (image_write(path->part, sector_offset(t,s), entrybuf, 2, 0))
       return;
 
-    allocate_sector(dh.dir.d64.track, dh.dir.d64.sector, bambuf);
+    allocate_sector(path->part, dh.dir.d64.track, dh.dir.d64.sector);
 
     /* Clear the new directory sector */
     memset(entrybuf, 0, 32);
@@ -783,13 +810,13 @@ static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
   entrybuf[OFS_FILE_TYPE] = type;
 
   /* Find a free sector and allocate it */
-  if (get_first_sector(&t,&s,bambuf))
+  if (get_first_sector(path->part,&t,&s))
     return;
 
   entrybuf[OFS_TRACK]  = t;
   entrybuf[OFS_SECTOR] = s;
-  allocate_sector(t,s,bambuf);
-  if (bambuf->cleanup(bambuf))
+  allocate_sector(path->part,t,s);
+  if (bam_buffer->cleanup(bam_buffer))
     return;
 
   /* Write the directory entry */
@@ -813,17 +840,13 @@ static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
 static uint8_t d64_delete(path_t *path, struct cbmdirent *dent) {
   /* At this point entrybuf will contain the directory entry and    */
   /* matchdh will almost point to it (entry incremented in readdir) */
-  buffer_t *bambuf;
   uint8_t linkbuf[2];
-
-  /* Read BAM */
-  bambuf = find_buffer(BUFFER_SEC_SYSTEM + path->part);
 
   /* Free the sector chain in the BAM */
   linkbuf[0] = entrybuf[OFS_TRACK];
   linkbuf[1] = entrybuf[OFS_SECTOR];
   do {
-    free_sector(linkbuf[0], linkbuf[1], bambuf);
+    free_sector(path->part, linkbuf[0], linkbuf[1]);
 
     if (checked_read(path->part, linkbuf[0], linkbuf[1], linkbuf, 2, ERROR_ILLEGAL_TS_LINK))
       return 255;
@@ -836,7 +859,7 @@ static uint8_t d64_delete(path_t *path, struct cbmdirent *dent) {
     return 255;
 
   /* Write new BAM */
-  if (bambuf->cleanup(bambuf))
+  if (bam_buffer->cleanup(bam_buffer))
     return 255;
   else
     return 1;
@@ -882,6 +905,10 @@ static void d64_format(uint8_t part, uint8_t *name, uint8_t *id) {
   mark_write_buffer(buf);
   memset(buf->data, 0, 256);
 
+  /* Flush BAM buffer and mark its contents as invalid */
+  bam_buffer->cleanup(bam_buffer);
+  bam_buffer->pvt.bam.part = 0xff;
+
   if (id != NULL) {
     uint16_t i;
 
@@ -909,8 +936,13 @@ static void d64_format(uint8_t part, uint8_t *name, uint8_t *id) {
     return;
   }
 
-  /* Create a new BAM */
-  ptr = buf->data;
+  /* Mark all sectors as free */
+  for (t=1; t<=LAST_TRACK; t++)
+    for (s=0; s<sectors_per_track(t); s++)
+      if (t != 18 || s > 1)
+        free_sector(part,t,s);
+
+  ptr = bam_buffer->data;
   ptr[0] = DIR_TRACK;
   ptr[1] = 1;
   ptr[2] = 0x41;
@@ -923,29 +955,15 @@ static void d64_format(uint8_t part, uint8_t *name, uint8_t *id) {
     *ptr++ = *name++;
 
   /* Set the ID */
-  buf->data[ID_OFFSET  ] = idbuf[0];
-  buf->data[ID_OFFSET+1] = idbuf[1];
-  buf->data[ID_OFFSET+3] = '2';
-  buf->data[ID_OFFSET+4] = 'A';
+  bam_buffer->data[ID_OFFSET  ] = idbuf[0];
+  bam_buffer->data[ID_OFFSET+1] = idbuf[1];
+  bam_buffer->data[ID_OFFSET+3] = '2';
+  bam_buffer->data[ID_OFFSET+4] = 'A';
 
-  /* Mark all sectors as free */
-  for (t=1; t<=LAST_TRACK; t++)
-    for (s=0; s<sectors_per_track(t); s++) {
-      if (t != 18 || s > 1)
-        free_sector(t,s,buf);
-    }
+  /* Write the new BAM - mustflush is set because free_sector was used */
+  bam_buffer->cleanup(bam_buffer);
 
-  /* Write the new BAM */
-  if (image_write(part, sector_offset(BAM_TRACK, BAM_SECTOR), buf->data, 256, 1)) {
-    free_buffer(buf);
-    return;
-  }
-
-  /* Replace the in-memory BAM with our new version */
   free_buffer(buf);
-  buf = find_buffer(BUFFER_SEC_SYSTEM + part);
-  // Assume that reading the data we just wrote always works
-  image_read(part, sector_offset(BAM_TRACK, BAM_SECTOR), buf->data, 256);
 
   /* FIXME: Clear the error info block */
 }
