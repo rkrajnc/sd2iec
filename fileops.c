@@ -414,12 +414,14 @@ static void load_directory(uint8_t secondary) {
           case '>':
             if(parse_date(&date_match_start,&name))
               goto scandone;
-            buf->pvt.dir.match_start = &date_match_start;
+            if(date_match_start.month && date_match_start.day) // ignore 00/00/00
+              buf->pvt.dir.match_start = &date_match_start;
             break;
           case '<':
             if(parse_date(&date_match_end,&name))
               goto scandone;
-            buf->pvt.dir.match_end = &date_match_end;
+            if(date_match_end.month && date_match_end.day) // ignore 00/00/00
+              buf->pvt.dir.match_end = &date_match_end;
             break;
           case 'L':
             /* don't switch to long format if 'N' has already been sent */
