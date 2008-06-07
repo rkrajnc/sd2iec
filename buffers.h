@@ -87,6 +87,7 @@ typedef struct buffer_s {
     struct {
       uint8_t refcount;    /* Reference counter, buffer is free if == 0 */
       uint8_t part;        /* partition number where the BAM came from */
+      uint8_t track;       /* BAM-track (if more than one) */
       uint8_t sector;      /* BAM-sector (if more than one) */
     } bam;
   } pvt;

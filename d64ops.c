@@ -55,6 +55,7 @@
 #define BAM_TRACK 18
 #define BAM_SECTOR 0
 #define BAM_BYTES_PER_TRACK 4
+#define BAM_BITFIELD_BYTES_PER_TRACK 3
 #define TOTAL_SECTORS 683
 #define FILE_INTERLEAVE 10
 #define DIR_INTERLEAVE 3
@@ -64,8 +65,11 @@
 #define D64_TYPE_D64  1
 #define D64_TYPE_D71  2
 #define D64_TYPE_D81  3
+#define D64_TYPE_DNP  4
 
 #define D64_HAS_ERRORINFO 128
+
+typedef enum { BAM_BITFIELD, BAM_FREECOUNT } bamdata_t;
 
 struct {
   uint8_t part;
@@ -206,10 +210,88 @@ static uint8_t d64_bam_flush(buffer_t *buf) {
   uint8_t res;
 
   if (buf->mustflush && buf->pvt.bam.part < max_part) {
-    res = image_write(buf->pvt.bam.part, sector_offset(BAM_TRACK,BAM_SECTOR), buf->data, 256, 1);
+    res = image_write(buf->pvt.bam.part,
+                      sector_offset(buf->pvt.bam.track, buf->pvt.bam.sector),
+                      buf->data, 256, 1);
     buf->mustflush = 0;
     return res;
   } else
+    return 0;
+}
+
+/**
+ * move_bam_window - read correct BAM sector into window.
+ * @part  : partition
+ * @track : track number
+ * @type  : type of pointer requested
+ * @ptr   : pointer to track information in BAM sector
+ *
+ * This function reads the correct BAM sector into memory for the requested
+ * track, flushing an existing BAM sector to disk if needed.  It also
+ * calculates the correct pointer into the BAM sector for the appropriate
+ * track.  Since the BAM contains both sector counts and sector allocation
+ * bitmaps, type is used to signal which reference is desired.
+ * Returns 0 if successful, != 0 otherwise.
+ */
+static uint8_t move_bam_window(uint8_t part, uint8_t track, bamdata_t type, uint8_t **ptr) {
+  uint8_t res;
+  uint8_t t,s, pos;
+
+    switch(partition[part].imagetype & D64_TYPE_MASK) {
+    case D64_TYPE_D64:
+    default:
+      t   = BAM_TRACK;
+      s   = BAM_SECTOR;
+      pos = BAM_BYTES_PER_TRACK * track + (type == BAM_BITFIELD ? 1:0);
+      break;
+/*
+    case D64_TYPE_D71:
+      if(track > 35 && type == D64_BAM_BITFIELD_PTR) {
+        t   = D71_BAM2_TRACK;
+        s   = D71_BAM2_SECTOR;
+        pos = (track - 36) * D71_BAM_BITFIELD_BYTES_PER_TRACK;
+      } else {
+        t = D71_BAM1_TRACK;
+        s = D71_BAM1_SECTOR;
+        if (track > 35) {
+          pos = (track - 36) + 0xdd;
+        } else {
+          pos = D71_BAM_BYTES_PER_TRACK * track + (type == D64_BAM_BITFIELD_PTR ? 1:0);
+        }
+      }
+      break;
+
+    case D64_TYPE_D81:
+      t   = D81_BAM_TRACK;
+      s   = (track < 41? D81_BAM_SECTOR1:D81_BAM_SECTOR2);
+      pos = 10 + (track % 40) * D81_BAM_BYTES_PER_TRACK + (type == D64_BAM_BITFIELD_PTR ? 1:0);
+      break;
+
+    case D64_TYPE_DNP:
+      t   = DNP_BAM_TRACK;
+      s   = DNP_BAM_SECTOR + 1 + (track >> 3);
+      pos = (track & 0x07) * 32;
+      break;
+*/
+    }
+
+    if (bam_buffer->pvt.bam.part != part
+        || bam_buffer->pvt.bam.track != t
+        || bam_buffer->pvt.bam.sector != s) {
+      /* Need to read the BAM sector */
+      if((res = bam_buffer->cleanup(bam_buffer)))
+        return res;
+
+      res = image_read(part, sector_offset(t, s), bam_buffer->data, 256);
+      if(res)
+        return res;
+
+      bam_buffer->pvt.bam.part   = part;
+      bam_buffer->pvt.bam.track  = t;
+      bam_buffer->pvt.bam.sector = s;
+    }
+
+    *ptr = bam_buffer->data + pos;
     return 0;
 }
 
@@ -221,22 +303,16 @@ static uint8_t d64_bam_flush(buffer_t *buf) {
  *
  * This function checks if the given sector is marked as free in
  * the BAM of drive "part". Returns 0 if allocated, >0 if free, <0 on error.
- * Will read the necessary BAM buffer into memory if it isn't present.
  */
 static int8_t is_free(uint8_t part, uint8_t track, uint8_t sector) {
-  /* Note: Defining a read_bam function instead of (ab)using is_free increased the code size. */
-  if (bam_buffer->pvt.bam.part != part) {
-    /* Need to read the BAM sector */
-    if (bam_buffer->cleanup(bam_buffer))
-      return -1;
+  uint8_t res;
+  uint8_t *ptr = NULL;
 
-    if (image_read(part, sector_offset(BAM_TRACK, BAM_SECTOR), bam_buffer->data, 256))
-      return -1;
+  res = move_bam_window(part,track,BAM_BITFIELD,&ptr);
+  if(res)
+    return -1;
 
-    bam_buffer->pvt.bam.part = part;
-  }
-
-  return (bam_buffer->data[4*track+1+(sector>>3)] & (1<<(sector&7))) != 0;
+  return (ptr[sector>>3] & (1<<(sector&7))) != 0;
 }
 
 /**
@@ -248,14 +324,36 @@ static int8_t is_free(uint8_t part, uint8_t track, uint8_t sector) {
  * of partition part.
  */
 static uint8_t sectors_free(uint8_t part, uint8_t track) {
-  /* Use is_free to pull the BAM sector into memory */
-  if (is_free(part,track,0) < 0)
-    return 0;
+  uint8_t *trackmap = NULL;
+  //uint8_t i, b;
+  //uint8_t blocks = 0;
 
   if (track < 1 || track > LAST_TRACK)
     return 0;
 
-  return bam_buffer->data[4*track];
+  switch(partition[part].imagetype & D64_TYPE_MASK) {
+/*
+  case D64_TYPE_DNP:
+    if(move_bam_window(part,track,BAM_FREECOUNT,&trackmap))
+      return 0;
+    for(i=0;i < BAM_BITFIELD_BYTES_PER_TRACK;i++) {
+      // From http://everything2.com/title/counting%25201%2520bits
+      b = (trackmap[i] & 0x55) + (trackmap[i]>>1 & 0x55);
+      b = (b & 0x33) + (b >> 2 & 0x33);
+      b = (b & 0x0f) + (b >> 4 & 0x0f);
+      blocks += b;
+    }
+    return blocks;
+
+  case D64_TYPE_D71:
+  case D64_TYPE_D81:
+*/
+  case D64_TYPE_D64:
+  default:
+    if(move_bam_window(part,track,BAM_FREECOUNT,&trackmap))
+      return 0;
+    return *trackmap;
+  }
 }
 
 /**
@@ -269,18 +367,26 @@ static uint8_t sectors_free(uint8_t part, uint8_t track) {
  * Returns 0 if successful, 1 on error.
  */
 static uint8_t allocate_sector(uint8_t part, uint8_t track, uint8_t sector) {
-  uint8_t *trackmap = bam_buffer->data+4*track;
+  uint8_t *trackmap;
   int8_t res = is_free(part,track,sector);
 
   if (res < 0)
     return 1;
 
   if (res != 0) {
-    if (trackmap[0] > 0)
-      trackmap[0]--;
+    /* do the bitfield first, since is_free already set it up for us. */
+    if(move_bam_window(part,track,BAM_BITFIELD,&trackmap))
+      return 1;
 
-    trackmap[1+(sector>>3)] &= (uint8_t)~(1<<(sector&7));
+    trackmap[sector>>3] &= (uint8_t)~(1<<(sector&7));
     bam_buffer->mustflush = 1;
+
+    if(move_bam_window(part,track,BAM_FREECOUNT,&trackmap))
+      return 1;
+    if (trackmap[0] > 0) {
+      trackmap[0]--;
+      bam_buffer->mustflush = 1;
+    }
   }
   return 0;
 }
@@ -296,17 +402,27 @@ static uint8_t allocate_sector(uint8_t part, uint8_t track, uint8_t sector) {
  * Returns 0 if successful, 1 on error.
  */
 static uint8_t free_sector(uint8_t part, uint8_t track, uint8_t sector) {
-  uint8_t *trackmap = bam_buffer->data+4*track;
+  uint8_t *trackmap;
   int8_t res = is_free(part,track,sector);
 
   if (res < 0)
     return 1;
 
   if (res == 0) {
-    trackmap[0]++;
+    /* do the bitfield first, since is_free already set it up for us. */
+    if(move_bam_window(part,track,BAM_BITFIELD,&trackmap))
+      return 1;
 
-    trackmap[1+(sector>>3)] |= 1<<(sector&7);
+    trackmap[sector>>3] |= 1<<(sector&7);
     bam_buffer->mustflush = 1;
+
+    if(move_bam_window(part,track,BAM_FREECOUNT,&trackmap))
+      return 1;
+
+    if(trackmap[0] < sectors_per_track(track)) {
+      trackmap[0]++;
+      bam_buffer->mustflush = 1;
+    }
   }
   return 0;
 }
