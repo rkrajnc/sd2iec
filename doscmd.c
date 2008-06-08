@@ -202,6 +202,12 @@ static void handle_memexec(void) {
     save_fc3();
   }
 #endif
+#ifdef CONFIG_DREAMLOAD
+  if (detected_loader == FL_DREAMLOAD && address == 0x0700) {
+    detected_loader = FL_NONE;
+    load_dreamload();
+  }
+#endif
 }
 
 static void handle_memread(void) {
@@ -270,6 +276,11 @@ static void handle_memwrite(void) {
   }
   else if (datacrc == 0xbe56) {
     detected_loader = FL_FC3_SAVE;
+  }
+#endif
+#ifdef CONFIG_DREAMLOAD
+  if (datacrc == 0x1f5b) {
+    detected_loader = FL_DREAMLOAD;
   }
 #endif
 

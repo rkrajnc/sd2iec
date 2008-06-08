@@ -33,9 +33,13 @@
 #include "buffers.h"
 #include "doscmd.h"
 #include "fileops.h"
+#include "parser.h"
+#include "wrapops.h"
 #include "iec-ll.h"
 #include "fastloader-ll.h"
 #include "fastloader.h"
+#include "timer.h"
+#include "diskchange.h"
 
 enum fastloaders detected_loader;
 
@@ -232,4 +236,96 @@ void save_fc3(void) {
   buf->cleanup(buf);
   free_buffer(buf);
 }
+#endif
+
+#ifdef CONFIG_DREAMLOAD
+static void dreamload_send_block(const uint8_t* p) {
+  uint8_t checksum = 0;
+  int     n;
+
+  // checksum is EOR of all bytes
+  for (n = 0; n < 256; n++)
+    checksum ^= p[n];
+
+  // send status, data bytes and checksum
+  dreamload_send_byte(0);
+  for (n = 0; n < 256; n++) {
+    dreamload_send_byte(*p);
+    p++;
+  }
+  dreamload_send_byte(checksum);
+
+  // release CLOCK and DATA
+  IEC_OUT = IEC_PULLUPS;
+}
+
+void load_dreamload(void) {
+  uint16_t n;
+  uint8_t  type, t, s;
+  buffer_t *buf;
+
+  // Release clock and data
+  IEC_OUT = IEC_PULLUPS;
+
+  /* load final drive code, fixed length */
+  cli();
+  type = 0;
+  for (n = 4 * 256; n != 0; --n) {
+    type ^= dreamload_get_byte();
+  }
+  sei();
+
+  buf = alloc_buffer();
+  if (!buf) {
+    /* &§$% :-( */
+    return;
+  }
+
+  cli();
+
+  for (;;) {
+    /* get T/S (or command) from host */
+    if ((type == 0xac) || (type == 0xdc)) {
+      t = dreamload_get_byte_old();
+      s = dreamload_get_byte_old();
+    } else {
+      t = dreamload_get_byte();
+      s = dreamload_get_byte();
+    }
+
+    BUSY_LED_ON();
+
+    if (t == 0) {
+      // check special commands first
+      if (s == 0) {
+        // end loader
+        break;
+      } else if (s == 1) {
+        // command: load first sector of directory
+        // enable the IRQs for some time to enable disk changes
+        sei();
+        _delay_ms(1000);
+        if (key_pressed(KEY_NEXT | KEY_PREV | KEY_HOME)) {
+          change_disk();
+          /* for blinking: */
+          _delay_ms(1000);
+        }
+        cli();
+
+        read_sector(buf, current_part, 18, 1);
+        dreamload_send_block(buf->data);
+      }
+      else {
+        BUSY_LED_OFF();
+      }
+    } else {
+      read_sector(buf, current_part, t, s);
+      dreamload_send_block(buf->data);
+    }
+  }
+
+  sei();
+  free_buffer(buf);
+}
+
 #endif

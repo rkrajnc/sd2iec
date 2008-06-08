@@ -3,7 +3,7 @@
    Copyright (C) 2007,2008  M.Kiesel <mayne@users.sourceforge.net>
    Final Cartridge III fastloader support:
    Copyright (C) 2008  Thomas Giesel <skoe@directbox.com>
-        
+
    Inspiration and low-level SD/MMC access based on code from MMC2IEC
      by Lars Pontoppidan et al., see sdcard.c|h and config.h.
 
@@ -89,7 +89,19 @@ delay1us:
         nop                     ; 1
         ret                     ; 4
 
-#endif // ifdef any fast loader
+        ;; wait for ATN high
+wait_atn_high:
+        sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_ATN
+        rjmp    wait_atn_high
+        ret
+
+        ;; wait for ATN low
+wait_atn_low:
+        sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_ATN
+        rjmp    wait_atn_low
+        ret
+
+#endif ; ifdef any fast loader
 
 #ifdef CONFIG_JIFFY_ASM
         ;; ====================================================================
@@ -442,6 +454,34 @@ tdbitloop2:
         ret
 #endif
 
+#if defined(CONFIG_DREAMLOAD)
+        ;;
+        ;; Set bit 0 of r0 on CLOCK and bit 1 on DATA
+        ;; A bit value of one means pull down
+        ;; After sending these two bits r0 is shifted right two bits
+        ;;
+        ;; r19 is used as scratch reg here
+        ;;
+        ;; Takes 9 cycles before OUT (incl. rcall)
+        ;; Takes 6 cycles to return after OUT
+        ;;
+        ; todo: Use this also for FC3
+        .global send_bits_to_clk_data
+sent_bits_to_clk_data:
+        ; rcall                 ; 3
+        ldi r19, IEC_PULLUPS    ; 1 - prepare output register
+        bst r0, 0               ; 1 - take bit 0 (lsb)
+        bld r19, IEC_OPIN_CLOCK ; 1 - for CLOCK line
+        bst r0, 1               ; 1 - take bit 1
+        bld r19, IEC_OPIN_DATA  ; 1 - for DATA line
+        out     _SFR_IO_ADDR(IEC_OUT), r19 ; 1 - output the bit pair
+
+        lsr r0                  ; 1
+        lsr r0                  ; 1 - prepare next two bits
+
+        ret                     ; 4
+#endif
+
 #ifdef CONFIG_FC3
         ;;
         ;; Do this kind of handshake:
@@ -579,6 +619,110 @@ fc3_get_byte:
         sei
         com     r24     ; negate all bits
         clr     r25     ; clear hi-byte of return val
+        ret
+#endif
+
+#ifdef CONFIG_DREAMLOAD
+        ;;
+        ;; Receive a byte using the DreamLoad protocol
+        ;;
+        .global dreamload_get_byte
+dreamload_get_byte:
+        clr     r24     ; clear return value
+        clr     r25
+
+        ldi     r20, 4  ; 4 * 2 bits to load
+dl_bitloop:
+        ; wait until clock goes low
+1:
+        sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
+        rjmp    1b
+
+        lsl     r24
+
+        ; read data a short time later
+        in      r19, _SFR_IO_ADDR(IEC_PIN)
+        bst     r19, IEC_PIN_DATA
+        bld     r24, 0
+
+        ; wait until clock goes high
+2:
+        sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
+        rjmp    2b
+
+        lsl     r24
+
+        ; read data a short time later
+        in      r19, _SFR_IO_ADDR(IEC_PIN)
+        bst     r19, IEC_PIN_DATA
+        bld     r24, 0
+
+        dec     r20
+        brne     dl_bitloop
+
+        com     r24     ; negate all bits
+        ret
+
+        ;;
+        ;; Receive a byte using the old DreamLoad protocol
+        ;;
+        .global dreamload_get_byte_old
+dreamload_get_byte_old:
+        clr     r24
+
+        ; 2 nibbles
+        ldi     r20, 2
+dlgb_nibble:
+        swap    r24
+        rcall   wait_atn_low
+
+        ; get bits 1, 3 (or 5, 7)
+        in      r19, _SFR_IO_ADDR(IEC_PIN)
+        bst     r19, IEC_PIN_DATA
+        bld     r24, 1
+        bst     r19, IEC_PIN_CLOCK
+        bld     r24, 3
+
+        rcall   wait_atn_high
+
+        ; get bits 0, 2 (or 4, 6)
+        in      r19, _SFR_IO_ADDR(IEC_PIN)
+        bst     r19, IEC_PIN_DATA
+        bld     r24, 0
+        bst     r19, IEC_PIN_CLOCK
+        bld     r24, 2
+
+        dec     r20
+        brne     dlgb_nibble
+
+        com     r24     ; negate all bits
+        ret
+
+        ;;
+        ;; Send the byte in r24 using the DreamLoad protocol
+        ;;
+        .global dreamload_send_byte
+dreamload_send_byte:
+
+        ; inverse all bits
+        mov     r0, r24
+        com     r0
+
+        ldi     r20, 2          ; loop counter
+
+dsb_bitloop:
+        ; send r0[0,1] to CLOCK and DATA, shift r0 right two times
+        ; changes r19
+        rcall   sent_bits_to_clk_data
+        rcall   wait_atn_low
+
+        ; send r0[0,1] to CLOCK and DATA, shift r0 right two times
+        ; changes r19
+        rcall   sent_bits_to_clk_data
+        rcall   wait_atn_high
+
+        dec     r20             ; decrement bitpair counter
+        brne    dsb_bitloop     ; loop until done
         ret
 #endif
         .end

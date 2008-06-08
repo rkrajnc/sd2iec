@@ -65,6 +65,7 @@ CONFIG_COMMAND_CHANNEL_DUMP=y
 CONFIG_TURBODISK=y
 CONFIG_JIFFY_ASM=y
 CONFIG_FC3=y
+CONFIG_DREAMLOAD=y
 
 # Select which hardware to compile for
 # Valid values:

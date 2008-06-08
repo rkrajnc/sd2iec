@@ -37,4 +37,8 @@ void clk_data_handshake(void);
 void fastloader_fc3_send_block(uint8_t *data);
 uint8_t fc3_get_byte(void);
 
+uint8_t dreamload_get_byte(void);
+uint8_t dreamload_get_byte_old(void);
+void dreamload_send_byte(uint8_t byte);
+
 #endif
