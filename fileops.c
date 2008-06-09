@@ -505,6 +505,7 @@ scandone:
  */
 void file_open(uint8_t secondary) {
   buffer_t *buf;
+  uint8_t i = 0;
 
   /* Assume everything will go well unless proven otherwise */
   set_error(ERROR_OK);
@@ -542,7 +543,7 @@ void file_open(uint8_t secondary) {
   enum open_modes mode = OPEN_READ;
   uint8_t filetype = TYPE_DEL;
 
-  while (*ptr && (ptr = ustrchr(ptr, ','))) {
+  while(i++ < 2 && *ptr && (ptr = ustrchr(ptr, ','))) {
     *ptr = 0;
     ptr++;
     switch (*ptr) {
@@ -583,7 +584,9 @@ void file_open(uint8_t secondary) {
 
     case 'L': /* REL */
       filetype = TYPE_REL;
-      // FIXME: REL wird nach dem L anders geparst!
+      if((ptr = ustrchr(ptr, ',')))
+        ;//recordlen = *(++ptr);
+      i = 2;  // stop the scan
       break;
     }
   }
