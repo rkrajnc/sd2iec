@@ -761,7 +761,7 @@ void parse_doscommand(void) {
       } else {
         path.part = part;
         path.fat  = partition[part].current_dir;
-        ustrcpy(dent.name, command_buffer+i+1);
+        ustrcpy(dent.name, buf+1);
         i = file_delete(&path, &dent);
         if (i != 255)
           set_error_ts(ERROR_SCRATCHED,i,0);
