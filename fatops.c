@@ -246,6 +246,43 @@ static void pet2asc(uint8_t *buf) {
   }
 }
 
+static uint8_t* build_name(uint8_t *name, uint8_t type) {
+  uint8_t *x00ext = NULL;
+
+  pet2asc(name);
+  if (type != TYPE_RAW && file_extension_mode != 0 &&
+      !(type == TYPE_PRG && check_imageext(name) != IMG_UNKNOWN)) {
+    if ((file_extension_mode == 1 && type != TYPE_PRG) ||
+        (file_extension_mode == 2)
+        ) {
+      /* Append .[PSUR]00 suffix to the file name */
+      while (*name) {
+        if (isalnum(*name) || *name == '!' ||
+            (*name >= '#' && *name <= ')') ||
+            *name == '-') {
+          name++;
+        } else {
+          *name++ = '_';
+        }
+      }
+      *name++ = '.';
+      *name++ = pgm_read_byte(filetypes+3*type);
+      *name++ = '0';
+      x00ext = name;
+      *name++ = '0';
+      *name   = 0;
+    } else if ((file_extension_mode == 3 && type != TYPE_PRG) ||
+               (file_extension_mode == 4)) {
+      /* Append type suffix to the file name */
+      while (*name) name++;
+      *name++ = '.';
+      memcpy_P(name, filetypes + TYPE_LENGTH * (type & EXT_TYPE_MASK), TYPE_LENGTH);
+      *(name+3) = 0;
+    }
+  }
+  return x00ext;
+}
+
 /* ------------------------------------------------------------------------- */
 /*  Callbacks                                                                */
 /* ------------------------------------------------------------------------- */
@@ -421,39 +458,7 @@ void fat_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t
     name = dent->realname;
   else {
     ustrcpy(entrybuf, dent->name);
-    pet2asc(entrybuf);
-    if (type != TYPE_RAW && file_extension_mode != 0 &&
-        !(type == TYPE_PRG && check_imageext(entrybuf) != IMG_UNKNOWN)) {
-      if ((file_extension_mode == 1 && type != TYPE_PRG) ||
-          (file_extension_mode == 2)
-          ) {
-        /* Append .[PSUR]00 suffix to the file name */
-        name = entrybuf;
-        while (*name) {
-          if (isalnum(*name) || *name == '!' ||
-              (*name >= '#' && *name <= ')') ||
-              *name == '-') {
-            name++;
-          } else {
-            *name++ = '_';
-          }
-        }
-        *name++ = '.';
-        *name++ = pgm_read_byte(filetypes+3*type);
-        *name++ = '0';
-        x00ext = name;
-        *name++ = '0';
-        *name   = 0;
-      } else if ((file_extension_mode == 3 && type != TYPE_PRG) ||
-                 (file_extension_mode == 4)) {
-        /* Append type suffix to the file name */
-        name = entrybuf;
-        while (*name) name++;
-        *name++ = '.';
-        memcpy_P(name, filetypes + TYPE_LENGTH * (type & EXT_TYPE_MASK), TYPE_LENGTH);
-        *(name+3) = 0;
-      }
-    }
+    x00ext = build_name(entrybuf, type);
     name = entrybuf;
   }
 
@@ -940,39 +945,54 @@ void fat_sectordummy(buffer_t *buf, uint8_t part, uint8_t track, uint8_t sector)
  * path to newname.
  */
 void fat_rename(path_t *path, struct cbmdirent *dent, uint8_t *newname) {
+  uint8_t *ext;
   FRESULT res;
+  UINT byteswritten;
 
   partition[path->part].fatfs.curr_dir = path->fat;
   if (dent->realname[0]) {
-    /* [PSUR]00 rename, just change the internal file name */
-    UINT byteswritten;
+    switch (check_extension(dent->realname, &ext)) {
+    case EXT_IS_X00:
+      /* [PSUR]00 rename, just change the internal file name */
+      res = f_open(&partition[path->part].fatfs, &partition[path->part].imagehandle, dent->realname, FA_WRITE|FA_OPEN_EXISTING);
+      if (res != FR_OK) {
+        parse_error(res,0);
+        return;
+      }
 
-    res = f_open(&partition[path->part].fatfs, &partition[path->part].imagehandle, dent->realname, FA_WRITE|FA_OPEN_EXISTING);
-    if (res != FR_OK) {
-      parse_error(res,0);
-      return;
-    }
+      res = f_lseek(&partition[path->part].imagehandle, P00_CBMNAME_OFFSET);
+      if (res != FR_OK) {
+        parse_error(res,0);
+        return;
+      }
 
-    res = f_lseek(&partition[path->part].imagehandle, P00_CBMNAME_OFFSET);
-    if (res != FR_OK) {
-      parse_error(res,0);
-      return;
-    }
+      /* Copy the new name into dent->name so we can overwrite all 16 bytes */
+      memset(dent->name, 0, CBM_NAME_LENGTH);
+      ustrcpy(dent->name, newname);
 
-    /* Copy the new name into dent->name so we can overwrite all 16 bytes */
-    memset(dent->name, 0, CBM_NAME_LENGTH);
-    ustrcpy(dent->name, newname);
+      res = f_write(&partition[path->part].imagehandle, dent->name, CBM_NAME_LENGTH, &byteswritten);
+      if (res != FR_OK || byteswritten != CBM_NAME_LENGTH) {
+        parse_error(res,0);
+        return;
+      }
 
-    res = f_write(&partition[path->part].imagehandle, newname, CBM_NAME_LENGTH, &byteswritten);
-    if (res != FR_OK || byteswritten != CBM_NAME_LENGTH) {
-      parse_error(res,0);
-      return;
-    }
+      res = f_close(&partition[path->part].imagehandle);
+      if (res != FR_OK) {
+        parse_error(res,0);
+        return;
+      }
+      break;
 
-    res = f_close(&partition[path->part].imagehandle);
-    if (res != FR_OK) {
-      parse_error(res,0);
-      return;
+    case EXT_IS_TYPE:
+      ustrcpy(entrybuf, newname);
+      build_name(entrybuf, dent->typeflags & TYPE_MASK);
+      res = f_rename(&partition[path->part].fatfs, dent->realname, entrybuf);
+      if (res != FR_OK)
+        parse_error(res, 0);
+      break;
+
+    default:
+      break;
     }
   } else {
     /* Normal rename */

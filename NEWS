@@ -1,4 +1,5 @@
 2008-06-10 - release 0.7.2
+        - Bugfix: rename doesn't corrupt files with hidden extensions anymore
         - case-insensitive matching of FAT filenames
 
 2008-06-05 - release 0.7.1
