@@ -1,4 +1,5 @@
 2008-xx-xx - release x.x.x
+        - Bugfix: rename doesn't corrupt files with hidden extensions anymore
         - Implement Dreamload emulation
 
 2008-06-05 - release 0.7.1
