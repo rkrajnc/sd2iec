@@ -314,7 +314,7 @@
 #  define IEC_PULLUPS           0
 #  define ATN_INT_VECT          INT6_vect
 #  define ATN_INT_SETUP()       do { EICRB |= _BV(ISC60); } while (0)
-#  define set_atnack(x)         if (x) { EIMSK |= _BV(INT6); } else { EIMSK &= ~(uint8_t)~_BV(INT6); }
+#  define set_atnack(x)         if (x) { EIMSK |= _BV(INT6); } else { EIMSK &= (uint8_t)~_BV(INT6); }
 /* JLB: This should really be on a INT pin, but I need to find one.  Use G1 for now. */
 /*   Only if the button is hardware-debounced, otherwise it doesn't help a bit. -ik */
 #  define BUTTON_PIN            PING
