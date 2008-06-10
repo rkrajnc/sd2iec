@@ -1,5 +1,7 @@
 2008-06-10 - release 0.7.2
         - Bugfix: rename doesn't corrupt files with hidden extensions anymore
+        - Bugfix: RD works again
+        - Bugfix: On uIEC the ATN ACK interrupt was never disabled
         - case-insensitive matching of FAT filenames
 
 2008-06-05 - release 0.7.1
