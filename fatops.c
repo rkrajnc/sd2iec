@@ -356,6 +356,7 @@ static uint8_t fat_file_write(buffer_t *buf) {
   }
 
   buf->mustflush = 0;
+  buf->dirty     = 0;
   buf->position  = 2;
   buf->lastused  = 2;
 

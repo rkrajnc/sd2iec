@@ -64,6 +64,7 @@ typedef struct buffer_s {
   int     mustflush:1;
   int     read:1;
   int     write:1;
+  int     dirty:1;
   int     sendeoi:1;
   uint8_t (*refill)(struct buffer_s *buffer);
   uint8_t (*cleanup)(struct buffer_s *buffer);
