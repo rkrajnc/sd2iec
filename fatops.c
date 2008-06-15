@@ -338,7 +338,7 @@ static uint8_t fat_file_write(buffer_t *buf) {
 
   uart_putc('/');
 
-  res = f_write(&buf->pvt.fh, buf->data, buf->lastused+1, &byteswritten);
+  res = f_write(&buf->pvt.fh, buf->data+2, buf->lastused-1, &byteswritten);
   if (res != FR_OK) {
     uart_putc('r');
     parse_error(res,1);
@@ -347,7 +347,7 @@ static uint8_t fat_file_write(buffer_t *buf) {
     return 1;
   }
 
-  if (byteswritten != buf->lastused+1) {
+  if (byteswritten != buf->lastused-1) {
     uart_putc('l');
     set_error(ERROR_DISK_FULL);
     f_close(&buf->pvt.fh);
@@ -356,8 +356,8 @@ static uint8_t fat_file_write(buffer_t *buf) {
   }
 
   buf->mustflush = 0;
-  buf->position  = 0;
-  buf->lastused  = 0;
+  buf->position  = 2;
+  buf->lastused  = 2;
 
   return 0;
 }
@@ -505,8 +505,13 @@ void fat_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t
   }
 
   mark_write_buffer(buf);
-  buf->cleanup   = fat_file_close;
-  buf->refill    = fat_file_write;
+  buf->position = 2;
+  buf->lastused = 2;
+  buf->cleanup  = fat_file_close;
+  buf->refill   = fat_file_write;
+
+  /* If no data is written the file should end up with a single 0x0d byte */
+  buf->data[2] = 13;
 }
 
 /* ------------------------------------------------------------------------- */
