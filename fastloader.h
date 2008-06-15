@@ -27,24 +27,23 @@
 #ifndef FASTLOADER_H
 #define FASTLOADER_H
 
-enum fastloaders {
-  FL_NONE = 0,
-#ifdef CONFIG_TURBODISK
-  FL_TURBODISK,
-#endif
-#ifdef CONFIG_FC3
-  FL_FC3_LOAD,
-  FL_FC3_SAVE,
-#endif
-#ifdef CONFIG_DREAMLOAD
-  FL_DREAMLOAD
-#endif
-};
-extern enum fastloaders detected_loader;
+#define FL_NONE          0
+#define FL_TURBODISK     1
+#define FL_FC3_LOAD      2
+#define FL_FC3_SAVE      3
+#define FL_DREAMLOAD     4
+#define FL_DREAMLOAD_OLD 5
+
+#ifndef __ASSEMBLER__
+
+extern uint8_t detected_loader;
+extern volatile uint8_t fl_track;
+extern volatile uint8_t fl_sector;
 
 void load_turbodisk(void);
 void load_fc3(void);
 void save_fc3(void);
 void load_dreamload(void);
 
+#endif
 #endif

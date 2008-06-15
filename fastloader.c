@@ -1,6 +1,6 @@
 /* sd2iec - SD/MMC to Commodore serial bus interface/controller
    Copyright (C) 2007,2008  Ingo Korb <ingo@akana.de>
-   Final Cartridge III fastloader support:
+   Final Cartridge III, DreamLoad fastloader support:
    Copyright (C) 2008  Thomas Giesel <skoe@directbox.com>
 
    Inspiration and low-level SD/MMC access based on code from MMC2IEC
@@ -41,7 +41,13 @@
 #include "timer.h"
 #include "diskchange.h"
 
-enum fastloaders detected_loader;
+uint8_t detected_loader;
+
+/* track to load, used as a kind of jobcode */
+volatile uint8_t fl_track;
+
+/* sector to load, used as a kind of jobcode */
+volatile uint8_t fl_sector;
 
 #ifdef CONFIG_TURBODISK
 void load_turbodisk(void) {
@@ -239,9 +245,15 @@ void save_fc3(void) {
 #endif
 
 #ifdef CONFIG_DREAMLOAD
+#ifndef IEC_PCMSK
+#  error "Sorry, DreamLoad is only supported on platforms using PCINT IEC"
+#endif
+
 static void dreamload_send_block(const uint8_t* p) {
   uint8_t checksum = 0;
   int     n;
+
+  cli();
 
   // checksum is EOR of all bytes
   for (n = 0; n < 256; n++)
@@ -257,61 +269,66 @@ static void dreamload_send_block(const uint8_t* p) {
 
   // release CLOCK and DATA
   IEC_OUT = IEC_PULLUPS;
+  sei();
 }
 
 void load_dreamload(void) {
   uint16_t n;
-  uint8_t  type, t, s;
+  uint8_t  type;
   buffer_t *buf;
+
+  /* disable IRQs while loading the final code, so no jobcodes are read */
+  cli();
+  set_clock_irq(0);
+  set_atn_irq(0);
 
   // Release clock and data
   IEC_OUT = IEC_PULLUPS;
 
   /* load final drive code, fixed length */
-  cli();
   type = 0;
   for (n = 4 * 256; n != 0; --n) {
     type ^= dreamload_get_byte();
   }
-  sei();
 
-  buf = alloc_buffer();
-  if (!buf) {
-    /* &§$% :-( */
-    return;
+  if ((type == 0xac) || (type == 0xdc)) {
+    set_atn_irq(1);
+    detected_loader = FL_DREAMLOAD_OLD;
+  } else {
+    set_clock_irq(1);
   }
 
-  cli();
+  /* mark no job waiting, enable IRQs to get job codes */
+  fl_track = 0xff;
+  sei();
+
+  buf = alloc_system_buffer();
+  if (!buf) {
+    /* &§$% :-( */
+    goto error;
+  }
 
   for (;;) {
-    /* get T/S (or command) from host */
-    if ((type == 0xac) || (type == 0xdc)) {
-      t = dreamload_get_byte_old();
-      s = dreamload_get_byte_old();
-    } else {
-      t = dreamload_get_byte();
-      s = dreamload_get_byte();
+
+    while (fl_track == 0xff) {
+      if (key_pressed(KEY_NEXT | KEY_PREV | KEY_HOME)) {
+        change_disk();
+      }
     }
 
     BUSY_LED_ON();
 
-    if (t == 0) {
+    if (fl_track == 0) {
       // check special commands first
-      if (s == 0) {
+      if (fl_sector == 0) {
         // end loader
         break;
-      } else if (s == 1) {
+      } else if (fl_sector == 1) {
         // command: load first sector of directory
-        // enable the IRQs for some time to enable disk changes
-        sei();
-        _delay_ms(1000);
-        if (key_pressed(KEY_NEXT | KEY_PREV | KEY_HOME)) {
-          change_disk();
-          /* for blinking: */
-          _delay_ms(1000);
-        }
-        cli();
-
+        // slow down 18/1 loading, so diskswap has a higher chance
+        tick_t targettime = ticks + MS_TO_TICKS(1000);
+        while (time_before(ticks,targettime)) ;
+        // FIXME: Needs update for non-d64 images
         read_sector(buf, current_part, 18, 1);
         dreamload_send_block(buf->data);
       }
@@ -319,13 +336,16 @@ void load_dreamload(void) {
         BUSY_LED_OFF();
       }
     } else {
-      read_sector(buf, current_part, t, s);
+      read_sector(buf, current_part, fl_track, fl_sector);
       dreamload_send_block(buf->data);
     }
+    fl_track = 0xff;
   }
 
-  sei();
   free_buffer(buf);
+error:
+  set_clock_irq(0);
+  set_atn_irq(0);
+  sei();
 }
-
 #endif

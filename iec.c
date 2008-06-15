@@ -43,6 +43,7 @@
 #include "diskio.h"
 #include "doscmd.h"
 #include "errormsg.h"
+#include "fastloader.h"
 #include "fastloader-ll.h"
 #include "fatops.h"
 #include "flags.h"
@@ -113,16 +114,7 @@ static uint8_t check_atn(void) {
       return 0;
 }
 
-#ifdef ATN_INT_VECT
-
-/// Actual interrupt-based ATN handling
-ISR(ATN_INT_VECT) {
-  if (!IEC_ATN) {
-    set_data(0);
-  }
-}
-
-#else
+#ifndef IEC_INT_VECT
 
 /// Interrupt routine that simulates the hardware-auto-acknowledge of ATN
 /* This currently runs once every 500 microseconds, keep small! */
@@ -347,7 +339,7 @@ static uint8_t iec_listen_handler(const uint8_t cmd) {
   while (1) {
     if (iec_data.iecflags & JIFFY_ACTIVE) {
       uint8_t flags;
-      set_atnack(1);
+      set_atn_irq(1);
       _delay_us(50); /* Slow down or we'll see garbage from the C64 */
                      /* The time was guessed from bus traces.       */
       c = jiffy_receive(&flags);
@@ -503,10 +495,10 @@ void init_iec(void) {
   IEC_PORT = ~(IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA);
 #endif
 
-  /* Prepare ATN interrupt (if any) */
-  ATN_INT_SETUP();
+  /* Prepare IEC interrupt (if any) */
+  IEC_INT_SETUP();
 
-#ifndef ATN_INT_VECT
+#ifndef IEC_INT_VECT
   /* Issue an interrupt every 500us with timer 2 for ATN-Acknowledge.    */
   /* The exact timing isn't critical, it just has to be faster than 1ms. */
   /* Every 800us was too slow in rare situations.                        */
@@ -534,7 +526,7 @@ void iec_mainloop(void) {
   while (1) {
     switch (iec_data.bus_state) {
     case BUS_SLEEP:
-      set_atnack(0);
+      set_atn_irq(0);
       set_data(1);
       set_clock(1);
       set_error(ERROR_OK);
@@ -563,7 +555,7 @@ void iec_mainloop(void) {
 
     case BUS_IDLE:  // EBFF
       /* Wait for ATN */
-      set_atnack(1);
+      set_atn_irq(1);
       while (IEC_ATN) {
         if (key_pressed(KEY_NEXT | KEY_PREV | KEY_HOME)) {
           change_disk();
@@ -582,7 +574,7 @@ void iec_mainloop(void) {
       /* Pull data low to say we're here */
       set_clock(1);
       set_data(0);
-      set_atnack(0);
+      set_atn_irq(0);
 
       iec_data.device_state = DEVICE_IDLE;
       iec_data.bus_state    = BUS_ATNACTIVE;
@@ -688,7 +680,7 @@ void iec_mainloop(void) {
       break;
 
     case BUS_NOTFORME: // E8FD
-      set_atnack(0);
+      set_atn_irq(0);
       set_clock(1);
       set_data(1);
       iec_data.bus_state = BUS_ATNFINISH;
@@ -700,7 +692,7 @@ void iec_mainloop(void) {
       break;
 
     case BUS_ATNPROCESS: // E8D7
-      set_atnack(1);
+      set_atn_irq(1);
 
       if (iec_data.device_state == DEVICE_LISTEN) {
         if (iec_listen_handler(cmd))
@@ -719,7 +711,7 @@ void iec_mainloop(void) {
       break;
 
     case BUS_CLEANUP:
-      set_atnack(1);
+      set_atn_irq(1);
       // 836B
       set_clock(1);
       set_data(1);

@@ -1,7 +1,7 @@
 /* sd2iec - SD/MMC to Commodore serial bus interface/controller
    Copyright (C) 2007,2008  Ingo Korb <ingo@akana.de>
    Copyright (C) 2007,2008  M.Kiesel <mayne@users.sourceforge.net>
-   Final Cartridge III fastloader support:
+   Final Cartridge III, DreamLoad fastloader support:
    Copyright (C) 2008  Thomas Giesel <skoe@directbox.com>
 
    Inspiration and low-level SD/MMC access based on code from MMC2IEC
@@ -31,6 +31,7 @@
 
 
 #include "config.h"
+#include "fastloader.h"
 #include <avr/io.h>
 
 /* Timing offsets for JiffyDos read/write */
@@ -41,6 +42,85 @@
 #define JIFFY_OFFSET_READ  30
 
         .section .text
+
+#ifdef IEC_INT_VECT
+        ;; ===================================================================
+        ;; Interrupt service routine for IEC bus
+        ;; ===================================================================
+        ;
+        ; Functions called from here may change these registers:
+        ; r0, r18, r19, r24
+        ; Other registers must be saved and restored by the called functions
+        ;
+        .global IEC_INT_VECT
+IEC_INT_VECT:
+        ; functions called from here must only change these registers:
+        push    r18
+        in      r18, _SFR_IO_ADDR(SREG)
+        push    r18
+        push    r19
+        push    r24
+        push    r0
+
+#ifdef IEC_PCMSK
+        lds     r18, _SFR_ADDR(IEC_PCMSK)
+        bst     r18, IEC_PIN_ATN        ; only check ATN
+        brtc    iiv_atn_irq_end         ; if it is an IRQ source
+
+        ; check if ATN is low
+        sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_ATN
+        rjmp    iiv_atn_irq_end
+
+        ; ATN is low, continue depending from active fast loader
+#ifdef CONFIG_DREAMLOAD
+        lds     r18, detected_loader
+        cpi     r18, FL_DREAMLOAD_OLD
+        brne    iiv_not_fl_dreamload_old
+        ; dreamload (old), receive a command code
+        rcall   dreamload_get_command_old
+        rjmp    iiv_atn_irq_end         ; no other ATN action needed
+iiv_not_fl_dreamload_old:
+#endif
+        ; no custom behaviour, this is ATN ACK
+        sbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA    ; DATA low
+
+iiv_atn_irq_end:
+        lds     r18, _SFR_ADDR(IEC_PCMSK)
+        bst     r18, IEC_PIN_CLOCK      ; only check CLOCK
+        brtc    iiv_clock_irq_end       ; if it is an IRQ source
+
+        ; check if CLOCK is low
+        sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
+        rjmp    iiv_clock_irq_end
+
+        ; CLOCK is low, continue depending from active fast loader
+#ifdef CONFIG_DREAMLOAD
+        lds     r18, detected_loader
+        cpi     r18, FL_DREAMLOAD
+        brne    iiv_not_fl_dreamload
+        ; dreamload, receive a command code
+        rcall   dreamload_get_command
+        rjmp    iiv_clock_irq_end       ; no other CLOCK action needed
+iiv_not_fl_dreamload:
+#endif
+
+iiv_clock_irq_end:
+
+#else // ifdef IEC_PCMSK
+        ; basic IRQ functionality w/o PCINT: ATN ACK
+        ; check if ATN is low
+        sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_ATN
+        sbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA    ; DATA low
+#endif
+
+        pop     r0
+        pop     r24
+        pop     r19
+        pop     r18
+        out     _SFR_IO_ADDR(SREG), r18
+        pop     r18
+        reti
+#endif // ifdef IEC_INT_VECT
 
 #if defined(CONFIG_JIFFY_ASM) || defined(CONFIG_TURBODISK) || defined(CONFIG_FC3)
         ;; ===================================================================
@@ -101,7 +181,7 @@ wait_atn_low:
         rjmp    wait_atn_low
         ret
 
-#endif ; ifdef any fast loader
+#endif // ifdef any fast loader
 
 #ifdef CONFIG_JIFFY_ASM
         ;; ====================================================================
@@ -121,7 +201,7 @@ jiffy_receive:
         movw    r30,r24
         clr     r24             ; clear output register
         clr     r25             ; clear high byte of return value
-        
+
         ;; Set clock+data high
         cbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_CLOCK
         cbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA
@@ -323,7 +403,7 @@ js_finish:
         ori     r22, IEC_PULLUPS ; Set whatever bits are is required
         out     _SFR_IO_ADDR(IEC_OUT), r22 ; Write output register
 #endif
-        
+
         sei                     ; re-enable interrupts
         ret
 
@@ -624,14 +704,23 @@ fc3_get_byte:
 
 #ifdef CONFIG_DREAMLOAD
         ;;
+        ;; Receive a command (track/sector) using the DreamLoad protocol
+        ;;
+dreamload_get_command:
+        rcall   dreamload_get_byte
+        sts     fl_track, r24
+        rcall   dreamload_get_byte
+        sts     fl_sector, r24
+        ret
+
+        ;;
         ;; Receive a byte using the DreamLoad protocol
         ;;
         .global dreamload_get_byte
 dreamload_get_byte:
         clr     r24     ; clear return value
-        clr     r25
 
-        ldi     r20, 4  ; 4 * 2 bits to load
+        ldi     r18, 4  ; 4 * 2 bits to load
 dl_bitloop:
         ; wait until clock goes low
 1:
@@ -657,21 +746,30 @@ dl_bitloop:
         bst     r19, IEC_PIN_DATA
         bld     r24, 0
 
-        dec     r20
+        dec     r18
         brne     dl_bitloop
 
         com     r24     ; negate all bits
         ret
 
         ;;
+        ;; Receive a command (track/sector) using the old DreamLoad protocol
+        ;;
+dreamload_get_command_old:
+        rcall   dreamload_get_byte_old
+        sts     fl_track, r24
+        rcall   dreamload_get_byte_old
+        sts     fl_sector, r24
+        ret
+
+        ;;
         ;; Receive a byte using the old DreamLoad protocol
         ;;
-        .global dreamload_get_byte_old
 dreamload_get_byte_old:
         clr     r24
 
         ; 2 nibbles
-        ldi     r20, 2
+        ldi     r18, 2
 dlgb_nibble:
         swap    r24
         rcall   wait_atn_low
@@ -692,7 +790,7 @@ dlgb_nibble:
         bst     r19, IEC_PIN_CLOCK
         bld     r24, 2
 
-        dec     r20
+        dec     r18
         brne     dlgb_nibble
 
         com     r24     ; negate all bits
@@ -708,7 +806,7 @@ dreamload_send_byte:
         mov     r0, r24
         com     r0
 
-        ldi     r20, 2          ; loop counter
+        ldi     r18, 2          ; loop counter
 
 dsb_bitloop:
         ; send r0[0,1] to CLOCK and DATA, shift r0 right two times
@@ -721,7 +819,7 @@ dsb_bitloop:
         rcall   sent_bits_to_clk_data
         rcall   wait_atn_high
 
-        dec     r20             ; decrement bitpair counter
+        dec     r18             ; decrement bitpair counter
         brne    dsb_bitloop     ; loop until done
         ret
 #endif

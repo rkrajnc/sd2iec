@@ -9,7 +9,7 @@ description may not be accurate in any point.
 DreamLoad is a two bit IRQ fast loader. This means that the timing of the C64
 (host) may be deferred by IRQs at any time. The timing is given by the host,
 so the drive code must be always listening. The only exception is after the
-host sent a command to load a sector to the drive. The the host starts the
+host sent a command to load a sector to the drive. Then the host starts the
 protocol after having seen the first two bits (always 0) on the bus.
 
 All the directory and sector chain stuff is done by the host.
@@ -76,6 +76,11 @@ BLOCK TO HOST PROTOCOL
 ======================
 
 The first byte is a status code. If it is 0 a block of 256 bytes will follow.
+As the host waits for DATA to become low before receiving this byte, bit 1 must
+always be zero in this byte.
+
+Is the value is not 0, it is an error indication. No additional bytes follow in
+this case. The C64 code returns an error flag to the application in this case.
 
 After a block a checksum follows. All bytes of the block are EORed beginning
 with 0, the result is transfered as checksum.

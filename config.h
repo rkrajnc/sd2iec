@@ -222,9 +222,9 @@
 #  define IEC_PIN_CLOCK         PA2
 #  define IEC_PIN_SRQ           PA3
 #  define IEC_PULLUPS           0
-#  define ATN_INT_VECT          PCINT0_vect
-#  define ATN_INT_SETUP()       do { PCMSK0 = _BV(PCINT0); PCIFR |= _BV(PCIF0); } while (0)
-#  define set_atnack(x)         if (x) { PCICR |= _BV(PCIE0); } else { PCICR &= (uint8_t)~_BV(PCIE0); }
+#  define IEC_INT_VECT          PCINT0_vect
+#  define IEC_INT_SETUP()       do { PCICR |= _BV(PCIE0); PCIFR |= _BV(PCIF0); } while (0)
+#  define IEC_PCMSK             PCMSK0
 #  define BUTTON_PIN            PINC
 #  define BUTTON_PORT           PORTC
 #  define BUTTON_DDR            DDRC
@@ -275,9 +275,9 @@
 #  define IEC_PIN_CLOCK         PC2
 #  define IEC_PIN_SRQ           PC3
 #  define IEC_PULLUPS           0
-#  define ATN_INT_VECT          PCINT2_vect
-#  define ATN_INT_SETUP()       do { PCMSK2 = _BV(PCINT16); PCIFR |= _BV(PCIF2); } while (0)
-#  define set_atnack(x)         if (x) { PCICR |= _BV(PCIE2); } else { PCICR &= (uint8_t)~_BV(PCIE2); }
+#  define IEC_INT_VECT          PCINT2_vect
+#  define IEC_INT_SETUP()       do { PCICR |= _BV(PCIE2); PCIFR |= _BV(PCIF2); } while (0)
+#  define IEC_PCMSK             PCMSK2
 #  define BUTTON_PIN            PINA
 #  define BUTTON_PORT           PORTA
 #  define BUTTON_DDR            DDRA
@@ -312,9 +312,9 @@
 #  define IEC_PIN_CLOCK         PE5
 #  define IEC_PIN_SRQ           PE2
 #  define IEC_PULLUPS           0
-#  define ATN_INT_VECT          INT6_vect
-#  define ATN_INT_SETUP()       do { EICRB |= _BV(ISC60); } while (0)
-#  define set_atnack(x)         if (x) { EIMSK |= _BV(INT6); } else { EIMSK &= (uint8_t)~_BV(INT6); }
+#  define IEC_INT_VECT          INT6_vect
+#  define IEC_INT_SETUP()       do { EICRB |= _BV(ISC60); } while (0)
+#  undef  IEC_PCMSK
 /* JLB: This should really be on a INT pin, but I need to find one.  Use G1 for now. */
 /*   Only if the button is hardware-debounced, otherwise it doesn't help a bit. -ik */
 #  define BUTTON_PIN            PING
@@ -369,9 +369,9 @@
 #  define IEC_OPIN_DATA         PA5
 #  define IEC_OPIN_CLOCK        PA6
 #  define IEC_OPIN_SRQ          PA7
-#  define ATN_INT_VECT          PCINT0_vect
-#  define ATN_INT_SETUP()       do { PCMSK0 = _BV(PCINT0); PCIFR |= _BV(PCIF0); } while (0)
-#  define set_atnack(x)         if (x) { PCICR |= _BV(PCIE0); } else { PCICR &= (uint8_t)~_BV(PCIE0); }
+#  define IEC_INT_VECT          PCINT0_vect
+#  define IEC_INT_SETUP()       do { PCICR |= _BV(PCIE0); PCIFR |= _BV(PCIF0); } while (0)
+#  define IEC_PCMSK             PCMSK0
 #  define BUTTON_PIN            PINC
 #  define BUTTON_PORT           PORTC
 #  define BUTTON_DDR            DDRC
@@ -438,9 +438,9 @@
 #  define IEC_PIN_CLOCK         PB2
 #  define IEC_PIN_SRQ           PB3
 #  define IEC_PULLUPS           (_BV(PB7) | _BV(PB6) | _BV(PB4))
-#  define ATN_INT_VECT          PCINT1_vect
-#  define ATN_INT_SETUP()       do { PCMSK1 = _BV(PCINT8); PCIFR |= _BV(PCIF1); } while (0)
-#  define set_atnack(x)         if (x) { PCICR |= _BV(PCIE1); } else { PCICR &= (uint8_t)~_BV(PCIE1); }
+#  define IEC_INT_VECT          PCINT1_vect
+#  define IEC_INT_SETUP()       do { PCICR |= _BV(PCIE1); PCIFR |= _BV(PCIF1); } while (0)
+#  define IEC_PCMSK             PCMSK1
 #  define BUTTON_PIN            PINA
 #  define BUTTON_PORT           PORTA
 #  define BUTTON_DDR            DDRA
@@ -476,6 +476,21 @@
 #  define IEC_OBIT_CLOCK IEC_BIT_CLOCK
 #  define IEC_OBIT_SRQ   IEC_BIT_SRQ
 #  define IEC_OUT        IEC_DDR
+#endif
+
+#ifdef IEC_PCMSK
+   /* For hardware configurations using PCINT for IEC IRQs */
+#  define set_atn_irq(x) \
+     if (x) { IEC_PCMSK |= _BV(IEC_PIN_ATN); } \
+     else { IEC_PCMSK &= (uint8_t)~_BV(IEC_PIN_ATN); }
+#  define set_clock_irq(x) \
+     if (x) { IEC_PCMSK |= _BV(IEC_PIN_CLOCK); } \
+     else { IEC_PCMSK &= (uint8_t)~_BV(IEC_PIN_CLOCK); }
+#else
+   /* That's for uIEC */
+#  define set_atn_irq(x) \
+     if (x) { EIMSK |= _BV(INT6); } \
+     else { EIMSK &= (uint8_t)~_BV(INT6); }
 #endif
 
 /* ---------------- End of user-configurable options ---------------- */

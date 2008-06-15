@@ -188,26 +188,24 @@ static void handle_memexec(void) {
 #ifdef CONFIG_TURBODISK
   if (detected_loader == FL_TURBODISK && address == 0x0303) {
     /* Looks like Turbodisk */
-    detected_loader = FL_NONE;
     load_turbodisk();
   }
 #endif
 #ifdef CONFIG_FC3
   if (detected_loader == FL_FC3_LOAD && address == 0x059a) {
-    detected_loader = FL_NONE;
     load_fc3();
   }
   if (detected_loader == FL_FC3_SAVE && address == 0x059c) {
-    detected_loader = FL_NONE;
     save_fc3();
   }
 #endif
 #ifdef CONFIG_DREAMLOAD
   if (detected_loader == FL_DREAMLOAD && address == 0x0700) {
-    detected_loader = FL_NONE;
     load_dreamload();
   }
 #endif
+
+  detected_loader = FL_NONE;
 }
 
 static void handle_memread(void) {
