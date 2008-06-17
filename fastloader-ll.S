@@ -534,7 +534,7 @@ tdbitloop2:
         ret
 #endif
 
-#if defined(CONFIG_DREAMLOAD)
+#if defined(CONFIG_DREAMLOAD) || defined(CONFIG_FC3)
         ;;
         ;; Set bit 0 of r0 on CLOCK and bit 1 on DATA
         ;; A bit value of one means pull down
@@ -545,9 +545,7 @@ tdbitloop2:
         ;; Takes 9 cycles before OUT (incl. rcall)
         ;; Takes 6 cycles to return after OUT
         ;;
-        ; todo: Use this also for FC3
-        .global send_bits_to_clk_data
-sent_bits_to_clk_data:
+send_bits_to_clk_data:
         ; rcall                 ; 3
         ldi r19, IEC_PULLUPS    ; 1 - prepare output register
         bst r0, 0               ; 1 - take bit 0 (lsb)
@@ -560,6 +558,26 @@ sent_bits_to_clk_data:
         lsr r0                  ; 1 - prepare next two bits
 
         ret                     ; 4
+
+        ;;
+        ;; Get DATA  => bit 0
+        ;; and CLOCK => bit 2 of r24
+        ;; Low level means value 0 here
+        ;;
+        ;; r19 is used as scratch reg here
+        ;;
+        ;; Takes 4 cycles before IN (incl. rcall)
+        ;; Takes 8 cycles to return after IN
+        ;;
+get_bits_from_clk_data:
+        ; rcall                         ; 3
+        in      r19, _SFR_IO_ADDR(IEC_PIN)  ; 1
+        bst     r19, IEC_PIN_DATA       ; 1
+        bld     r24, 0                  ; 1
+        bst     r19, IEC_PIN_CLOCK      ; 1
+        bld     r24, 2                  ; 1
+        ret                             ; 4
+
 #endif
 
 #ifdef CONFIG_FC3
@@ -592,7 +610,7 @@ fastloader_fc3_send_block:
         sbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_CLOCK ; 1
 
         ; 12 us between sync and bitpair
-        delay_cycles 12 * 8 - 13 ; 83
+        delay_cycles 12 * 8 - 14 ; 83
 
         ldi     r21, 4          ; 1 - byte counter
 fc3_byteloop:
@@ -602,18 +620,12 @@ fc3_byteloop:
 
         ldi     r20, 4          ; 1 - bitpair counter
 fc3_bitloop:
-        ldi r19, IEC_PULLUPS    ; 1 - prepare output register
-        bst r0, 0               ; 1 - take bit 0 (lsb)
-        bld r19, IEC_OPIN_CLOCK ; 1 - for CLOCK line
-        bst r0, 1               ; 1 - take bit 1
-        bld r19, IEC_OPIN_DATA  ; 1 - for DATA line
-        lsr r0                  ; 1
-        lsr r0                  ; 1 - prepare next two bits
-
-        out     _SFR_IO_ADDR(IEC_OUT), r19 ; 1 - output the bit pair
+        ; send r0[0,1] to CLOCK and DATA, shift r0 right two times
+        ; changes r19
+        rcall send_bits_to_clk_data ; 9 + 6
 
         ; wait 12 us between bitpair
-        delay_cycles 12*8-11    ; 85
+        delay_cycles 12*8-18
 
         dec     r20             ; 1 - decrement bitpair counter
         brne    fc3_bitloop     ; 2/1 - loop until done
@@ -654,44 +666,32 @@ fc3_get_byte:
         rjmp    1b
 
         ; 17 us later...
-        delay_cycles 17 * 8 - 2
+        delay_cycles 17 * 8 - 6
 
-        ; get bits 5 and 7
-        in      r19, _SFR_IO_ADDR(IEC_PIN)  ; 1
-        bst     r19, IEC_PIN_DATA       ; 1
-        bld     r24, 5                  ; 1
-        bst     r19, IEC_PIN_CLOCK      ; 1
-        bld     r24, 7                  ; 1
+        ; get bits 5,7 @ 0,2 - changes r19
+        rcall   get_bits_from_clk_data  ; 4 + 8 r24 = .....7.5
+        lsl     r24                     ; 1     r24 = ....7.5.
 
         ; 13 us later...
-        delay_cycles 13 * 8 - 5
+        delay_cycles 13 * 8 - 13
 
-        ; get bits 4 and 6
-        in      r19, _SFR_IO_ADDR(IEC_PIN)  ; 1
-        bst     r19, IEC_PIN_DATA       ; 1
-        bld     r24, 4                  ; 1
-        bst     r19, IEC_PIN_CLOCK      ; 1
-        bld     r24, 6                  ; 1
+        ; get bits 4,6 @ 0,2 - changes r19
+        rcall   get_bits_from_clk_data  ; 4 + 8 r24 = ....7654
+        swap    r24                     ; 1     r24 = 7654....
+        lsr     r24                     ; 1     r24 = .7654...
 
         ; 12 us later...
-        delay_cycles 12 * 8 - 5
+        delay_cycles 12 * 8 - 14
 
-        ; get bits 1 and 3
-        in      r19, _SFR_IO_ADDR(IEC_PIN)  ; 1
-        bst     r19, IEC_PIN_DATA       ; 1
-        bld     r24, 1                  ; 1
-        bst     r19, IEC_PIN_CLOCK      ; 1
-        bld     r24, 3                  ; 1
+        ; get bits 1,3 @ 0,2 - changes r19
+        rcall   get_bits_from_clk_data  ; 4 + 8 r24 = .76543.1
+        lsl     r24                     ; 1     r24 = 76543.1.
 
         ; 10 us later...
-        delay_cycles 10 * 8 - 5
+        delay_cycles 10 * 8 - 13
 
-        ; get bits 0 and 2
-        in      r19, _SFR_IO_ADDR(IEC_PIN)  ; 1
-        bst     r19, IEC_PIN_DATA       ; 1
-        bld     r24, 0                  ; 1
-        bst     r19, IEC_PIN_CLOCK      ; 1
-        bld     r24, 2                  ; 1
+        ; get bits 0,2 @ 0,2 - changes r19
+        rcall   get_bits_from_clk_data  ; 4 + 8 r24 = 76543210
 
         ; Pull DATA down
         sbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA
@@ -718,7 +718,6 @@ dreamload_get_command:
         ;;
         .global dreamload_get_byte
 dreamload_get_byte:
-        clr     r24     ; clear return value
 
         ldi     r18, 4  ; 4 * 2 bits to load
 dl_bitloop:
@@ -766,32 +765,23 @@ dreamload_get_command_old:
         ;; Receive a byte using the old DreamLoad protocol
         ;;
 dreamload_get_byte_old:
-        clr     r24
-
         ; 2 nibbles
         ldi     r18, 2
 dlgb_nibble:
-        swap    r24
-        rcall   wait_atn_low
+        swap    r24                     ; 2nd loop: r24 = 7654....
+        lsr     r24                     ; 2nd loop: r24 = .7654...
 
-        ; get bits 1, 3 (or 5, 7)
-        in      r19, _SFR_IO_ADDR(IEC_PIN)
-        bst     r19, IEC_PIN_DATA
-        bld     r24, 1
-        bst     r19, IEC_PIN_CLOCK
-        bld     r24, 3
+        rcall   wait_atn_low
+        ; 1st: get bits 5,7 @ 0,2 / 2nd: get bits 1,3 @ 0,2 - changes r19
+        rcall   get_bits_from_clk_data  ; 1st: r24 = .....7.5 / 2nd: .76543.1
+        lsl     r24                     ; 1st: r24 = ....7.5. / 2nd: 76543.1.
 
         rcall   wait_atn_high
-
-        ; get bits 0, 2 (or 4, 6)
-        in      r19, _SFR_IO_ADDR(IEC_PIN)
-        bst     r19, IEC_PIN_DATA
-        bld     r24, 0
-        bst     r19, IEC_PIN_CLOCK
-        bld     r24, 2
+        ; 1st: get bits 4,6 @ 0,2 / 2nd: get bits 0,2 @ 0,2 - changes r19
+        rcall   get_bits_from_clk_data  ; 1st: r24 = ....7654 / 2nd: 76543210
 
         dec     r18
-        brne     dlgb_nibble
+        brne    dlgb_nibble
 
         com     r24     ; negate all bits
         ret
@@ -811,12 +801,12 @@ dreamload_send_byte:
 dsb_bitloop:
         ; send r0[0,1] to CLOCK and DATA, shift r0 right two times
         ; changes r19
-        rcall   sent_bits_to_clk_data
+        rcall   send_bits_to_clk_data
         rcall   wait_atn_low
 
         ; send r0[0,1] to CLOCK and DATA, shift r0 right two times
         ; changes r19
-        rcall   sent_bits_to_clk_data
+        rcall   send_bits_to_clk_data
         rcall   wait_atn_high
 
         dec     r18             ; decrement bitpair counter
