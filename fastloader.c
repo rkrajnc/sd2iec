@@ -314,6 +314,16 @@ void load_dreamload(void) {
       if (key_pressed(KEY_NEXT | KEY_PREV | KEY_HOME)) {
         change_disk();
       }
+      if (key_pressed(KEY_SLEEP)) {
+        BUSY_LED_OFF();
+        DIRTY_LED_ON();
+        /* Wait for the "NEXT" event created by releasing the button */
+        while (!key_pressed(KEY_NEXT)) ;
+        reset_key(0xff);
+        fl_track = 0;
+        fl_sector = 0;
+        break;
+      }
     }
 
     BUSY_LED_ON();
@@ -322,6 +332,7 @@ void load_dreamload(void) {
       // check special commands first
       if (fl_sector == 0) {
         // end loader
+        BUSY_LED_OFF();
         break;
       } else if (fl_sector == 1) {
         // command: load first sector of directory

@@ -283,9 +283,10 @@ Software fastloaders:
   Dreamload uses direct track/sector access, so it is only supported
   on D41 or similiar disk image formats. As sd2iec has to wait for commands
   from the C64 constantly the disk change buttons may become unresponsive,
-  try multiple times if you need to. If the C64 software doesn't send the
-  "Quit loader" command to the drive sd2iec will not resume normal operation,
-  reset the microcontroller by power-cycling or an external reset button.
+  try multiple times if you need to. Dreamload is a "captive" fastloader,
+  sd2iec stay in Dreamload mode until it receives a "quit loader" command
+  from the C64. To force sd2iec to resume normal operation, hold the disk
+  change button until the red LED turns on (just like sleep mode).
 
   Please note that Dreamload does not work with more than one device on the
   serial bus due to the way it uses the ATN line.
