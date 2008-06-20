@@ -390,6 +390,10 @@ static uint8_t iec_listen_handler(const uint8_t cmd) {
       /* Mark buffer for flushing if position wrapped */
       if (buf->position == 0)
         buf->mustflush = 1;
+
+      /* REL files must be syncronized on EOI */
+      if(buf->recordlen && (iec_data.iecflags & EOI_RECVD))
+        buf->refill(buf);
     }
   }
 }
@@ -477,7 +481,7 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
       }
     } while (buf->position++ < buf->lastused);
 
-    if (buf->sendeoi && (cmd & 0x0f) != 0x0f)
+    if (buf->sendeoi && (cmd & 0x0f) != 0x0f && !buf->recordlen)
       break;
 
     if (buf->refill(buf)) {

@@ -506,6 +506,7 @@ scandone:
 void file_open(uint8_t secondary) {
   buffer_t *buf;
   uint8_t i = 0;
+  uint8_t recordlen = 0;
 
   /* Assume everything will go well unless proven otherwise */
   set_error(ERROR_OK);
@@ -584,30 +585,12 @@ void file_open(uint8_t secondary) {
 
     case 'L': /* REL */
       filetype = TYPE_REL;
+      mode = OPEN_WRITE;
       if((ptr = ustrchr(ptr, ',')))
-        ;//recordlen = *(++ptr);
+        recordlen = *(++ptr);
       i = 2;  // stop the scan
       break;
     }
-  }
-
-  /* Force mode for secondaries 0/1 */
-  switch (secondary) {
-  case 0:
-    mode = OPEN_READ;
-    if (filetype == TYPE_DEL)
-      filetype = TYPE_PRG;
-    break;
-
-  case 1:
-    mode = OPEN_WRITE;
-    if (filetype == TYPE_DEL)
-      filetype = TYPE_PRG;
-    break;
-
-  default:
-    if (filetype == TYPE_DEL)
-      filetype = TYPE_SEQ;
   }
 
   /* Parse path+partition numbers */
@@ -638,6 +621,42 @@ void file_open(uint8_t secondary) {
   if (res > 0)
     return;
 
+  if(res && filetype == TYPE_REL && !recordlen) {
+    set_error(ERROR_SYNTAX_UNABLE);
+    return;
+  }
+
+  /* If match found is a REL... */
+  if(!res && (dent.typeflags & TYPE_MASK) == TYPE_REL) {
+    /* requested type must be REL or DEL */
+    if(filetype != TYPE_REL && filetype != TYPE_DEL) {
+      set_error(ERROR_FILE_TYPE_MISMATCH);
+      return;
+    }
+    filetype = TYPE_REL;
+    mode = OPEN_MODIFY;
+  }
+
+
+  /* Force mode+type for secondaries 0/1 */
+  switch (secondary) {
+  case 0:
+    mode = OPEN_READ;
+    if (filetype == TYPE_DEL)
+      filetype = TYPE_PRG;
+    break;
+
+  case 1:
+    mode = OPEN_WRITE;
+    if (filetype == TYPE_DEL)
+      filetype = TYPE_PRG;
+    break;
+
+  default:
+    if (filetype == TYPE_DEL)
+      filetype = TYPE_SEQ;
+  }
+
   if (mode == OPEN_WRITE) {
     if (res == 0) {
       /* Match found */
@@ -663,12 +682,11 @@ void file_open(uint8_t secondary) {
       dent.realname[0] = 0;
       set_error(ERROR_OK); // because first_match has set FNF
     }
-  } else
-    if (res != 0) {
-      /* File not found */
-      set_error(ERROR_FILE_NOT_FOUND);
-      return;
-    }
+  } else if (res != 0) {
+    /* File not found */
+    set_error(ERROR_FILE_NOT_FOUND);
+    return;
+  }
 
   /* Grab a buffer */
   buf = alloc_buffer();
@@ -676,6 +694,11 @@ void file_open(uint8_t secondary) {
     return;
 
   buf->secondary = secondary;
+
+  if(filetype == TYPE_REL) {
+    open_rel(&path, &dent, buf, recordlen, (mode == OPEN_MODIFY));
+    return;
+  }
 
   switch (mode) {
   case OPEN_MODIFY:

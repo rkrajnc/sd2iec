@@ -423,6 +423,10 @@ static void m2i_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
   }
 }
 
+static void m2i_open_rel(path_t *path, struct cbmdirent *dent, buffer_t *buf, uint8_t length, uint8_t mode) {
+  set_error(ERROR_SYNTAX_UNABLE);
+}
+
 static uint8_t m2i_delete(path_t *path, struct cbmdirent *dent) {
   uint16_t offset;
 
@@ -484,6 +488,7 @@ static void m2i_rename(path_t *path, struct cbmdirent *dent, uint8_t *newname) {
 const PROGMEM fileops_t m2iops = {
   m2i_open_read,
   m2i_open_write,
+  m2i_open_rel,
   m2i_delete,
   m2i_getlabel,
   fat_getid,

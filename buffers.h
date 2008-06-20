@@ -39,6 +39,7 @@ typedef enum { DIR_FMT_CBM, DIR_FMT_CMD_SHORT, DIR_FMT_CMD_LONG } dirformat_t;
  * @lastused : Index to the last used byted
  * @position : Index of the byte that will be read/written next
  * @seconday : Secondary address the buffer is associated with
+ * @recordlen: Record length, if buffer points to a REL file
  * @allocated: Flags if the buffer is allocated or not
  * @mustflush: Flags if the buffer must be flushed before adding characters
  * @read     : Flags if the buffer was opened for reading
@@ -60,15 +61,20 @@ typedef struct buffer_s {
   uint8_t lastused;
   uint8_t position;
   uint8_t secondary;
+  uint8_t recordlen;
+  uint32_t fptr;
   int     allocated:1;
   int     mustflush:1;
   int     read:1;
   int     write:1;
   int     dirty:1;
   int     sendeoi:1;
+  uint8_t (*seek) (struct buffer_s *buffer, uint32_t position, uint8_t index);
   uint8_t (*refill)(struct buffer_s *buffer);
   uint8_t (*cleanup)(struct buffer_s *buffer);
-
+  struct {  // this really should go as with FIL below as a structure in pvt.
+    uint8_t headersize; // offset to start of file data, useful for 'P' CMD.
+  } fat;
   /* private: */
   union {
     struct {

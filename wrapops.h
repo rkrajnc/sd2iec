@@ -40,6 +40,7 @@
  * struct fileops_t - function pointers to file operations
  * @open_read   : open a file for reading
  * @open_write  : open a file for writing/appending
+ * @open_rel    : open a relative file
  * @file_delete : delete a file
  * @disk_label  : read disk label
  * @disk_id     : read disk id
@@ -61,6 +62,7 @@
 typedef struct fileops_s {
   void     (*open_read)(path_t *path, struct cbmdirent *name, buffer_t *buf);
   void     (*open_write)(path_t *path, struct cbmdirent *name, uint8_t type, buffer_t *buf, uint8_t append);
+  void     (*open_rel)(path_t *path, struct cbmdirent *name, buffer_t *buf, uint8_t recordlen, uint8_t mode);
   uint8_t  (*file_delete)(path_t *path, struct cbmdirent *name);
   uint8_t  (*disk_label)(path_t *path, uint8_t *label);
   uint8_t  (*disk_id)(uint8_t part, uint8_t *id);
@@ -81,6 +83,7 @@ typedef struct fileops_s {
 /* Wrappers to make the indirect calls look like normal functions */
 #define open_read(path,name,buf) ((pgmcall(partition[(path)->part].fop->open_read))(path,name,buf))
 #define open_write(path,name,type,buf,app) ((pgmcall(partition[(path)->part].fop->open_write))(path,name,type,buf,app))
+#define open_rel(path,name,buf,len,mode) ((pgmcall(partition[(path)->part].fop->open_rel))(path,name,buf,len,mode))
 #define file_delete(path,name) ((pgmcall(partition[(path)->part].fop->file_delete))(path,name))
 #define disk_label(path,label) ((pgmcall(partition[(path)->part].fop->disk_label))(path,label))
 #define disk_id(drv,id) ((pgmcall(partition[drv].fop->disk_id))(drv,id))

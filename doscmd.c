@@ -568,6 +568,45 @@ void parse_new(void) {
   format(part, name, id);
 }
 
+/* -------------- */
+/*  P - Position  */
+/* -------------- */
+void parse_position(void) {
+  buffer_t *buf;
+  uint8_t hi = 0, lo, pos;
+
+  if(command_length < 2 || (buf = find_buffer(command_buffer[1] & 0x5f)) == NULL) {
+    set_error(ERROR_NO_CHANNEL);
+    return;
+  }
+
+  lo = pos = (buf->recordlen? 1:0); // REL file start indexes at one.
+
+  if(command_length > 1)
+    lo = command_buffer[2];
+  if(command_length > 2)
+    hi = command_buffer[3];
+  if(command_length > 3) {
+    pos = command_buffer[4];
+    if(buf->recordlen && pos >= buf->recordlen) {
+      set_error(ERROR_RECORD_OVERFLOW);
+      return;
+    }
+  }
+
+  if (buf->seek == NULL) {
+    set_error(ERROR_SYNTAX_UNABLE);
+    return;
+  }
+
+  if(buf->recordlen) { // REL files start indexes at 1.
+    lo--;
+    pos--;
+  }
+  buf->seek(buf,(hi * 256UL + lo) * (uint32_t)(buf->recordlen ? buf->recordlen : 256),pos);
+}
+
+
 /* ------------ */
 /*  R - Rename  */
 /* ------------ */
@@ -928,6 +967,11 @@ void parse_doscommand(void) {
   case 'N':
     /* New */
     parse_new();
+    break;
+
+  case 'P':
+    /* Position */
+    parse_position();
     break;
 
   case 'R':

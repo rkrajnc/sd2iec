@@ -604,6 +604,11 @@ static uint8_t d64_read(buffer_t *buf) {
   return 0;
 }
 
+static uint8_t d64_seek(buffer_t *buf, uint32_t position, uint8_t index) {
+  set_error(ERROR_SYNTAX_UNABLE);
+  return 1;
+}
+
 static uint8_t d64_write(buffer_t *buf) {
   uint8_t t,s,savederror;
 
@@ -834,6 +839,7 @@ static void d64_open_read(path_t *path, struct cbmdirent *dent, buffer_t *buf) {
 
   buf->read    = 1;
   buf->refill  = d64_read;
+  buf->seek    = d64_seek;
 
   buf->refill(buf);
 }
@@ -866,6 +872,7 @@ static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
       buf->mustflush = 0;
     buf->refill     = d64_write;
     buf->cleanup    = d64_write_cleanup;
+    buf->seek       = d64_seek;
     mark_write_buffer(buf);
 
     return;
@@ -947,11 +954,16 @@ static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
   buf->lastused       = 2;
   buf->cleanup        = d64_write_cleanup;
   buf->refill         = d64_write;
+  buf->seek           = d64_seek;
   buf->data[2]        = 13; /* Verified on VICE */
   buf->pvt.d64.dh     = dh.dir.d64;
   buf->pvt.d64.part   = path->part;
   buf->pvt.d64.track  = t;
   buf->pvt.d64.sector = s;
+}
+
+static void d64_open_rel(path_t *path, struct cbmdirent *dent, buffer_t *buf, uint8_t length, uint8_t mode) {
+  set_error(ERROR_SYNTAX_UNABLE);
 }
 
 static uint8_t d64_delete(path_t *path, struct cbmdirent *dent) {
@@ -1088,6 +1100,7 @@ static void d64_format(uint8_t part, uint8_t *name, uint8_t *id) {
 const PROGMEM fileops_t d64ops = {
   d64_open_read,
   d64_open_write,
+  d64_open_rel,
   d64_delete,
   d64_getlabel,
   d64_getid,
