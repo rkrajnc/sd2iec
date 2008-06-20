@@ -245,6 +245,10 @@ static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
 
   if (iec_data.iecflags & JIFFY_ACTIVE) {
     /* This is the non-load Jiffy case */
+    _delay_ms(0.2);  // This delay fixes hangs with Castle Wolfenstein.
+                     // Its length is based on experiments.
+                     // 0.1ms are not enough, moving it after the send call
+                     // doesn't work.
     if (jiffy_send(data, with_eoi, 0)) {
       check_atn();
       return -1;
@@ -305,6 +309,15 @@ static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
   do {
     if (check_atn()) return -1;
   } while (iec_pin() & IEC_BIT_DATA);
+
+  /* More stuff that's not in the original rom:
+   *   Wait for 250us or until DATA is high or ATN is low.
+   * This fixes a problem with Castle Wolfenstein.
+   * Bus traces seem to indicate that a real 1541 needs
+   * about 350us between two bytes, sd2iec is usually WAY faster.
+   */
+  start_timeout(TIMEOUT_US(250));
+  while (!IEC_DATA && IEC_ATN && !has_timed_out()) ;
 
   return 0;
 }
