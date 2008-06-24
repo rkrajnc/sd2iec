@@ -71,7 +71,7 @@ ISR(TIMER1_COMPA_vect) {
 
   ticks++;
 
-  if (error_blink_active) {
+  if (led_state & LED_ERROR) {
     if ((ticks & 15) == 0)
       DIRTY_LED_PORT ^= DIRTY_LED_BIT();
   }

@@ -32,7 +32,7 @@
 
 extern uint8_t current_error;
 extern uint8_t error_buffer[CONFIG_ERROR_BUFFER_SIZE];
-extern volatile uint8_t error_blink_active;
+extern volatile uint8_t led_state;
 
 
 void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector);
@@ -77,5 +77,8 @@ uint8_t set_ok_message(buffer_t *buf);
 #define ERROR_DRIVE_NOT_READY    74
 #define ERROR_PARTITION_ILLEGAL  77
 #define ERROR_IMAGE_INVALID      79
+
+#define LED_ERROR  1
+#define LED_BUSY   2
 
 #endif

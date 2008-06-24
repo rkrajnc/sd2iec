@@ -35,6 +35,7 @@
 #include "buffers.h"
 #include "diskchange.h"
 #include "eeprom.h"
+#include "errormsg.h"
 #include "fatops.h"
 #include "iec.h"
 #include "diskio.h"

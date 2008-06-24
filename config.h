@@ -294,13 +294,13 @@
 #  define DEVICE_SELECT         10
 #  define DEVICE_SELECT_SETUP() do {} while (0)
 #  define BUSY_LED_SETDDR()     DDRG  |= _BV(PG4)
-#  define BUSY_LED_ON()         PORTG |= _BV(PG4)
-#  define BUSY_LED_OFF()        PORTG &= ~_BV(PG4)
-#  define DIRTY_LED_SETDDR()    DDRG  |= _BV(PG3)
-#  define DIRTY_LED_ON()        PORTG |= _BV(PG3)
-#  define DIRTY_LED_OFF()       PORTG &= ~_BV(PG3)
+#  define BUSY_LED_ON()         do {led_state |= LED_BUSY; PORTG |= _BV(PG4); } while (0)
+#  define BUSY_LED_OFF()        do {led_state &= (uint8_t)~LED_BUSY; PORTG &= ~_BV(PG4); } while (0)
+#  define DIRTY_LED_SETDDR()    DDRG  |= _BV(PG4)
+#  define DIRTY_LED_ON()        do {led_state |= LED_ERROR; PORTG |= _BV(PG4); } while(0)
+#  define DIRTY_LED_OFF()       do {if(!(led_state & (LED_BUSY))) PORTG &= ~_BV(PG4); else PORTG |= _BV(PG4); } while (0)
 #  define DIRTY_LED_PORT        PORTG
-#  define DIRTY_LED_BIT()       _BV(PG3)
+#  define DIRTY_LED_BIT()       _BV(PG4)
 #  define AUX_LED_SETDDR()      DDRG  |= _BV(PG2)
 #  define AUX_LED_ON()          PORTG |= _BV(PG2)
 #  define AUX_LED_OFF()         PORTG &= ~_BV(PG2)
@@ -315,8 +315,6 @@
 #  define IEC_INT_VECT          INT6_vect
 #  define IEC_INT_SETUP()       do { EICRB |= _BV(ISC60); } while (0)
 #  undef  IEC_PCMSK
-/* JLB: This should really be on a INT pin, but I need to find one.  Use G1 for now. */
-/*   Only if the button is hardware-debounced, otherwise it doesn't help a bit. -ik */
 #  define BUTTON_PIN            PING
 #  define BUTTON_PORT           PORTG
 #  define BUTTON_DDR            DDRG

@@ -38,7 +38,7 @@
 
 uint8_t current_error;
 uint8_t error_buffer[CONFIG_ERROR_BUFFER_SIZE];
-volatile uint8_t error_blink_active;
+volatile uint8_t led_state;
 
 #define EC(x) x+0x80
 
@@ -231,9 +231,9 @@ void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
   if (errornum >= 20 && errornum != ERROR_DOSVERSION) {
     // FIXME: Compare to E648
     // NOTE: 1571 doesn't write the BAM and closes some buffers if an error occured
-    error_blink_active = 1;
+    led_state |= LED_ERROR;
   } else {
-    error_blink_active = 0;
+    led_state &= (uint8_t)~LED_ERROR;
     if (check_write_buf_count())
       DIRTY_LED_ON();
     else
