@@ -18,158 +18,226 @@
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 #include <inttypes.h>
+#include <util/delay.h>
 #include <avr/io.h>
 #include "config.h"
-#include "ata.h"
+
 #include "diskio.h"
 #include "uart.h"
+#include "ata.h"
 
-static uint8_t ATA_drv_flags[2];
+/*--------------------------------------------------------------------------
+
+   Module Private Functions
+
+---------------------------------------------------------------------------*/
+
+
+static DSTATUS ATA_drv_flags[2];
 
 volatile enum diskstates disk_state;
 
-#define DELAY() { asm volatile ("nop" ::); asm volatile ("nop" ::);}
-#define ATA_send_command(cmd) { ATA_write_reg(ATA_REG_COMMAND,cmd); }
-#define ATA_INIT_WAIT 0xfff80000
+#define ATA_WRITE_CMD(cmd) { ata_write_reg(ATA_REG_CMD,cmd); }
+
+/* Yes, this is a very inaccurate delay mechanism, but this interface only
+ * uses it for timeout that will cause a fatal error, so it should be fine.
+ * About the only downside is a possible additional delay if a drive is not
+ * present on the bus.
+ */
+
+#define DELAY_VALUE(ms) ((double)F_CPU/40000L * ms)
+#define ATA_INIT_TIMEOUT 31000  /* 31 sec */
+
+/*-----------------------------------------------------------------------*/
+/* Read an ATA register                                                  */
+/*-----------------------------------------------------------------------*/
+
+static BYTE ata_read_reg(BYTE reg) {
+  BYTE data;
+
+  ATA_PORT_CTRL_OUT = reg;
+  ATA_PORT_CTRL_OUT &= (BYTE)~ATA_PIN_RD;
+  ATA_PORT_CTRL_OUT &= (BYTE)~ATA_PIN_RD;
+  ATA_PORT_CTRL_OUT &= (BYTE)~ATA_PIN_RD;
+  data = ATA_PORT_DATA_LO_IN;
+  ATA_PORT_CTRL_OUT |= ATA_PIN_RD;
+  return data;
+}
+
+
+/*-----------------------------------------------------------------------*/
+/* Write a byte to an ATA register                                       */
+/*-----------------------------------------------------------------------*/
+
+static void ata_write_reg(BYTE reg, BYTE data) {
+  ATA_PORT_DATA_LO_DDR = 0xff;            /* bring to output */
+  ATA_PORT_DATA_LO_OUT = data;
+  ATA_PORT_CTRL_OUT = reg;
+  ATA_PORT_CTRL_OUT &= (BYTE)~ATA_PIN_WR;
+  ATA_PORT_CTRL_OUT &= (BYTE)~ATA_PIN_WR; /* delay */
+  ATA_PORT_CTRL_OUT |= ATA_PIN_WR;
+  ATA_PORT_DATA_LO_OUT = 0xff;
+  ATA_PORT_DATA_LO_DDR = 0x00;            /* bring to input */
+}
+
+
+/*-----------------------------------------------------------------------*/
+/* Wait for Data Ready                                                   */
+/*-----------------------------------------------------------------------*/
+
+static BOOL ata_wait_data(void) {
+  BYTE s;
+  DWORD i = DELAY_VALUE(1000);
+  do {
+    if(!--i) return FALSE;
+    s=ata_read_reg(ATA_REG_STATUS);
+  } while((s & (ATA_STATUS_BSY | ATA_STATUS_DRQ)) != ATA_STATUS_DRQ && !(s & ATA_STATUS_ERR));
+  //} while((s&ATA_STATUS_BSY)!= 0 && (s&ATA_STATUS_ERR)==0 && (s & (ATA_STATUS_DRDY | ATA_STATUS_DRQ)) != (ATA_STATUS_DRDY | ATA_STATUS_DRQ));
+  if(s & ATA_STATUS_ERR)
+    return FALSE;
+
+  ata_read_reg(ATA_REG_ALTSTAT);
+  return TRUE;
+}
+
+
+/*-----------------------------------------------------------------------*/
+/* Wait for Busy Low                                                     */
+/*-----------------------------------------------------------------------*/
+
+static BOOL ata_wait_busy(void) {
+  BYTE s;
+  DWORD i = DELAY_VALUE(1000);
+  do {
+    if(!--i) return FALSE;
+    s=ata_read_reg(ATA_REG_STATUS);
+  } while(s & ATA_STATUS_BSY);
+  if (s & ATA_STATUS_ERR) return FALSE;
+  return TRUE;
+}
+
+
+static void ata_select_sector(BYTE drv, DWORD sector, BYTE count) {
+  if(ATA_drv_flags[drv] & STA_48BIT) {
+    ata_write_reg (ATA_REG_COUNT, 0);
+    ata_write_reg (ATA_REG_COUNT, count);
+    ata_write_reg (ATA_REG_LBA0, (uint8_t)(sector >> 24));
+    ata_write_reg (ATA_REG_LBA0, (uint8_t)sector);
+    ata_write_reg (ATA_REG_LBA1, 0);
+    ata_write_reg (ATA_REG_LBA1, (uint8_t)(sector >> 16));
+    ata_write_reg (ATA_REG_LBA2, 0);
+    ata_write_reg (ATA_REG_LBA2, (uint8_t)(sector >> 8));
+    ata_write_reg (ATA_REG_LBA3, ATA_LBA3_LBA
+                                 | (drv ? ATA_DEV_SLAVE : ATA_DEV_MASTER));
+  } else {
+    ata_write_reg(ATA_REG_COUNT, count);
+    ata_write_reg(ATA_REG_LBA0, (BYTE)sector);
+    ata_write_reg(ATA_REG_LBA1, (BYTE)(sector >> 8));
+    ata_write_reg(ATA_REG_LBA2, (BYTE)(sector >> 16));
+    ata_write_reg(ATA_REG_LBA3, ((BYTE)(sector >> 24) & 0x0F)
+                                | ATA_LBA3_LBA
+                                | ( drv ? ATA_DEV_SLAVE : ATA_DEV_MASTER));
+  }
+}
+
+
+/*-----------------------------------------------------------------------*/
+/* Read a part of data block                                             */
+/*-----------------------------------------------------------------------*/
+
+static void ata_read_part (BYTE *buff, BYTE ofs, BYTE count) {
+  BYTE c = 0, dl, dh;
+
+  ATA_PORT_CTRL_OUT = ATA_REG_DATA;          /* Select Data register */
+  do {
+    ATA_PORT_CTRL_OUT &= (BYTE)~ATA_PIN_RD;  /* IORD = L */
+    ATA_PORT_CTRL_OUT &= (BYTE)~ATA_PIN_RD;  /* delay */
+    dl = ATA_PORT_DATA_LO_IN;                /* Read even data */
+    dh = ATA_PORT_DATA_HI_IN;                /* Read odd data */
+    ATA_PORT_CTRL_OUT |= ATA_PIN_RD;         /* IORD = H */
+    if (count && (c >= ofs)) {               /* Pick up a part of block */
+      *buff++ = dl;
+      *buff++ = dh;
+      count--;
+    }
+  } while (++c);
+  ata_read_reg(ATA_REG_ALTSTAT);
+  ata_read_reg(ATA_REG_STATUS);
+}
+
+/*--------------------------------------------------------------------------
+
+   Public Functions
+
+---------------------------------------------------------------------------*/
+
+void reset_disk(void) {
+  ATA_PORT_CTRL_OUT = (BYTE)~ATA_PIN_RESET;
+  // wait a bit for the drive to reset.
+  _delay_ms(1);
+  ATA_PORT_CTRL_OUT |= ATA_PIN_RESET;
+}
 
 void init_disk(void) {
   disk_state=DISK_OK;
   ATA_drv_flags[0]=STA_NOINIT;
   ATA_drv_flags[1]=STA_NOINIT;
-  ATA_PORT_CTRL_OUT=ATA_REG_IDLE;
-  ATA_PORT_CTRL_DDR=ATA_REG_IDLE;
-  ATA_PORT_RESET_DDR |= ATA_PIN_RESET;
-  uint8_t i=0;
-  ATA_PORT_RESET_OUT &= (uint8_t)~ATA_PIN_RESET;
-  ATA_PORT_CTRL_OUT=ATA_REG_IDLE; // bring active low lines high
-  // wait a bit for the drive to reset.
-  while((++i))
-    DELAY();
-  ATA_PORT_RESET_OUT |= ATA_PIN_RESET;
+
+  /* Initialize the ATA control port */
+  ATA_PORT_CTRL_OUT=0xff;
+  ATA_PORT_CTRL_DDR=0xff;
 }
 
-uint8_t ATA_read_reg(uint8_t reg) {
-  uint8_t data;
 
-  ATA_PORT_CTRL_OUT=reg ;
-  ATA_PORT_CTRL_OUT&=(uint8_t)~ATA_PIN_RD;
-  DELAY();
-  data=ATA_PORT_DATA_LO_IN;
-  ATA_PORT_CTRL_OUT|=ATA_PIN_RD;
-  return data;
-}
-
-void ATA_write_reg(uint8_t reg, unsigned char data) {
-  ATA_PORT_DATA_LO_DDR = 0xff;  // bring to output
-  ATA_PORT_DATA_LO_OUT = data;
-  ATA_PORT_CTRL_OUT = reg;
-  ATA_PORT_CTRL_OUT&=(uint8_t)~ATA_PIN_WR;
-  DELAY();
-  ATA_PORT_CTRL_OUT|=ATA_PIN_WR;
-  ATA_PORT_DATA_LO_DDR=0x00;  // bring to input
-}
-
-void ATA_read_data(unsigned char* data, uint8_t offset, uint8_t dlen) {
-  uint8_t i=0,l,h;
-  
-  ATA_PORT_CTRL_OUT=ATA_REG_DATA;
-  do {
-    ATA_PORT_CTRL_OUT&=(uint8_t)~ATA_PIN_RD;
-    DELAY();
-    l=ATA_PORT_DATA_LO_IN;
-    h=ATA_PORT_DATA_HI_IN;
-    ATA_PORT_CTRL_OUT|=ATA_PIN_RD;
-    if(dlen && i>=offset) {
-      *data++=l;
-      *data++=h;
-      dlen--;
-    }
-  } while (++i);
-}
-
-uint8_t ATA_drq(void) {
-  // check for DRQ hi or ERR hi
-  uint8_t status;
-  do {
-      status=ATA_read_reg(ATA_REG_STATUS);
-  } while((status&ATA_STATUS_BSY)!= 0 && (status&ATA_STATUS_ERR)==0 && (status & (ATA_STATUS_RDY | ATA_STATUS_DRQ)) != (ATA_STATUS_RDY | ATA_STATUS_DRQ));
-  return status;
-}
-
-uint8_t ATA_bsy(void) {
-  // check for BSY lo
-  uint8_t status;
-  do {
-      status=ATA_read_reg(ATA_REG_STATUS);
-  } while((status&ATA_STATUS_BSY)!=0);
-  return status;
-}
-
-void ATA_select_sector(uint8_t drv, uint32_t sec, uint8_t count) {
-  if(ATA_drv_flags[drv]&ATA_FL_48BIT) {
-    ATA_write_reg (ATA_REG_SECCNT, 0);
-    ATA_write_reg (ATA_REG_SECCNT, count);
-
-    ATA_write_reg (ATA_REG_LBA0, (uint8_t)(sec>>24));
-    ATA_write_reg (ATA_REG_LBA0, (uint8_t)sec);
-    
-    ATA_write_reg (ATA_REG_LBA1,0);
-    ATA_write_reg (ATA_REG_LBA1, (uint8_t)(sec>>16));
-    
-    ATA_write_reg (ATA_REG_LBA2,0);
-    ATA_write_reg (ATA_REG_LBA2, (uint8_t)(sec>>8));
-    
-    ATA_write_reg (ATA_REG_LBA3, 0xe0 | (drv?ATA_DEV_SLAVE:ATA_DEV_MASTER));
-  } else {
-    ATA_write_reg (ATA_REG_SECCNT, count);
-    ATA_write_reg (ATA_REG_LBA0, (uint8_t)sec);
-    ATA_write_reg (ATA_REG_LBA1, (uint8_t)(sec>>8));
-    ATA_write_reg (ATA_REG_LBA2, (uint8_t)(sec>>16));
-    ATA_write_reg (ATA_REG_LBA3, 0xe0 | (drv?ATA_DEV_SLAVE:ATA_DEV_MASTER) | ((sec>>24)&0x0f));
-  }
-}
+/*-----------------------------------------------------------------------*/
+/* Initialize Disk Drive                                                 */
+/*-----------------------------------------------------------------------*/
 
 DSTATUS disk_initialize (BYTE drv) {
-  unsigned char data[(83-49+1)*2];
-  uint32_t i=ATA_INIT_WAIT;
-  uint8_t status;
+  BYTE data[(83 - 49 + 1) * 2];
+  DWORD i = DELAY_VALUE(ATA_INIT_TIMEOUT);
   
   if(drv>1) return STA_NOINIT;
-  if(ATA_drv_flags[drv]&STA_NODISK)
-    return STA_NOINIT; // cannot initialize a drive with no disk in it.
+  if(ATA_drv_flags[drv] & STA_NODISK) return STA_NOINIT; // cannot initialize a drive with no disk in it.
   // we need to set the drive.
-  ATA_write_reg (ATA_REG_LBA3, 0xe0 | (drv?ATA_DEV_SLAVE:ATA_DEV_MASTER));
-  // we should set a timeout on bsy();
-  //ATA_rdy();
-  // check for RDY hi.
+  ata_write_reg (ATA_REG_LBA3, ATA_LBA3_LBA | (drv ? ATA_DEV_SLAVE : ATA_DEV_MASTER));
   do {
-      status=ATA_read_reg(ATA_REG_STATUS);
-  } while((status&ATA_STATUS_RDY)==0 && (++i));
-  if(status&ATA_STATUS_RDY) {
-    i=ATA_INIT_WAIT;
-    do {
-        status=ATA_read_reg(ATA_REG_STATUS);
-    } while((status&ATA_STATUS_BSY)!=0 && (++i));
-    if(!(status&ATA_STATUS_BSY)) {
-      //ATA_write_reg (ATA_REG_FEATURES, 3); /* set PIO mode 0 */ 
-      //ATA_write_reg (ATA_REG_SECCNT, 1);
-      //ATA_send_command (ATA_CMD_FEATURES);
-      ATA_send_command(ATA_CMD_IDENTIFY);
-      if(!(ATA_drq()&ATA_STATUS_ERR)) {
-        ATA_read_data(data,49,83-49+1);
-        if((data[1] & 0x02)) { /* LBA support */
-          if(data[(83-49)*2 + 1]&0x04) /* 48 bit addressing... */
-            ATA_drv_flags[drv] |= ATA_FL_48BIT;
-          ATA_drv_flags[drv]&=(uint8_t)~STA_NOINIT;
-          return ATA_drv_flags[drv]&STA_NOINIT;
-        }
-      }
-    }
-  }
-  ATA_drv_flags[drv]|=STA_NODISK; // no disk in drive
-  return ATA_drv_flags[drv]&STA_NOINIT;
+    if (!--i) goto di_error;
+  //} while (!(ata_read_reg(ATA_REG_STATUS) & (ATA_STATUS_BSY | ATA_STATUS_DRQ)));
+  } while ((ata_read_reg(ATA_REG_STATUS) & (ATA_STATUS_BSY | ATA_STATUS_DRDY)) == ATA_STATUS_BSY);
+
+  ata_write_reg(ATA_REG_DEVCTRL, ATA_DEVCTRL_SRST | ATA_DEVCTRL_NIEN);  /* Software reset */
+  _delay_ms(20);
+  ata_write_reg(ATA_REG_DEVCTRL, ATA_DEVCTRL_NIEN);
+  _delay_ms(20);
+  i = DELAY_VALUE(ATA_INIT_TIMEOUT);
+  do {
+    if (!--i) goto di_error;
+  } while ((ata_read_reg(ATA_REG_STATUS) & (ATA_STATUS_DRDY|ATA_STATUS_BSY)) != ATA_STATUS_DRDY);
+
+  ata_write_reg (ATA_REG_FEATURES, 3); /* set PIO mode 0 */
+  ata_write_reg (ATA_REG_COUNT, 1);
+  ATA_WRITE_CMD (ATA_CMD_SETFEATURES);
+  if (!ata_wait_busy()) goto di_error; /* Wait cmd ready */
+  ATA_WRITE_CMD(ATA_CMD_IDENTIFY);
+  if(!ata_wait_data()) goto di_error;
+  ata_read_part(data, 49, 83 - 49 + 1);
+  if(!(data[1] & 0x02)) goto di_error; /* No LBA support */
+  if(data[(83 - 49) * 2 + 1] & 0x04)   /* 48 bit addressing... */
+    ATA_drv_flags[drv] |= STA_48BIT;
+  ATA_drv_flags[drv] &= (BYTE)~( STA_NOINIT | STA_NODISK);
+
+  return ATA_drv_flags[drv] & STA_NOINIT;
+
+di_error:
+  ATA_drv_flags[drv]|=(STA_NOINIT | STA_NODISK); // no disk in drive
+  return ATA_drv_flags[drv] & STA_NOINIT;
 }
 
+
+/*-----------------------------------------------------------------------*/
+/* Return Disk Status                                                    */
+/*-----------------------------------------------------------------------*/
 
 DSTATUS disk_status (BYTE drv) {
   if(drv>1)
@@ -178,63 +246,101 @@ DSTATUS disk_status (BYTE drv) {
 }
 
 
-DRESULT disk_read (BYTE drv, BYTE* data, DWORD sec, BYTE count) {
-  uint8_t i=0;
-  
-  if (drv>1 || !count) return RES_PARERR;
+/*-----------------------------------------------------------------------*/
+/* Read Sector(s)                                                        */
+/*-----------------------------------------------------------------------*/
+
+DRESULT disk_read (BYTE drv, BYTE *data, DWORD sector, BYTE count) {
+  BYTE c, iord_l, iord_h;
+
+  if (drv > 1 || !count) return RES_PARERR;
   if (ATA_drv_flags[drv] & STA_NOINIT) return RES_NOTRDY;
-  
-  ATA_bsy();
-  ATA_select_sector(drv, sec, count);
-  ATA_send_command((ATA_drv_flags[drv]&ATA_FL_48BIT?ATA_CMD_READ_EXT:ATA_CMD_READ));
-  ATA_drq();
-  ATA_PORT_CTRL_OUT=ATA_REG_DATA;
+
+  /* Issue Read Sector(s) command */
+  ata_select_sector(drv, sector, count);
+  ATA_WRITE_CMD(ATA_drv_flags[drv] & STA_48BIT ? ATA_CMD_READ_EXT : ATA_CMD_READ);
+
+  iord_h = ATA_REG_DATA;
+  iord_l = ATA_REG_DATA & (BYTE)~ATA_PIN_RD;
   do {
-    ATA_PORT_CTRL_OUT&=(uint8_t)~ATA_PIN_RD;
-    DELAY();
-    *data++=ATA_PORT_DATA_LO_IN;
-    *data++=ATA_PORT_DATA_HI_IN;
-    ATA_PORT_CTRL_OUT|=ATA_PIN_RD;
-  } while (++i);
+    if (!ata_wait_data()) return RES_ERROR; /* Wait data ready */
+    ATA_PORT_CTRL_OUT = ATA_REG_DATA;
+    c = 0;
+    do {
+      ATA_PORT_CTRL_OUT = iord_l;       /* IORD = L */
+      ATA_PORT_CTRL_OUT = iord_l;       /* delay */
+      ATA_PORT_CTRL_OUT = iord_l;       /* delay */
+      ATA_PORT_CTRL_OUT = iord_l;       /* delay */
+      ATA_PORT_CTRL_OUT = iord_l;       /* delay */
+      *data++ = ATA_PORT_DATA_LO_IN;    /* Get even data */
+      *data++ = ATA_PORT_DATA_HI_IN;    /* Get odd data */
+      ATA_PORT_CTRL_OUT = iord_h;       /* IORD = H */
+      ATA_PORT_CTRL_OUT = iord_h;       /* delay */
+      ATA_PORT_CTRL_OUT = iord_h;       /* delay */
+      ATA_PORT_CTRL_OUT = iord_h;       /* delay */
+    } while (++c);
+  } while (--count);
+
+  ata_read_reg(ATA_REG_ALTSTAT);
+  ata_read_reg(ATA_REG_STATUS);
+
   return RES_OK;
 }
+
+
+/*-----------------------------------------------------------------------*/
+/* Write Sector(s)                                                       */
+/*-----------------------------------------------------------------------*/
 
 #if _READONLY == 0
-DRESULT disk_write (BYTE drv, const BYTE* data, DWORD sec, BYTE count) {
-  uint8_t i=0;
-  
-  ATA_bsy();
-  ATA_select_sector(drv, sec, count);
-  ATA_send_command((ATA_drv_flags[drv]&ATA_FL_48BIT?ATA_CMD_WRITE_EXT:ATA_CMD_WRITE));
-  ATA_drq();
-  ATA_PORT_CTRL_OUT=ATA_REG_DATA;
-  ATA_PORT_DATA_LO_DDR=0xff;  // bring to output
-  ATA_PORT_DATA_HI_DDR=0xff;  // bring to output
+DRESULT disk_write (BYTE drv, const BYTE *data, DWORD sector, BYTE count) {
+  BYTE c, iowr_l, iowr_h;
+
+  if (drv > 1 || !count) return RES_PARERR;
+  if (ATA_drv_flags[drv] & STA_NOINIT) return RES_NOTRDY;
+
+  /* Issue Write Setor(s) command */
+  ata_select_sector(drv,sector,count);
+  ATA_WRITE_CMD(ATA_drv_flags[drv] & STA_48BIT ? ATA_CMD_WRITE_EXT : ATA_CMD_WRITE);
+
+  iowr_h = ATA_REG_DATA;
+  iowr_l = ATA_REG_DATA & (BYTE)~ATA_PIN_WR;
   do {
-  ATA_PORT_DATA_LO_OUT=*data++;
-  ATA_PORT_DATA_HI_OUT=*data++;
-  ATA_PORT_CTRL_OUT&=(uint8_t)~ATA_PIN_WR;
-  DELAY();
-  ATA_PORT_CTRL_OUT|=ATA_PIN_WR;
-  } while (++i);
-  ATA_PORT_DATA_LO_DDR=0x00;  // bring to input
-  ATA_PORT_DATA_HI_DDR=0x00;  // bring to input
+    if (!ata_wait_data()) return RES_ERROR;
+    ATA_PORT_CTRL_OUT = ATA_REG_DATA;
+    ATA_PORT_DATA_LO_DDR = 0xff;  // bring to output
+    ATA_PORT_DATA_HI_DDR = 0xff;  // bring to output
+    c = 0;
+    do {
+      ATA_PORT_DATA_LO_OUT = *data++; /* Set even data */
+      ATA_PORT_DATA_HI_OUT = *data++; /* Set odd data */
+      ATA_PORT_CTRL_OUT = iowr_l;   /* IOWR = L */
+      ATA_PORT_CTRL_OUT = iowr_h;   /* IOWR = H */
+    } while (++c);
+  } while (--count);
+  ATA_PORT_DATA_LO_OUT = 0xff;  /* Set D0-D15 as input */
+  ATA_PORT_DATA_HI_OUT = 0xff;
+  ATA_PORT_DATA_LO_DDR = 0x00;  // bring to input
+  ATA_PORT_DATA_HI_DDR = 0x00;  // bring to input
+
+  if (!ata_wait_busy()) return RES_ERROR; /* Wait cmd ready */
+  ata_read_reg(ATA_REG_ALTSTAT);
+  ata_read_reg(ATA_REG_STATUS);
+
   return RES_OK;
 }
-#endif
+#endif /* _READONLY == 0 */
 
+
+/*-----------------------------------------------------------------------*/
+/* Miscellaneous Functions                                               */
+/*-----------------------------------------------------------------------*/
 
 #if _USE_IOCTL != 0
-DRESULT disk_ioctl (
-  BYTE drv,   /* Physical drive nmuber (0) */
-  BYTE ctrl,    /* Control code */
-  void *buff    /* Buffer to send/receive data block */
-)
-{
+DRESULT disk_ioctl (BYTE drv, BYTE ctrl, void *buff) {
   BYTE n, dl, dh, ofs, w, *ptr = buff;
 
-
-  if (drv>1) return RES_PARERR;
+  if (drv) return RES_PARERR;
   if (ATA_drv_flags[drv] & STA_NOINIT) return RES_NOTRDY;
 
   switch (ctrl) {
@@ -269,10 +375,9 @@ DRESULT disk_ioctl (
       return RES_PARERR;
   }
 
-  ATA_send_command(ATA_CMD_IDENTIFY);
-  ATA_drq();
-  //if (!wait_data()) return RES_ERROR;
-  ATA_read_data(ptr, ofs, w);
+  ATA_WRITE_CMD(ATA_CMD_IDENTIFY);
+  if (!ata_wait_data()) return RES_ERROR;
+  ata_read_part(ptr, ofs, w);
   while (n--) {
     dl = *ptr; dh = *(ptr+1);
     *ptr++ = dh; *ptr++ = dl; 
