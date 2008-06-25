@@ -302,9 +302,9 @@ static uint8_t fat_file_read(buffer_t *buf) {
 
   uart_putc('#');
 
-  buf->fptr      = buf->pvt.fh.fptr - buf->fat.headersize;
+  buf->fptr      = buf->pvt.fat.fh.fptr - buf->pvt.fat.headersize;
 
-  res = f_read(&buf->pvt.fh, buf->data+2, (buf->recordlen ? buf->recordlen : 254), &bytesread);
+  res = f_read(&buf->pvt.fat.fh, buf->data+2, (buf->recordlen ? buf->recordlen : 254), &bytesread);
   if (res != FR_OK) {
     parse_error(res,1);
     free_buffer(buf);
@@ -323,7 +323,7 @@ static uint8_t fat_file_read(buffer_t *buf) {
   if(buf->recordlen) // strip nulls from end of REL record.
     while(!buf->data[buf->lastused] && --(buf->lastused) > 1);
   if (bytesread < 254
-      || (buf->pvt.fh.fsize - buf->pvt.fh.fptr) == 0
+      || (buf->pvt.fat.fh.fsize - buf->pvt.fat.fh.fptr) == 0
       || buf->recordlen
      )
     buf->sendeoi = 1;
@@ -355,11 +355,11 @@ static uint8_t write_data(buffer_t *buf) {
   if(buf->recordlen)
     buf->lastused = buf->recordlen + 1;
 
-  res = f_write(&buf->pvt.fh, buf->data+2, buf->lastused-1, &byteswritten);
+  res = f_write(&buf->pvt.fat.fh, buf->data+2, buf->lastused-1, &byteswritten);
   if (res != FR_OK) {
     uart_putc('r');
     parse_error(res,1);
-    f_close(&buf->pvt.fh);
+    f_close(&buf->pvt.fat.fh);
     free_buffer(buf);
     return res;
   }
@@ -367,7 +367,7 @@ static uint8_t write_data(buffer_t *buf) {
   if (byteswritten != buf->lastused-1) {
     uart_putc('l');
     set_error(ERROR_DISK_FULL);
-    f_close(&buf->pvt.fh);
+    f_close(&buf->pvt.fat.fh);
     free_buffer(buf);
     return 1;
   }
@@ -376,7 +376,7 @@ static uint8_t write_data(buffer_t *buf) {
   buf->dirty     = 0;
   buf->position  = 2;
   buf->lastused  = 2;
-  buf->fptr      = buf->pvt.fh.fptr - buf->fat.headersize;
+  buf->fptr      = buf->pvt.fat.fh.fptr - buf->pvt.fat.headersize;
 
   return 0;
 }
@@ -386,11 +386,11 @@ static uint8_t fat_file_write(buffer_t *buf) {
   uint32_t fptr;
   uint32_t i = 0;
 
-  fptr = buf->pvt.fh.fsize - buf->fat.headersize;
+  fptr = buf->pvt.fat.fh.fsize - buf->pvt.fat.headersize;
 
   // on a REL file, the fptr will be be at the end of the record we just read.  Reposition.
   if(buf->fptr != fptr)
-    res = f_lseek(&buf->pvt.fh, buf->fat.headersize + buf->fptr);
+    res = f_lseek(&buf->pvt.fat.fh, buf->pvt.fat.headersize + buf->fptr);
 
   if(buf->fptr > fptr)
     i = buf->fptr - fptr;
@@ -401,7 +401,7 @@ static uint8_t fat_file_write(buffer_t *buf) {
   if(i) {
     // we need to fill bytes.
     // position to old end of file.
-    res = f_lseek(&buf->pvt.fh, buf->fat.headersize + fptr);
+    res = f_lseek(&buf->pvt.fat.fh, buf->pvt.fat.headersize + fptr);
     buf->fptr = fptr;
     buf->data[2] = (buf->recordlen?255:0);
     memset(buf->data + 3,0,253);
@@ -412,15 +412,15 @@ static uint8_t fat_file_write(buffer_t *buf) {
       if(write_data(buf))
         return 1;
     }
-    res = f_lseek(&buf->pvt.fh, buf->pvt.fh.fsize);
+    res = f_lseek(&buf->pvt.fat.fh, buf->pvt.fat.fh.fsize);
     if (res != FR_OK) {
       uart_putc('r');
       parse_error(res,1);
-      f_close(&buf->pvt.fh);
+      f_close(&buf->pvt.fat.fh);
       free_buffer(buf);
       return 1;
     }
-    buf->fptr      = buf->pvt.fh.fptr - buf->fat.headersize;
+    buf->fptr      = buf->pvt.fat.fh.fptr - buf->pvt.fat.headersize;
   }
 
   return 0;
@@ -428,13 +428,13 @@ static uint8_t fat_file_write(buffer_t *buf) {
 
 uint8_t fat_file_seek(buffer_t *buf, uint32_t position, uint8_t index) {
   FRESULT res = FR_OK;
-  uint32_t pos = position + buf->fat.headersize;
+  uint32_t pos = position + buf->pvt.fat.headersize;
 
   if(buf->dirty)
     res = fat_file_write(buf);
   if(res == FR_OK) {
-    if(buf->pvt.fh.fsize >= pos) {
-      res = f_lseek(&buf->pvt.fh, pos);
+    if(buf->pvt.fat.fh.fsize >= pos) {
+      res = f_lseek(&buf->pvt.fat.fh, pos);
       if(res == FR_OK)
         res = fat_file_read(buf);
     } else {
@@ -483,7 +483,7 @@ static uint8_t fat_file_close(buffer_t *buf) {
     buf->refill(buf);
   }
 
-  res = f_close(&buf->pvt.fh);
+  res = f_close(&buf->pvt.fat.fh);
   parse_error(res,1);
 
   if (res != FR_OK)
@@ -516,7 +516,7 @@ void fat_open_read(path_t *path, struct cbmdirent *dent, buffer_t *buf) {
     name = dent->name;
 
   partition[path->part].fatfs.curr_dir = path->fat;
-  res = f_open(&partition[path->part].fatfs,&buf->pvt.fh, name, FA_READ | FA_OPEN_EXISTING);
+  res = f_open(&partition[path->part].fatfs,&buf->pvt.fat.fh, name, FA_READ | FA_OPEN_EXISTING);
   if (res != FR_OK) {
     parse_error(res,1);
     free_buffer(buf);
@@ -526,8 +526,8 @@ void fat_open_read(path_t *path, struct cbmdirent *dent, buffer_t *buf) {
   if (dent->realname[0] && check_extension(dent->realname, &ext) == EXT_IS_X00) {
     /* It's a [PSUR]00 file, skip the header */
     /* If anything goes wrong here, refill will notice too */
-    f_lseek(&buf->pvt.fh, P00_HEADER_SIZE);
-    buf->fat.headersize = P00_HEADER_SIZE;
+    f_lseek(&buf->pvt.fat.fh, P00_HEADER_SIZE);
+    buf->pvt.fat.headersize = P00_HEADER_SIZE;
   }
 
   buf->read      = 1;
@@ -567,7 +567,7 @@ uint8_t create_file(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t
 
   partition[path->part].fatfs.curr_dir = path->fat;
   do {
-    res = f_open(&partition[path->part].fatfs, &buf->pvt.fh, name,FA_WRITE | FA_CREATE_NEW | (recordlen?FA_READ:0));
+    res = f_open(&partition[path->part].fatfs, &buf->pvt.fat.fh, name,FA_WRITE | FA_CREATE_NEW | (recordlen?FA_READ:0));
     if (res == FR_EXIST && x00ext != NULL) {
       /* File exists, increment extension */
       *x00ext += 1;
@@ -595,13 +595,13 @@ uint8_t create_file(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t
       memcpy(entrybuf+P00_CBMNAME_OFFSET, dent->name, CBM_NAME_LENGTH);
       if(recordlen)
         entrybuf[P00_RECORDLEN_OFFSET] = recordlen;
-      buf->fat.headersize = P00_HEADER_SIZE;
+      buf->pvt.fat.headersize = P00_HEADER_SIZE;
     } else if(recordlen) {
       entrybuf[0] = recordlen;
-      buf->fat.headersize = 1;
+      buf->pvt.fat.headersize = 1;
     }
-    res = f_write(&buf->pvt.fh, entrybuf, buf->fat.headersize, &byteswritten);
-    if (res != FR_OK || byteswritten != buf->fat.headersize) {
+    res = f_write(&buf->pvt.fat.fh, entrybuf, buf->pvt.fat.headersize, &byteswritten);
+    if (res != FR_OK || byteswritten != buf->pvt.fat.headersize) {
       return res;
     }
   }
@@ -626,13 +626,13 @@ void fat_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t
 
   if (append) {
     partition[path->part].fatfs.curr_dir = path->fat;
-    res = f_open(&partition[path->part].fatfs, &buf->pvt.fh, dent->realname, FA_WRITE | FA_OPEN_EXISTING);
+    res = f_open(&partition[path->part].fatfs, &buf->pvt.fat.fh, dent->realname, FA_WRITE | FA_OPEN_EXISTING);
     if (dent->realname[0] && check_extension(dent->realname, &ext) == EXT_IS_X00)
       /* It's a [PSUR]00 file */
-      buf->fat.headersize = P00_HEADER_SIZE;
+      buf->pvt.fat.headersize = P00_HEADER_SIZE;
     if (res == FR_OK)
-      res = f_lseek(&buf->pvt.fh, buf->pvt.fh.fsize);
-    buf->fptr = buf->pvt.fh.fsize - buf->fat.headersize;
+      res = f_lseek(&buf->pvt.fat.fh, buf->pvt.fat.fh.fsize);
+    buf->fptr = buf->pvt.fat.fh.fsize - buf->pvt.fat.headersize;
   } else
     res = create_file(path, dent, type, buf, 0);
 
@@ -673,14 +673,14 @@ void fat_open_rel(path_t *path, struct cbmdirent *dent, buffer_t *buf, uint8_t l
     entrybuf[0] = length;
   } else {
     partition[path->part].fatfs.curr_dir = path->fat;
-    res = f_open(&partition[path->part].fatfs, &buf->pvt.fh, dent->realname, FA_WRITE | FA_READ | FA_OPEN_EXISTING);
+    res = f_open(&partition[path->part].fatfs, &buf->pvt.fat.fh, dent->realname, FA_WRITE | FA_READ | FA_OPEN_EXISTING);
     if (res == FR_OK) {
       if (dent->realname[0] && check_extension(dent->realname, &ext) == EXT_IS_X00) {
-        res = f_lseek(&buf->pvt.fh, P00_RECORDLEN_OFFSET);
+        res = f_lseek(&buf->pvt.fat.fh, P00_RECORDLEN_OFFSET);
       }
       if(res == FR_OK)
         /* read record length */
-        res = f_read(&buf->pvt.fh, entrybuf, 1, &bytesread);
+        res = f_read(&buf->pvt.fat.fh, entrybuf, 1, &bytesread);
       if(!length)
         length = entrybuf[0];
     }
@@ -692,7 +692,7 @@ void fat_open_rel(path_t *path, struct cbmdirent *dent, buffer_t *buf, uint8_t l
     return;
   }
 
-  buf->fat.headersize = (uint8_t)buf->pvt.fh.fptr;
+  buf->pvt.fat.headersize = (uint8_t)buf->pvt.fat.fh.fptr;
   buf->recordlen  = length;
   mark_write_buffer(buf);
   buf->read      = 1;

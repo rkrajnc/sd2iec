@@ -72,9 +72,7 @@ typedef struct buffer_s {
   uint8_t (*seek) (struct buffer_s *buffer, uint32_t position, uint8_t index);
   uint8_t (*refill)(struct buffer_s *buffer);
   uint8_t (*cleanup)(struct buffer_s *buffer);
-  struct {  // this really should go as with FIL below as a structure in pvt.
-    uint8_t headersize; // offset to start of file data, useful for 'P' CMD.
-  } fat;
+
   /* private: */
   union {
     struct {
@@ -85,7 +83,10 @@ typedef struct buffer_s {
       date_t *match_start; /* Start matching date */
       date_t *match_end;   /* End matching date */
     } dir;
-    FIL fh;                /* File access via FAT */
+    struct {
+      FIL fh;              /* File access via FAT */
+      uint8_t headersize;  /* offset to start of file data */
+    } fat;
     d64fh_t d64;           /* File access on D64  */
     struct {
       uint8_t part;        /* partition number for $=P */
