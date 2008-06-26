@@ -594,20 +594,14 @@ void file_open(uint8_t secondary) {
   }
 
   /* Parse path+partition numbers */
-  uint8_t *cbuf = command_buffer;
   uint8_t *fname;
   int8_t res;
   struct cbmdirent dent;
   path_t path;
 
-  /* Check for rewrite marker */
-  if (command_buffer[0] == '@')
-    cbuf = command_buffer+1;
-  else
-    cbuf = command_buffer;
-
-  if (parse_path(cbuf, &path, &fname, 0))
-    return;
+  /* Parse path and file name */
+  if (parse_path(command_buffer, &path, &fname, 0))
+      return;
 
   /* For M2I only: Remove trailing spaces from name */
   if (partition[path.part].fop == &m2iops) {
@@ -660,7 +654,7 @@ void file_open(uint8_t secondary) {
   if (mode == OPEN_WRITE) {
     if (res == 0) {
       /* Match found */
-      if (cbuf != command_buffer) {
+      if (command_buffer[0] == '@') {
         /* Make sure there is a free buffer to open the new file later */
         if (!check_free_buffers()) {
           set_error(ERROR_NO_CHANNEL);

@@ -78,7 +78,8 @@ static uint8_t tolower_pet(uint8_t c) {
  */
 uint8_t parse_partition(uint8_t **buf) {
   uint8_t part=0;
-  while (isdigit(**buf) || **buf == ' ') {
+
+  while (isdigit(**buf) || **buf == ' ' || **buf == '@') {
     if(isdigit(**buf))
       part=part*10+(**buf-'0');
     (*buf)++;
