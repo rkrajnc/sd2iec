@@ -631,7 +631,6 @@ void file_open(uint8_t secondary) {
     mode = OPEN_MODIFY;
   }
 
-
   /* Force mode+type for secondaries 0/1 */
   switch (secondary) {
   case 0:
@@ -649,6 +648,15 @@ void file_open(uint8_t secondary) {
   default:
     if (filetype == TYPE_DEL)
       filetype = TYPE_SEQ;
+  }
+
+  /* Partial type checking (15x1 drives are stricter)    */
+  /* Just disallow loading a DEL file as a program here, */
+  /* way too many decorated directories start with a DEL */
+  /* entry that would crash the C64 without this check.  */
+  if (filetype == TYPE_PRG && !res && (dent.typeflags & TYPE_MASK) == TYPE_DEL) {
+    set_error(ERROR_FILE_TYPE_MISMATCH);
+    return;
   }
 
   if (mode == OPEN_WRITE) {
