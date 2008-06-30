@@ -71,6 +71,22 @@
 #  define OCIE2A OCIE2
 #  define OCR2A  OCR2
 
+#elif defined __AVR_ATmega1281__
+#  define RXC    RXC0
+#  define RXEN   RXEN0
+#  define TXC    TXC0
+#  define TXEN   TXEN0
+#  define UBRRH  UBRR0H
+#  define UBRRL  UBRR0L
+#  define UCSRA  UCSR0A
+#  define UCSRB  UCSR0B
+#  define UCSRC  UCSR0C
+#  define UCSZ0  UCSZ00
+#  define UCSZ1  UCSZ01
+#  define UDR    UDR0
+#  define UDRIE UDRIE0
+#  define USART_UDRE_vect USART0_UDRE_vect
+
 #else
 #  error Unknown chip!
 #endif

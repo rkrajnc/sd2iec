@@ -103,7 +103,7 @@ int main(void) {
                 : "I" (_SFR_IO_ADDR(MCUCSR))
                 : "r24"
                 );
-#elif defined __AVR_ATmega128__
+#elif defined __AVR_ATmega128__ || defined __AVR_ATmega1281__
   /* Just assume that JTAG doesn't hurt us on the m128 */
 #else
 #  error Unknown chip!

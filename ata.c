@@ -23,7 +23,6 @@
 #include "config.h"
 
 #include "diskio.h"
-#include "uart.h"
 #include "ata.h"
 
 /*--------------------------------------------------------------------------
