@@ -214,11 +214,13 @@ static void open_existing(path_t *path, struct cbmdirent *dent, uint8_t type, bu
   offset = find_entry(path->part, dent->name);
   if (offset < M2I_ENTRY_OFFSET) {
     set_error(ERROR_FILE_NOT_FOUND);
+    free_buffer(buf);
     return;
   }
 
   if (parsetype()) {
     set_error(ERROR_FILE_NOT_FOUND);
+    free_buffer(buf);
     return;
   }
 
@@ -329,13 +331,16 @@ static void m2i_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
   } else {
     if (check_invalid_name(dent->name)) {
       set_error(ERROR_SYNTAX_JOKER);
+      free_buffer(buf);
       return;
     }
 
     /* Find an empty entry */
     offset = find_empty_entry(path->part);
-    if (offset < M2I_ENTRY_OFFSET)
+    if (offset < M2I_ENTRY_OFFSET) {
+      free_buffer(buf);
       return;
+    }
 
     memset(entrybuf, ' ', sizeof(entrybuf));
     str = entrybuf;
@@ -359,6 +364,7 @@ static void m2i_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
 
     default:
       /* Unknown type - play it safe, don't create a file */
+      free_buffer(buf);
       return;
     }
 
@@ -389,8 +395,10 @@ static void m2i_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
       }
     } while (res == FR_OK);
 
-    if (res != FR_NO_FILE)
+    if (res != FR_NO_FILE) {
+      free_buffer(buf);
       return;
+    }
 
     /* Copy the CBM file name */
     nameptr = dent->name;
@@ -408,8 +416,10 @@ static void m2i_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
     entrybuf[M2I_CBMNAME_OFFSET+CBM_NAME_LENGTH+1] = 10;
 
     /* Write it */
-    if (image_write(path->part, offset, entrybuf, M2I_ENTRY_LEN, 1))
+    if (image_write(path->part, offset, entrybuf, M2I_ENTRY_LEN, 1)) {
+      free_buffer(buf);
       return;
+    }
 
     /* Write the actual file - always without P00 header */
     fat_open_write(path, dent, TYPE_RAW, buf, append);
