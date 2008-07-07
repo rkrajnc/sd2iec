@@ -587,8 +587,10 @@ static uint8_t d64_read(buffer_t *buf) {
   buf->pvt.d64.track  = buf->data[0];
   buf->pvt.d64.sector = buf->data[1];
 
-  if (checked_read(buf->pvt.d64.part, buf->data[0], buf->data[1], buf->data, 256, ERROR_ILLEGAL_TS_LINK))
+  if (checked_read(buf->pvt.d64.part, buf->data[0], buf->data[1], buf->data, 256, ERROR_ILLEGAL_TS_LINK)) {
+    free_buffer(buf);
     return 1;
+  }
 
   buf->position = 2;
 
@@ -633,17 +635,23 @@ static uint8_t d64_write(buffer_t *buf) {
   buf->data[1] = s;
 
   /* Allocate it */
-  if (allocate_sector(buf->pvt.d64.part, t, s))
+  if (allocate_sector(buf->pvt.d64.part, t, s)) {
+    free_buffer(buf);
     return 1;
-  if (bam_buffer->cleanup(bam_buffer))
+  }
+  if (bam_buffer->cleanup(bam_buffer)) {
+    free_buffer(buf);
     return 1;
+  }
 
  storedata:
   /* Store data in the already-reserved sector */
   if (image_write(buf->pvt.d64.part,
                   sector_offset(buf->pvt.d64.track,buf->pvt.d64.sector),
-                  buf->data, 256, 1))
+                  buf->data, 256, 1)) {
+    free_buffer(buf);
     return 1;
+  }
 
   buf->pvt.d64.track  = t;
   buf->pvt.d64.sector = s;
@@ -654,6 +662,7 @@ static uint8_t d64_write(buffer_t *buf) {
 
   if (savederror) {
     set_error(savederror);
+    free_buffer(buf);
     return 1;
   } else
     return 0;
@@ -856,8 +865,10 @@ static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
     while (!current_error && buf->data[0])
       buf->refill(buf);
 
-    if (current_error)
+    if (current_error) {
+      free_buffer(buf);
       return;
+    }
 
     /* Modify the buffer for writing */
     buf->pvt.d64.dh.track  = matchdh.dir.d64.track;
@@ -884,8 +895,10 @@ static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
   d64_opendir(&dh, path);
   do {
     res = nextdirentry(&dh);
-    if (res > 0)
+    if (res > 0) {
+      free_buffer(buf);
       return;
+    }
   } while (res == 0 && entrybuf[OFS_FILE_TYPE] != 0);
 
   /* Allocate a new directory sector if no empty entries were found */
@@ -893,24 +906,33 @@ static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
     t = dh.dir.d64.track;
     s = dh.dir.d64.sector;
 
-    if (get_next_sector(path->part, &dh.dir.d64.track, &dh.dir.d64.sector))
+    if (get_next_sector(path->part, &dh.dir.d64.track, &dh.dir.d64.sector)) {
+      free_buffer(buf);
       return;
+    }
 
     /* Link the old sector to the new */
     entrybuf[0] = dh.dir.d64.track;
     entrybuf[1] = dh.dir.d64.sector;
-    if (image_write(path->part, sector_offset(t,s), entrybuf, 2, 0))
+    if (image_write(path->part, sector_offset(t,s), entrybuf, 2, 0)) {
+      free_buffer(buf);
       return;
+    }
 
-    allocate_sector(path->part, dh.dir.d64.track, dh.dir.d64.sector);
+    if (allocate_sector(path->part, dh.dir.d64.track, dh.dir.d64.sector)) {
+      free_buffer(buf);
+      return;
+    }
 
     /* Clear the new directory sector */
     memset(entrybuf, 0, 32);
     entrybuf[1] = 0xff;
     for (uint8_t i=0;i<256/32;i++) {
       if (image_write(path->part, sector_offset(dh.dir.d64.track, dh.dir.d64.sector)+32*i,
-                      entrybuf, 32, 0))
+                      entrybuf, 32, 0)) {
+        free_buffer(buf);
         return;
+      }
 
       entrybuf[1] = 0;
     }
@@ -934,19 +956,29 @@ static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
   entrybuf[OFS_FILE_TYPE] = type;
 
   /* Find a free sector and allocate it */
-  if (get_first_sector(path->part,&t,&s))
+  if (get_first_sector(path->part,&t,&s)) {
+    free_buffer(buf);
     return;
+  }
 
   entrybuf[OFS_TRACK]  = t;
   entrybuf[OFS_SECTOR] = s;
-  allocate_sector(path->part,t,s);
-  if (bam_buffer->cleanup(bam_buffer))
+
+  if (allocate_sector(path->part,t,s)) {
+    free_buffer(buf);
     return;
+  }
+  if (bam_buffer->cleanup(bam_buffer)) {
+    free_buffer(buf);
+    return;
+  }
 
   /* Write the directory entry */
   if (image_write(path->part, sector_offset(dh.dir.d64.track,dh.dir.d64.sector)+
-                  dh.dir.d64.entry*32, entrybuf, 32, 1))
+                  dh.dir.d64.entry*32, entrybuf, 32, 1)) {
+    free_buffer(buf);
     return;
+  }
 
   /* Prepare the data buffer */
   mark_write_buffer(buf);
