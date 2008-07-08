@@ -58,7 +58,10 @@ PROGMEM struct tm defaultdate = {
 
 rtcstate_t rtc_state;
 
-#define bcd2dec(x) (((x) & 0x0f) + 10*((x)>>4))
+/* Convert a one-byte BCD value to a normal integer */
+static uint8_t bcd2int(uint8_t value) {
+  return (value & 0x0f) + 10*(value >> 4);
+}
 
 /* Internal function to read the time from the RTC */
 /* Will auto-adjust the stored year if required */
@@ -76,12 +79,12 @@ static void read_time(struct tm *time) {
   if (i2c_read_registers(PCF8583_ADDR, REG_SECONDS, 5, &tmp))
     return;
 
-  time->tm_sec  = bcd2dec(tmp.bytes[0]);
-  time->tm_min  = bcd2dec(tmp.bytes[1]);
-  time->tm_hour = bcd2dec(tmp.bytes[2]);
-  time->tm_mday = bcd2dec(tmp.bytes[3] & 0b00111111);
-  time->tm_mon  = bcd2dec(tmp.bytes[4] & 0b00011111);
-  time->tm_wday = bcd2dec(tmp.bytes[4] >> 5);
+  time->tm_sec  = bcd2int(tmp.bytes[0]);
+  time->tm_min  = bcd2int(tmp.bytes[1]);
+  time->tm_hour = bcd2int(tmp.bytes[2]);
+  time->tm_mday = bcd2int(tmp.bytes[3] & 0b00111111);
+  time->tm_mon  = bcd2int(tmp.bytes[4] & 0b00011111);
+  time->tm_wday = bcd2int(tmp.bytes[4] >> 5);
   
   /* Check for year rollover */
   tmp.bytes[4] = tmp.bytes[3] >> 6;
