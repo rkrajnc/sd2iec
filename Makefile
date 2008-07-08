@@ -92,6 +92,11 @@ ifneq ($(CONFIG_JIFFY_ASM),y)
   SRC += jiffy.c
 endif
 
+# No hardware I2C module yet
+ifeq ($(CONFIG_RTC),y)
+  SRC += softi2c.c pcf8583.c
+endif
+
 # List Assembler source files here.
 #     Make them always end in a capital .S.  Files ending in a lowercase .s
 #     will not be considered source files but generated files (assembler

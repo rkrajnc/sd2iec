@@ -119,3 +119,6 @@ CONFIG_STACK_TRACKING=n
 
 # Maximum number of partitions
 CONFIG_MAX_PARTITIONS=2
+
+# Use an RTC? Software I2C PCF8583 only for now.
+CONFIG_RTC=n

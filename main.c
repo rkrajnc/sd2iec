@@ -40,6 +40,7 @@
 #include "iec.h"
 #include "diskio.h"
 #include "ff.h"
+#include "rtc.h"
 #include "timer.h"
 #include "uart.h"
 
@@ -120,6 +121,7 @@ int main(void) {
   init_buffers();
   init_timer();
   init_iec();
+  init_rtc();
   init_disk();
   init_fatops(0);
   init_change();

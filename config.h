@@ -177,6 +177,13 @@
 /* If you don't have/need this button, define it as 0. */
 #  define BUTTON_PREV _BV(PC3)
 
+/* Software I2C lines for the RTC */
+#  define SOFTI2C_PORT    PORTC
+#  define SOFTI2C_PIN     PINC
+#  define SOFTI2C_DDR     DDRC
+#  define SOFTI2C_BIT_SCL PC4
+#  define SOFTI2C_BIT_SDA PC5
+#  define SOFTI2C_DELAY   20
 
 
 /* Pre-configurated hardware variants */
@@ -380,6 +387,12 @@
 #  define BUTTON_MASK           (_BV(PC2)|_BV(PC3))
 #  define BUTTON_NEXT           _BV(PC3)
 #  define BUTTON_PREV           _BV(PC2)
+#  define SOFTI2C_PORT          PORTC
+#  define SOFTI2C_PIN           PINC
+#  define SOFTI2C_DDR           DDRC
+#  define SOFTI2C_BIT_SCL       PC4
+#  define SOFTI2C_BIT_SDA       PC5
+#  define SOFTI2C_DELAY         20
 
 #  ifdef CONFIG_TWINSD
 /* Support for multiple SD cards */
