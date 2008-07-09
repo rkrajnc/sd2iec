@@ -755,6 +755,10 @@ void parse_timewrite(void) {
 
   switch (command_buffer[3]) {
   case 'A': /* ASCII format */
+    if (command_length < 27) { // Allow dropping the AM/PM marker for 24h format
+      set_error(ERROR_SYNTAX_UNABLE);
+      return;
+    }
     for (i=0;i<7;i++) {
       if (memcmp_P(command_buffer+4, downames + 4*i, 4) == 0)
         break;
@@ -786,6 +790,10 @@ void parse_timewrite(void) {
     break;
 
   case 'B': /* BCD format */
+    if (command_length < 12) {
+      set_error(ERROR_SYNTAX_UNABLE);
+      return;
+    }
     time.tm_wday = command_buffer[4];
     time.tm_year = bcd2int(command_buffer[5]);
     time.tm_mon  = bcd2int(command_buffer[6]);
@@ -801,6 +809,10 @@ void parse_timewrite(void) {
     break;
 
   case 'D': /* Decimal format */
+    if (command_length < 12) {
+      set_error(ERROR_SYNTAX_UNABLE);
+      return;
+    }
     time.tm_wday = command_buffer[4];
     time.tm_year = command_buffer[5];
     time.tm_mon  = command_buffer[6];
@@ -823,6 +835,18 @@ void parse_timewrite(void) {
   /* Y2K fix for legacy apps */
   if (time.tm_year < 80)
     time.tm_year += 100;
+
+  /* The CMD drives don't check for validity, we do - partially */
+  if (time.tm_mday ==  0 || time.tm_mday >  31 ||
+      time.tm_mon  ==  0 || time.tm_mon  >  12 ||
+      time.tm_wday >   6 ||
+      time.tm_hour >  23 ||
+      time.tm_min  >  59 ||
+      time.tm_sec  >  59) {
+    set_error(ERROR_SYNTAX_UNABLE);
+    return;
+  }
+
   set_rtc(&time);
 }
 #endif
