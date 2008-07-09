@@ -54,6 +54,12 @@ extern rtcstate_t rtc_state;
 
 void init_rtc(void);
 
+/* Return current time in struct tm */
+void read_rtc(struct tm *time);
+
+/* Set time from struct tm */
+void set_rtc(struct tm *time);
+
 /* Return current time in FAT format */
 uint32_t get_fattime(void);
 

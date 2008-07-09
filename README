@@ -87,12 +87,41 @@ Supported commands:
 - N:
   Format works only if a D64 image is already mounted.
 
-- S:
-  Name matching is fully supported, directories are ignored.
-
 - R
   Renaming files should work the same as it does on CMD drives, although
   the errors flagged for invalid characters in the name may differ.
+
+- S:
+  Name matching is fully supported, directories are ignored.
+
+- T-R and T-W
+  If your hardware features RTC support the commands T-R (time read) and T-W
+  (time write) are available. If the RTC isn't present, both commands return
+  30,SYNTAX ERROR,00,00; if the RTC is present but not set correctly T-R will
+  return 31,SYNTAX ERROR,00,00.
+
+  Both commands expect a fourth character that specifies the time format
+  to be used, T-W expects that the new time follows that character in exactly
+  the format returned by T-R with the same format char.
+
+  The possible formats are:
+   - "A"SCII: "SUN. 01/20/08 01:23:45 PM"+CHR$(13)
+      The day-of-week string can be any of "SUN.", "MON.", "TUES", "WED.",
+      "THUR", "FRI.", "SAT.". The year field is modulo 100.
+   - "B"CD or "D"ecimal:
+     Both these formats use 9 bytes to specify the time. For BCD everything
+     is BCD-encoded, for Decimal the numbers are sent/parsed as-is.
+      Byte 0: Day of the week (0 for sunday)
+           1: Year (modulo 100 for BCD; -1900 for Decimal, i.e. 108 for 2008)
+           2: Month (1-based)
+           3: Day (1-based)
+           4: Hour   (1-12)
+           5: Minute (0-59)
+           6: Second (0-59)
+           7: AM/PM-Flag (0 is AM, everything else is PM)
+           8: CHR$(13)
+
+      When the time is set a year less that 80 is interpreted as 20xx.
 
 - U0
   Device address changing with "U0>"+chr$(new address) is supported,

@@ -28,5 +28,7 @@
 #define UTILS_H
 
 uint8_t *appendnumber(uint8_t *msg, uint8_t value);
+uint8_t bcd2int(uint8_t value);
+uint8_t int2bcd(uint8_t value);
 
 #endif

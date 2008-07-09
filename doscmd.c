@@ -43,9 +43,11 @@
 #include "iec.h"
 #include "m2iops.h"
 #include "parser.h"
+#include "rtc.h"
 #include "sdcard.h"
 #include "uart.h"
 #include "ustring.h"
+#include "utils.h"
 #include "wrapops.h"
 #include "doscmd.h"
 
@@ -56,8 +58,7 @@ static void (*restart_call)(void) = 0;
 typedef struct magic_value_s {
   uint16_t address;
   uint8_t  val[2];
-}
-magic_value_t;
+} magic_value_t;
 
 /* These are address/value pairs used by some programs to detect a 1541. */
 /* Currently we remember two bytes per address since that's the longest  */
@@ -89,6 +90,12 @@ void __cyg_profile_func_enter (void *this_fn, void *call_site) {
   if (SP < minstack) minstack = SP;
 }
 #endif
+
+/* Days of the week as used by the CMD FD */
+PROGMEM uint8_t downames[] = "SUN.MON.TUESWED.THURFRI.SAT.";
+
+/* Skeleton of the ASCII time format */
+PROGMEM uint8_t asciitime_skel[] = " xx/xx/xx xx:xx:xx xM\r";
 
 /* ------------------------------------------------------------------------- */
 /*  Parsing helpers                                                          */
@@ -672,6 +679,153 @@ void parse_rename(void) {
   rename(&oldpath, &dent, newname);
 }
 
+#ifdef CONFIG_RTC
+/* ----------------- */
+/*  T-R - Time Read  */
+/* ----------------- */
+void parse_timeread(void) {
+  struct tm time;
+  uint8_t *ptr = error_buffer;
+  uint8_t hour;
+
+  if (rtc_state != RTC_OK) {
+    set_error(ERROR_SYNTAX_UNABLE);
+    return;
+  }
+
+  read_rtc(&time);
+  hour = time.tm_hour % 12;
+  if (hour == 0) hour = 12;
+
+  switch (command_buffer[3]) {
+  case 'A': /* ASCII format */
+    buffers[CONFIG_BUFFER_COUNT].lastused = 25;
+    memcpy_P(error_buffer+4, asciitime_skel, sizeof(asciitime_skel));
+    memcpy_P(error_buffer, downames + 4*time.tm_wday, 4);
+    appendnumber(error_buffer+5, time.tm_mon);
+    appendnumber(error_buffer+8, time.tm_mday);
+    appendnumber(error_buffer+11, time.tm_year % 100);
+    appendnumber(error_buffer+14, hour);
+    appendnumber(error_buffer+17, time.tm_min);
+    appendnumber(error_buffer+20, time.tm_sec);
+    if (time.tm_hour < 12)
+      error_buffer[23] = 'A';
+    else
+      error_buffer[23] = 'P';
+    break;
+
+  case 'B': /* BCD format */
+    buffers[CONFIG_BUFFER_COUNT].lastused = 8;
+    *ptr++ = time.tm_wday;
+    *ptr++ = int2bcd(time.tm_year % 100);
+    *ptr++ = int2bcd(time.tm_mon);
+    *ptr++ = int2bcd(time.tm_mday);
+    *ptr++ = int2bcd(hour);
+    *ptr++ = int2bcd(time.tm_min);
+    *ptr++ = int2bcd(time.tm_sec);
+    *ptr++ = (time.tm_hour >= 12);
+    *ptr   = 13;
+    break;
+
+  case 'D': /* Decimal format */
+    buffers[CONFIG_BUFFER_COUNT].lastused = 8;
+    *ptr++ = time.tm_wday;
+    *ptr++ = time.tm_year;
+    *ptr++ = time.tm_mon;
+    *ptr++ = time.tm_mday;
+    *ptr++ = hour;
+    *ptr++ = time.tm_min;
+    *ptr++ = time.tm_sec;
+    *ptr++ = (time.tm_hour >= 12);
+    *ptr   = 13;
+    break;
+
+  default: /* Unknown format */
+    set_error(ERROR_SYNTAX_UNKNOWN);
+    break;
+  }
+}
+
+/* ------------------ */
+/*  T-W - Time Write  */
+/* ------------------ */
+void parse_timewrite(void) {
+  struct tm time;
+  uint8_t i, *ptr;
+
+  switch (command_buffer[3]) {
+  case 'A': /* ASCII format */
+    for (i=0;i<7;i++) {
+      if (memcmp_P(command_buffer+4, downames + 4*i, 4) == 0)
+        break;
+    }
+    if (i == 7) {
+      set_error(ERROR_SYNTAX_UNKNOWN); // FIXME: Check the real error
+      return;
+    }
+    time.tm_wday = i;
+    ptr = command_buffer + 9;
+    time.tm_mon  = parse_number(&ptr);
+    ptr++;
+    time.tm_mday = parse_number(&ptr);
+    ptr++;
+    time.tm_year = parse_number(&ptr);
+    ptr++;
+    time.tm_hour = parse_number(&ptr);
+    ptr++;
+    time.tm_min  = parse_number(&ptr);
+    ptr++;
+    time.tm_sec  = parse_number(&ptr);
+    if (command_buffer[28] == 'M') {
+      /* Adjust for AM/PM only if AM/PM is actually supplied */
+      if (time.tm_hour == 12)
+        time.tm_hour = 0;
+      if (command_buffer[27] == 'P')
+        time.tm_hour += 12;
+    }
+    break;
+
+  case 'B': /* BCD format */
+    time.tm_wday = command_buffer[4];
+    time.tm_year = bcd2int(command_buffer[5]);
+    time.tm_mon  = bcd2int(command_buffer[6]);
+    time.tm_mday = bcd2int(command_buffer[7]);
+    time.tm_hour = bcd2int(command_buffer[8]);
+    /* Hour range is 1-12, change 12:xx to 0:xx for easier conversion */
+    if (time.tm_hour == 12)
+      time.tm_hour = 0;
+    time.tm_min  = bcd2int(command_buffer[9]);
+    time.tm_sec  = bcd2int(command_buffer[10]);
+    if (command_buffer[11])
+      time.tm_hour += 12;
+    break;
+
+  case 'D': /* Decimal format */
+    time.tm_wday = command_buffer[4];
+    time.tm_year = command_buffer[5];
+    time.tm_mon  = command_buffer[6];
+    time.tm_mday = command_buffer[7];
+    time.tm_hour = command_buffer[8];
+    /* Hour range is 1-12, change 12:xx to 0:xx for easier conversion */
+    if (time.tm_hour == 12)
+      time.tm_hour = 0;
+    time.tm_min  = command_buffer[9];
+    time.tm_sec  = command_buffer[10];
+    if (command_buffer[11])
+      time.tm_hour += 12;
+    break;
+
+  default: /* Unknown format */
+    set_error(ERROR_SYNTAX_UNKNOWN);
+    return;
+  }
+
+  /* Y2K fix for legacy apps */
+  if (time.tm_year < 80)
+    time.tm_year += 100;
+  set_rtc(&time);
+}
+#endif
 
 /* ------------------------------------------------------------------------- */
 /*  Main command parser function                                             */
@@ -1007,6 +1161,21 @@ void parse_doscommand(void) {
       set_error_ts(ERROR_SCRATCHED,count,0);
 
     break;
+
+#ifdef CONFIG_RTC
+  case 'T':
+    if (rtc_state == RTC_NOT_FOUND)
+      set_error(ERROR_SYNTAX_UNKNOWN);
+    else {
+      if (command_buffer[2] == 'R') {
+        parse_timeread();
+      } else if (command_buffer[2] == 'W') {
+        parse_timewrite();
+      } else
+        set_error(ERROR_SYNTAX_UNKNOWN);
+    }
+    break;
+#endif
 
   case 'U':
     parse_user();

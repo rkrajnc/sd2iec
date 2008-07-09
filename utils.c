@@ -37,3 +37,13 @@ uint8_t *appendnumber(uint8_t *msg, uint8_t value) {
 
   return msg;
 }
+
+/* Convert a one-byte BCD value to a normal integer */
+uint8_t bcd2int(uint8_t value) {
+  return (value & 0x0f) + 10*(value >> 4);
+}
+
+/* Convert a uint8_t into a BCD value */
+uint8_t int2bcd(uint8_t value) {
+  return (value % 10) + 16*(value/10);
+}

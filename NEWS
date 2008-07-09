@@ -1,5 +1,6 @@
 2008-xx-xx - release x.x.x
         - Implement Dreamload emulation
+        - RTC support
 
 2008-07-09 - release 0.7.3
         - Bugfix: Free buffers on error in M2I and D64

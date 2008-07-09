@@ -33,6 +33,7 @@
 #include "i2c.h"
 #include "uart.h"
 #include "ustring.h"
+#include "utils.h"
 #include "rtc.h"
 
 #define PCF8583_ADDR 0xa0
@@ -51,6 +52,9 @@
 #define REG_YEARC1  18
 #define REG_YEARC2  19
 
+#define CTL_STOP_CLOCK  0x80
+#define CTL_START_CLOCK 0
+
 /* Default date/time if the RTC isn't preset or not set: 1982-08-31 00:00:00 */
 PROGMEM struct tm defaultdate = {
   0, 0, 0, 31, 8, 82, 2
@@ -58,14 +62,9 @@ PROGMEM struct tm defaultdate = {
 
 rtcstate_t rtc_state;
 
-/* Convert a one-byte BCD value to a normal integer */
-static uint8_t bcd2int(uint8_t value) {
-  return (value & 0x0f) + 10*(value >> 4);
-}
-
-/* Internal function to read the time from the RTC */
+/* Read the current time from the RTC */
 /* Will auto-adjust the stored year if required */
-static void read_time(struct tm *time) {
+void read_rtc(struct tm *time) {
   union {
     uint8_t  bytes[5];
     uint16_t words[2];
@@ -101,10 +100,30 @@ static void read_time(struct tm *time) {
   time->tm_year = tmp.words[0]-1900;
 }
 
+/* Set the time in the RTC */
+void set_rtc(struct tm *time) {
+  union {
+    uint8_t  bytes[5];
+    uint16_t words[2];
+  } tmp;
+
+  i2c_write_register(PCF8583_ADDR, REG_CONTROL, CTL_STOP_CLOCK);
+  tmp.bytes[0] = int2bcd(time->tm_sec);
+  tmp.bytes[1] = int2bcd(time->tm_min);
+  tmp.bytes[2] = int2bcd(time->tm_hour);
+  tmp.bytes[3] = int2bcd(time->tm_mday) | ((time->tm_year & 3) << 6);
+  tmp.bytes[4] = int2bcd(time->tm_mon)  | ((time->tm_wday    ) << 5);
+  i2c_write_registers(PCF8583_ADDR, REG_SECONDS, 5, &tmp);
+  tmp.words[0] = time->tm_year + 1900;
+  tmp.words[1] = (time->tm_year + 1900) ^ 0xffffU;
+  i2c_write_registers(PCF8583_ADDR, REG_YEAR1, 4, &tmp);
+  i2c_write_register(PCF8583_ADDR, REG_CONTROL, CTL_START_CLOCK);
+}
+
 uint32_t get_fattime(void) {
   struct tm time;
 
-  read_time(&time);
+  read_rtc(&time);
   return ((uint32_t)time.tm_year-80) << 25 |
     ((uint32_t)time.tm_mon)  << 21 |
     ((uint32_t)time.tm_mday) << 16 |
@@ -119,7 +138,7 @@ void init_rtc(void) {
   init_i2c();
   rtc_state = RTC_NOT_FOUND;
   uart_puts_P(PSTR("RTC "));
-  if (i2c_write_register(PCF8583_ADDR, REG_CONTROL, 0) ||
+  if (i2c_write_register(PCF8583_ADDR, REG_CONTROL, CTL_START_CLOCK) ||
       i2c_read_registers(PCF8583_ADDR, REG_YEAR1, 4, tmp)) {
     uart_puts_P(PSTR("not found"));
   } else {
