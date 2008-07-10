@@ -404,6 +404,14 @@ static void load_directory(uint8_t secondary) {
 void file_open(uint8_t secondary) {
   buffer_t *buf;
 
+  /* If the secondary is already in use, close the existing buffer */
+  buf = find_buffer(secondary);
+  if (buf != NULL) {
+    /* FIXME: What should we do if an error occurs? */
+    buf->cleanup(buf);
+    free_buffer(buf);
+  }
+
   /* Assume everything will go well unless proven otherwise */
   set_error(ERROR_OK);
 
