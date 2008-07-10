@@ -127,40 +127,27 @@ iiv_clock_irq_end:
         ;;  Utility routines
         ;; ===================================================================
 
-        ;; waits the number of cycles given in r18 plus 18, including rcall
-        ;; this works for 19 to 255 cycles, r18 will be changed
-        ;; Please use the delay_cycles macro instead of calling directly.
-cycleloop:
-        ; rcall                 ; 3
-1:
-        cpi     r18, 5          ; 1 - less than one loop left?
-        brcs    2f              ; 2/1 - then go to the final part
-        subi    r18, 5          ; 1 - minus cycles for one loop
-        rjmp    1b              ; 2
-2:
-        ; r18 is 0..4 now and we have 12..16 cycles to waste, DELTA see above
-        bst     r18, 0          ; 1 - take lowest bit
-        brts    3f              ; 1/2 - waste 1 cycle more if set
-3:
-        bst     r18, 1          ; 1 - take bit with value 2
-        brtc    5f              ; 1/2 - waste 2 cycles more if set
-        rjmp    4f              ; 2
-4:
+        ;;  Used by the macro below, don't call directly
+cycleloop2:
         nop                     ; 1
-5:
-        bst     r18, 2          ; 1 - take bit with value 4
-        brtc    7f              ; 1/2 - waste 4 cycles more if set
+cycleloop1:
         nop                     ; 1
-        rjmp    6f              ; 2
-6:
-        rjmp    7f              ; 2
-7:
+cycleloop0:
+        dec     r18             ; 1
+        brne    cycleloop0      ; 2/1
         ret                     ; 4
 
-        ;; Convenience-wrapper for cycleloop
+        ;; This macro waits for the specified number of cycles
+        ;;  Uses r18
         .macro delay_cycles num
-        ldi     r18, \num-19     ; 1 - minus cycles for ldi, rcall, sbi, cpi, brcc+, DELTA
-        rcall   cycleloop       ; 3
+        ldi     r18, 1 + (\num - 10) / 3 ; 1
+        .if (\num - 10) % 3 == 0
+        rcall   cycleloop0      ; 3
+        .elseif (\num - 10) % 3 == 1
+        rcall   cycleloop1      ; 3
+        .else
+        rcall   cycleloop2      ; 3
+        .endif
         .endm
 
 
