@@ -508,6 +508,14 @@ void file_open(uint8_t secondary) {
   uint8_t i = 0;
   uint8_t recordlen = 0;
 
+  /* If the secondary is already in use, close the existing buffer */
+  buf = find_buffer(secondary);
+  if (buf != NULL) {
+    /* FIXME: What should we do if an error occurs? */
+    buf->cleanup(buf);
+    free_buffer(buf);
+  }
+
   /* Assume everything will go well unless proven otherwise */
   set_error(ERROR_OK);
 
