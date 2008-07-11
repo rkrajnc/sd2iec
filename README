@@ -1,4 +1,4 @@
-sd2iec - a controller/interface adapting SD/MMC to the CBM serial bus
+sd2iec - a controller/interface adapting storage devices to the CBM serial bus
 Copyright (C) 2007,2008  Ingo Korb <ingo@akana.de>
 Parts based on code from others, see comments in main.c for details.
 JiffyDos send based on code by M.Kiesel
@@ -13,14 +13,17 @@ FIXME:This file still needs to be expanded. A lot.
 
 Introduction:
 =============
-sd2iec is a device for the Commodore serial bus that allows accessing an SD
-or MMC card - think of it as a 1541 with a modern storage medium instead of
-disks. The project was inspired by (and uses a few bits of code from)
-MMC2IEC[1] by Lars Pontoppidan and runs on the same hardware.
+sd2iec is firmware, used in hardware designs like MMC2IEC, SD2IEC, or uIEC,
+that allows the Commodore serial bus to access removable storage devices
+(MMC, SD, CF) - think of it as a 1541 with a modern storage medium instead
+of disks. The project was inspired by (and uses a few bits of code from)
+MMC2IEC[1] by Lars Pontoppidan and once ran on the same hardware before it
+grew too big for the ATmega32 used there.
 
-Currently the compatibility is slightly higher than MMC2IEC 0.8, but there
-are still lots of features missing. Anything that tries execute code on the
-1541 will not work, this includes every software-fastloader.
+Currently, the firmware provide good DOS and file-level compatibility with CBM
+drives, but much work remains.  Unless specifically noted, anything that tries
+to execute code on the 1541 will not work, this includes every software
+fastloader.
 
 [1] Homepage: http://pontoppidan.info/lars/index.php?proj=mmc2iec
 
@@ -73,9 +76,9 @@ Supported commands:
     RD:foo       deletes foo
 
   CD is also used to mount/unmount image files. Just change into them
-  as if they were a directory and use CD:_ to leave. Please note that
-  image files are detected by file extension only and there is no reliable
-  way to see if a file is a valid image file.
+  as if they were a directory and use CD:_ (left arrow on the C64) to leave.
+  Please note that image files are detected by file extension and file size
+  and there is no reliable way to see if a file is a valid image file.
 
 - CP, C<Shift-P>
   This changes the current partition, see "Partitions" below for details.
@@ -138,9 +141,9 @@ Supported commands:
   it hasn't been tested much though.
 
 - UI/UJ
-  Soft/Hard reset - UI just sets the "73,SD2IEC..." message on the
-  error channel, UJ closes all active buffers but doesn't reset the
-  currect directory, mounted image, swap list or anything else.
+  Soft/Hard reset - UI just sets the "73,..." message on the error channel,
+  UJ closes all active buffers but doesn't reset the current directory,
+  mounted image, swap list or anything else.
 
 - U<Shift-J>
   Real hard reset - this command causes a restart of the AVR processor
@@ -182,9 +185,8 @@ Supported commands:
              two seconds at most. This flag can be saved in the EEPROM using
              XW, the default value is enabled (+).
 
-  - XJ+/XJ-  Set or reset the JiffyDOS protocol support flag. Default state
-             is disabled for compatibility reasons. This flag can be saved
-             in the EEPROM using XW, the default value is enabled (+).
+  - XJ+/XJ-  Set or reset the JiffyDOS protocol support flag. This flag can be
+             saved in the EEPROM using XW, the default value is enabled (+).
 
   - X*+/X*-  Enable/disable 1581-style * matching. If enabled, characters
              after a * will be matched against the end of the file name.
@@ -198,7 +200,7 @@ Supported commands:
 
   - X        X without any following characters reports the current state
              of all extended parameters via the error channel, similiar
-             to DolphinDOS. Example result: "03,J-:C152,08,00"
+             to DolphinDOS. Example result: "03,J-:C152:E01+:B+:*+,08,00"
              The track indicates the current device address.
 
   - XS:name  Set up a swap list - see "Changing Disk Images" below.
@@ -274,12 +276,12 @@ drives. The partitions (which may be on separate drives for some hardware
 configurations) are accessed using the drive number of the commands
 sent from the computer and are numbered starting with 1. Partition 0
 is a special case: Because most software doesn't support drive numbers
-or always sends drive number 0, this partition point to any of the
-real partitions. By default, accesses to partition 0 will access partition 1,
-this can be changed by sending "CP<num>" over the command channel with
-<num> being an ASCII number from 1 to 255. "C<Shift-P" (0x42 0xd0) works
-the same, but expects a binary partition number as the third character of
-the command.
+or always sends drive number 0, this partition points to the currently
+selected partition. By default, accesses to partition 0 will access
+partition 1, this can be changed by sending "CP<num>" over the command
+channel with <num> being an ASCII number from 1 to 255. "C<Shift-P"
+(0x42 0xd0) works the same, but expects a binary partition number as the
+third character of the command.
 
 Software fastloaders:
 =====================
