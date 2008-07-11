@@ -245,6 +245,8 @@ static int16_t iec_getc(void) {
 static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
   uint8_t i;
 
+  if (check_atn()) return -1;                          // E916
+
   if (iecflags.jiffy_active) {
     /* This is the non-load Jiffy case */
     if (jiffy_send(data, with_eoi, 0)) {
@@ -254,7 +256,6 @@ static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
     return 0;
   }
 
-  if (check_atn()) return -1;                          // E916
   i = iec_pin();
 
   _delay_us(60); // Fudged delay
@@ -396,7 +397,6 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
 
   if (iecflags.jiffy_enabled)
     /* wait 360us (J1541 E781) to make sure the C64 is at fbb7/fb0c */
-    /* FIXME: Check if this delay is required for all Jiffy TALKs or just LOADs */
     _delay_ms(0.36);
 
   if (iecflags.jiffy_load) {
@@ -449,7 +449,15 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
       } else {
 	if (finalbyte && buf->sendeoi) {
 	  /* Send with EOI */
-	  if (iec_putc(buf->data[buf->position],1)) {
+          uint8_t res = iec_putc(buf->data[buf->position],1);
+          if (iecflags.jiffy_load) {
+            /* Jiffy resets the EOI condition on the bus after 30-40us. */
+            /* We use 50 to play it safe.                               */
+            _delay_us(50);
+            set_data(1);
+            set_clock(0);
+          }
+	  if (res) {
 	    uart_putc('Q');
 	    return 1;
 	  }
