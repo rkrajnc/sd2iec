@@ -243,12 +243,10 @@ static int16_t iec_getc(void) {
 static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
   uint8_t i;
 
+  if (check_atn()) return -1;                          // E916
+
   if (iec_data.iecflags & JIFFY_ACTIVE) {
     /* This is the non-load Jiffy case */
-    _delay_ms(0.2);  // This delay fixes hangs with Castle Wolfenstein.
-                     // Its length is based on experiments.
-                     // 0.1ms are not enough, moving it after the send call
-                     // doesn't work.
     if (jiffy_send(data, with_eoi, 0)) {
       check_atn();
       return -1;
@@ -256,7 +254,6 @@ static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
     return 0;
   }
 
-  if (check_atn()) return -1;                          // E916
   i = iec_pin();
 
   _delay_us(60); // Fudged delay
@@ -415,7 +412,6 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
 
   if (iec_data.iecflags & JIFFY_ACTIVE)
     /* wait 360us (J1541 E781) to make sure the C64 is at fbb7/fb0c */
-    /* FIXME: Check if this delay is required for all Jiffy TALKs or just LOADs */
     _delay_ms(0.36);
 
   if (iec_data.iecflags & JIFFY_LOAD) {
@@ -468,7 +464,15 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
       } else {
         if (finalbyte && buf->sendeoi) {
           /* Send with EOI */
-          if (iec_putc(buf->data[buf->position],1)) {
+          uint8_t res = iec_putc(buf->data[buf->position],1);
+          if (iec_data.iecflags & JIFFY_ACTIVE) {
+            /* Jiffy resets the EOI condition on the bus after 30-40us. */
+            /* We use 50 to play it safe.                               */
+            _delay_us(50);
+            set_data(1);
+            set_clock(0);
+          }
+          if (res) {
             uart_putc('Q');
             return 1;
           }
