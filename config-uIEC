@@ -29,7 +29,7 @@
 # into autoconf.h.
 
 # MCU to compile for
-CONFIG_MCU=atmega128
+CONFIG_MCU=atmega1281
 
 # Use the -relax parameter when linking?
 # Passing -O9 and -relax to the linker saves ~650 bytes of flash,
@@ -41,8 +41,10 @@ CONFIG_LINKER_RELAX=n
 CONFIG_MCU_FREQ=8000000
 
 # Add a bootloader signature
-CONFIG_BOOTLOADER=n
+CONFIG_BOOTLOADER=y
 
+# Value of the signature word
+CONFIG_BOOT_DEVID=0x32304955
 
 # Enable UART debugging - requires 24 bytes plus buffer size in RAM
 CONFIG_UART_DEBUG=y
