@@ -413,8 +413,9 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
   if (buf == NULL)
     return 0; /* 0 because we didn't change the state here */
 
-  if (globalflags & JIFFY_ENABLED)
+  if (iec_data.iecflags & JIFFY_ACTIVE)
     /* wait 360us (J1541 E781) to make sure the C64 is at fbb7/fb0c */
+    /* FIXME: Check if this delay is required for all Jiffy TALKs or just LOADs */
     _delay_ms(0.36);
 
   if (iec_data.iecflags & JIFFY_LOAD) {
