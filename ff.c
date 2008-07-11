@@ -724,8 +724,10 @@ FRESULT trace_path (     /* FR_OK(0): successful, !=0: error code */
       }
 #endif
       if (!next_dir_entry(dj)) {                  /* Next directory pointer */
+#if _USE_LFN != 0
         if (!lfn)
           *len = 0;
+#endif
         return !ds ? FR_NO_FILE : FR_NO_PATH;
       }
     }
@@ -1383,6 +1385,8 @@ FRESULT f_mount (
 
 #if _USE_DEFERRED_MOUNT == 0
   return mount_drv(drv,fs,0);
+#else
+  return FR_OK;
 #endif
 }
 
@@ -1405,10 +1409,10 @@ FRESULT f_open (
 {
   FRESULT res;
   DIR dj;
-  BYTE *dir;
+  BYTE *dir = NULL;
   UCHAR fn[8+3+1];
 #if _USE_DRIVE_PREFIX != 0
-  FATFS *fs;
+  FATFS *fs = NULL;
 #endif
 #if _USE_LFN != 0
   UINT len;
@@ -1963,8 +1967,8 @@ FRESULT f_readdir (
 {
   BYTE *dir, c, res;
   FATFS *fs = dj->fs;
-  WORD len=0;
 #if _USE_LFN != 0
+  WORD len=0;
   BYTE i,pos;
 # ifdef _MAX_LFN_LENGTH
   BOOL skiplfn = FALSE;
