@@ -35,6 +35,15 @@ else
  CONFIGSUFFIX =
 endif
 
+# Enable verbose compilation with "make V=1"
+ifdef V
+ Q :=
+ E := @:
+else
+ Q := @
+ E := @echo
+endif
+
 # Include the configuration file
 include $(CONFIG)
 
@@ -353,7 +362,8 @@ ALL_ASFLAGS = -mmcu=$(MCU) -I. -x assembler-with-cpp $(ASFLAGS) $(CDEFS)
 all: build
 
 build: elf bin hex
-	$(ELFSIZE)|grep -v debug
+	$(E) "  SIZE   $(TARGET).elf"
+	$(Q)$(ELFSIZE)|grep -v debug
 
 elf: $(TARGET).elf
 bin: $(TARGET).bin
@@ -438,21 +448,26 @@ extcoff: $(TARGET).elf
 # Generate autoconf.h from config
 .PRECIOUS : $(OBJDIR)/autoconf.h
 $(OBJDIR)/autoconf.h: $(CONFIG) | $(OBJDIR)
-	gawk -f conf2h.awk $(CONFIG) > $(OBJDIR)/autoconf.h
+	$(E) "  CONF2H $(CONFIG)"
+	$(Q)gawk -f conf2h.awk $(CONFIG) > $(OBJDIR)/autoconf.h
 
 # Create final output files (.hex, .eep) from ELF output file.
 ifeq ($(CONFIG_BOOTLOADER),y)
 $(OBJDIR)/%.bin: $(OBJDIR)/%.elf
-	$(OBJCOPY) -O binary -R .eeprom $< $@
-	-crcgen-new $@ $(BINARY_LENGTH) $(CONFIG_BOOT_DEVID) $(BOOT_VERSION)
+	$(E) "  BIN    $@"
+	$(Q)$(OBJCOPY) -O binary -R .eeprom $< $@
+	$(E) "  CRCGEN $@"
+	-$(Q)crcgen-new $@ $(BINARY_LENGTH) $(CONFIG_BOOT_DEVID) $(BOOT_VERSION)
 else
 $(OBJDIR)/%.bin: $(OBJDIR)/%.elf
-	$(OBJCOPY) -O binary -R .eeprom $< $@
+	$(E) "  BIN    $@"
+	$(Q)$(OBJCOPY) -O binary -R .eeprom $< $@
 endif
 
 
 $(OBJDIR)/%.hex: $(OBJDIR)/%.elf
-	$(OBJCOPY) -O $(FORMAT) -R .eeprom $< $@
+	$(E) "  HEX    $@"
+	$(Q)$(OBJCOPY) -O $(FORMAT) -R .eeprom $< $@
 
 $(OBJDIR)/%.eep: $(OBJDIR)/%.elf
 	-$(OBJCOPY) -j .eeprom --set-section-flags=.eeprom="alloc,load" \
@@ -460,11 +475,13 @@ $(OBJDIR)/%.eep: $(OBJDIR)/%.elf
 
 # Create extended listing file from ELF output file.
 $(OBJDIR)/%.lss: $(OBJDIR)/%.elf
-	$(OBJDUMP) -h -S $< > $@
+	$(E) "  LSS    $<"
+	$(Q)$(OBJDUMP) -h -S $< > $@
 
 # Create a symbol table from ELF output file.
 $(OBJDIR)/%.sym: $(OBJDIR)/%.elf
-	$(NM) -n $< > $@
+	$(E) "  SYM    $<"
+	$(E)$(NM) -n $< > $@
 
 
 
@@ -472,12 +489,14 @@ $(OBJDIR)/%.sym: $(OBJDIR)/%.elf
 .SECONDARY : $(TARGET).elf
 .PRECIOUS : $(OBJ)
 $(OBJDIR)/%.elf: $(OBJ)
-	$(CC) $(ALL_CFLAGS) $^ --output $@ $(LDFLAGS)
+	$(E) "  LINK   $@"
+	$(Q)$(CC) $(ALL_CFLAGS) $^ --output $@ $(LDFLAGS)
 
 
 # Compile: create object files from C source files.
 $(OBJDIR)/%.o : %.c | $(OBJDIR) $(OBJDIR)/autoconf.h
-	$(CC) -c $(ALL_CFLAGS) $< -o $@ 
+	$(E) "  CC     $<"
+	$(Q)$(CC) -c $(ALL_CFLAGS) $< -o $@ 
 
 
 # Compile: create assembler files from C source files.
@@ -487,7 +506,8 @@ $(OBJDIR)/%.s : %.c | $(OBJDIR) $(OBJDIR)/autoconf.h
 
 # Assemble: create object files from assembler source files.
 $(OBJDIR)/%.o : %.S | $(OBJDIR) $(OBJDIR)/autoconf.h
-	$(CC) -c $(ALL_ASFLAGS) $< -o $@
+	$(E) "  AS     $<"
+	$(Q)$(CC) -c $(ALL_ASFLAGS) $< -o $@
 
 # Create preprocessed source for use in sending a bug report.
 $(OBJDIR)/%.i : %.c | $(OBJDIR) $(OBJDIR)/autoconf.h
@@ -495,29 +515,31 @@ $(OBJDIR)/%.i : %.c | $(OBJDIR) $(OBJDIR)/autoconf.h
 
 # Create the output directory
 $(OBJDIR):
-	mkdir $(OBJDIR)
+	$(E) "  MKDIR  $(OBJDIR)"
+	$(Q)mkdir $(OBJDIR)
 
 # Target: clean project.
 clean: begin clean_list end
 
 clean_list :
-	$(REMOVE) $(TARGET).hex
-	$(REMOVE) $(TARGET).bin
-	$(REMOVE) $(TARGET).eep
-	$(REMOVE) $(TARGET).cof
-	$(REMOVE) $(TARGET).elf
-	$(REMOVE) $(TARGET).map
-	$(REMOVE) $(TARGET).sym
-	$(REMOVE) $(TARGET).lss
-	$(REMOVE) $(OBJ)
-	$(REMOVE) $(OBJDIR)/autoconf.h
-	$(REMOVE) $(LST)
-	$(REMOVE) $(SRC:.c=.s)
-	$(REMOVE) $(SRC:.c=.d)
-	$(REMOVE) .dep/*
-	$(REMOVE) -rf codedoc
-	$(REMOVE) -rf doxyinput
-	-rmdir $(OBJDIR)
+	$(E) "  CLEAN"
+	$(Q)$(REMOVE) $(TARGET).hex
+	$(Q)$(REMOVE) $(TARGET).bin
+	$(Q)$(REMOVE) $(TARGET).eep
+	$(Q)$(REMOVE) $(TARGET).cof
+	$(Q)$(REMOVE) $(TARGET).elf
+	$(Q)$(REMOVE) $(TARGET).map
+	$(Q)$(REMOVE) $(TARGET).sym
+	$(Q)$(REMOVE) $(TARGET).lss
+	$(Q)$(REMOVE) $(OBJ)
+	$(Q)$(REMOVE) $(OBJDIR)/autoconf.h
+	$(Q)$(REMOVE) $(LST)
+	$(Q)$(REMOVE) $(SRC:.c=.s)
+	$(Q)$(REMOVE) $(SRC:.c=.d)
+	$(Q)$(REMOVE) .dep/*
+	$(Q)$(REMOVE) -rf codedoc
+	$(Q)$(REMOVE) -rf doxyinput
+	-$(Q)rmdir $(OBJDIR)
 
 # Include the dependency files.
 -include $(shell mkdir .dep 2>/dev/null) $(wildcard .dep/*)
