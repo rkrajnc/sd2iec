@@ -35,7 +35,7 @@ void init_serial(void);
 unsigned char uart_getc(void);
 void uart_putc(char c);
 void uart_puthex(uint8_t num);
-void uart_trace(uint8_t* ptr, uint16_t start, uint16_t len);
+void uart_trace(void *ptr, uint16_t start, uint16_t len);
 void uart_flush(void);
 void uart_puts_P(prog_char *text);
 void uart_putcrlf(void);

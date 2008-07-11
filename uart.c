@@ -72,12 +72,13 @@ void uart_puthex(uint8_t num) {
     uart_putc('a'+tmp-10);
 }
 
-void uart_trace(uint8_t* ptr, uint16_t start, uint16_t len) {
+void uart_trace(void *ptr, uint16_t start, uint16_t len) {
   uint16_t i;
   uint8_t j;
   uint8_t ch;
+  uint8_t *data = ptr;
 
-  ptr+=start;
+  data+=start;
   for(i=0;i<len;i+=16) {
 
     uart_puthex(start>>8);
@@ -86,7 +87,7 @@ void uart_trace(uint8_t* ptr, uint16_t start, uint16_t len) {
     uart_putc(' ');
     for(j=0;j<16;j++) {
       if(i+j<len) {
-        ch=*(ptr + j);
+        ch=*(data + j);
         uart_puthex(ch);
       } else {
         uart_putc(' ');
@@ -97,7 +98,7 @@ void uart_trace(uint8_t* ptr, uint16_t start, uint16_t len) {
     uart_putc('|');
     for(j=0;j<16;j++) {
       if(i+j<len) {
-        ch=*(ptr++);
+        ch=*(data++);
         if(ch<32 || ch>0x7e)
           ch='.';
         uart_putc(ch);
