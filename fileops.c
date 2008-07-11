@@ -688,8 +688,8 @@ void file_open(uint8_t secondary) {
     } else {
       /* Normal write or non-existing rewrite */
       /* Doesn't exist: Copy name to dent */
-      ustrcpy(dent.name, fname);
-      dent.realname[0] = 0;
+      memset(&dent, 0, sizeof(dent));
+      ustrncpy(dent.name, fname, CBM_NAME_LENGTH);
       set_error(ERROR_OK); // because first_match has set FNF
     }
   } else if (res != 0) {
