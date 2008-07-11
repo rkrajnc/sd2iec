@@ -44,7 +44,7 @@ volatile enum diskstates disk_state;
  * present on the bus.
  */
 
-#define DELAY_VALUE(ms) ((double)F_CPU/40000L * ms)
+#define DELAY_VALUE(ms) ((double)F_CPU/40000UL * ms)
 #define ATA_INIT_TIMEOUT 31000  /* 31 sec */
 
 /*-----------------------------------------------------------------------*/
