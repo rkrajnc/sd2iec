@@ -4,7 +4,7 @@
 MAJOR = 0
 MINOR = 7
 PATCHLEVEL = 3
-BOOT_VERSION = 73
+FIX =
 
 
 #----------------------------------------------------------------------------
@@ -53,6 +53,8 @@ ifeq ($(CONFIG_BOOTLOADER),y)
   ifeq ($(MCU),atmega32)
     BINARY_LENGTH = 0x7800
   else ifeq ($(MCU),atmega128)
+    BINARY_LENGTH = 0x1f000
+  else ifeq ($(MCU),atmega1281)
     BINARY_LENGTH = 0x1f000
   else ifeq ($(MCU),atmega644)
     BINARY_LENGTH = 0xf000
@@ -148,10 +150,16 @@ CSTANDARD = -std=gnu99
 # Place -D or -U options here
 CDEFS = -DF_CPU=$(F_CPU)UL
 
+# Calculate bootloader version
+BOOT_VERSION = 0x$(MAJOR)$(MINOR)$(PATCHLEVEL)$(FIX)
 
 # Create a version number define
 ifdef PATCHLEVEL
+ifdef FIX
+PROGRAMVERSION := $(MAJOR).$(MINOR).$(PATCHLEVEL).$(FIX)
+else
 PROGRAMVERSION := $(MAJOR).$(MINOR).$(PATCHLEVEL)
+endif
 else
 PROGRAMVERSION := $(MAJOR).$(MINOR)
 endif
@@ -458,6 +466,8 @@ $(OBJDIR)/%.bin: $(OBJDIR)/%.elf
 	$(Q)$(OBJCOPY) -O binary -R .eeprom $< $@
 	$(E) "  CRCGEN $@"
 	-$(Q)crcgen-new $@ $(BINARY_LENGTH) $(CONFIG_BOOT_DEVID) $(BOOT_VERSION)
+	$(E) "  COPY   $(CONFIG_HARDWARE_NAME)-bootloader-$(PROGRAMVERSION).bin"
+	$(Q)$(COPY) $@ $(OBJDIR)/$(CONFIG_HARDWARE_NAME)-bootloader-$(PROGRAMVERSION).bin
 else
 $(OBJDIR)/%.bin: $(OBJDIR)/%.elf
 	$(E) "  BIN    $@"
@@ -533,6 +543,7 @@ clean_list :
 	$(Q)$(REMOVE) $(TARGET).lss
 	$(Q)$(REMOVE) $(OBJ)
 	$(Q)$(REMOVE) $(OBJDIR)/autoconf.h
+	$(Q)$(REMOVE) $(OBJDIR)/*.bin
 	$(Q)$(REMOVE) $(LST)
 	$(Q)$(REMOVE) $(SRC:.c=.s)
 	$(Q)$(REMOVE) $(SRC:.c=.d)
