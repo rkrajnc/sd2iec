@@ -75,6 +75,8 @@ CONFIG_DREAMLOAD=n
 #   4 - uIEC
 #   5 - Shadowolf sd2iec PCBs version 1.x
 CONFIG_HARDWARE_VARIANT=4
+CONFIG_HARDWARE_NAME=uIEC
+
 
 # The following SD settings are ignored on uIEC
 # Length of error message buffer - 1571 uses 36 bytes

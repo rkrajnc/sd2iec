@@ -84,6 +84,7 @@ CONFIG_DREAMLOAD=y
 #   5 - Shadowolf sd2iec PCBs version 1.x
 #   6 - NKC-modified MMC2IEC
 CONFIG_HARDWARE_VARIANT=1
+CONFIG_HARDWARE_NAME=sd2iec-example
 
 # The following SD settings are ignored on uIEC
 # Support SDHC - disabling it saves ~220 bytes flash
