@@ -188,6 +188,7 @@ uint8_t i2c_read_registers(uint8_t address, uint8_t startreg, uint8_t count, voi
   for (i=0;i<count-1;i++)
     ((uint8_t *)data)[i] = i2c_recv_byte(1);
   ((uint8_t *)data)[i] = i2c_recv_byte(0);
+  stop_condition();
   return 0;
 }
 
