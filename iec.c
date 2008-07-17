@@ -745,14 +745,15 @@ void iec_mainloop(void) {
 
 #ifdef HAVE_HOTPLUG
         /* This seems to be a nice point to handle card changes */
-        if (disk_state != DISK_OK && disk_state != DISK_REMOVED) {
+        if (disk_state != DISK_OK) {
           BUSY_LED_ON();
           /* If the disk was changed the buffer contents are useless */
-          if (disk_state == DISK_CHANGED) {
+          if (disk_state == DISK_CHANGED || disk_state == DISK_REMOVED) {
             free_all_buffers(0);
             init_change();
             init_fatops(0);
           } else
+            /* Disk state indicated an error, try to recover by initialising */
             init_fatops(1);
           
           if (!active_buffers)
