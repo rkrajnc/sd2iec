@@ -1070,7 +1070,8 @@ uint8_t fat_getlabel(path_t *path, uint8_t *label) {
 
   if(*name)
     memcpy(label,name,ustrlen(name));
-  return 0;
+  if (res == FR_OK)
+    return 0;
 
 gl_error:
   parse_error(res,0);
