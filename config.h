@@ -304,19 +304,19 @@
 #  define SDCARD_DETECT_SETUP() do { DDRE &= ~_BV(PE7); PORTE |= _BV(PE7); } while(0)
 #  define SD_CHANGE_SETUP()     do { EICRB |= _BV(ISC70); EIMSK |= _BV(INT7); } while(0)
 #  define SD_CHANGE_VECT        INT7_vect
-#  define MAX_DRIVES            2
+#  define MAX_DRIVES            1 //2
 /* No device jumpers on uIEC */
 #  define DEVICE_SELECT         10
 #  define DEVICE_SELECT_SETUP() do {} while (0)
 #  define SINGLE_LED
-#  define DIRTY_LED_SETDDR()    DDRG  |= _BV(PG4)
-#  define DIRTY_LED_ON()        PORTG |= _BV(PG4)
-#  define DIRTY_LED_OFF()       PORTG &= ~_BV(PG4)
-#  define DIRTY_LED_PORT        PORTG
-#  define DIRTY_LED_BIT()       _BV(PG4)
-#  define AUX_LED_SETDDR()      DDRG  |= _BV(PG2)
-#  define AUX_LED_ON()          PORTG |= _BV(PG2)
-#  define AUX_LED_OFF()         PORTG &= ~_BV(PG2)
+#  define DIRTY_LED_SETDDR()    DDRE  |= _BV(PE3)
+#  define DIRTY_LED_ON()        PORTE |= _BV(PE3)
+#  define DIRTY_LED_OFF()       PORTE &= ~_BV(PE3)
+#  define DIRTY_LED_PORT        PORTE
+#  define DIRTY_LED_BIT()       _BV(PE3)
+#  define AUX_LED_SETDDR()      do {} while (0)
+#  define AUX_LED_ON()          do {} while (0)
+#  define AUX_LED_OFF()         do {} while (0)
 #  define IEC_PIN               PINE
 #  define IEC_DDR               DDRE
 #  define IEC_PORT              PORTE
@@ -331,9 +331,9 @@
 #  define BUTTON_PIN            PING
 #  define BUTTON_PORT           PORTG
 #  define BUTTON_DDR            DDRG
-#  define BUTTON_MASK           (_BV(PG0)|_BV(PG1))
-#  define BUTTON_NEXT           _BV(PG1)
-#  define BUTTON_PREV           _BV(PG0)
+#  define BUTTON_MASK           (_BV(PG3)|_BV(PG4))
+#  define BUTTON_NEXT           _BV(PG4)
+#  define BUTTON_PREV           _BV(PG3)
 
 
 #elif CONFIG_HARDWARE_VARIANT==5
