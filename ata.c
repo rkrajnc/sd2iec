@@ -19,6 +19,7 @@
 */
 #include <inttypes.h>
 #include <util/delay.h>
+#include <avr/interrupt.h>
 #include <avr/io.h>
 #include "config.h"
 
@@ -170,17 +171,33 @@ static void ata_read_part (BYTE *buff, BYTE ofs, BYTE count) {
 
 ---------------------------------------------------------------------------*/
 
-void reset_disk(void) {
+
+static void reset_disk(void) {
   ATA_PORT_CTRL_OUT = (BYTE)~ATA_PIN_RESET;
   // wait a bit for the drive to reset.
   _delay_ms(1);
   ATA_PORT_CTRL_OUT |= ATA_PIN_RESET;
+  ATA_drv_flags[0] = STA_NOINIT;
+  ATA_drv_flags[1] = STA_NOINIT;
 }
 
+
+ISR(SD_CHANGE_VECT) {
+  if (SDCARD_DETECT)
+    disk_state = DISK_CHANGED;
+  else
+    disk_state = DISK_REMOVED;
+}
+
+
 void init_disk(void) {
+  SDCARD_DETECT_SETUP();
+  SD_CHANGE_SETUP();
   disk_state=DISK_OK;
-  ATA_drv_flags[0]=STA_NOINIT;
-  ATA_drv_flags[1]=STA_NOINIT;
+  ATA_drv_flags[0] = STA_NOINIT | STA_FIRSTTIME;
+  if(ATA_PORT_DATA_HI_OUT == 0xff)
+    ATA_drv_flags[0] = STA_NOINIT | STA_NODISK;
+  ATA_drv_flags[1] = STA_NOINIT | STA_FIRSTTIME;
 
   /* Initialize the ATA control port */
   ATA_PORT_CTRL_OUT=0xff;
@@ -197,6 +214,8 @@ DSTATUS disk_initialize (BYTE drv) {
   DWORD i = DELAY_VALUE(ATA_INIT_TIMEOUT);
   
   if(drv>1) return STA_NOINIT;
+  if(!(ATA_drv_flags[drv] & STA_FIRSTTIME) && disk_state != DISK_OK)
+    reset_disk();
   if(ATA_drv_flags[drv] & STA_NODISK) return STA_NOINIT; // cannot initialize a drive with no disk in it.
   // we need to set the drive.
   ata_write_reg (ATA_REG_LBA3, ATA_LBA3_LBA | (drv ? ATA_DEV_SLAVE : ATA_DEV_MASTER));
@@ -226,11 +245,12 @@ DSTATUS disk_initialize (BYTE drv) {
     ATA_drv_flags[drv] |= STA_48BIT;
   ATA_drv_flags[drv] &= (BYTE)~( STA_NOINIT | STA_NODISK);
 
-  return ATA_drv_flags[drv] & STA_NOINIT;
+  disk_state = DISK_OK;
+  return 0;
 
 di_error:
-  ATA_drv_flags[drv]|=(STA_NOINIT | STA_NODISK); // no disk in drive
-  return ATA_drv_flags[drv] & STA_NOINIT;
+  ATA_drv_flags[drv]=(STA_NOINIT | STA_NODISK); // no disk in drive
+  return STA_NOINIT | STA_NODISK;
 }
 
 

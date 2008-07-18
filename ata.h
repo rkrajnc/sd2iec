@@ -63,6 +63,7 @@
 #define ATA_DEV_SLAVE        0x10
 
 #define STA_48BIT            0x08
+#define STA_FIRSTTIME        0x80
 
 void init_disk(void);
 
