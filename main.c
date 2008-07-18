@@ -34,12 +34,13 @@
 #include "config.h"
 #include "buffers.h"
 #include "diskchange.h"
+#include "diskio.h"
 #include "eeprom.h"
 #include "errormsg.h"
 #include "fatops.h"
 #include "iec.h"
-#include "diskio.h"
 #include "ff.h"
+#include "led.h"
 #include "rtc.h"
 #include "timer.h"
 #include "uart.h"
@@ -113,8 +114,8 @@ int main(void) {
   BUSY_LED_SETDDR();
   DIRTY_LED_SETDDR();
 
-  BUSY_LED_ON();
-  DIRTY_LED_OFF();
+  set_busy_led(1);
+  set_dirty_led(0);
 
   init_serial();
   sei();
@@ -132,7 +133,7 @@ int main(void) {
   uart_puthex(device_address);
   uart_putcrlf();
 
-  BUSY_LED_OFF();
+  set_busy_led(0);
 
   iec_mainloop();
 

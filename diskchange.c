@@ -34,6 +34,7 @@
 #include "fatops.h"
 #include "flags.h"
 #include "ff.h"
+#include "led.h"
 #include "parser.h"
 #include "timer.h"
 #include "ustring.h"
@@ -55,10 +56,14 @@ static void confirm_blink(uint8_t type) {
   for (i=0;i<2;i++) {
     tick_t targettime;
 
+#ifdef SINGLE_LED
+    DIRTY_LED_ON();
+#else
     if (!i || type & 1)
       DIRTY_LED_ON();
     if (!i || type & 2)
       BUSY_LED_ON();
+#endif
     targettime = ticks + MS_TO_TICKS(100);
     while (time_before(ticks,targettime)) ;
 

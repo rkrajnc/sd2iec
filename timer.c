@@ -29,7 +29,7 @@
 #include <avr/io.h>
 #include "avrcompat.h"
 #include "diskchange.h"
-#include "errormsg.h"
+#include "led.h"
 #include "timer.h"
 
 volatile tick_t ticks;
@@ -71,10 +71,22 @@ ISR(TIMER1_COMPA_vect) {
 
   ticks++;
 
+#ifdef SINGLE_LED
   if (led_state & LED_ERROR) {
     if ((ticks & 15) == 0)
       DIRTY_LED_PORT ^= DIRTY_LED_BIT();
+  } else {
+    if ((led_state & LED_BUSY) || (led_state & LED_DIRTY)) {
+      DIRTY_LED_ON();
+    } else {
+      DIRTY_LED_OFF();
+    }
   }
+#else
+  if (led_state & LED_ERROR)
+    if ((ticks & 15) == 0)
+      DIRTY_LED_PORT ^= DIRTY_LED_BIT();
+#endif
 
   /* Sleep button triggers when held down for 2sec */
   if (time_after(ticks, lastbuttonchange+2)) {

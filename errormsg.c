@@ -33,6 +33,7 @@
 #include "buffers.h"
 #include "fatops.h"
 #include "flags.h"
+#include "led.h"
 #include "utils.h"
 #include "errormsg.h"
 
@@ -234,10 +235,7 @@ void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
     led_state |= LED_ERROR;
   } else {
     led_state &= (uint8_t)~LED_ERROR;
-    if (check_write_buf_count())
-      DIRTY_LED_ON();
-    else
-      DIRTY_LED_OFF();
+    set_error_led(0);
   }
   buffers[CONFIG_BUFFER_COUNT].lastused = msg - error_buffer;
 }

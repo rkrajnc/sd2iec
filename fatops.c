@@ -38,6 +38,7 @@
 #include "ff.h"
 #include "fileops.h"
 #include "flags.h"
+#include "led.h"
 #include "m2iops.h"
 #include "parser.h"
 #include "uart.h"
@@ -886,7 +887,7 @@ uint8_t fat_delete(path_t *path, struct cbmdirent *dent) {
   FRESULT res;
   uint8_t *name;
 
-  DIRTY_LED_ON();
+  set_dirty_led(1);
   if (dent->realname[0]) {
     name = dent->realname;
   } else {
@@ -896,8 +897,7 @@ uint8_t fat_delete(path_t *path, struct cbmdirent *dent) {
   partition[path->part].fatfs.curr_dir = path->fat;
   res = f_unlink(&partition[path->part].fatfs, name);
 
-  if (check_write_buf_count())
-    DIRTY_LED_OFF();
+  update_leds();
 
   parse_error(res,0);
   if (res == FR_OK)

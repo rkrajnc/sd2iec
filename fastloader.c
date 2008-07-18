@@ -38,6 +38,7 @@
 #include "iec-ll.h"
 #include "fastloader-ll.h"
 #include "fastloader.h"
+#include "led.h"
 #include "timer.h"
 #include "diskchange.h"
 
@@ -315,8 +316,8 @@ void load_dreamload(void) {
         change_disk();
       }
       if (key_pressed(KEY_SLEEP)) {
-        BUSY_LED_OFF();
-        DIRTY_LED_ON();
+        set_busy_led(0);
+        set_dirty_led(1);
         /* Wait for the "NEXT" event created by releasing the button */
         while (!key_pressed(KEY_NEXT)) ;
         reset_key(0xff);
@@ -326,13 +327,13 @@ void load_dreamload(void) {
       }
     }
 
-    BUSY_LED_ON();
+    set_busy_led(1);
 
     if (fl_track == 0) {
       // check special commands first
       if (fl_sector == 0) {
         // end loader
-        BUSY_LED_OFF();
+        set_busy_led(0);
         break;
       } else if (fl_sector == 1) {
         // command: load first sector of directory
@@ -344,7 +345,7 @@ void load_dreamload(void) {
         dreamload_send_block(buf->data);
       }
       else {
-        BUSY_LED_OFF();
+        set_busy_led(0);
       }
     } else {
       read_sector(buf, current_part, fl_track, fl_sector);

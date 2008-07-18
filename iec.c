@@ -49,6 +49,7 @@
 #include "flags.h"
 #include "fileops.h"
 #include "iec-ll.h"
+#include "led.h"
 #include "timer.h"
 #include "uart.h"
 #include "iec.h"
@@ -553,8 +554,8 @@ void iec_mainloop(void) {
       set_data(1);
       set_clock(1);
       set_error(ERROR_OK);
-      BUSY_LED_OFF();
-      DIRTY_LED_ON();
+      set_busy_led(0);
+      set_dirty_led(1);
 
       /* Releasing the button creates an additional "NEXT" event, wait for that */
       while (!key_pressed(KEY_NEXT))  ;
@@ -564,10 +565,7 @@ void iec_mainloop(void) {
       while (!key_pressed(KEY_SLEEP)) ;
       reset_key(0xff);
 
-      if (active_buffers)
-        BUSY_LED_ON();
-      if (!check_write_buf_count())
-        DIRTY_LED_OFF();
+      update_leds();
 
       /* Eat the KEY_NEXT event too */
       while (!key_pressed(KEY_NEXT)) ;
@@ -746,7 +744,7 @@ void iec_mainloop(void) {
 #ifdef HAVE_HOTPLUG
         /* This seems to be a nice point to handle card changes */
         if (disk_state != DISK_OK) {
-          BUSY_LED_ON();
+          set_busy_led(1);
           /* If the disk was changed the buffer contents are useless */
           if (disk_state == DISK_CHANGED || disk_state == DISK_REMOVED) {
             free_all_buffers(0);
@@ -756,8 +754,7 @@ void iec_mainloop(void) {
             /* Disk state indicated an error, try to recover by initialising */
             init_fatops(1);
           
-          if (!active_buffers)
-            BUSY_LED_OFF();
+          update_leds();
         }
 #endif
 

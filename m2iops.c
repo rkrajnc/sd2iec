@@ -33,6 +33,7 @@
 #include "errormsg.h"
 #include "fatops.h"
 #include "ff.h"
+#include "led.h"
 #include "parser.h"
 #include "ustring.h"
 #include "wrapops.h"
@@ -462,19 +463,17 @@ static void m2i_rename(path_t *path, struct cbmdirent *dent, uint8_t *newname) {
   uint16_t offset;
   uint8_t *ptr;
 
-  BUSY_LED_ON();
+  set_busy_led(1);
   /* Locate entry in the M2I file */
   offset = find_entry(path->part, dent->name);
   if (offset == 1) {
-    if (!active_buffers)
-      BUSY_LED_OFF();
+    update_leds();
     return;
   }
 
   if (offset == 0) {
-    if (!active_buffers)
-      BUSY_LED_OFF();
     set_error(ERROR_FILE_NOT_FOUND);
+    update_leds();
     return;
   }
 
@@ -491,8 +490,7 @@ static void m2i_rename(path_t *path, struct cbmdirent *dent, uint8_t *newname) {
   /* Write new entry */
   image_write(path->part, offset, entrybuf, M2I_ENTRY_LEN, 1);
 
-  if (!active_buffers)
-    BUSY_LED_OFF();
+  update_leds();
 }
 
 const PROGMEM fileops_t m2iops = {

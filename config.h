@@ -106,6 +106,10 @@
 
 
 /*** LEDs ***/
+/* If your hardware only has a single LED, use only the DIRTY_LED defines */
+/* and set SINGLE_LED. See uIEC below for an example.                     */
+/* #  define SINGLE_LED */
+
 /* BUSY led, recommended color: green */
 /* R.Riedel - using PORTC instead of the original PORTA here plus inverse polarity */
 #  define BUSY_LED_SETDDR() DDRC  |= _BV(PC0)
@@ -304,12 +308,10 @@
 /* No device jumpers on uIEC */
 #  define DEVICE_SELECT         10
 #  define DEVICE_SELECT_SETUP() do {} while (0)
-#  define BUSY_LED_SETDDR()     DDRG  |= _BV(PG4)
-#  define BUSY_LED_ON()         do {led_state |= LED_BUSY; PORTG |= _BV(PG4); } while (0)
-#  define BUSY_LED_OFF()        do {led_state &= (uint8_t)~LED_BUSY; PORTG &= ~_BV(PG4); } while (0)
+#  define SINGLE_LED
 #  define DIRTY_LED_SETDDR()    DDRG  |= _BV(PG4)
-#  define DIRTY_LED_ON()        do {led_state |= LED_ERROR; PORTG |= _BV(PG4); } while(0)
-#  define DIRTY_LED_OFF()       do {if(!(led_state & (LED_BUSY))) PORTG &= ~_BV(PG4); else PORTG |= _BV(PG4); } while (0)
+#  define DIRTY_LED_ON()        PORTG |= _BV(PG4)
+#  define DIRTY_LED_OFF()       PORTG &= ~_BV(PG4)
 #  define DIRTY_LED_PORT        PORTG
 #  define DIRTY_LED_BIT()       _BV(PG4)
 #  define AUX_LED_SETDDR()      DDRG  |= _BV(PG2)
@@ -469,6 +471,8 @@
 #endif
 
 
+/* ---------------- End of user-configurable options ---------------- */
+
 #define IEC_BIT_ATN      _BV(IEC_PIN_ATN)
 #define IEC_BIT_DATA     _BV(IEC_PIN_DATA)
 #define IEC_BIT_CLOCK    _BV(IEC_PIN_CLOCK)
@@ -508,8 +512,6 @@
      else { EIMSK &= (uint8_t)~_BV(INT6); }
 #endif
 
-/* ---------------- End of user-configurable options ---------------- */
-
 /* Disable COMMAND_CHANNEL_DUMP if UART_DEBUG is disabled */
 #ifndef CONFIG_UART_DEBUG
 #  undef CONFIG_COMMAND_CHANNEL_DUMP
@@ -518,6 +520,13 @@
 /* An interrupt for detecting card changes implies hotplugging capability */
 #ifdef SD_CHANGE_VECT
 #  define HAVE_HOTPLUG
+#endif
+
+/* Generate dummy functions for the BUSY LED if required */
+#ifdef SINGLE_LED
+#  define BUSY_LED_SETDDR() do {} while(0)
+#  define BUSY_LED_ON()     do {} while(0)
+#  define BUSY_LED_OFF()    do {} while(0)
 #endif
 
 #endif

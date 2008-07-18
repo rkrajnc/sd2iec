@@ -30,6 +30,7 @@
 #include "dirent.h"
 #include "errormsg.h"
 #include "ff.h"
+#include "led.h"
 #include "buffers.h"
 
 dh_t    matchdh;
@@ -115,7 +116,7 @@ buffer_t *alloc_buffer(void) {
   if (buf != NULL) {
     buf->secondary = 0;
     active_buffers++;
-    BUSY_LED_ON();
+    set_busy_led(1);
   }
   return buf;
 }
@@ -139,11 +140,10 @@ void free_buffer(buffer_t *buffer) {
 
   if (buffer->write)
     active_buffers -= 16;
-  if (!(active_buffers & 0xf0))
-    DIRTY_LED_OFF();
+  if (buffer->secondary < BUFFER_SEC_SYSTEM)
+    active_buffers--;
 
-  if (buffer->secondary < BUFFER_SEC_SYSTEM && ! --active_buffers)
-    BUSY_LED_OFF();
+  update_leds();
 }
 
 /**
@@ -222,5 +222,5 @@ buffer_t *find_buffer(uint8_t secondary) {
 void mark_write_buffer(buffer_t *buf) {
   buf->write = 1;
   active_buffers += 16;
-  DIRTY_LED_ON();
+  set_dirty_led(1);
 }
