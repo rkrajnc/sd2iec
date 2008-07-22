@@ -151,11 +151,12 @@
 //#  define IEC_OPIN_CLOCK PA6
 //#  define IEC_OPIN_SRQ   PA7
 
-/* If non-separate output lines: Value to be ORed into the DDR register */
-/* This is used in the NKC configuration (6) to make sure that the      */
-/* SPI lines are configured correctly when the fastloader code uses     */
-/* OUT on the register instead of toggeling single bits.                */
-#  define IEC_PULLUPS     0
+/* You can use different ports for input and output bits. The code tries */
+/* to not stomp on the unused bits. IEC output is on IEC_PORT.           */
+/* Not well-tested yet.                                                  */
+//#  define IEC_DDRIN      DDRX
+//#  define IEC_DDROUT     DDRY
+//#  define IEC_PORTIN     PORTX
 
 /* ATN interrupt line (not required) */
 /* If this is commented out, the ATN line will be polled by a timer interrupt instead */
@@ -232,7 +233,6 @@
 #  define IEC_PIN_DATA          PA1
 #  define IEC_PIN_CLOCK         PA2
 #  define IEC_PIN_SRQ           PA3
-#  define IEC_PULLUPS           0
 #  define IEC_INT_VECT          PCINT0_vect
 #  define IEC_INT_SETUP()       do { PCICR |= _BV(PCIE0); PCIFR |= _BV(PCIF0); } while (0)
 #  define IEC_PCMSK             PCMSK0
@@ -285,7 +285,6 @@
 #  define IEC_PIN_DATA          PC1
 #  define IEC_PIN_CLOCK         PC2
 #  define IEC_PIN_SRQ           PC3
-#  define IEC_PULLUPS           0
 #  define IEC_INT_VECT          PCINT2_vect
 #  define IEC_INT_SETUP()       do { PCICR |= _BV(PCIE2); PCIFR |= _BV(PCIF2); } while (0)
 #  define IEC_PCMSK             PCMSK2
@@ -324,7 +323,6 @@
 #  define IEC_PIN_DATA          PE4
 #  define IEC_PIN_CLOCK         PE5
 #  define IEC_PIN_SRQ           PE2
-#  define IEC_PULLUPS           0
 #  define IEC_INT_VECT          INT6_vect
 #  define IEC_INT_SETUP()       do { EICRB |= _BV(ISC60); } while (0)
 #  undef  IEC_PCMSK
@@ -454,7 +452,6 @@
 #  define IEC_PIN_DATA          PB1
 #  define IEC_PIN_CLOCK         PB2
 #  define IEC_PIN_SRQ           PB3
-#  define IEC_PULLUPS           (_BV(PB7) | _BV(PB6) | _BV(PB4))
 #  define IEC_INT_VECT          PCINT1_vect
 #  define IEC_INT_SETUP()       do { PCICR |= _BV(PCIE1); PCIFR |= _BV(PCIF1); } while (0)
 #  define IEC_PCMSK             PCMSK1
@@ -479,7 +476,6 @@
 #define IEC_BIT_SRQ      _BV(IEC_PIN_SRQ)
 
 #ifdef IEC_SEPARATE_OUT
-#  define IEC_PULLUPS    (IEC_BIT_ATN | IEC_BIT_DATA | IEC_BIT_CLOCK | IEC_BIT_SRQ)
 #  define IEC_OBIT_ATN   _BV(IEC_OPIN_ATN)
 #  define IEC_OBIT_DATA  _BV(IEC_OPIN_DATA)
 #  define IEC_OBIT_CLOCK _BV(IEC_OPIN_CLOCK)
@@ -495,6 +491,15 @@
 #  define IEC_OBIT_CLOCK IEC_BIT_CLOCK
 #  define IEC_OBIT_SRQ   IEC_BIT_SRQ
 #  define IEC_OUT        IEC_DDR
+#endif
+
+#ifndef IEC_PORTIN
+#  define IEC_PORTIN IEC_PORT
+#endif
+
+#ifndef IEC_DDRIN
+#  define IEC_DDRIN  IEC_DDR
+#  define IEC_DDROUT IEC_DDR
 #endif
 
 #ifdef IEC_PCMSK

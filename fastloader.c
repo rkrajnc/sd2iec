@@ -72,8 +72,8 @@ void load_turbodisk(void) {
   if (!buf) {
     cli();
     turbodisk_byte(0xff);
-    IEC_DDR &= ~IEC_BIT_CLOCK;
-    IEC_DDR &= ~IEC_BIT_DATA;
+    set_clock(1);
+    set_data(1);
     sei();
     return;
   }
@@ -269,7 +269,7 @@ static void dreamload_send_block(const uint8_t* p) {
   dreamload_send_byte(checksum);
 
   // release CLOCK and DATA
-  IEC_OUT = IEC_PULLUPS;
+  IEC_OUT &= (uint8_t)~(IEC_ATN|IEC_DATA|IEC_CLOCK|IEC_SRQ);
   sei();
 }
 
@@ -284,7 +284,7 @@ void load_dreamload(void) {
   set_atn_irq(0);
 
   // Release clock and data
-  IEC_OUT = IEC_PULLUPS;
+  IEC_OUT &= (uint8_t)~(IEC_ATN|IEC_DATA|IEC_CLOCK|IEC_SRQ);
 
   /* load final drive code, fixed length */
   type = 0;

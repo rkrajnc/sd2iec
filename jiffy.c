@@ -35,6 +35,8 @@
 #include "fastloader-ll.h"
 #include "timer.h"
 
+/* Ugly hack. Use the assembler version instead. */
+#define IEC_PULLUPS (IEC_PORT & (uint8_t)~(IEC_ATN|IEC_DATA|IEC_CLOCK|IEC_SRQ))
 
 #define JIFFY_OFFSET_SEND 3
 #define JIFFY_OFFSET_RECV 3

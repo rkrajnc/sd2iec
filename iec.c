@@ -509,14 +509,16 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
 void init_iec(void) {
 #ifdef IEC_SEPARATE_OUT
   /* Set up the port: Output bits as output, all others as input */
-  IEC_DDR  =            IEC_OBIT_ATN | IEC_OBIT_CLOCK | IEC_OBIT_DATA | IEC_OBIT_SRQ;
+  IEC_DDROUT |=            IEC_OBIT_ATN | IEC_OBIT_CLOCK | IEC_OBIT_DATA | IEC_OBIT_SRQ;
+  IEC_DDRIN  &= (uint8_t)~(IEC_BIT_ATN  | IEC_BIT_CLOCK  | IEC_BIT_DATA  | IEC_BIT_SRQ);
   /* Enable pullups on the input pins and set the output lines to high */
-  IEC_PORT = (uint8_t)~(IEC_OBIT_ATN | IEC_OBIT_CLOCK | IEC_OBIT_DATA | IEC_OBIT_SRQ);
+  IEC_PORT   &= (uint8_t)~(IEC_OBIT_ATN | IEC_OBIT_CLOCK | IEC_OBIT_DATA | IEC_OBIT_SRQ);
+  IEC_PORTIN |= IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA | IEC_BIT_SRQ;
 #else
   /* Pullups would be nice, but AVR can't switch from */
   /* low output to hi-z input directly                */
-  IEC_DDR  = 0;
-  IEC_PORT = ~(IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA);
+  IEC_DDR  &= (uint8_t)~(IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA | IEC_BIT_SRQ);
+  IEC_PORT &= (uint8_t)~(IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA | IEC_BIT_SRQ);
 #endif
 
   /* Prepare IEC interrupt (if any) */
