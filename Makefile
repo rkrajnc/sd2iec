@@ -108,6 +108,19 @@ ifeq ($(CONFIG_RTC),y)
   SRC += softi2c.c pcf8583.c
 endif
 
+# Additional hardware support enabled in the config file
+ifdef CONFIG_ADD_SD
+  SRC += sdcard.c spi.c crc7.c
+endif
+
+ifdef CONFIG_ADD_ATA
+  SRC += ata.c
+endif
+
+ifdef CONFIG_ADD_DF
+  SRC += spi.c dataflash.c
+endif
+
 # List Assembler source files here.
 #     Make them always end in a capital .S.  Files ending in a lowercase .s
 #     will not be considered source files but generated files (assembler
@@ -344,13 +357,14 @@ COPY = cp
 WINSHELL = cmd
 
 
-
+# De-dupe the list of C source files
+CSRC := $(sort $(SRC))
 
 # Define all object files.
-OBJ := $(patsubst %,$(OBJDIR)/%,$(SRC:.c=.o) $(ASRC:.S=.o))
+OBJ := $(patsubst %,$(OBJDIR)/%,$(CSRC:.c=.o) $(ASRC:.S=.o))
 
 # Define all listing files.
-LST := $(patsubst %,$(OBJDIR)/%,$(SRC:.c=.lst) $(ASRC:.S=.lst))
+LST := $(patsubst %,$(OBJDIR)/%,$(CSRC:.c=.lst) $(ASRC:.S=.lst))
 
 
 # Compiler flags to generate dependency files.
@@ -545,8 +559,8 @@ clean_list :
 	$(Q)$(REMOVE) $(OBJDIR)/autoconf.h
 	$(Q)$(REMOVE) $(OBJDIR)/*.bin
 	$(Q)$(REMOVE) $(LST)
-	$(Q)$(REMOVE) $(SRC:.c=.s)
-	$(Q)$(REMOVE) $(SRC:.c=.d)
+	$(Q)$(REMOVE) $(CSRC:.c=.s)
+	$(Q)$(REMOVE) $(CSRC:.c=.d)
 	$(Q)$(REMOVE) .dep/*
 	$(Q)$(REMOVE) -rf codedoc
 	$(Q)$(REMOVE) -rf doxyinput

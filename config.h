@@ -61,7 +61,10 @@
 /* How many drives can be accessed on this hardware? */
 #  define MAX_DRIVES         1
 
-/*** SD card signals ***/
+/*** SD card support ***/
+/* If your device supports SD cards by default, define this symbol. */
+#  define HAVE_SD
+
 /* CARD_DETECT must return non-zero when card is inserted */
 /* This must be a pin capable of generating interrupts.   */
 #  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
@@ -118,9 +121,16 @@
 
 /*** AT45DB161D dataflash support ***/
 /* You can use an Atmel AT45DB161D chip as data storage/additional drive */
+//#  define HAVE_DF
 //#  define DATAFLASH_PORT        PORTD
 //#  define DATAFLASH_DDR         DDRD
 //#  define DATAFLASH_SELECT      _BV(PD2)
+
+
+/*** diskio mux ***/
+/* If your device supports more than one type of storage (SD/ATA/DF) by default, */
+/* define this symbol to force inclusion of the diskio mux code.                 */
+//#  define NEED_DISKMUX
 
 
 /*** Device address selection ***/
@@ -224,6 +234,7 @@
 #elif CONFIG_HARDWARE_VARIANT==2
 /* Hardware configuration: Shadowolf 1 */
 #  define HW_NAME "SD2IEC"
+#  define HAVE_SD
 #  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
 #  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
 #  if defined __AVR_ATmega32__
@@ -275,6 +286,7 @@
 #elif CONFIG_HARDWARE_VARIANT == 3
 /* Hardware configuration: LarsP */
 #  define HW_NAME "SD2IEC"
+#  define HAVE_SD
 #  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
 #  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
 #  if defined __AVR_ATmega32__
@@ -327,6 +339,7 @@
 #elif CONFIG_HARDWARE_VARIANT == 4
 /* Hardware configuration: uIEC */
 #  define HW_NAME "UIEC"
+#  define HAVE_ATA
 #  define CFCARD_DETECT         (!(PINE & _BV(PE7)))
 #  define CFCARD_DETECT_SETUP() do { DDRE &= ~_BV(PE7); PORTE |= _BV(PE7); } while(0)
 #  define CF_CHANGE_SETUP()     do { EICRB |= _BV(ISC70); EIMSK |= _BV(INT7); } while(0)
@@ -365,6 +378,7 @@
 #elif CONFIG_HARDWARE_VARIANT==5
 /* Hardware configuration: Shadowolf 2 aka sd2iec 1.x */
 #  define HW_NAME "SD2IEC"
+#  define HAVE_SD
 #  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
 #  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
 #  if defined __AVR_ATmega32__
@@ -442,6 +456,7 @@
 #elif CONFIG_HARDWARE_VARIANT == 6
 /* Hardware configuration: NKC MMC2IEC */
 #  define HW_NAME "SD2IEC"
+#  define HAVE_SD
 #  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
 #  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
 #  if defined __AVR_ATmega32__
@@ -494,6 +509,7 @@
 #elif CONFIG_HARDWARE_VARIANT == 99
 /* Hardware configuration: sdlite - not for production use */
 #  define HW_NAME "SD2IEC"
+#  define HAVE_SD
 #  define SDCARD_DETECT         1
 #  define SDCARD_DETECT_SETUP() do { } while(0)
 #  define SD_CHANGE_SETUP()     do { } while(0)
@@ -600,5 +616,28 @@
 #  define BUSY_LED_ON()     do {} while(0)
 #  define BUSY_LED_OFF()    do {} while(0)
 #endif
+
+/* Enable the diskio mux if non-default storage devices are enabled */
+#ifndef NEED_DISKMUX
+#  if defined(CONFIG_ADD_SD) || defined(CONFIG_ADD_ATA) || defined(CONFIG_ADD_DF)
+#    define NEED_DISKMUX
+#  endif
+#endif
+
+/* Translate CONFIG_ADD symbols to HAVE symbols */
+/* By using two symbols for this purpose it's easier to determine if */
+/* support was enabled by default or added in the config file.       */
+#if defined(CONFIG_ADD_SD) && !defined(HAVE_SD)
+#  define HAVE_SD
+#endif
+
+#if defined(CONFIG_ADD_ATA) && !defined(HAVE_ATA)
+#  define HAVE_ATA
+#endif
+
+#if defined(CONFIG_ADD_DF) && !defined(HAVE_DF)
+#  define HAVE_DF
+#endif
+
 
 #endif

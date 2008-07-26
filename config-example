@@ -96,6 +96,25 @@ CONFIG_SD_AUTO_RETRIES=10
 # Use CRC checks for all SD data transmissions?
 CONFIG_SD_DATACRC=y
 
+# Use two SD cards? Works only if SD2 hardware definitions
+# in config.h are present for the selected hardware variant.
+CONFIG_TWINSD=y
+
+# Additional storage device support
+# You don't need to enable the "native" storage device of your hardware
+# here, the build system will add that itself (requires definitions in
+# config.h).
+#
+# At this time no hardware is set up to support storage devices other than
+# its native one.
+#
+# Add SD support
+#CONFIG_ADD_SD=y
+# Add ATA support
+#CONFIG_ADD_ATA=y
+# Add DataFlash support
+#CONFIG_ADD_DF=y
+
 # Length of error message buffer - 1571 uses 36 bytes
 # Increased to 46 because the long version message can be a bit long
 CONFIG_ERROR_BUFFER_SIZE=46
