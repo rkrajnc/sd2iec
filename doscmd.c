@@ -91,11 +91,13 @@ void __cyg_profile_func_enter (void *this_fn, void *call_site) {
 }
 #endif
 
+#ifdef CONFIG_RTC
 /* Days of the week as used by the CMD FD */
-PROGMEM uint8_t downames[] = "SUN.MON.TUESWED.THURFRI.SAT.";
+static PROGMEM uint8_t downames[] = "SUN.MON.TUESWED.THURFRI.SAT.";
 
 /* Skeleton of the ASCII time format */
-PROGMEM uint8_t asciitime_skel[] = " xx/xx/xx xx:xx:xx xM\r";
+static PROGMEM uint8_t asciitime_skel[] = " xx/xx/xx xx:xx:xx xM\r";
+#endif
 
 /* ------------------------------------------------------------------------- */
 /*  Parsing helpers                                                          */
