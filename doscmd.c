@@ -209,38 +209,30 @@ static void parse_chdir(void) {
 
 /* --- RD --- */
 static void parse_rmdir(void) {
-  uint8_t *buf;
-  uint8_t i;
+  uint8_t *str;
+  uint8_t res;
   uint8_t part;
   path_t  path;
   struct cbmdirent dent;
 
   /* No deletion across subdirectories */
-  for (i=0;command_buffer[i];i++) {
-    if (command_buffer[i] == '/') {
-      /* Hack around a missing 2-level-break */
-      i = 255;
-      break;
-    }
-  }
-
-  if (i == 255) {
+  if (ustrchr(command_buffer, '/')) {
     set_error(ERROR_SYNTAX_NONAME);
     return;
   }
 
   /* Parse partition number */
-  buf=command_buffer+2;
-  part=parse_partition(&buf);
-  if (*buf != ':') {
+  str = command_buffer+2;
+  part = parse_partition(&str);
+  if (*str != ':') {
     set_error(ERROR_SYNTAX_NONAME);
   } else {
     path.part = part;
     path.fat  = partition[part].current_dir;
-    ustrcpy(dent.name, buf+1);
-    i = file_delete(&path, &dent);
-    if (i != 255)
-      set_error_ts(ERROR_SCRATCHED,i,0);
+    ustrcpy(dent.name, str+1);
+    res = file_delete(&path, &dent);
+    if (res != 255)
+      set_error_ts(ERROR_SCRATCHED,res,0);
   }
 }
 
@@ -270,10 +262,10 @@ static void parse_dircommand(void) {
 /*  B commands  */
 /* ------------ */
 static void parse_block(void) {
-  uint8_t *str;
+  uint8_t  *str;
   buffer_t *buf;
-  uint8_t params[4];
-  int8_t  pcount;
+  uint8_t  params[4];
+  int8_t   pcount;
 
   str = ustrchr(command_buffer, '-');
   if (!str) {
@@ -334,45 +326,36 @@ static void parse_block(void) {
   }
 }
 
+
 /* ----------------------- */
 /*  CP - Change Partition  */
 /* ----------------------- */
 static void parse_changepart(void) {
-  uint8_t *buf;
+  uint8_t *str;
   uint8_t part;
 
   switch(command_buffer[1]) {
   case 'P':
-    buf=command_buffer+2;
-    part=parse_partition(&buf);
-
-    if(part>=max_part) {
-      set_error_ts(ERROR_PARTITION_ILLEGAL,part+1,0);
-      return;
-    }
-
-    current_part=part;
-    if (globalflags & AUTOSWAP_ACTIVE)
-      set_changelist(NULL, NULLSTRING);
-
-    set_error_ts(ERROR_PARTITION_SELECTED, part+1, 0);
+    str  = command_buffer + 2;
+    part = parse_partition(&str);
     break;
 
   case 0xd0: /* Shift-P */
-    /* Change Partition, binary version */
-    if (command_buffer[2] > max_part) {
-      set_error_ts(ERROR_PARTITION_ILLEGAL, command_buffer[2], 0);
-      return;
-    }
-
-    if (command_buffer[2]) {
-      current_part = command_buffer[2]-1;
-      if (globalflags & AUTOSWAP_ACTIVE)
-        set_changelist(NULL, NULLSTRING);
-    }
-    set_error_ts(ERROR_PARTITION_SELECTED, command_buffer[2], 0);
+    /* binary version */
+    part = command_buffer[2] - 1;
     break;
   }
+
+  if(part>=max_part) {
+    set_error_ts(ERROR_PARTITION_ILLEGAL,part+1,0);
+    return;
+  }
+
+  current_part=part;
+  if (globalflags & AUTOSWAP_ACTIVE)
+    set_changelist(NULL, NULLSTRING);
+
+  set_error_ts(ERROR_PARTITION_SELECTED, part+1, 0);
 }
 
 
@@ -431,7 +414,7 @@ static void parse_eeprom(void) {
 /*  G-P - Get Partition info  */
 /* -------------------------- */
 static void parse_getpartition(void) {
-  uint8_t *buf;
+  uint8_t *ptr;
   path_t path;
 
   if (command_length < 3) /* FIXME: should this set an error? */
@@ -455,26 +438,26 @@ static void parse_getpartition(void) {
 
   buffers[CONFIG_BUFFER_COUNT].position = 0;
   buffers[CONFIG_BUFFER_COUNT].lastused = 31;
-  buf=buffers[CONFIG_BUFFER_COUNT].data;
-  memset(buf,0,32);
-  *(buf++) = 1; /* Partition type: native */
-  buf++;
+  ptr=buffers[CONFIG_BUFFER_COUNT].data;
+  memset(ptr,0,32);
+  *(ptr++) = 1; /* Partition type: native */
+  ptr++;
 
-  *(buf++) = path.part+1;
+  *(ptr++) = path.part+1;
   path.fat=0;
-  if (disk_label(&path,buf))
+  if (disk_label(&path,ptr))
     return;
-  buf+= 16;
-  *(buf++) = partition[path.part].fatfs.fatbase>>16;
-  *(buf++) = partition[path.part].fatfs.fatbase>>8;
-  *(buf++) = (partition[path.part].fatfs.fatbase & 0xff);
-  buf++;
+  ptr += 16;
+  *(ptr++) = partition[path.part].fatfs.fatbase>>16;
+  *(ptr++) = partition[path.part].fatfs.fatbase>>8;
+  *(ptr++) = (partition[path.part].fatfs.fatbase & 0xff);
+  ptr++;
 
   uint32_t size = (partition[path.part].fatfs.max_clust - 1) * partition[path.part].fatfs.csize;
-  *(buf++) = size>>16;
-  *(buf++) = size>>8;
-  *(buf++) = size;
-  *buf = 13;
+  *(ptr++) = size>>16;
+  *(ptr++) = size>>8;
+  *(ptr++) = size;
+  *ptr = 13;
 }
 
 
