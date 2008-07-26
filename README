@@ -83,6 +83,19 @@ Supported commands:
 - CP, C<Shift-P>
   This changes the current partition, see "Partitions" below for details.
 
+- C:
+  File copy command, should be CMD compatible. The syntax is
+   C[partition][path]:targetname=[[partition][path]:]sourcename[,[[p][p]:]sourcename...]
+  You can use this command to copy multiple files into a single target
+  file in which case all source files will be appended into the target
+  file. Parsing restarts for every source file name which means that
+  every source name is assumed to be relative to the current directory.
+  You can use wildcards in the source names, but only the first
+  file matching will be copied.
+
+  Copying REL files should work, but isn't tested well. Mixing REL and
+  non-REL files in an append operation isn't supported.
+
 - G-P
   Get partition info, see CMD FD/HD manual for details. The reported
   information is partially faked, feedback is welcome.

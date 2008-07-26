@@ -327,6 +327,160 @@ static void parse_block(void) {
 }
 
 
+/* ---------- */
+/*  C - Copy  */
+/* ---------- */
+static void parse_copy(void) {
+  path_t srcpath,dstpath;
+  uint8_t *srcname,*dstname,*tmp;
+  uint8_t savedtype;
+  int8_t res;
+  buffer_t *srcbuf,*dstbuf;
+  struct cbmdirent dent;
+
+  /* Find the = */
+  srcname = ustrchr(command_buffer,'=');
+  if (srcname == NULL) {
+    set_error(ERROR_SYNTAX_UNKNOWN);
+    return;
+  }
+  *srcname++ = 0;
+
+  /* Parse the destination name */
+  if (parse_path(command_buffer+1, &dstpath, &dstname, 0))
+    return;
+
+  if (ustrlen(dstname) == 0) {
+    set_error(ERROR_SYNTAX_NONAME);
+    return;
+  }
+
+  /* Check for invalid characters in the destination name */
+  if (check_invalid_name(dstname)) {
+    set_error(ERROR_SYNTAX_UNKNOWN);
+    return;
+  }
+
+  /* Check if the destination file exists */
+  res = first_match(&dstpath, dstname, FLAG_HIDDEN, &dent);
+  if (res == 0) {
+    set_error(ERROR_FILE_EXISTS);
+    return;
+  }
+
+  if (res > 0)
+    return;
+
+  set_error(ERROR_OK);
+
+  srcbuf = alloc_buffer();
+  dstbuf = alloc_buffer();
+  if (srcbuf == NULL || dstbuf == NULL) {
+    free_buffer(srcbuf);
+    free_buffer(dstbuf);
+    return;
+  }
+
+  savedtype = 0;
+  srcname = ustr1tok(srcname,',',&tmp);
+  while (srcname != NULL) {
+    /* Parse the source path */
+    if (parse_path(srcname, &srcpath, &srcname, 0))
+      goto cleanup;
+
+    /* Open the current source file */
+    res = first_match(&srcpath, srcname, FLAG_HIDDEN, &dent);
+    if (res != 0)
+      goto cleanup;
+
+    /* Note: A 1541 can't copy REL files. We try to do better. */
+    if ((dent.typeflags & TYPE_MASK) == TYPE_REL) {
+      if (savedtype != 0 && savedtype != TYPE_REL) {
+        set_error(ERROR_FILE_TYPE_MISMATCH);
+        goto cleanup;
+      }
+      open_rel(&srcpath, &dent, srcbuf, 0, 1);
+    } else {
+      if (savedtype != 0 && savedtype == TYPE_REL) {
+        set_error(ERROR_FILE_TYPE_MISMATCH);
+        goto cleanup;
+      }
+      open_read(&srcpath, &dent, srcbuf);
+    }
+
+    if (current_error != 0)
+      goto cleanup;
+
+    /* Open the destination file (first source only) */
+    if (savedtype == 0) {
+      savedtype = dent.typeflags & TYPE_MASK;
+      memset(&dent, 0, sizeof(dent));
+      ustrncpy(dent.name, dstname, CBM_NAME_LENGTH);
+      if (savedtype == TYPE_REL)
+        open_rel(&dstpath, &dent, dstbuf, srcbuf->recordlen, 1);
+      else
+        open_write(&dstpath, &dent, savedtype, dstbuf, 0);
+    }
+
+    while (1) {
+      uint8_t tocopy;
+
+      if (savedtype == TYPE_REL)
+        tocopy = srcbuf->recordlen;
+      else
+        tocopy = 256-dstbuf->position;
+
+      if (tocopy > (srcbuf->lastused - srcbuf->position+1))
+        tocopy = srcbuf->lastused - srcbuf->position + 1;
+
+      if (tocopy > 256-dstbuf->position)
+        tocopy = 256-dstbuf->position;
+
+      memcpy(dstbuf->data + dstbuf->position,
+             srcbuf->data + srcbuf->position,
+             tocopy);
+      dstbuf->dirty     = 1;
+      srcbuf->position += tocopy-1;  /* add 1 less, simplifies the test later */
+      dstbuf->position += tocopy;
+      dstbuf->lastused  = dstbuf->position-1;
+
+      /* End if we just copied the last data block */
+      if (srcbuf->sendeoi && srcbuf->position == srcbuf->lastused)
+        break;
+
+      /* Refill the buffers if required */
+      if (srcbuf->recordlen || srcbuf->position++ == srcbuf->lastused)
+        if (srcbuf->refill(srcbuf))
+          goto cleanup;
+
+      if (dstbuf->recordlen || dstbuf->position == 0)
+        if (dstbuf->refill(dstbuf))
+          goto cleanup;
+    }
+
+    /* Close current source file */
+    srcbuf->cleanup(srcbuf);
+
+    /* Free and reallocate the buffer. This is required because most of the  */
+    /* file_open code assumes that it will get a "pristine" buffer with      */
+    /* 0 is most of the fields. Allocation cannot fail at this point because */
+    /* there is at least one free buffer.                                    */
+    free_buffer(srcbuf);
+    srcbuf = alloc_buffer();
+
+    /* Next file */
+    srcname = ustr1tok(NULL,',',&tmp);
+  }
+
+  cleanup:
+  /* Close the buffers */
+  dstbuf->cleanup(dstbuf);
+  srcbuf->cleanup(srcbuf);
+  free_buffer(srcbuf);
+  free_buffer(dstbuf);
+}
+
+
 /* ----------------------- */
 /*  CP - Change Partition  */
 /* ----------------------- */
@@ -1221,8 +1375,8 @@ void parse_doscommand(void) {
     if (command_buffer[1] == 'P' || command_buffer[1] == 0xd0)
       parse_changepart();
     else
-      /* Throw an error because we don't handle copy yet */
-      set_error(ERROR_SYNTAX_UNKNOWN);
+      /* Copy a file */
+      parse_copy();
     break;
 
   case 'E':

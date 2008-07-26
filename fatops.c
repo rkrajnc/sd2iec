@@ -486,6 +486,7 @@ static uint8_t fat_file_close(buffer_t *buf) {
 
   res = f_close(&buf->pvt.fat.fh);
   parse_error(res,1);
+  buf->cleanup = callback_dummy;
 
   if (res != FR_OK)
     return 1;
