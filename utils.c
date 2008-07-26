@@ -25,6 +25,7 @@
 */
 
 #include <stdint.h>
+#include "ustring.h"
 
 uint8_t *appendnumber(uint8_t *msg, uint8_t value) {
   if (value >= 100) {
@@ -46,4 +47,31 @@ uint8_t bcd2int(uint8_t value) {
 /* Convert a uint8_t into a BCD value */
 uint8_t int2bcd(uint8_t value) {
   return (value % 10) + 16*(value/10);
+}
+
+/* Similiar to strtok_r, but only a single delimiting character  */
+uint8_t *ustr1tok(uint8_t *str, const uint8_t delim, uint8_t **saveptr) {
+  uint8_t *tmp;
+
+  if (str == NULL)
+    str = *saveptr;
+
+  /* Skip leading delimiters */
+  while (*str == delim) str++;
+
+  /* If there is anything left... */
+  if (*str) {
+    /* Search for the next delimiter */
+    tmp = str;
+    while (*tmp && *tmp != delim) tmp++;
+
+    /* Terminate the string there */
+    if (*tmp != 0)
+      *tmp++ = 0;
+
+    *saveptr = tmp;
+
+    return str;
+  } else
+    return NULL;
 }

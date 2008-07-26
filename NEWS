@@ -1,6 +1,8 @@
 2008-xx-xx - release x.x.x
         - Implement Dreamload emulation
         - RTC support
+        - Dataflash support
+        - Multi-file scratch
 
 2008-07-09 - release 0.7.3
         - Bugfix: Free buffers on error in M2I and D64

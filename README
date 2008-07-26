@@ -96,6 +96,9 @@ Supported commands:
 
 - S:
   Name matching is fully supported, directories are ignored.
+  Scratching of multiple files separated by , is also supported with no
+  limit to the number of files except for the maximum command line length
+  (usually 100 to 120 characters).
 
 - T-R and T-W
   If your hardware features RTC support the commands T-R (time read) and T-W
@@ -385,6 +388,20 @@ To use this functionality, create a text file that lists the file
 names of all disk images you want to swap between, one per line.
 The file names are parsed in the same way as the CD command, so you
 can include a path to the image if desired.
+
+Examples:
+=== example 1 ===
+FOO.D64
+BAR.D64
+BAZ.D64
+=== end of example 1 ===
+
+=== example 2 ===
+//NEATGAME/:DISK1A.D64
+//NEATGAME/:DISK1B.D64
+//NEATGAME/:DISK2A.D64
+//NEATGAME/:DISK2B.D64
+=== end of example 2 ===
 
 The swap list is enabled by sending "XS:filename" over the command channel
 with filename being the name of the image list you created, parsed

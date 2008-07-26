@@ -27,8 +27,14 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+/* Write a number to a string as ASCII */
 uint8_t *appendnumber(uint8_t *msg, uint8_t value);
+
+/* Convert between integer and BCD */
 uint8_t bcd2int(uint8_t value);
 uint8_t int2bcd(uint8_t value);
+
+/* Tokenize a string like strtok_r, but with a single delimiter character only */
+uint8_t *ustr1tok(uint8_t *str, const uint8_t delim, uint8_t **saveptr);
 
 #endif

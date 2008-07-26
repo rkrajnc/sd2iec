@@ -679,6 +679,46 @@ void parse_rename(void) {
   rename(&oldpath, &dent, newname);
 }
 
+static void parse_scratch(void) {
+  struct cbmdirent dent;
+  int8_t  res;
+  uint8_t count,cnt;
+  uint8_t *filename,*tmp,*name;
+  path_t  path;
+
+  filename = ustr1tok(command_buffer+1,',',&tmp);
+
+  count = 0;
+  /* Loop over all file names */
+  while (filename != NULL) {
+    parse_path(filename, &path, &name, 0);
+
+    if (opendir(&matchdh, &path))
+      return;
+
+    while (1) {
+      res = next_match(&matchdh, name, NULL, NULL, FLAG_HIDDEN, &dent);
+      if (res < 0)
+        break;
+      if (res > 0)
+        return;
+
+      /* Skip directories */
+      if ((dent.typeflags & TYPE_MASK) == TYPE_DIR)
+        continue;
+      cnt = file_delete(&path, &dent);
+      if (cnt != 255)
+        count += cnt;
+      else
+        return;
+    }
+
+    filename = ustr1tok(NULL,',',&tmp);
+  }
+
+  set_error_ts(ERROR_SCRATCHED,count,0);
+}
+
 #ifdef CONFIG_RTC
 /* ----------------- */
 /*  T-R - Time Read  */
@@ -856,7 +896,7 @@ void parse_timewrite(void) {
 /* ------------------------------------------------------------------------- */
 
 void parse_doscommand(void) {
-  uint8_t i,count;
+  uint8_t i;
   uint8_t *buf;
   struct cbmdirent dent;
   path_t path;
@@ -1164,26 +1204,7 @@ void parse_doscommand(void) {
       break;
     }
     /* Scratch */
-    parse_path(command_buffer+1, &path, &buf, 0);
-
-    if (opendir(&matchdh, &path))
-      return;
-
-    i = 255;
-    count = 0;
-    while (!next_match(&matchdh, buf, NULL, NULL, FLAG_HIDDEN, &dent)) {
-      /* Skip directories */
-      if ((dent.typeflags & TYPE_MASK) == TYPE_DIR)
-        continue;
-      i = file_delete(&path, &dent);
-      if (i != 255)
-        count += i;
-      else
-        break;
-    }
-    if (i != 255)
-      set_error_ts(ERROR_SCRATCHED,count,0);
-
+    parse_scratch();
     break;
 
 #ifdef CONFIG_RTC
