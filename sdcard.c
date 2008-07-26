@@ -59,6 +59,7 @@
 #include "config.h"
 #include "spi.h"
 #include "crc7.h"
+#include "diskio.h"
 #include "uart.h"
 #include "sdcard.h"
 
@@ -114,8 +115,6 @@
 #define STATUS_ADDRESS_ERROR   32
 #define STATUS_PARAMETER_ERROR 64
 
-
-volatile enum diskstates disk_state;
 
 #ifdef CONFIG_SDHC_SUPPORT
 static uint8_t isSDHC;

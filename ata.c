@@ -35,8 +35,6 @@
 
 static DSTATUS ATA_drv_flags[2];
 
-volatile enum diskstates disk_state;
-
 #define ATA_WRITE_CMD(cmd) { ata_write_reg(ATA_REG_CMD,cmd); }
 
 /* Yes, this is a very inaccurate delay mechanism, but this interface only

@@ -20,13 +20,11 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
-   sdcard.h: Definitions for the SD/MMC access routines
+   diskio.c: Generic disk access routines and supporting stuff
 
 */
 
-#ifndef SDCARD_H
-#define SDCARD_H
+#include "config.h"
+#include "diskio.h"
 
-/* Empty for now, but will be filled later */
-
-#endif
+volatile enum diskstates disk_state;
