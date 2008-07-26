@@ -16,6 +16,12 @@
     You should have received a copy of the GNU General Public License
     along with uIEC; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+
+    The exported functions in this file are weak-aliased to their corresponding
+    versions defined in diskio.h so when this file is the only diskio provider
+    compiled in they will be automatically used by the linker.
+
 */
 #include <inttypes.h>
 #include <util/delay.h>
@@ -188,7 +194,7 @@ ISR(CF_CHANGE_VECT) {
 }
 
 
-void init_disk(void) {
+void init_ata(void) {
   CFCARD_DETECT_SETUP();
   CF_CHANGE_SETUP();
   disk_state=DISK_OK;
@@ -201,13 +207,14 @@ void init_disk(void) {
   ATA_PORT_CTRL_OUT=0xff;
   ATA_PORT_CTRL_DDR=0xff;
 }
+void init_disk(void) __attribute__ ((weak, alias("init_ata")));
 
 
 /*-----------------------------------------------------------------------*/
 /* Initialize Disk Drive                                                 */
 /*-----------------------------------------------------------------------*/
 
-DSTATUS disk_initialize (BYTE drv) {
+DSTATUS ata_initialize (BYTE drv) {
   BYTE data[(83 - 49 + 1) * 2];
   DWORD i = DELAY_VALUE(ATA_INIT_TIMEOUT);
   
@@ -250,24 +257,26 @@ di_error:
   ATA_drv_flags[drv]=(STA_NOINIT | STA_NODISK); // no disk in drive
   return STA_NOINIT | STA_NODISK;
 }
+DSTATUS disk_initialize (BYTE drv) __attribute__ ((weak, alias("ata_initialize")));
 
 
 /*-----------------------------------------------------------------------*/
 /* Return Disk Status                                                    */
 /*-----------------------------------------------------------------------*/
 
-DSTATUS disk_status (BYTE drv) {
+DSTATUS ata_status (BYTE drv) {
   if(drv>1)
      return STA_NOINIT;
   return ATA_drv_flags[drv]&STA_NOINIT;
 }
+DSTATUS disk_status (BYTE drv) __attribute__ ((weak, alias("ata_status")));
 
 
 /*-----------------------------------------------------------------------*/
 /* Read Sector(s)                                                        */
 /*-----------------------------------------------------------------------*/
 
-DRESULT disk_read (BYTE drv, BYTE *data, DWORD sector, BYTE count) {
+DRESULT ata_read (BYTE drv, BYTE *data, DWORD sector, BYTE count) {
   BYTE c, iord_l, iord_h;
 
   if (drv > 1 || !count) return RES_PARERR;
@@ -303,6 +312,7 @@ DRESULT disk_read (BYTE drv, BYTE *data, DWORD sector, BYTE count) {
 
   return RES_OK;
 }
+DRESULT disk_read (BYTE drv, BYTE *data, DWORD sector, BYTE count) __attribute__ ((weak, alias("ata_read")));
 
 
 /*-----------------------------------------------------------------------*/
@@ -310,7 +320,7 @@ DRESULT disk_read (BYTE drv, BYTE *data, DWORD sector, BYTE count) {
 /*-----------------------------------------------------------------------*/
 
 #if _READONLY == 0
-DRESULT disk_write (BYTE drv, const BYTE *data, DWORD sector, BYTE count) {
+DRESULT ata_write (BYTE drv, const BYTE *data, DWORD sector, BYTE count) {
   BYTE c, iowr_l, iowr_h;
 
   if (drv > 1 || !count) return RES_PARERR;
@@ -346,6 +356,7 @@ DRESULT disk_write (BYTE drv, const BYTE *data, DWORD sector, BYTE count) {
 
   return RES_OK;
 }
+DRESULT disk_write (BYTE drv, const BYTE *data, DWORD sector, BYTE count) __attribute__ ((weak, alias("ata_write")));
 #endif /* _READONLY == 0 */
 
 
@@ -354,7 +365,7 @@ DRESULT disk_write (BYTE drv, const BYTE *data, DWORD sector, BYTE count) {
 /*-----------------------------------------------------------------------*/
 
 #if _USE_IOCTL != 0
-DRESULT disk_ioctl (BYTE drv, BYTE ctrl, void *buff) {
+DRESULT ata_ioctl (BYTE drv, BYTE ctrl, void *buff) {
   BYTE n, dl, dh, ofs, w, *ptr = buff;
 
   if (drv) return RES_PARERR;
@@ -402,5 +413,6 @@ DRESULT disk_ioctl (BYTE drv, BYTE ctrl, void *buff) {
 
   return RES_OK;
 }
+DRESULT disk_ioctl (BYTE drv, BYTE ctrl, void *buff) __attribute__ ((weak, alias("ata_ioctl")));
 #endif /*  _USE_IOCTL != 0 */
 

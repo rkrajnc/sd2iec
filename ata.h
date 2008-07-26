@@ -65,6 +65,14 @@
 #define STA_48BIT            0x08
 #define STA_FIRSTTIME        0x80
 
-void init_disk(void);
+/* These functions are weak-aliased to init_disk/disk_... */
+void init_ata(void);
+DSTATUS ata_initialize (BYTE drv);
+DSTATUS ata_status (BYTE drv);
+DRESULT ata_read (BYTE drv, BYTE *data, DWORD sector, BYTE count);
+DRESULT ata_write (BYTE drv, const BYTE *data, DWORD sector, BYTE count);
+#if _USE_IOCTL != 0
+DRESULT ata_ioctl (BYTE drv, BYTE ctrl, void *buff);
+#endif
 
 #endif /*ATA_H_*/

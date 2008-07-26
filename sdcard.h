@@ -27,6 +27,13 @@
 #ifndef SDCARD_H
 #define SDCARD_H
 
-/* Empty for now, but will be filled later */
+#include "diskio.h"
+
+/* These functions are weak-aliased to init_disk/disk_... */
+void    init_sd(void);
+DSTATUS sd_status(BYTE drv);
+DSTATUS sd_initialize(BYTE drv);
+DRESULT sd_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count);
+DRESULT sd_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count);
 
 #endif

@@ -50,6 +50,10 @@
 // which can be found at http://www.gnu.org/licenses/gpl.txt
 //
 
+  The exported functions in this file are weak-aliased to their corresponding
+  versions defined in diskio.h so when this file is the only diskio provider
+  compiled in they will be automatically used by the linker.
+
 */
 
 #include <avr/io.h>
@@ -307,7 +311,7 @@ ISR(SD2_CHANGE_VECT) {
 //
 // Public functions
 //
-void init_disk(void) {
+void init_sd(void) {
   spiInit();
   SDCARD_DETECT_SETUP();
   SDCARD_WP_SETUP();
@@ -318,9 +322,10 @@ void init_disk(void) {
   SD2_CHANGE_SETUP();
 #endif
 }
+void init_disk(void) __attribute__ ((weak, alias("init_sd")));
 
 
-DSTATUS disk_status(BYTE drv) {
+DSTATUS sd_status(BYTE drv) {
 #ifdef CONFIG_TWINSD
   if (drv != 0) {
     if (SD2_DETECT) {
@@ -342,8 +347,16 @@ DSTATUS disk_status(BYTE drv) {
   else
     return STA_NOINIT|STA_NODISK;
 }
+DSTATUS disk_status(BYTE drv) __attribute__ ((weak, alias("sd_status")));
 
-DSTATUS disk_initialize(BYTE drv) {
+
+/**
+ * sd_initialize - initialize SD card
+ * @drv   : drive
+ *
+ * This function tries to initialize the selected SD card.
+ */
+DSTATUS sd_initialize(BYTE drv) {
   uint8_t  i;
   uint16_t counter;
   uint32_t answer;
@@ -443,11 +456,12 @@ DSTATUS disk_initialize(BYTE drv) {
   disk_state = DISK_OK;
   return disk_status(drv);
 }
+DSTATUS disk_initialize(BYTE drv) __attribute__ ((weak, alias("sd_status")));
 
 
 /**
- * disk_read - reads sectors from the SD card to buffer
- * @drv   : drive (unused)
+ * sd_read - reads sectors from the SD card to buffer
+ * @drv   : drive
  * @buffer: pointer to the buffer
  * @sector: first sector to be read
  * @count : number of sectors to be read
@@ -459,7 +473,7 @@ DSTATUS disk_initialize(BYTE drv) {
  * card. If there were errors during the command transmission
  * disk_state will be set to DISK_ERROR and no retries are made.
  */
-DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
+DRESULT sd_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
   uint8_t sec,res,tmp,errorcount;
   uint16_t crc,recvcrc;
 
@@ -534,12 +548,13 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
 
   return RES_OK;
 }
+DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) __attribute__ ((weak, alias("sd_read")));
 
 
 
 /**
- * disk_write - writes sectors from buffer to the SD card
- * @drv   : drive (unused)
+ * sd_write - writes sectors from buffer to the SD card
+ * @drv   : drive
  * @buffer: pointer to the buffer
  * @sector: first sector to be written
  * @count : number of sectors to be written
@@ -552,7 +567,7 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
  * transmission disk_state will be set to DISK_ERROR and no retries
  * are made.
  */
-DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
+DRESULT sd_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
   uint8_t res,sec,errorcount,status;
   uint16_t crc;
 
@@ -631,3 +646,4 @@ DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
 
   return RES_OK;
 }
+DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) __attribute__ ((weak, alias("sd_write")));
