@@ -463,6 +463,42 @@
 #  define BUTTON_PREV           _BV(PA5)
 
 
+#elif CONFIG_HARDWARE_VARIANT == 99
+/* Hardware configuration: sdlite - not for production use */
+#  define HW_NAME "SD2IEC"
+#  define SDCARD_DETECT         1
+#  define SDCARD_DETECT_SETUP() do { } while(0)
+#  define SD_CHANGE_SETUP()     do { } while(0)
+#  define SDCARD_WP             0
+#  define SDCARD_WP_SETUP()     do { } while(0)
+#  define SD_SUPPLY_VOLTAGE     (1L<<21)
+#  define MAX_DRIVES            1
+#  define DEVICE_SELECT         8
+#  define DEVICE_SELECT_SETUP() do {} while(0)
+#  define SINGLE_LED
+#  define DIRTY_LED_SETDDR()    DDRD  |= _BV(PD7)
+#  define DIRTY_LED_ON()        PORTD |= _BV(PD7)
+#  define DIRTY_LED_OFF()       PORTD &= ~_BV(PD7)
+#  define DIRTY_LED_PORT        PORTD
+#  define DIRTY_LED_BIT()       _BV(PD7)
+#  define IEC_PIN               PINB
+#  define IEC_DDR               DDRB
+#  define IEC_PORT              PORTB
+#  define IEC_PIN_ATN           PB0
+#  define IEC_PIN_DATA          PB2
+#  define IEC_PIN_CLOCK         PB1
+#  define IEC_PIN_SRQ           PB3
+#  define IEC_INT_VECT          PCINT1_vect
+#  define IEC_INT_SETUP()       do { PCICR |= _BV(PCIE1); PCIFR |= _BV(PCIF1); } while (0)
+#  define IEC_PCMSK             PCMSK1
+#  define BUTTON_PIN            255
+#  define BUTTON_PORT           PORTD
+#  define BUTTON_DDR            DDRD
+#  define BUTTON_MASK           _BV(PD0)
+#  define BUTTON_NEXT           _BV(PD0)
+#  define BUTTON_PREV           _BV(PD0)
+
+
 #else
 #  error "CONFIG_HARDWARE_VARIANT is unset or set to an unknown value."
 #endif

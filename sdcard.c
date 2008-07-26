@@ -286,12 +286,14 @@ static void sdInit(const uint8_t card) {
 }
 
 /* Detect changes of SD card 0 */
+#ifdef SD_CHANGE_VECT
 ISR(SD_CHANGE_VECT) {
   if (SDCARD_DETECT)
     disk_state = DISK_CHANGED;
   else
     disk_state = DISK_REMOVED;
 }
+#endif
 
 #ifdef CONFIG_TWINSD
 /* Detect changes of SD card 1 */
