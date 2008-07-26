@@ -58,6 +58,9 @@
 /* This should be upper-case because it isn't PETSCII-converted.   */
 #  define HW_NAME "SD2IEC"
 
+/* How many drives can be accessed on this hardware? */
+#  define MAX_DRIVES         1
+
 /*** SD card signals ***/
 /* CARD_DETECT must return non-zero when card is inserted */
 /* This must be a pin capable of generating interrupts.   */
@@ -91,8 +94,33 @@
 /* #  define SD_SUPPLY_VOLTAGE (1L<<22)  / * 3.4V - 3.5V */
 /* #  define SD_SUPPLY_VOLTAGE (1L<<23)  / * 3.5V - 3.6V */
 
-/* How many drives can be accessed on this hardware? */
-#  define MAX_DRIVES         1
+/* Support for a second SD card - use CONFIG_TWINSD=y in your config file to enable! */
+/* The code assumes that detect/select/write-protect lines of the */
+/* second card are all on the same port.                          */
+#   define SD2_PORT             PORTC
+#   define SD2_PIN              PINC
+#   define SD2_PRESENT          _BV(PB2)
+#   define SD2_CS               _BV(PC6)
+#   define SD2_WP               (PINC & _BV(PC7))
+
+/* Same sd SD_DETECT above. */
+#   define SD2_DETECT           (!(PINB & SD2_PRESENT))
+
+/* Full setup of the SD2 port, excluding interrupts. */
+#   define SD2_SETUP()          do { SD2_PORT |= SD2_CS|SD2_WP; DDRC |= SD2_CS; DDRC &= ~SD2_WP; DDRB &= ~SD2_PRESENT; PORTB |= SD2_PRESENT; } while (0)
+
+/* Interrupt vector for card 2 change detection */
+#   define SD2_CHANGE_VECT      INT2_vect
+
+/* Set up and enable the card 2 change interrupt */
+#   define SD2_CHANGE_SETUP()   do { EICRA |= _BV(ISC20); EIMSK |= _BV(INT2);  } while (0)
+
+
+/*** AT45DB161D dataflash support ***/
+/* You can use an Atmel AT45DB161D chip as data storage/additional drive */
+//#  define DATAFLASH_PORT        PORTD
+//#  define DATAFLASH_DDR         DDRD
+//#  define DATAFLASH_SELECT      _BV(PD2)
 
 
 /*** Device address selection ***/
@@ -472,7 +500,10 @@
 #  define SDCARD_WP             0
 #  define SDCARD_WP_SETUP()     do { } while(0)
 #  define SD_SUPPLY_VOLTAGE     (1L<<21)
-#  define MAX_DRIVES            1
+#  define DATAFLASH_PORT        PORTD
+#  define DATAFLASH_DDR         DDRD
+#  define DATAFLASH_SELECT      _BV(PD2)
+#  define MAX_DRIVES            2
 #  define DEVICE_SELECT         8
 #  define DEVICE_SELECT_SETUP() do {} while(0)
 #  define SINGLE_LED
