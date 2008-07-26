@@ -299,10 +299,10 @@
 #elif CONFIG_HARDWARE_VARIANT == 4
 /* Hardware configuration: uIEC */
 #  define HW_NAME "UIEC"
-#  define SDCARD_DETECT         (!(PINE & _BV(PE7)))
-#  define SDCARD_DETECT_SETUP() do { DDRE &= ~_BV(PE7); PORTE |= _BV(PE7); } while(0)
-#  define SD_CHANGE_SETUP()     do { EICRB |= _BV(ISC70); EIMSK |= _BV(INT7); } while(0)
-#  define SD_CHANGE_VECT        INT7_vect
+#  define CFCARD_DETECT         (!(PINE & _BV(PE7)))
+#  define CFCARD_DETECT_SETUP() do { DDRE &= ~_BV(PE7); PORTE |= _BV(PE7); } while(0)
+#  define CF_CHANGE_SETUP()     do { EICRB |= _BV(ISC70); EIMSK |= _BV(INT7); } while(0)
+#  define CF_CHANGE_VECT        INT7_vect
 #  define MAX_DRIVES            1 //2
 /* No device jumpers on uIEC */
 #  define DEVICE_SELECT         10

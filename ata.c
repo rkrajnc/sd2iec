@@ -180,8 +180,8 @@ static void reset_disk(void) {
 }
 
 
-ISR(SD_CHANGE_VECT) {
-  if (SDCARD_DETECT)
+ISR(CF_CHANGE_VECT) {
+  if (CFCARD_DETECT)
     disk_state = DISK_CHANGED;
   else
     disk_state = DISK_REMOVED;
@@ -189,8 +189,8 @@ ISR(SD_CHANGE_VECT) {
 
 
 void init_disk(void) {
-  SDCARD_DETECT_SETUP();
-  SD_CHANGE_SETUP();
+  CFCARD_DETECT_SETUP();
+  CF_CHANGE_SETUP();
   disk_state=DISK_OK;
   ATA_drv_flags[0] = STA_NOINIT | STA_FIRSTTIME;
   if(ATA_PORT_DATA_HI_OUT == 0xff)
