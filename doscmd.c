@@ -148,10 +148,239 @@ static uint8_t parse_bool(void) {
 /*  Command handlers                                                         */
 /* ------------------------------------------------------------------------- */
 
+/* ------------------- */
+/*  CD/MD/RD commands  */
+/* ------------------- */
+
+/* --- MD --- */
+static void parse_mkdir(void) {
+  path_t  path;
+  uint8_t *name;
+
+  /* MD requires a colon */
+  if (!ustrchr(command_buffer, ':')) {
+    set_error(ERROR_SYNTAX_NONAME);
+    return;
+  }
+  if (parse_path(command_buffer+2, &path, &name, 0))
+    return;
+  mkdir(&path,name);
+}
+
+/* --- CD --- */
+static void parse_chdir(void) {
+  path_t  path;
+  uint8_t *name;
+  struct cbmdirent dent;
+
+  if (parse_path(command_buffer+2, &path, &name, 1))
+    return;
+
+  if (ustrlen(name) != 0) {
+    /* Path component after the : */
+    if (name[0] == '_') {
+      /* Going up a level - let chdir handle it. */
+      if (chdir(&path,name))
+        return;
+    } else {
+      /* A directory name - try to match it */
+      if (first_match(&path, name, FLAG_HIDDEN, &dent))
+        return;
+
+      /* Move into it if it's a directory, use chdir if it's a file. */
+      if ((dent.typeflags & TYPE_MASK) != TYPE_DIR) {
+        if (chdir(&path, dent.name))
+          return;
+      } else
+        partition[path.part].current_dir = dent.fatcluster;
+    }
+  } else {
+    if (ustrchr(command_buffer, '/')) {
+      partition[path.part].current_dir = path.fat;
+    } else {
+      set_error(ERROR_FILE_NOT_FOUND_39);
+      return;
+    }
+  }
+
+  if (globalflags & AUTOSWAP_ACTIVE)
+    set_changelist(NULL, NULLSTRING);
+}
+
+/* --- RD --- */
+static void parse_rmdir(void) {
+  uint8_t *buf;
+  uint8_t i;
+  uint8_t part;
+  path_t  path;
+  struct cbmdirent dent;
+
+  /* No deletion across subdirectories */
+  for (i=0;command_buffer[i];i++) {
+    if (command_buffer[i] == '/') {
+      /* Hack around a missing 2-level-break */
+      i = 255;
+      break;
+    }
+  }
+
+  if (i == 255) {
+    set_error(ERROR_SYNTAX_NONAME);
+    return;
+  }
+
+  /* Parse partition number */
+  buf=command_buffer+2;
+  part=parse_partition(&buf);
+  if (*buf != ':') {
+    set_error(ERROR_SYNTAX_NONAME);
+  } else {
+    path.part = part;
+    path.fat  = partition[part].current_dir;
+    ustrcpy(dent.name, buf+1);
+    i = file_delete(&path, &dent);
+    if (i != 255)
+      set_error_ts(ERROR_SCRATCHED,i,0);
+  }
+}
+
+/* --- CD/MD/RD subparser --- */
+static void parse_dircommand(void) {
+  switch (command_buffer[0]) {
+  case 'M':
+    parse_mkdir();
+    break;
+
+  case 'C':
+    parse_chdir();
+    break;
+
+  case 'R':
+    parse_rmdir();
+    break;
+
+  default:
+    set_error(ERROR_SYNTAX_UNKNOWN);
+    break;
+  }
+}
+
+
+/* ------------ */
+/*  B commands  */
+/* ------------ */
+static void parse_block(void) {
+  uint8_t *str;
+  buffer_t *buf;
+  uint8_t params[4];
+  int8_t  pcount;
+
+  str = ustrchr(command_buffer, '-');
+  if (!str) {
+    set_error(ERROR_SYNTAX_UNABLE);
+    return;
+  }
+
+  memset(params,0,sizeof(params));
+  pcount = parse_blockparam(params);
+  if (pcount < 0)
+    return;
+
+  str++;
+  switch (*str) {
+  case 'R':
+  case 'W':
+    /* Block-Read  - CD56 */
+    /* Block-Write - CD73 */
+    buf = find_buffer(params[0]);
+    if (!buf) {
+      set_error(ERROR_NO_CHANNEL);
+      return;
+    }
+
+    /* Use current partition for 0 */
+    if (params[1] == 0)
+      params[1] = current_part;
+
+    if (*str == 'R') {
+      read_sector(buf,params[1],params[2],params[3]);
+      if (command_buffer[0] == 'B') {
+        buf->position = 1;
+        buf->lastused = buf->data[0];
+      } else {
+        buf->position = 0;
+        buf->lastused = 255;
+      }
+    } else {
+      if (command_buffer[0] == 'B')
+        buf->data[0] = buf->position-1; // FIXME: Untested, verify!
+      write_sector(buf,params[1],params[2],params[3]);
+    }
+    break;
+
+  case 'P':
+    /* Buffer-Position - CDBD */
+    buf = find_buffer(params[0]);
+    if (!buf) {
+      set_error(ERROR_NO_CHANNEL);
+      return;
+    }
+    buf->position = params[1];
+    break;
+
+  default:
+    set_error(ERROR_SYNTAX_UNABLE);
+    return;
+  }
+}
+
+/* ----------------------- */
+/*  CP - Change Partition  */
+/* ----------------------- */
+static void parse_changepart(void) {
+  uint8_t *buf;
+  uint8_t part;
+
+  switch(command_buffer[1]) {
+  case 'P':
+    buf=command_buffer+2;
+    part=parse_partition(&buf);
+
+    if(part>=max_part) {
+      set_error_ts(ERROR_PARTITION_ILLEGAL,part+1,0);
+      return;
+    }
+
+    current_part=part;
+    if (globalflags & AUTOSWAP_ACTIVE)
+      set_changelist(NULL, NULLSTRING);
+
+    set_error_ts(ERROR_PARTITION_SELECTED, part+1, 0);
+    break;
+
+  case 0xd0: /* Shift-P */
+    /* Change Partition, binary version */
+    if (command_buffer[2] > max_part) {
+      set_error_ts(ERROR_PARTITION_ILLEGAL, command_buffer[2], 0);
+      return;
+    }
+
+    if (command_buffer[2]) {
+      current_part = command_buffer[2]-1;
+      if (globalflags & AUTOSWAP_ACTIVE)
+        set_changelist(NULL, NULLSTRING);
+    }
+    set_error_ts(ERROR_PARTITION_SELECTED, command_buffer[2], 0);
+    break;
+  }
+}
+
+
 /* ------------ */
 /*  E commands  */
 /* ------------ */
 
+/* --- E-R --- */
 static void handle_eeread(uint16_t address, uint8_t length) {
   if (length > CONFIG_ERROR_BUFFER_SIZE) {
     set_error(ERROR_SYNTAX_TOOLONG);
@@ -166,16 +395,105 @@ static void handle_eeread(uint16_t address, uint8_t length) {
     *ptr++ = eeprom_read_byte((uint8_t *)(CONFIG_EEPROM_OFFSET + address++));
 }
 
+/* --- E-W --- */
 static void handle_eewrite(uint16_t address, uint8_t length) {
   uint8_t *ptr = command_buffer+6;
   while (length--)
     eeprom_write_byte((uint8_t *)(CONFIG_EEPROM_OFFSET + address++), *ptr++);
 }
 
+/* --- E subparser --- */
+static void parse_eeprom(void) {
+  uint16_t address = command_buffer[3] + (command_buffer[4] << 8);
+  uint8_t  length  = command_buffer[5];
+      
+  if (command_length < 6) {
+    set_error(ERROR_SYNTAX_UNKNOWN);
+    return;
+  }
+      
+  if (command_buffer[1] != '-' || (command_buffer[2] != 'W' && command_buffer[2] != 'R'))
+    set_error(ERROR_SYNTAX_UNKNOWN);
+      
+  if (address > CONFIG_EEPROM_SIZE || address+length > CONFIG_EEPROM_SIZE) {
+    set_error(ERROR_SYNTAX_TOOLONG);
+    return;
+  }
+      
+  if (command_buffer[2] == 'W')
+    handle_eewrite(address, length);
+  else
+    handle_eeread(address, length);
+}
+
+
+/* -------------------------- */
+/*  G-P - Get Partition info  */
+/* -------------------------- */
+static void parse_getpartition(void) {
+  uint8_t *buf;
+  path_t path;
+
+  if (command_length < 3) /* FIXME: should this set an error? */
+    return;
+
+  if (command_buffer[1] != '-' || command_buffer[2] != 'P') {
+    set_error(ERROR_SYNTAX_UNKNOWN);
+    return;
+  }
+
+  if (command_length == 3)
+    path.part = current_part+1;
+  else
+    path.part = command_buffer[3];
+
+  /* Valid partition number? */
+  if (path.part >= max_part) {
+    set_error(ERROR_PARTITION_ILLEGAL);
+    return;
+  }
+
+  buffers[CONFIG_BUFFER_COUNT].position = 0;
+  buffers[CONFIG_BUFFER_COUNT].lastused = 31;
+  buf=buffers[CONFIG_BUFFER_COUNT].data;
+  memset(buf,0,32);
+  *(buf++) = 1; /* Partition type: native */
+  buf++;
+
+  *(buf++) = path.part+1;
+  path.fat=0;
+  if (disk_label(&path,buf))
+    return;
+  buf+= 16;
+  *(buf++) = partition[path.part].fatfs.fatbase>>16;
+  *(buf++) = partition[path.part].fatfs.fatbase>>8;
+  *(buf++) = (partition[path.part].fatfs.fatbase & 0xff);
+  buf++;
+
+  uint32_t size = (partition[path.part].fatfs.max_clust - 1) * partition[path.part].fatfs.csize;
+  *(buf++) = size>>16;
+  *(buf++) = size>>8;
+  *(buf++) = size;
+  *buf = 13;
+}
+
+
+/* ---------------- */
+/*  I - Initialize  */
+/* ---------------- */
+static void parse_initialize(void) {
+  if (disk_state != DISK_OK)
+    set_error_ts(ERROR_READ_NOSYNC,18,0);
+  else
+    free_all_user_buffers(1);
+}
+
+
 /* ------------ */
 /*  M commands  */
 /* ------------ */
 
+/* --- M-E --- */
 static void handle_memexec(void) {
   uint16_t address;
 
@@ -217,6 +535,7 @@ static void handle_memexec(void) {
   detected_loader = FL_NONE;
 }
 
+/* --- M-R --- */
 static void handle_memread(void) {
   uint16_t address, check;
   magic_value_t *p;
@@ -244,6 +563,7 @@ static void handle_memread(void) {
   buffers[CONFIG_BUFFER_COUNT].lastused = command_buffer[5]-1;
 }
 
+/* --- M-W --- */
 static void handle_memwrite(void) {
   uint16_t address;
   uint8_t  length,i;
@@ -299,14 +619,462 @@ static void handle_memwrite(void) {
   }
 }
 
+/* --- M subparser --- */
+static void parse_memory(void) {
+  if (command_buffer[2] == 'W')
+    handle_memwrite();
+  else if (command_buffer[2] == 'E')
+    handle_memexec();
+  else if (command_buffer[2] == 'R')
+    handle_memread();
+  else
+    set_error(ERROR_SYNTAX_UNKNOWN);
+}
+
+/* --------- */
+/*  N - New  */
+/* --------- */
+static void parse_new(void) {
+  uint8_t *name, *id;
+  uint8_t part;
+
+  name = command_buffer+1;
+  part = parse_partition(&name);
+  name = ustrchr(command_buffer, ':');
+  if (name++ == NULL) {
+    set_error(ERROR_SYNTAX_NONAME);
+    return;
+  }
+
+  id = ustrchr(name, ',');
+  if (id != NULL) {
+    *id = 0;
+    id++;
+  }
+
+  format(part, name, id);
+}
+
+
+/* -------------- */
+/*  P - Position  */
+/* -------------- */
+static void parse_position(void) {
+  buffer_t *buf;
+  uint8_t hi = 0, lo, pos;
+
+  if(command_length < 2 || (buf = find_buffer(command_buffer[1] & 0x5f)) == NULL) {
+    set_error(ERROR_NO_CHANNEL);
+    return;
+  }
+
+  lo = pos = (buf->recordlen? 1:0); // REL file start indexes at one.
+
+  if(command_length > 1)
+    lo = command_buffer[2];
+  if(command_length > 2)
+    hi = command_buffer[3];
+  if(command_length > 3) {
+    pos = command_buffer[4];
+    if(buf->recordlen && pos >= buf->recordlen) {
+      set_error(ERROR_RECORD_OVERFLOW);
+      return;
+    }
+  }
+
+  if (buf->seek == NULL) {
+    set_error(ERROR_SYNTAX_UNABLE);
+    return;
+  }
+
+  if(buf->recordlen) { // REL files start indexes at 1.
+    lo--;
+    pos--;
+  }
+  buf->seek(buf,(hi * 256UL + lo) * (uint32_t)(buf->recordlen ? buf->recordlen : 256),pos);
+}
+
+
+/* ------------ */
+/*  R - Rename  */
+/* ------------ */
+static void parse_rename(void) {
+  path_t oldpath,newpath;
+  uint8_t *oldname,*newname;
+  struct cbmdirent dent;
+  int8_t res;
+
+  /* Find the boundary between the names */
+  oldname = ustrchr(command_buffer,'=');
+  if (oldname == NULL) {
+    set_error(ERROR_SYNTAX_UNKNOWN);
+    return;
+  }
+  *oldname++ = 0;
+
+  /* Parse both names */
+  if (parse_path(command_buffer+1, &newpath, &newname, 0))
+    return;
+
+  if (parse_path(oldname, &oldpath, &oldname, 0))
+    return;
+
+  /* Rename can't move files across directories */
+  if (oldpath.fat != newpath.fat) {
+    set_error(ERROR_FILE_NOT_FOUND);
+    return;
+  }
+
+  /* Check for invalid characters in the new name */
+  if (check_invalid_name(newname)) {
+    /* This isn't correct for all cases, but for most. */
+    set_error(ERROR_SYNTAX_UNKNOWN);
+    return;
+  }
+
+  /* Don't allow an empty new name */
+  /* The 1541 renames the file to "=" in this case, but I consider that a bug. */
+  if (ustrlen(newname) == 0) {
+    set_error(ERROR_SYNTAX_NONAME);
+    return;
+  }
+
+  /* Check if the new name already exists */
+  res = first_match(&newpath, newname, FLAG_HIDDEN, &dent);
+  if (res == 0) {
+    set_error(ERROR_FILE_EXISTS);
+    return;
+  }
+
+  if (res > 0)
+    /* first_match generated an error other than File Not Found, abort */
+    return;
+
+  /* Clear the FNF */
+  set_error(ERROR_OK);
+
+  /* Check if the old name exists */
+  if (first_match(&oldpath, oldname, FLAG_HIDDEN, &dent))
+    return;
+
+  rename(&oldpath, &dent, newname);
+}
+
+
+/* ------------- */
+/*  S - Scratch  */
+/* ------------- */
+static void parse_scratch(void) {
+  struct cbmdirent dent;
+  int8_t  res;
+  uint8_t count,cnt;
+  uint8_t *filename,*tmp,*name;
+  path_t  path;
+
+  filename = ustr1tok(command_buffer+1,',',&tmp);
+
+  count = 0;
+  /* Loop over all file names */
+  while (filename != NULL) {
+    parse_path(filename, &path, &name, 0);
+
+    if (opendir(&matchdh, &path))
+      return;
+
+    while (1) {
+      res = next_match(&matchdh, name, NULL, NULL, FLAG_HIDDEN, &dent);
+      if (res < 0)
+        break;
+      if (res > 0)
+        return;
+
+      /* Skip directories */
+      if ((dent.typeflags & TYPE_MASK) == TYPE_DIR)
+        continue;
+      cnt = file_delete(&path, &dent);
+      if (cnt != 255)
+        count += cnt;
+      else
+        return;
+    }
+
+    filename = ustr1tok(NULL,',',&tmp);
+  }
+
+  set_error_ts(ERROR_SCRATCHED,count,0);
+}
+
+
+#ifdef CONFIG_RTC
+/* ------------------ */
+/*  T - Time commands */
+/* ------------------ */
+
+/* --- T-R --- */
+static void parse_timeread(void) {
+  struct tm time;
+  uint8_t *ptr = error_buffer;
+  uint8_t hour;
+
+  if (rtc_state != RTC_OK) {
+    set_error(ERROR_SYNTAX_UNABLE);
+    return;
+  }
+
+  read_rtc(&time);
+  hour = time.tm_hour % 12;
+  if (hour == 0) hour = 12;
+
+  switch (command_buffer[3]) {
+  case 'A': /* ASCII format */
+    buffers[CONFIG_BUFFER_COUNT].lastused = 25;
+    memcpy_P(error_buffer+4, asciitime_skel, sizeof(asciitime_skel));
+    memcpy_P(error_buffer, downames + 4*time.tm_wday, 4);
+    appendnumber(error_buffer+5, time.tm_mon);
+    appendnumber(error_buffer+8, time.tm_mday);
+    appendnumber(error_buffer+11, time.tm_year % 100);
+    appendnumber(error_buffer+14, hour);
+    appendnumber(error_buffer+17, time.tm_min);
+    appendnumber(error_buffer+20, time.tm_sec);
+    if (time.tm_hour < 12)
+      error_buffer[23] = 'A';
+    else
+      error_buffer[23] = 'P';
+    break;
+
+  case 'B': /* BCD format */
+    buffers[CONFIG_BUFFER_COUNT].lastused = 8;
+    *ptr++ = time.tm_wday;
+    *ptr++ = int2bcd(time.tm_year % 100);
+    *ptr++ = int2bcd(time.tm_mon);
+    *ptr++ = int2bcd(time.tm_mday);
+    *ptr++ = int2bcd(hour);
+    *ptr++ = int2bcd(time.tm_min);
+    *ptr++ = int2bcd(time.tm_sec);
+    *ptr++ = (time.tm_hour >= 12);
+    *ptr   = 13;
+    break;
+
+  case 'D': /* Decimal format */
+    buffers[CONFIG_BUFFER_COUNT].lastused = 8;
+    *ptr++ = time.tm_wday;
+    *ptr++ = time.tm_year;
+    *ptr++ = time.tm_mon;
+    *ptr++ = time.tm_mday;
+    *ptr++ = hour;
+    *ptr++ = time.tm_min;
+    *ptr++ = time.tm_sec;
+    *ptr++ = (time.tm_hour >= 12);
+    *ptr   = 13;
+    break;
+
+  default: /* Unknown format */
+    set_error(ERROR_SYNTAX_UNKNOWN);
+    break;
+  }
+}
+
+/* --- T-W --- */
+static void parse_timewrite(void) {
+  struct tm time;
+  uint8_t i, *ptr;
+
+  switch (command_buffer[3]) {
+  case 'A': /* ASCII format */
+    if (command_length < 27) { // Allow dropping the AM/PM marker for 24h format
+      set_error(ERROR_SYNTAX_UNABLE);
+      return;
+    }
+    for (i=0;i<7;i++) {
+      if (memcmp_P(command_buffer+4, downames + 4*i, 4) == 0)
+        break;
+    }
+    if (i == 7) {
+      set_error(ERROR_SYNTAX_UNKNOWN); // FIXME: Check the real error
+      return;
+    }
+    time.tm_wday = i;
+    ptr = command_buffer + 9;
+    time.tm_mon  = parse_number(&ptr);
+    ptr++;
+    time.tm_mday = parse_number(&ptr);
+    ptr++;
+    time.tm_year = parse_number(&ptr);
+    ptr++;
+    time.tm_hour = parse_number(&ptr);
+    ptr++;
+    time.tm_min  = parse_number(&ptr);
+    ptr++;
+    time.tm_sec  = parse_number(&ptr);
+    if (command_buffer[28] == 'M') {
+      /* Adjust for AM/PM only if AM/PM is actually supplied */
+      if (time.tm_hour == 12)
+        time.tm_hour = 0;
+      if (command_buffer[27] == 'P')
+        time.tm_hour += 12;
+    }
+    break;
+
+  case 'B': /* BCD format */
+    if (command_length < 12) {
+      set_error(ERROR_SYNTAX_UNABLE);
+      return;
+    }
+    time.tm_wday = command_buffer[4];
+    time.tm_year = bcd2int(command_buffer[5]);
+    time.tm_mon  = bcd2int(command_buffer[6]);
+    time.tm_mday = bcd2int(command_buffer[7]);
+    time.tm_hour = bcd2int(command_buffer[8]);
+    /* Hour range is 1-12, change 12:xx to 0:xx for easier conversion */
+    if (time.tm_hour == 12)
+      time.tm_hour = 0;
+    time.tm_min  = bcd2int(command_buffer[9]);
+    time.tm_sec  = bcd2int(command_buffer[10]);
+    if (command_buffer[11])
+      time.tm_hour += 12;
+    break;
+
+  case 'D': /* Decimal format */
+    if (command_length < 12) {
+      set_error(ERROR_SYNTAX_UNABLE);
+      return;
+    }
+    time.tm_wday = command_buffer[4];
+    time.tm_year = command_buffer[5];
+    time.tm_mon  = command_buffer[6];
+    time.tm_mday = command_buffer[7];
+    time.tm_hour = command_buffer[8];
+    /* Hour range is 1-12, change 12:xx to 0:xx for easier conversion */
+    if (time.tm_hour == 12)
+      time.tm_hour = 0;
+    time.tm_min  = command_buffer[9];
+    time.tm_sec  = command_buffer[10];
+    if (command_buffer[11])
+      time.tm_hour += 12;
+    break;
+
+  default: /* Unknown format */
+    set_error(ERROR_SYNTAX_UNKNOWN);
+    return;
+  }
+
+  /* Y2K fix for legacy apps */
+  if (time.tm_year < 80)
+    time.tm_year += 100;
+
+  /* The CMD drives don't check for validity, we do - partially */
+  if (time.tm_mday ==  0 || time.tm_mday >  31 ||
+      time.tm_mon  ==  0 || time.tm_mon  >  12 ||
+      time.tm_wday >   6 ||
+      time.tm_hour >  23 ||
+      time.tm_min  >  59 ||
+      time.tm_sec  >  59) {
+    set_error(ERROR_SYNTAX_UNABLE);
+    return;
+  }
+
+  set_rtc(&time);
+}
+
+/* --- T subparser --- */
+static void parse_time(void) {
+  if (rtc_state == RTC_NOT_FOUND)
+    set_error(ERROR_SYNTAX_UNKNOWN);
+  else {
+    if (command_buffer[2] == 'R') {
+      parse_timeread();
+    } else if (command_buffer[2] == 'W') {
+      parse_timewrite();
+    } else
+      set_error(ERROR_SYNTAX_UNKNOWN);
+  }
+}
+#endif /* CONFIG_RTC */
+
+
+/* ------------ */
+/*  U commands  */
+/* ------------ */
+static void parse_user(void) {
+  switch (command_buffer[1]) {
+  case 'A':
+  case '1':
+    /* Tiny little hack: Rewrite as (B)-R and call that                */
+    /* This will always work because there is either a : in the string */
+    /* or the drive will start parsing at buf[3].                      */
+    command_buffer[0] = '-';
+    command_buffer[1] = 'R';
+    parse_block();
+    break;
+    
+  case 'B':
+  case '2':
+    /* Tiny little hack: see above case for rationale */
+    command_buffer[0] = '-';
+    command_buffer[1] = 'W';
+    parse_block();
+    break;
+    
+  case 'I':
+  case '9':
+    switch (command_buffer[2]) {
+    case 0:
+      /* Soft-reset - just return the dos version */
+      set_error(ERROR_DOSVERSION);
+      break;
+      
+    case '+':
+      globalflags &= (uint8_t)~VC20MODE;
+      break;
+      
+    case '-':
+      globalflags |= VC20MODE;
+      break;
+      
+    default:
+      set_error(ERROR_SYNTAX_UNKNOWN);
+      break;
+    }
+    break;
+    
+  case 'J':
+  case ':':
+    /* Reset - technically hard-reset */
+    /* Faked because Ultima 5 sends UJ. */
+    free_all_user_buffers(0);
+    set_error(ERROR_DOSVERSION);
+    break;
+
+  case 202: /* Shift-J */
+    /* The real hard reset command */
+    cli();
+    restart_call();
+    break;
+    
+  case '0':
+    /* U0 - only device address changes for now */
+    if ((command_buffer[2] & 0x1f) == 0x1e &&
+        command_buffer[3] >= 4 &&
+        command_buffer[3] <= 30) {
+      device_address = command_buffer[3];
+      break;
+    }
+    /* Fall through */
+    
+  default:
+    set_error(ERROR_SYNTAX_UNKNOWN);
+    break;
+  }
+}
+
+
 /* ------------ */
 /*  X commands  */
 /* ------------ */
-
 static void parse_xcommand(void) {
   uint8_t num;
   uint8_t *str;
-  path_t path; // FIXME: use global? Dupe in parse_command
+  path_t path;
 
   switch (command_buffer[1]) {
   case 'B':
@@ -408,502 +1176,12 @@ static void parse_xcommand(void) {
   }
 }
 
-/* ------------ */
-/*  B commands  */
-/* ------------ */
-
-static void parse_block(void) {
-  uint8_t *str;
-  buffer_t *buf;
-  uint8_t params[4];
-  int8_t  pcount;
-
-  str = ustrchr(command_buffer, '-');
-  if (!str) {
-    set_error(ERROR_SYNTAX_UNABLE);
-    return;
-  }
-
-  memset(params,0,sizeof(params));
-  pcount = parse_blockparam(params);
-  if (pcount < 0)
-    return;
-
-  str++;
-  switch (*str) {
-  case 'R':
-  case 'W':
-    /* Block-Read  - CD56 */
-    /* Block-Write - CD73 */
-    buf = find_buffer(params[0]);
-    if (!buf) {
-      set_error(ERROR_NO_CHANNEL);
-      return;
-    }
-
-    /* Use current partition for 0 */
-    if (params[1] == 0)
-      params[1] = current_part;
-
-    if (*str == 'R') {
-      read_sector(buf,params[1],params[2],params[3]);
-      if (command_buffer[0] == 'B') {
-        buf->position = 1;
-        buf->lastused = buf->data[0];
-      } else {
-        buf->position = 0;
-        buf->lastused = 255;
-      }
-    } else {
-      if (command_buffer[0] == 'B')
-        buf->data[0] = buf->position-1; // FIXME: Untested, verify!
-      write_sector(buf,params[1],params[2],params[3]);
-    }
-    break;
-
-  case 'P':
-    /* Buffer-Position - CDBD */
-    buf = find_buffer(params[0]);
-    if (!buf) {
-      set_error(ERROR_NO_CHANNEL);
-      return;
-    }
-    buf->position = params[1];
-    break;
-
-  default:
-    set_error(ERROR_SYNTAX_UNABLE);
-    return;
-  }
-}
-
-/* ------------ */
-/*  U commands  */
-/* ------------ */
-
-void parse_user(void) {
-  switch (command_buffer[1]) {
-  case 'A':
-  case '1':
-    /* Tiny little hack: Rewrite as (B)-R and call that                */
-    /* This will always work because there is either a : in the string */
-    /* or the drive will start parsing at buf[3].                      */
-    command_buffer[0] = '-';
-    command_buffer[1] = 'R';
-    parse_block();
-    break;
-    
-  case 'B':
-  case '2':
-    /* Tiny little hack: see above case for rationale */
-    command_buffer[0] = '-';
-    command_buffer[1] = 'W';
-    parse_block();
-    break;
-    
-  case 'I':
-  case '9':
-    switch (command_buffer[2]) {
-    case 0:
-      /* Soft-reset - just return the dos version */
-      set_error(ERROR_DOSVERSION);
-      break;
-      
-    case '+':
-      globalflags &= (uint8_t)~VC20MODE;
-      break;
-      
-    case '-':
-      globalflags |= VC20MODE;
-      break;
-      
-    default:
-      set_error(ERROR_SYNTAX_UNKNOWN);
-      break;
-    }
-    break;
-    
-  case 'J':
-  case ':':
-    /* Reset - technically hard-reset */
-    /* Faked because Ultima 5 sends UJ. */
-    free_all_user_buffers(0);
-    set_error(ERROR_DOSVERSION);
-    break;
-
-  case 202: /* Shift-J */
-    /* The real hard reset command */
-    cli();
-    restart_call();
-    break;
-    
-  case '0':
-    /* U0 - only device address changes for now */
-    if ((command_buffer[2] & 0x1f) == 0x1e &&
-        command_buffer[3] >= 4 &&
-        command_buffer[3] <= 30) {
-      device_address = command_buffer[3];
-      break;
-    }
-    /* Fall through */
-    
-  default:
-    set_error(ERROR_SYNTAX_UNKNOWN);
-    break;
-  }
-}
-
-/* --------- */
-/*  N - New  */
-/* --------- */
-void parse_new(void) {
-  uint8_t *name, *id;
-  uint8_t part;
-
-  name = command_buffer+1;
-  part = parse_partition(&name);
-  name = ustrchr(command_buffer, ':');
-  if (name++ == NULL) {
-    set_error(ERROR_SYNTAX_NONAME);
-    return;
-  }
-
-  id = ustrchr(name, ',');
-  if (id != NULL) {
-    *id = 0;
-    id++;
-  }
-
-  format(part, name, id);
-}
-
-/* -------------- */
-/*  P - Position  */
-/* -------------- */
-void parse_position(void) {
-  buffer_t *buf;
-  uint8_t hi = 0, lo, pos;
-
-  if(command_length < 2 || (buf = find_buffer(command_buffer[1] & 0x5f)) == NULL) {
-    set_error(ERROR_NO_CHANNEL);
-    return;
-  }
-
-  lo = pos = (buf->recordlen? 1:0); // REL file start indexes at one.
-
-  if(command_length > 1)
-    lo = command_buffer[2];
-  if(command_length > 2)
-    hi = command_buffer[3];
-  if(command_length > 3) {
-    pos = command_buffer[4];
-    if(buf->recordlen && pos >= buf->recordlen) {
-      set_error(ERROR_RECORD_OVERFLOW);
-      return;
-    }
-  }
-
-  if (buf->seek == NULL) {
-    set_error(ERROR_SYNTAX_UNABLE);
-    return;
-  }
-
-  if(buf->recordlen) { // REL files start indexes at 1.
-    lo--;
-    pos--;
-  }
-  buf->seek(buf,(hi * 256UL + lo) * (uint32_t)(buf->recordlen ? buf->recordlen : 256),pos);
-}
-
-
-/* ------------ */
-/*  R - Rename  */
-/* ------------ */
-void parse_rename(void) {
-  path_t oldpath,newpath;
-  uint8_t *oldname,*newname;
-  struct cbmdirent dent;
-  int8_t res;
-
-  /* Find the boundary between the names */
-  oldname = ustrchr(command_buffer,'=');
-  if (oldname == NULL) {
-    set_error(ERROR_SYNTAX_UNKNOWN);
-    return;
-  }
-  *oldname++ = 0;
-
-  /* Parse both names */
-  if (parse_path(command_buffer+1, &newpath, &newname, 0))
-    return;
-
-  if (parse_path(oldname, &oldpath, &oldname, 0))
-    return;
-
-  /* Rename can't move files across directories */
-  if (oldpath.fat != newpath.fat) {
-    set_error(ERROR_FILE_NOT_FOUND);
-    return;
-  }
-
-  /* Check for invalid characters in the new name */
-  if (check_invalid_name(newname)) {
-    /* This isn't correct for all cases, but for most. */
-    set_error(ERROR_SYNTAX_UNKNOWN);
-    return;
-  }
-
-  /* Don't allow an empty new name */
-  /* The 1541 renames the file to "=" in this case, but I consider that a bug. */
-  if (ustrlen(newname) == 0) {
-    set_error(ERROR_SYNTAX_NONAME);
-    return;
-  }
-
-  /* Check if the new name already exists */
-  res = first_match(&newpath, newname, FLAG_HIDDEN, &dent);
-  if (res == 0) {
-    set_error(ERROR_FILE_EXISTS);
-    return;
-  }
-
-  if (res > 0)
-    /* first_match generated an error other than File Not Found, abort */
-    return;
-
-  /* Clear the FNF */
-  set_error(ERROR_OK);
-
-  /* Check if the old name exists */
-  if (first_match(&oldpath, oldname, FLAG_HIDDEN, &dent))
-    return;
-
-  rename(&oldpath, &dent, newname);
-}
-
-static void parse_scratch(void) {
-  struct cbmdirent dent;
-  int8_t  res;
-  uint8_t count,cnt;
-  uint8_t *filename,*tmp,*name;
-  path_t  path;
-
-  filename = ustr1tok(command_buffer+1,',',&tmp);
-
-  count = 0;
-  /* Loop over all file names */
-  while (filename != NULL) {
-    parse_path(filename, &path, &name, 0);
-
-    if (opendir(&matchdh, &path))
-      return;
-
-    while (1) {
-      res = next_match(&matchdh, name, NULL, NULL, FLAG_HIDDEN, &dent);
-      if (res < 0)
-        break;
-      if (res > 0)
-        return;
-
-      /* Skip directories */
-      if ((dent.typeflags & TYPE_MASK) == TYPE_DIR)
-        continue;
-      cnt = file_delete(&path, &dent);
-      if (cnt != 255)
-        count += cnt;
-      else
-        return;
-    }
-
-    filename = ustr1tok(NULL,',',&tmp);
-  }
-
-  set_error_ts(ERROR_SCRATCHED,count,0);
-}
-
-#ifdef CONFIG_RTC
-/* ----------------- */
-/*  T-R - Time Read  */
-/* ----------------- */
-void parse_timeread(void) {
-  struct tm time;
-  uint8_t *ptr = error_buffer;
-  uint8_t hour;
-
-  if (rtc_state != RTC_OK) {
-    set_error(ERROR_SYNTAX_UNABLE);
-    return;
-  }
-
-  read_rtc(&time);
-  hour = time.tm_hour % 12;
-  if (hour == 0) hour = 12;
-
-  switch (command_buffer[3]) {
-  case 'A': /* ASCII format */
-    buffers[CONFIG_BUFFER_COUNT].lastused = 25;
-    memcpy_P(error_buffer+4, asciitime_skel, sizeof(asciitime_skel));
-    memcpy_P(error_buffer, downames + 4*time.tm_wday, 4);
-    appendnumber(error_buffer+5, time.tm_mon);
-    appendnumber(error_buffer+8, time.tm_mday);
-    appendnumber(error_buffer+11, time.tm_year % 100);
-    appendnumber(error_buffer+14, hour);
-    appendnumber(error_buffer+17, time.tm_min);
-    appendnumber(error_buffer+20, time.tm_sec);
-    if (time.tm_hour < 12)
-      error_buffer[23] = 'A';
-    else
-      error_buffer[23] = 'P';
-    break;
-
-  case 'B': /* BCD format */
-    buffers[CONFIG_BUFFER_COUNT].lastused = 8;
-    *ptr++ = time.tm_wday;
-    *ptr++ = int2bcd(time.tm_year % 100);
-    *ptr++ = int2bcd(time.tm_mon);
-    *ptr++ = int2bcd(time.tm_mday);
-    *ptr++ = int2bcd(hour);
-    *ptr++ = int2bcd(time.tm_min);
-    *ptr++ = int2bcd(time.tm_sec);
-    *ptr++ = (time.tm_hour >= 12);
-    *ptr   = 13;
-    break;
-
-  case 'D': /* Decimal format */
-    buffers[CONFIG_BUFFER_COUNT].lastused = 8;
-    *ptr++ = time.tm_wday;
-    *ptr++ = time.tm_year;
-    *ptr++ = time.tm_mon;
-    *ptr++ = time.tm_mday;
-    *ptr++ = hour;
-    *ptr++ = time.tm_min;
-    *ptr++ = time.tm_sec;
-    *ptr++ = (time.tm_hour >= 12);
-    *ptr   = 13;
-    break;
-
-  default: /* Unknown format */
-    set_error(ERROR_SYNTAX_UNKNOWN);
-    break;
-  }
-}
-
-/* ------------------ */
-/*  T-W - Time Write  */
-/* ------------------ */
-void parse_timewrite(void) {
-  struct tm time;
-  uint8_t i, *ptr;
-
-  switch (command_buffer[3]) {
-  case 'A': /* ASCII format */
-    if (command_length < 27) { // Allow dropping the AM/PM marker for 24h format
-      set_error(ERROR_SYNTAX_UNABLE);
-      return;
-    }
-    for (i=0;i<7;i++) {
-      if (memcmp_P(command_buffer+4, downames + 4*i, 4) == 0)
-        break;
-    }
-    if (i == 7) {
-      set_error(ERROR_SYNTAX_UNKNOWN); // FIXME: Check the real error
-      return;
-    }
-    time.tm_wday = i;
-    ptr = command_buffer + 9;
-    time.tm_mon  = parse_number(&ptr);
-    ptr++;
-    time.tm_mday = parse_number(&ptr);
-    ptr++;
-    time.tm_year = parse_number(&ptr);
-    ptr++;
-    time.tm_hour = parse_number(&ptr);
-    ptr++;
-    time.tm_min  = parse_number(&ptr);
-    ptr++;
-    time.tm_sec  = parse_number(&ptr);
-    if (command_buffer[28] == 'M') {
-      /* Adjust for AM/PM only if AM/PM is actually supplied */
-      if (time.tm_hour == 12)
-        time.tm_hour = 0;
-      if (command_buffer[27] == 'P')
-        time.tm_hour += 12;
-    }
-    break;
-
-  case 'B': /* BCD format */
-    if (command_length < 12) {
-      set_error(ERROR_SYNTAX_UNABLE);
-      return;
-    }
-    time.tm_wday = command_buffer[4];
-    time.tm_year = bcd2int(command_buffer[5]);
-    time.tm_mon  = bcd2int(command_buffer[6]);
-    time.tm_mday = bcd2int(command_buffer[7]);
-    time.tm_hour = bcd2int(command_buffer[8]);
-    /* Hour range is 1-12, change 12:xx to 0:xx for easier conversion */
-    if (time.tm_hour == 12)
-      time.tm_hour = 0;
-    time.tm_min  = bcd2int(command_buffer[9]);
-    time.tm_sec  = bcd2int(command_buffer[10]);
-    if (command_buffer[11])
-      time.tm_hour += 12;
-    break;
-
-  case 'D': /* Decimal format */
-    if (command_length < 12) {
-      set_error(ERROR_SYNTAX_UNABLE);
-      return;
-    }
-    time.tm_wday = command_buffer[4];
-    time.tm_year = command_buffer[5];
-    time.tm_mon  = command_buffer[6];
-    time.tm_mday = command_buffer[7];
-    time.tm_hour = command_buffer[8];
-    /* Hour range is 1-12, change 12:xx to 0:xx for easier conversion */
-    if (time.tm_hour == 12)
-      time.tm_hour = 0;
-    time.tm_min  = command_buffer[9];
-    time.tm_sec  = command_buffer[10];
-    if (command_buffer[11])
-      time.tm_hour += 12;
-    break;
-
-  default: /* Unknown format */
-    set_error(ERROR_SYNTAX_UNKNOWN);
-    return;
-  }
-
-  /* Y2K fix for legacy apps */
-  if (time.tm_year < 80)
-    time.tm_year += 100;
-
-  /* The CMD drives don't check for validity, we do - partially */
-  if (time.tm_mday ==  0 || time.tm_mday >  31 ||
-      time.tm_mon  ==  0 || time.tm_mon  >  12 ||
-      time.tm_wday >   6 ||
-      time.tm_hour >  23 ||
-      time.tm_min  >  59 ||
-      time.tm_sec  >  59) {
-    set_error(ERROR_SYNTAX_UNABLE);
-    return;
-  }
-
-  set_rtc(&time);
-}
-#endif
 
 /* ------------------------------------------------------------------------- */
 /*  Main command parser function                                             */
 /* ------------------------------------------------------------------------- */
 
 void parse_doscommand(void) {
-  uint8_t i;
-  uint8_t *buf;
-  struct cbmdirent dent;
-  path_t path;
-  uint8_t part;
-
   /* Set default message: Everything ok */
   set_error(ERROR_OK);
 
@@ -945,89 +1223,7 @@ void parse_doscommand(void) {
 
   /* MD/CD/RD clash with other commands, so they're checked first */
   if (command_buffer[1] == 'D') {
-    uint8_t *name;
-    switch (command_buffer[0]) {
-    case 'M':
-      /* MD requires a colon */
-      if (!ustrchr(command_buffer, ':')) {
-        set_error(ERROR_SYNTAX_NONAME);
-        break;
-      }
-      if (parse_path(command_buffer+2, &path, &name, 0))
-        break;
-      mkdir(&path,name);
-      break;
-
-    case 'C':
-      if (parse_path(command_buffer+2, &path, &name, 1))
-        break;
-
-      if (ustrlen(name) != 0) {
-        /* Path component after the : */
-        if (name[0] == '_') {
-          /* Going up a level - let chdir handle it. */
-          if (chdir(&path,name))
-            break;
-        } else {
-          /* A directory name - try to match it */
-          if (first_match(&path, name, FLAG_HIDDEN, &dent))
-            break;
-
-          /* Move into it if it's a directory, use chdir if it's a file. */
-          if ((dent.typeflags & TYPE_MASK) != TYPE_DIR) {
-            if (chdir(&path, dent.name))
-              break;
-          } else
-            partition[path.part].current_dir = dent.fatcluster;
-        }
-      } else {
-        if (ustrchr(command_buffer, '/')) {
-          partition[path.part].current_dir = path.fat;
-        } else {
-          set_error(ERROR_FILE_NOT_FOUND_39);
-          break;
-        }
-      }
-
-      if (globalflags & AUTOSWAP_ACTIVE)
-        set_changelist(NULL, NULLSTRING);
-
-      break;
-
-    case 'R':
-      /* No deletion across subdirectories */
-      for (i=0;command_buffer[i];i++) {
-        if (command_buffer[i] == '/') {
-          /* Hack around a missing 2-level-break */
-          i = 255;
-          break;
-        }
-      }
-      if (i == 255) {
-        set_error(ERROR_SYNTAX_NONAME);
-        break;
-      }
-
-      /* Parse partition number */
-      buf=command_buffer+2;
-      part=parse_partition(&buf);
-      if (*buf != ':') {
-        set_error(ERROR_SYNTAX_NONAME);
-      } else {
-        path.part = part;
-        path.fat  = partition[part].current_dir;
-        ustrcpy(dent.name, buf+1);
-        i = file_delete(&path, &dent);
-        if (i != 255)
-          set_error_ts(ERROR_SCRATCHED,i,0);
-      }
-      break;
-
-    default:
-      set_error(ERROR_SYNTAX_UNKNOWN);
-      break;;
-    }
-
+    parse_dircommand();
     return;
   }
 
@@ -1039,149 +1235,31 @@ void parse_doscommand(void) {
 
   case 'C':
     /* Copy or Change Partition */
-    switch(command_buffer[1]) {
-    case 'P':
-      /* Change Partition */
-      buf=command_buffer+2;
-      part=parse_partition(&buf);
-      if(part>=max_part) {
-        set_error_ts(ERROR_PARTITION_ILLEGAL,part+1,0);
-        return;
-      }
-      
-      current_part=part;
-      if (globalflags & AUTOSWAP_ACTIVE)
-        set_changelist(NULL, NULLSTRING);
-      
-      set_error_ts(ERROR_PARTITION_SELECTED, part+1, 0);
-      break;
-      
-    case 0xd0: /* Shift-P */
-      /* Change Partition, binary version */
-      if (command_buffer[2] > max_part) {
-        set_error_ts(ERROR_PARTITION_ILLEGAL, command_buffer[2], 0);
-        return;
-      }
-      
-      if (command_buffer[2]) {
-        current_part = command_buffer[2]-1;
-        if (globalflags & AUTOSWAP_ACTIVE)
-          set_changelist(NULL, NULLSTRING);
-      }
-      set_error_ts(ERROR_PARTITION_SELECTED, command_buffer[2], 0);
-      break;
-
-    default:
+    if (command_buffer[1] == 'P' || command_buffer[1] == 0xd0)
+      parse_changepart();
+    else
       /* Throw an error because we don't handle copy yet */
       set_error(ERROR_SYNTAX_UNKNOWN);
-      break;
-    }
     break;
 
   case 'E':
     /* EEPROM-something */
-    do { /* Create a block to get local variables */
-      uint16_t address = command_buffer[3] + (command_buffer[4] << 8);
-      uint8_t  length  = command_buffer[5];
-      
-      if (command_length < 6) {
-        set_error(ERROR_SYNTAX_UNKNOWN);
-        break;
-      }
-      
-      if (command_buffer[1] != '-' || (command_buffer[2] != 'W' && command_buffer[2] != 'R'))
-        set_error(ERROR_SYNTAX_UNKNOWN);
-      
-      if (address > CONFIG_EEPROM_SIZE || address+length > CONFIG_EEPROM_SIZE) {
-        set_error(ERROR_SYNTAX_TOOLONG);
-        break;;
-      }
-      
-      if (command_buffer[2] == 'W')
-        handle_eewrite(address, length);
-      else
-        handle_eeread(address, length);
-    } while (0);
+    parse_eeprom();
     break;
 
   case 'G':
     /* Get-Partition */
-    if (command_length < 3) /* FIXME: should this set an error? */
-      break;
-
-    if (command_buffer[1] != '-' || command_buffer[2] != 'P') {
-      set_error(ERROR_SYNTAX_UNKNOWN);
-      break;
-    }
-
-    if (command_length == 3)
-      path.part = current_part+1;
-    else
-      path.part = command_buffer[3];
-
-    /* Valid partition number? */
-    if (path.part >= max_part) {
-      set_error(ERROR_PARTITION_ILLEGAL);
-      break;
-    }
-
-    buffers[CONFIG_BUFFER_COUNT].position = 0;
-    buffers[CONFIG_BUFFER_COUNT].lastused = 31;
-    buf=buffers[CONFIG_BUFFER_COUNT].data;
-    memset(buf,0,32);
-    *(buf++) = 1; /* Partition type: native */
-    buf++;
-
-    *(buf++) = path.part+1;
-    path.fat=0;
-    if (disk_label(&path,buf))
-      break;
-    buf+= 16;
-    *(buf++) = partition[path.part].fatfs.fatbase>>16;
-    *(buf++) = partition[path.part].fatfs.fatbase>>8;
-    *(buf++) = (partition[path.part].fatfs.fatbase & 0xff);
-    buf++;
-
-    uint32_t size = (partition[path.part].fatfs.max_clust - 1) * partition[path.part].fatfs.csize;
-    *(buf++) = size>>16;
-    *(buf++) = size>>8;
-    *(buf++) = size;
-    *buf = 13;
+    parse_getpartition();
     break;
 
   case 'I':
     /* Initialize */
-    if (disk_state != DISK_OK)
-      set_error_ts(ERROR_READ_NOSYNC,18,0);
-    else
-      free_all_user_buffers(1);
+    parse_initialize();
     break;
 
   case 'M':
-    /* Memory-something - just dump for later analysis */
-#ifndef CONFIG_COMMAND_CHANNEL_DUMP
-    if (detected_loader == FL_NONE) {
-      uart_flush();
-      for (i=0;i<3;i++)
-        uart_putc(command_buffer[i]);
-      for (i=3;i<command_length;i++) {
-        uart_putc(' ');
-        uart_puthex(command_buffer[i]);
-        uart_flush();
-      }
-      uart_putc(13);
-      uart_putc(10);
-    }
-#endif
-
-    if (command_buffer[2] == 'W')
-      handle_memwrite();
-    else if (command_buffer[2] == 'E')
-      handle_memexec();
-    else if (command_buffer[2] == 'R')
-      handle_memread();
-    else
-      set_error(ERROR_SYNTAX_UNKNOWN);
+    /* Memory-something */
+    parse_memory();
     break;
 
   case 'N':
@@ -1211,16 +1289,7 @@ void parse_doscommand(void) {
 
 #ifdef CONFIG_RTC
   case 'T':
-    if (rtc_state == RTC_NOT_FOUND)
-      set_error(ERROR_SYNTAX_UNKNOWN);
-    else {
-      if (command_buffer[2] == 'R') {
-        parse_timeread();
-      } else if (command_buffer[2] == 'W') {
-        parse_timewrite();
-      } else
-        set_error(ERROR_SYNTAX_UNKNOWN);
-    }
+    parse_time();
     break;
 #endif
 
