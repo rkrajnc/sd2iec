@@ -86,11 +86,11 @@ CONFIG_ERROR_BUFFER_SIZE=46
 
 # Length of command/filename buffer - 1571 uses 42 bytes
 # The buffer is actually 2 bytes larger to simplify parsing.
-CONFIG_COMMAND_BUFFER_SIZE=120
+CONFIG_COMMAND_BUFFER_SIZE=254
 
 # Number of sector buffers (256 byte+a bit of overhead)
 #  In general: More buffers -> More open files at the same time
-CONFIG_BUFFER_COUNT=6
+CONFIG_BUFFER_COUNT=15
 
 # Size of the EEPROM user area
 CONFIG_EEPROM_SIZE=512
@@ -98,4 +98,4 @@ CONFIG_EEPROM_SIZE=512
 # Offset of the EEPROM user area
 CONFIG_EEPROM_OFFSET=512
 
-CONFIG_MAX_PARTITIONS=2
+CONFIG_MAX_PARTITIONS=20
