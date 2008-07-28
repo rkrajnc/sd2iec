@@ -65,6 +65,8 @@
 #define STA_48BIT            0x08
 #define STA_FIRSTTIME        0x80
 
+#define RESET_DELAY          100   /* ms to hold RESET line low to init CF and IDE */
+
 /* These functions are weak-aliased to init_disk/disk_... */
 void init_ata(void);
 DSTATUS ata_initialize (BYTE drv);

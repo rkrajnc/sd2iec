@@ -179,7 +179,7 @@ static void ata_read_part (BYTE *buff, BYTE ofs, BYTE count) {
 static void reset_disk(void) {
   ATA_PORT_CTRL_OUT = (BYTE)~ATA_PIN_RESET;
   // wait a bit for the drive to reset.
-  _delay_ms(1);
+  _delay_ms(RESET_DELAY);
   ATA_PORT_CTRL_OUT |= ATA_PIN_RESET;
   ATA_drv_flags[0] = STA_NOINIT;
   ATA_drv_flags[1] = STA_NOINIT;
@@ -267,7 +267,7 @@ DSTATUS disk_initialize (BYTE drv) __attribute__ ((weak, alias("ata_initialize")
 DSTATUS ata_status (BYTE drv) {
   if(drv>1)
      return STA_NOINIT;
-  return ATA_drv_flags[drv]&STA_NOINIT;
+  return ATA_drv_flags[drv] & (STA_NOINIT | STA_NODISK);
 }
 DSTATUS disk_status (BYTE drv) __attribute__ ((weak, alias("ata_status")));
 
@@ -368,7 +368,7 @@ DRESULT disk_write (BYTE drv, const BYTE *data, DWORD sector, BYTE count) __attr
 DRESULT ata_ioctl (BYTE drv, BYTE ctrl, void *buff) {
   BYTE n, dl, dh, ofs, w, *ptr = buff;
 
-  if (drv) return RES_PARERR;
+  if (drv > 1) return RES_PARERR;
   if (ATA_drv_flags[drv] & STA_NOINIT) return RES_NOTRDY;
 
   switch (ctrl) {

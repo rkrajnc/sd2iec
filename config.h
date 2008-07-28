@@ -589,7 +589,7 @@
 #endif
 
 /* An interrupt for detecting card changes implies hotplugging capability */
-#ifdef SD_CHANGE_VECT
+#if defined(SD_CHANGE_VECT) || defined (CF_CHANGE_VECT)
 #  define HAVE_HOTPLUG
 #endif
 
