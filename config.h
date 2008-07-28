@@ -127,12 +127,6 @@
 //#  define DATAFLASH_SELECT      _BV(PD2)
 
 
-/*** diskio mux ***/
-/* If your device supports more than one type of storage (SD/ATA/DF) by default, */
-/* define this symbol to force inclusion of the diskio mux code.                 */
-//#  define NEED_DISKMUX
-
-
 /*** Device address selection ***/
 /* DEVICE_SELECT should return the selected device number,   */
 /* DEVICE_SELECT_SETUP() is called once to set up the ports. */
@@ -617,13 +611,6 @@
 #  define BUSY_LED_OFF()    do {} while(0)
 #endif
 
-/* Enable the diskio mux if non-default storage devices are enabled */
-#ifndef NEED_DISKMUX
-#  if defined(CONFIG_ADD_SD) || defined(CONFIG_ADD_ATA) || defined(CONFIG_ADD_DF)
-#    define NEED_DISKMUX
-#  endif
-#endif
-
 /* Translate CONFIG_ADD symbols to HAVE symbols */
 /* By using two symbols for this purpose it's easier to determine if */
 /* support was enabled by default or added in the config file.       */
@@ -639,5 +626,26 @@
 #  define HAVE_DF
 #endif
 
+/* Create some temporary symbols so we can calculate the number of */
+/* enabled storage devices.                                        */
+#ifdef HAVE_SD
+#  define TMP_SD 1
+#endif
+#ifdef HAVE_ATA
+#  define TMP_ATA 1
+#endif
+#ifdef HAVE_DF
+#  define TMP_DF 1
+#endif
+
+/* Enable the diskmux if more than one storage device is enabled. */
+#if !defined(NEED_DISKMUX) && (TMP_SD + TMP_ATA + TMP_DF) > 1
+#  define NEED_DISKMUX
+#endif
+
+/* Remove the temporary symbols */
+#undef TMP_SD
+#undef TMP_ATA
+#undef TMP_DF
 
 #endif
