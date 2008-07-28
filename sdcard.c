@@ -361,8 +361,12 @@ DSTATUS sd_initialize(BYTE drv) {
   uint16_t counter;
   uint32_t answer;
 
-#ifndef CONFIG_TWINSD
-  drv = 0;
+#ifdef CONFIG_TWINSD
+  if (drv > 1)
+    return STA_NOINIT|STA_NODISK;
+#else
+  if (drv != 0)
+    return STA_NOINIT|STA_NODISK;
 #endif
 
   /* Don't bother initializing a card that isn't there */

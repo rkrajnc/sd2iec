@@ -1374,9 +1374,9 @@ FRESULT f_mount (
   FATFS *fs   /* Pointer to new file system object (NULL for unmount)*/
 )
 {
+#if _USE_DRIVE_PREFIX != 0
   if (drv >= _LOGICAL_DRIVES) return FR_INVALID_DRIVE;
 
-#if _USE_DRIVE_PREFIX != 0
   if (FatFs[drv]) FatFs[drv]->fs_type = 0;  /* Clear old object */
 
   FatFs[drv] = fs;      /* Register and clear new object */

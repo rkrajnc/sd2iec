@@ -58,9 +58,6 @@
 /* This should be upper-case because it isn't PETSCII-converted.   */
 #  define HW_NAME "SD2IEC"
 
-/* How many drives can be accessed on this hardware? */
-#  define MAX_DRIVES         1
-
 /*** SD card support ***/
 /* If your device supports SD cards by default, define this symbol. */
 #  define HAVE_SD
@@ -242,7 +239,6 @@
 #  define SDCARD_WP             (PIND & _BV(PD6))
 #  define SDCARD_WP_SETUP()     do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
 #  define SD_SUPPLY_VOLTAGE     (1L<<18)
-#  define MAX_DRIVES            1
 #  define DEVICE_SELECT         (8+!(PIND & _BV(PD7))+2*!(PIND & _BV(PD5)))
 #  define DEVICE_SELECT_SETUP() do {        \
              DDRD  &= ~(_BV(PD7)|_BV(PD5)); \
@@ -295,7 +291,6 @@
 #  define SDCARD_WP_SETUP()     do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
 #  define SD_CHANGE_ICR         MCUCR
 #  define SD_SUPPLY_VOLTAGE     (1L<<21)
-#  define MAX_DRIVES            1
 #  define DEVICE_SELECT         (8+!(PINA & _BV(PA2))+2*!(PINA & _BV(PA3)))
 #  define DEVICE_SELECT_SETUP() do {        \
              DDRA  &= ~(_BV(PA2)|_BV(PA3)); \
@@ -338,7 +333,6 @@
 #  define CFCARD_DETECT_SETUP() do { DDRE &= ~_BV(PE7); PORTE |= _BV(PE7); } while(0)
 #  define CF_CHANGE_SETUP()     do { EICRB |= _BV(ISC70); EIMSK |= _BV(INT7); } while(0)
 #  define CF_CHANGE_VECT        INT7_vect
-#  define MAX_DRIVES            1 //2
 /* No device jumpers on uIEC */
 #  define DEVICE_SELECT         10
 #  define DEVICE_SELECT_SETUP() do {} while (0)
@@ -441,9 +435,6 @@
 #   define SD2_SETUP()          do { SD2_PORT |= SD2_CS|SD2_WP; DDRC |= SD2_CS; DDRC &= ~SD2_WP; DDRB &= ~SD2_PRESENT; PORTB |= SD2_PRESENT; } while (0)
 #   define SD2_CHANGE_VECT      INT2_vect
 #   define SD2_CHANGE_SETUP()   do { EICRA |= _BV(ISC20); EIMSK |= _BV(INT2);  } while (0)
-#   define MAX_DRIVES           2
-#  else
-#   define MAX_DRIVES           1
 #  endif
 
 
@@ -465,7 +456,6 @@
 #  define SDCARD_WP_SETUP()     do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
 #  define SD_CHANGE_ICR         MCUCR
 #  define SD_SUPPLY_VOLTAGE     (1L<<21)
-#  define MAX_DRIVES            1
 #  define DEVICE_SELECT         (8+!(PINA & _BV(PA2))+2*!(PINA & _BV(PA3)))
 #  define DEVICE_SELECT_SETUP() do {        \
              DDRA  &= ~(_BV(PA2)|_BV(PA3)); \
@@ -513,7 +503,6 @@
 #  define DATAFLASH_PORT        PORTD
 #  define DATAFLASH_DDR         DDRD
 #  define DATAFLASH_SELECT      _BV(PD2)
-#  define MAX_DRIVES            2
 #  define DEVICE_SELECT         8
 #  define DEVICE_SELECT_SETUP() do {} while(0)
 #  define SINGLE_LED
@@ -647,5 +636,8 @@
 #undef TMP_SD
 #undef TMP_ATA
 #undef TMP_DF
+
+/* Hardcoded maximum - reducing this won't save any ram */
+#define MAX_DRIVES 16
 
 #endif

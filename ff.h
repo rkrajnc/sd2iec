@@ -39,7 +39,7 @@
 #define _USE_STRFUNC    0
 /* To enable string functions, set _USE_STRFUNC to 1 or 2. */
 
-#define _DRIVES     CONFIG_MAX_PARTITIONS
+#define _DRIVES     MAX_DRIVES
 /* Number of physical drives to be used. This affects the size of internal
  * table. (when using _USE_DRIVE_PREFIX */
 
