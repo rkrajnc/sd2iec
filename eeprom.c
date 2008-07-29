@@ -27,6 +27,7 @@
 #include <avr/eeprom.h>
 #include <avr/io.h>
 #include "config.h"
+#include "diskio.h"
 #include "fatops.h"
 #include "flags.h"
 #include "iec.h"
@@ -42,6 +43,8 @@
  * @address    : device address set by software
  * @hardaddress: device address set by jumpers
  * @fileexts   : file extension mapping mode
+ * @drvflags0  : 16 bits of drv mappings, organized as 4 nybbles.
+ * @drvflags1  : 16 bits of drv mappings, organized as 4 nybbles.
  *
  * This is the data structure for the contents of the EEPROM.
  */
@@ -54,6 +57,8 @@ static EEMEM struct {
   uint8_t  address;
   uint8_t  hardaddress;
   uint8_t  fileexts;
+  uint16_t drvconfig0;
+  uint16_t drvconfig1;
 } storedconfig;
 
 /**
@@ -72,6 +77,7 @@ void read_configuration(void) {
   globalflags         |= POSTMATCH;        /* Post-* matching enabled */
   globalflags         |= FAT32_FREEBLOCKS; /* Calculate the number of free blocks on FAT32 */
   file_extension_mode  = 1;                /* Store x00 extensions except for PRG */
+  drive_config         = DRIVE_CONFIG;
 
   size = eeprom_read_word(&storedconfig.structsize);
 
@@ -97,6 +103,17 @@ void read_configuration(void) {
 
   file_extension_mode = eeprom_read_byte(&storedconfig.fileexts);
 
+  if (size > 9) {
+    drive_config = eeprom_read_word(&storedconfig.drvconfig0);
+    drive_config |= (uint32_t)eeprom_read_word(&storedconfig.drvconfig1) << 16;
+  }
+
+  /* sanity check.  If the user has truly turned off all drives, turn the
+   * defaults back on
+   */
+  if(!drive_config)
+    drive_config = DRIVE_CONFIG;
+
   /* Paranoia: Set EEPROM address register to the dummy entry */
   EEAR = 0;
 }
@@ -119,6 +136,8 @@ void write_configuration(void) {
   eeprom_write_byte(&storedconfig.address, device_address);
   eeprom_write_byte(&storedconfig.hardaddress, DEVICE_SELECT);
   eeprom_write_byte(&storedconfig.fileexts, file_extension_mode);
+  eeprom_write_word(&storedconfig.drvconfig0, drive_config);
+  eeprom_write_word(&storedconfig.drvconfig1, drive_config >> 16);
 
   /* Calculate checksum over EEPROM contents */
   checksum = 0;

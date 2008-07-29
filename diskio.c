@@ -31,17 +31,7 @@
 #include "sdcard.h"
 
 volatile enum diskstates disk_state;
-
-#ifdef NEED_DISKMUX
-
-/* Very stupid and incomplete implementation of the disk mux, */
-/* just as a template and for easier dataflash testing.       */
-
-#if defined(HAVE_SD) && defined(HAVE_ATA)
-#  define SD_OFFSET 2
-#else
-#  define SD_OFFSET 0
-#endif
+uint32_t drive_config;
 
 void init_disk(void) {
 #ifdef HAVE_SD
@@ -56,64 +46,101 @@ void init_disk(void) {
 }
 
 DSTATUS disk_status(BYTE drv) {
+  switch(drv & 0xe) {
 #ifdef HAVE_DF
-  if (drv == MAX_DRIVES-1)
-    return df_status(0);
+  case DRIVE_CONFIG_DF_MASK:
+    return df_status(drv & 1);
 #endif
+
 #ifdef HAVE_ATA
-  if (drv < 2)
-    return ata_status(drv);
+  case DRIVE_CONFIG_ATA1_MASK:
+    return ata_status(drv & 1);
+
+  case DRIVE_CONFIG_ATA2_MASK:
+    return ata_status((drv & 1) + 2);
 #endif
+
 #ifdef HAVE_SD
-  return sd_status(drv-SD_OFFSET);
+  case DRIVE_CONFIG_SD_MASK:
+    return sd_status(drv & 1);
 #endif
-  return STA_NOINIT|STA_NODISK;
+
+  default:
+    return STA_NOINIT|STA_NODISK;
+  }
 }
 
 DSTATUS disk_initialize(BYTE drv) {
+  switch(drv & 0xe) {
 #ifdef HAVE_DF
-  if (drv == MAX_DRIVES-1)
-    return df_initialize(0);
+  case DRIVE_CONFIG_DF_MASK:
+    return df_initialize(drv & 1);
 #endif
+
 #ifdef HAVE_ATA
-  if (drv < 2)
-    return ata_initialize(drv);
+  case DRIVE_CONFIG_ATA1_MASK:
+    return ata_initialize(drv & 1);
+
+  case DRIVE_CONFIG_ATA2_MASK:
+    return ata_initialize((drv & 1) + 2);
 #endif
+
 #ifdef HAVE_SD
-  return sd_initialize(drv-SD_OFFSET);
+  case DRIVE_CONFIG_SD_MASK:
+    return sd_initialize(drv & 1);
 #endif
-  return STA_NOINIT|STA_NODISK;
+
+  default:
+    return STA_NOINIT|STA_NODISK;
+  }
 }
   
 DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
+  switch(drv & 0xe) {
 #ifdef HAVE_DF
-  if (drv == MAX_DRIVES-1)
-    return df_read(drv,buffer,sector,count);
+  case DRIVE_CONFIG_DF_MASK:
+    return df_read(drv & 1,buffer,sector,count);
 #endif
+
 #ifdef HAVE_ATA
-  if (drv < 2)
-    return ata_read(drv,buffer,sector,count);
+  case DRIVE_CONFIG_ATA1_MASK:
+    return ata_read(drv & 1,buffer,sector,count);
+
+  case DRIVE_CONFIG_ATA2_MASK:
+    return ata_read((drv & 1) + 2,buffer,sector,count);
 #endif
+
 #ifdef HAVE_SD
-  return sd_read(drv,buffer,sector,count);
+  case DRIVE_CONFIG_SD_MASK:
+    return sd_read(drv & 1,buffer,sector,count);
 #endif
-  return RES_ERROR;
+
+  default:
+    return RES_ERROR;
+  }
 }
   
 DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
+  switch(drv & 0xe) {
 #ifdef HAVE_DF
-  if (drv == MAX_DRIVES-1)
-    return df_write(drv,buffer,sector,count);
+  case DRIVE_CONFIG_DF_MASK:
+    return df_write(drv & 1,buffer,sector,count);
 #endif
-#ifdef HAVE_ATA
-  if (drv < 2)
-    return ata_write(drv,buffer,sector,count);
-#endif
-#ifdef HAVE_SD
-  return sd_write(drv,buffer,sector,count);
-#endif
-  return RES_ERROR;
-}
-  
 
+#ifdef HAVE_ATA
+  case DRIVE_CONFIG_ATA1_MASK:
+    return ata_write(drv & 1,buffer,sector,count);
+
+  case DRIVE_CONFIG_ATA2_MASK:
+    return ata_write((drv & 1) + 2,buffer,sector,count);
 #endif
+
+#ifdef HAVE_SD
+  case DRIVE_CONFIG_SD_MASK:
+    return sd_write(drv & 1,buffer,sector,count);
+#endif
+
+  default:
+    return RES_ERROR;
+  }
+}

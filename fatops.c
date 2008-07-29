@@ -33,6 +33,7 @@
 #include "buffers.h"
 #include "d64ops.h"
 #include "diskchange.h"
+#include "diskio.h"
 #include "doscmd.h"
 #include "errormsg.h"
 #include "ff.h"
@@ -1213,14 +1214,17 @@ void fat_rename(path_t *path, struct cbmdirent *dent, uint8_t *newname) {
  */
 void init_fatops(uint8_t preserve_path) {
   FRESULT res;
-  uint8_t drive,part;
+  uint8_t realdrive,drive,part;
 
   max_part = 0;
   drive = 0;
   part = 0;
   while (max_part < CONFIG_MAX_PARTITIONS && drive < MAX_DRIVES) {
     partition[max_part].fop = &fatops;
-    res=f_mount((drive * 16) + part, &partition[max_part].fatfs);
+
+    /* Map drive numbers in just one place */
+    realdrive = map_drive(drive);
+    res=f_mount((realdrive * 16) + part, &partition[max_part].fatfs);
 
     if (!preserve_path)
       partition[max_part].current_dir = 0;

@@ -66,4 +66,50 @@ enum diskstates { DISK_CHANGED = 0, DISK_REMOVED, DISK_OK, DISK_ERROR };
 
 extern volatile enum diskstates disk_state;
 
+/* Disk mux configuration */
+
+extern uint32_t drive_config;
+
+#define map_drive(drv) ((drive_config >> (4 * drive)) & 0x0f)
+
+#define DRIVE_CONFIG_NONE         0
+#define DRIVE_CONFIG_SD0          2
+#define DRIVE_CONFIG_SD_MASK      DRIVE_CONFIG_SD0
+#define DRIVE_CONFIG_SD1          3
+#define DRIVE_CONFIG_ATA0         4
+#define DRIVE_CONFIG_ATA1_MASK     DRIVE_CONFIG_ATA0
+#define DRIVE_CONFIG_ATA1         5
+#define DRIVE_CONFIG_ATA2         6
+#define DRIVE_CONFIG_ATA2_MASK    DRIVE_CONFIG_ATA2
+#define DRIVE_CONFIG_ATA3         7
+#define DRIVE_CONFIG_DF           8
+#define DRIVE_CONFIG_DF_MASK      DRIVE_CONFIG_DF
+//#define DRIVE_CONFIG_USB0         10
+
+#ifdef HAVE_SD
+#  ifdef CONFIG_TWINSD
+#    define DRIVE_CONFIG1      ((DRIVE_CONFIG_SD1 << 4) | DRIVE_CONFIG_SD0)
+#  else
+#    define DRIVE_CONFIG1      (DRIVE_CONFIG_SD0)
+#  endif
+#else
+#  define DRIVE_CONFIG1        (DRIVE_CONFIG_NONE)
+#endif
+
+#ifdef HAVE_ATA
+//#  define DRIVE_CONFIG2        (((uint32_t)DRIVE_CONFIG1 << 8) | (DRIVE_CONFIG_ATA1 << 4) | DRIVE_CONFIG_ATA0)
+#  define DRIVE_CONFIG2        (((uint32_t)DRIVE_CONFIG1 << 4) | DRIVE_CONFIG_ATA0)
+#else
+#  define DRIVE_CONFIG2        DRIVE_CONFIG1
+#endif
+
+#ifdef HAVE_DF
+#  define DRIVE_CONFIG3        (((uint32_t)DRIVE_CONFIG2 << 8) | DRIVE_CONFIG_DF)
+#else
+#  define DRIVE_CONFIG3        DRIVE_CONFIG2
+#endif
+
+#define DRIVE_CONFIG           (uint32_t)DRIVE_CONFIG3
+
+
 #endif

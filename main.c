@@ -129,10 +129,10 @@ int main(void) {
   init_iec();
   init_rtc();
   init_disk();
+  read_configuration();
+
   init_fatops(0);
   init_change();
-
-  read_configuration();
 
   uart_puts_P(PSTR("\nsd2iec " VERSION " #"));
   uart_puthex(device_address);
