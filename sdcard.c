@@ -370,8 +370,8 @@ DSTATUS sd_initialize(BYTE drv) {
 #endif
 
   /* Don't bother initializing a card that isn't there */
-  if (disk_status(drv) & STA_NODISK)
-    return disk_status(drv);
+  if (sd_status(drv) & STA_NODISK)
+    return sd_status(drv);
 
   disk_state = DISK_ERROR;
 
@@ -458,7 +458,7 @@ DSTATUS sd_initialize(BYTE drv) {
 
   // Thats it!
   disk_state = DISK_OK;
-  return disk_status(drv);
+  return sd_status(drv);
 }
 DSTATUS disk_initialize(BYTE drv) __attribute__ ((weak, alias("sd_initialize")));
 
