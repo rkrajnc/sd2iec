@@ -460,7 +460,7 @@ DSTATUS sd_initialize(BYTE drv) {
   disk_state = DISK_OK;
   return disk_status(drv);
 }
-DSTATUS disk_initialize(BYTE drv) __attribute__ ((weak, alias("sd_status")));
+DSTATUS disk_initialize(BYTE drv) __attribute__ ((weak, alias("sd_initialize")));
 
 
 /**
