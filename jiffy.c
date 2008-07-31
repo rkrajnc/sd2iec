@@ -36,7 +36,7 @@
 #include "timer.h"
 
 /* Ugly hack. Use the assembler version instead. */
-#define IEC_PULLUPS (IEC_PORT & (uint8_t)~(IEC_ATN|IEC_DATA|IEC_CLOCK|IEC_SRQ))
+#define IEC_PULLUPS (IEC_PORT & (uint8_t)~(IEC_BIT_ATN|IEC_BIT_DATA|IEC_BIT_CLOCK|IEC_BIT_SRQ))
 
 #define JIFFY_OFFSET_SEND 3
 #define JIFFY_OFFSET_RECV 3

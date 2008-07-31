@@ -269,7 +269,7 @@ static void dreamload_send_block(const uint8_t* p) {
   dreamload_send_byte(checksum);
 
   // release CLOCK and DATA
-  IEC_OUT &= (uint8_t)~(IEC_ATN|IEC_DATA|IEC_CLOCK|IEC_SRQ);
+  IEC_OUT &= (uint8_t)~(IEC_OBIT_ATN|IEC_OBIT_DATA|IEC_OBIT_CLOCK|IEC_OBIT_SRQ);
   sei();
 }
 
@@ -284,7 +284,7 @@ void load_dreamload(void) {
   set_atn_irq(0);
 
   // Release clock and data
-  IEC_OUT &= (uint8_t)~(IEC_ATN|IEC_DATA|IEC_CLOCK|IEC_SRQ);
+  IEC_OUT &= (uint8_t)~(IEC_OBIT_ATN|IEC_OBIT_DATA|IEC_OBIT_CLOCK|IEC_OBIT_SRQ);
 
   /* load final drive code, fixed length */
   type = 0;
