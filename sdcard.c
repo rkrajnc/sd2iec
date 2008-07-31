@@ -61,9 +61,10 @@
 #include <avr/pgmspace.h>
 #include <util/crc16.h>
 #include "config.h"
-#include "spi.h"
+#include "avrcompat.h"
 #include "crc7.h"
 #include "diskio.h"
+#include "spi.h"
 #include "uart.h"
 #include "sdcard.h"
 

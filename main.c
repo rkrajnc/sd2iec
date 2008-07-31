@@ -29,6 +29,7 @@
 #include <avr/boot.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
+#include <avr/power.h>
 #include <avr/wdt.h>
 #include <util/delay.h>
 #include "config.h"
@@ -87,7 +88,7 @@ void poison_memory(void) {
 #endif
 
 int main(void) {
-#if defined __AVR_ATmega644__ || defined __AVR_ATmega644P__
+#if defined __AVR_ATmega644__ || defined __AVR_ATmega644P__ || defined __AVR_ATmega2561__
   asm volatile("in  r24, %0\n"
                "ori r24, 0x80\n"
                "out %0, r24\n"
@@ -109,6 +110,10 @@ int main(void) {
   /* Just assume that JTAG doesn't hurt us on the m128 */
 #else
 #  error Unknown chip!
+#endif
+
+#ifdef CLOCK_PRESCALE
+  clock_prescale_set(CLOCK_PRESCALE);
 #endif
 
   BUSY_LED_SETDDR();

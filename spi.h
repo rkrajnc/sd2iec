@@ -48,21 +48,21 @@ uint32_t spiTransferLong(uint32_t data);
 #ifdef CONFIG_TWINSD
 # define SPI_SS_HIGH(card) do { \
     if (card == 0) {            \
-      PORTB |= _BV(PB4);        \
+      SPI_PORT |= SPI_SS;       \
     } else {                    \
       SD2_PORT |= SD2_CS;       \
     }                           \
   } while (0)
 #define SPI_SS_LOW(card) do {       \
     if (card == 0) {                \
-      PORTB &= (uint8_t)~_BV(PB4);  \
+      SPI_PORT &= (uint8_t)~SPI_SS; \
     } else {                        \
       SD2_PORT &= (uint8_t)~SD2_CS; \
     }                               \
   } while (0)
 #else
-# define SPI_SS_HIGH(card)  PORTB |= _BV(PB4)
-# define SPI_SS_LOW(card)   PORTB &= (uint8_t)~_BV(PB4)
+# define SPI_SS_HIGH(card)  SPI_PORT |= SPI_SS
+# define SPI_SS_LOW(card)   SPI_PORT &= (uint8_t)~SPI_SS
 #endif
 
 #endif

@@ -186,12 +186,14 @@ static void reset_disk(void) {
 }
 
 
+#ifdef CF_CHANGE_VECT
 ISR(CF_CHANGE_VECT) {
   if (CFCARD_DETECT)
     disk_state = DISK_CHANGED;
   else
     disk_state = DISK_REMOVED;
 }
+#endif
 
 
 void init_ata(void) {

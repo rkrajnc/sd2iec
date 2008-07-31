@@ -50,6 +50,7 @@
 // FIXME: Integrate into sdcard.c
 
 #include <avr/io.h>
+#include "avrcompat.h"
 #include "spi.h"
 
 // access routines
@@ -58,10 +59,8 @@ void spiInit(void)
   uint8_t dummy;
 
   // setup SPI I/O pins
-  PORTB |=  _BV(PB7) | _BV(PB4) | _BV(PB6); // set SCK+SS hi (no chip select),
-                                            //  pullup on MISO
-  DDRB  |=  _BV(PB7) | _BV(PB5) | _BV(PB4); // set SCK/MOSI/SS as output
-  DDRB  &= ~_BV(PB6);                       // set MISO as input
+  SPI_PORT = (SPI_PORT & ~SPI_MASK) | SPI_SCK | SPI_SS | SPI_MISO;
+  SPI_DDR  = (SPI_DDR  & ~SPI_MASK) | SPI_SCK | SPI_SS | SPI_MOSI;
 
   // setup SPI interface:
   //   interrupts disabled, SPI enabled, MSB first, master mode,

@@ -56,6 +56,8 @@ ifeq ($(CONFIG_BOOTLOADER),y)
     BINARY_LENGTH = 0x1f000
   else ifeq ($(MCU),atmega1281)
     BINARY_LENGTH = 0x1f000
+  else ifeq ($(MCU),atmega2561)
+    BINARY_LENGTH = 0x3f000
   else ifeq ($(MCU),atmega644)
     BINARY_LENGTH = 0xf000
   else ifeq ($(MCU),atmega644p)
