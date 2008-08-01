@@ -36,6 +36,28 @@ volatile enum diskstates disk_state;
 
 uint32_t drive_config;
 
+/* This function calculates the default drive configuration. */
+/* Its result is static after compilation, but doing this in */
+/* C in less messy than doing it with the preprocessor.      */
+uint32_t get_default_driveconfig(void) {
+  uint32_t result = 0xffffffffL;
+
+  /* Order matters: Whatever is checked first will be last in the config */
+#ifdef HAVE_DF
+  result = (result << 4) + (DISK_TYPE_DF  << DRIVE_BITS) + 0;
+#endif
+#ifdef CONFIG_TWINSD
+  result = (result << 4) + (DISK_TYPE_SD  << DRIVE_BITS) + 1;
+#endif
+#ifdef HAVE_SD
+  result = (result << 4) + (DISK_TYPE_SD  << DRIVE_BITS) + 0;
+#endif
+#ifdef HAVE_ATA
+  result = (result << 4) + (DISK_TYPE_ATA << DRIVE_BITS) + 0;
+#endif
+  return result;
+}
+
 void init_disk(void) {
 #ifdef HAVE_SD
   init_sd();
@@ -49,23 +71,23 @@ void init_disk(void) {
 }
 
 DSTATUS disk_status(BYTE drv) {
-  switch(drv & 0xe) {
+  switch(drv >> DRIVE_BITS) {
 #ifdef HAVE_DF
-  case DRIVE_CONFIG_DF_MASK:
-    return df_status(drv & 1);
+  case DISK_TYPE_DF:
+    return df_status(drv & DRIVE_MASK);
 #endif
 
 #ifdef HAVE_ATA
-  case DRIVE_CONFIG_ATA1_MASK:
-    return ata_status(drv & 1);
+  case DISK_TYPE_ATA:
+    return ata_status(drv & DRIVE_MASK);
 
-  case DRIVE_CONFIG_ATA2_MASK:
-    return ata_status((drv & 1) + 2);
+  case DISK_TYPE_ATA2:
+    return ata_status((drv & DRIVE_MASK) + 2);
 #endif
 
 #ifdef HAVE_SD
-  case DRIVE_CONFIG_SD_MASK:
-    return sd_status(drv & 1);
+  case DISK_TYPE_SD:
+    return sd_status(drv & DRIVE_MASK);
 #endif
 
   default:
@@ -74,23 +96,23 @@ DSTATUS disk_status(BYTE drv) {
 }
 
 DSTATUS disk_initialize(BYTE drv) {
-  switch(drv & 0xe) {
+  switch(drv >> DRIVE_BITS) {
 #ifdef HAVE_DF
-  case DRIVE_CONFIG_DF_MASK:
-    return df_initialize(drv & 1);
+  case DISK_TYPE_DF:
+    return df_initialize(drv & DRIVE_MASK);
 #endif
 
 #ifdef HAVE_ATA
-  case DRIVE_CONFIG_ATA1_MASK:
-    return ata_initialize(drv & 1);
+  case DISK_TYPE_ATA:
+    return ata_initialize(drv & DRIVE_MASK);
 
-  case DRIVE_CONFIG_ATA2_MASK:
-    return ata_initialize((drv & 1) + 2);
+  case DISK_TYPE_ATA2:
+    return ata_initialize((drv & DRIVE_MASK) + 2);
 #endif
 
 #ifdef HAVE_SD
-  case DRIVE_CONFIG_SD_MASK:
-    return sd_initialize(drv & 1);
+  case DISK_TYPE_SD:
+    return sd_initialize(drv & DRIVE_MASK);
 #endif
 
   default:
@@ -99,23 +121,23 @@ DSTATUS disk_initialize(BYTE drv) {
 }
   
 DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
-  switch(drv & 0xe) {
+  switch(drv >> DRIVE_BITS) {
 #ifdef HAVE_DF
-  case DRIVE_CONFIG_DF_MASK:
-    return df_read(drv & 1,buffer,sector,count);
+  case DISK_TYPE_DF:
+    return df_read(drv & DRIVE_MASK,buffer,sector,count);
 #endif
 
 #ifdef HAVE_ATA
-  case DRIVE_CONFIG_ATA1_MASK:
-    return ata_read(drv & 1,buffer,sector,count);
+  case DISK_TYPE_ATA:
+    return ata_read(drv & DRIVE_MASK,buffer,sector,count);
 
-  case DRIVE_CONFIG_ATA2_MASK:
-    return ata_read((drv & 1) + 2,buffer,sector,count);
+  case DISK_TYPE_ATA2:
+    return ata_read((drv & DRIVE_MASK) + 2,buffer,sector,count);
 #endif
 
 #ifdef HAVE_SD
-  case DRIVE_CONFIG_SD_MASK:
-    return sd_read(drv & 1,buffer,sector,count);
+  case DISK_TYPE_SD:
+    return sd_read(drv & DRIVE_MASK,buffer,sector,count);
 #endif
 
   default:
@@ -124,23 +146,23 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
 }
   
 DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
-  switch(drv & 0xe) {
+  switch(drv >> DRIVE_BITS) {
 #ifdef HAVE_DF
-  case DRIVE_CONFIG_DF_MASK:
-    return df_write(drv & 1,buffer,sector,count);
+  case DISK_TYPE_DF:
+    return df_write(drv & DRIVE_MASK,buffer,sector,count);
 #endif
 
 #ifdef HAVE_ATA
-  case DRIVE_CONFIG_ATA1_MASK:
-    return ata_write(drv & 1,buffer,sector,count);
+  case DISK_TYPE_ATA:
+    return ata_write(drv & DRIVE_MASK,buffer,sector,count);
 
-  case DRIVE_CONFIG_ATA2_MASK:
-    return ata_write((drv & 1) + 2,buffer,sector,count);
+  case DISK_TYPE_ATA2:
+    return ata_write((drv & DRIVE_MASK) + 2,buffer,sector,count);
 #endif
 
 #ifdef HAVE_SD
-  case DRIVE_CONFIG_SD_MASK:
-    return sd_write(drv & 1,buffer,sector,count);
+  case DISK_TYPE_SD:
+    return sd_write(drv & DRIVE_MASK,buffer,sector,count);
 #endif
 
   default:

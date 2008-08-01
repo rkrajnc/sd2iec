@@ -76,11 +76,11 @@ void read_configuration(void) {
   uint8_t checksum, tmp;
 
   /* Set default values */
-  globalflags         |= JIFFY_ENABLED;    /* JiffyDos enabled */
-  globalflags         |= POSTMATCH;        /* Post-* matching enabled */
-  globalflags         |= FAT32_FREEBLOCKS; /* Calculate the number of free blocks on FAT32 */
-  file_extension_mode  = 1;                /* Store x00 extensions except for PRG */
-  set_drive_config(DRIVE_CONFIG);          /* Set the default drive configuration */
+  globalflags         |= JIFFY_ENABLED;        /* JiffyDos enabled */
+  globalflags         |= POSTMATCH;            /* Post-* matching enabled */
+  globalflags         |= FAT32_FREEBLOCKS;     /* Calculate the number of free blocks on FAT32 */
+  file_extension_mode  = 1;                    /* Store x00 extensions except for PRG */
+  set_drive_config(get_default_driveconfig()); /* Set the default drive configuration */
 
   /* Use the NEXT button to skip reading the EEPROM configuration */
   if (!(BUTTON_PIN & BUTTON_NEXT)) {
@@ -125,8 +125,8 @@ void read_configuration(void) {
   /* sanity check.  If the user has truly turned off all drives, turn the
    * defaults back on
    */
-  if(!drive_config)
-    set_drive_config(DRIVE_CONFIG);
+  if(drive_config == 0xffffffff)
+    set_drive_config(get_default_driveconfig());
 #endif
 
   /* Paranoia: Set EEPROM address register to the dummy entry */
