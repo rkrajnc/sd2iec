@@ -82,7 +82,7 @@ void read_rtc(struct tm *time) {
   time->tm_min  = bcd2int(tmp.bytes[1]);
   time->tm_hour = bcd2int(tmp.bytes[2]);
   time->tm_mday = bcd2int(tmp.bytes[3] & 0b00111111);
-  time->tm_mon  = bcd2int(tmp.bytes[4] & 0b00011111);
+  time->tm_mon  = bcd2int(tmp.bytes[4] & 0b00011111)-1;
   time->tm_wday = bcd2int(tmp.bytes[4] >> 5);
   
   /* Check for year rollover */
@@ -112,7 +112,7 @@ void set_rtc(struct tm *time) {
   tmp.bytes[1] = int2bcd(time->tm_min);
   tmp.bytes[2] = int2bcd(time->tm_hour);
   tmp.bytes[3] = int2bcd(time->tm_mday) | ((time->tm_year & 3) << 6);
-  tmp.bytes[4] = int2bcd(time->tm_mon)  | ((time->tm_wday    ) << 5);
+  tmp.bytes[4] = int2bcd(time->tm_mon+1)| ((time->tm_wday    ) << 5);
   i2c_write_registers(PCF8583_ADDR, REG_SECONDS, 5, &tmp);
   tmp.words[0] = time->tm_year + 1900;
   tmp.words[1] = (time->tm_year + 1900) ^ 0xffffU;
@@ -125,11 +125,11 @@ uint32_t get_fattime(void) {
 
   read_rtc(&time);
   return ((uint32_t)time.tm_year-80) << 25 |
-    ((uint32_t)time.tm_mon)  << 21 |
-    ((uint32_t)time.tm_mday) << 16 |
-    ((uint32_t)time.tm_hour) << 11 |
-    ((uint32_t)time.tm_min)  << 5  |
-    ((uint32_t)time.tm_sec);
+    ((uint32_t)time.tm_mon+1) << 21 |
+    ((uint32_t)time.tm_mday)  << 16 |
+    ((uint32_t)time.tm_hour)  << 11 |
+    ((uint32_t)time.tm_min)   << 5  |
+    ((uint32_t)time.tm_sec)   >> 1;
 }
 
 void init_rtc(void) {
