@@ -34,6 +34,8 @@
 #include "timer.h"
 #include "eeprom.h"
 
+#include "uart.h"
+
 /**
  * struct storedconfig - in-eeprom data structure
  * @dummy      : EEPROM position 0 is unused
@@ -78,7 +80,7 @@ void read_configuration(void) {
   globalflags         |= POSTMATCH;        /* Post-* matching enabled */
   globalflags         |= FAT32_FREEBLOCKS; /* Calculate the number of free blocks on FAT32 */
   file_extension_mode  = 1;                /* Store x00 extensions except for PRG */
-  drive_config         = DRIVE_CONFIG;
+  set_drive_config(DRIVE_CONFIG);          /* Set the default drive configuration */
 
   /* Use the NEXT button to skip reading the EEPROM configuration */
   if (!(BUTTON_PIN & BUTTON_NEXT)) {
@@ -94,8 +96,10 @@ void read_configuration(void) {
     checksum += eeprom_read_byte((uint8_t *)i);
 
   /* Abort if the checksum doesn't match */
-  if (checksum != eeprom_read_byte(&storedconfig.checksum))
+  if (checksum != eeprom_read_byte(&storedconfig.checksum)) {
+    EEAR = 0;
     return;
+  }
 
   /* Read data from EEPROM */
   OSCCAL = eeprom_read_byte(&storedconfig.osccal);
@@ -110,16 +114,20 @@ void read_configuration(void) {
 
   file_extension_mode = eeprom_read_byte(&storedconfig.fileexts);
 
+#ifdef NEED_DISKMUX
   if (size > 9) {
-    drive_config = eeprom_read_word(&storedconfig.drvconfig0);
-    drive_config |= (uint32_t)eeprom_read_word(&storedconfig.drvconfig1) << 16;
+    uint32_t tmpconfig;
+    tmpconfig = eeprom_read_word(&storedconfig.drvconfig0);
+    tmpconfig |= (uint32_t)eeprom_read_word(&storedconfig.drvconfig1) << 16;
+    set_drive_config(tmpconfig);
   }
 
   /* sanity check.  If the user has truly turned off all drives, turn the
    * defaults back on
    */
   if(!drive_config)
-    drive_config = DRIVE_CONFIG;
+    set_drive_config(DRIVE_CONFIG);
+#endif
 
   /* Paranoia: Set EEPROM address register to the dummy entry */
   EEAR = 0;
@@ -143,8 +151,10 @@ void write_configuration(void) {
   eeprom_write_byte(&storedconfig.address, device_address);
   eeprom_write_byte(&storedconfig.hardaddress, DEVICE_SELECT);
   eeprom_write_byte(&storedconfig.fileexts, file_extension_mode);
+#ifdef NEED_DISKMUX
   eeprom_write_word(&storedconfig.drvconfig0, drive_config);
   eeprom_write_word(&storedconfig.drvconfig1, drive_config >> 16);
+#endif
 
   /* Calculate checksum over EEPROM contents */
   checksum = 0;

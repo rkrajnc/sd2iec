@@ -31,6 +31,9 @@
 #include "sdcard.h"
 
 volatile enum diskstates disk_state;
+
+#ifdef NEED_DISKMUX
+
 uint32_t drive_config;
 
 void init_disk(void) {
@@ -144,3 +147,5 @@ DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
     return RES_ERROR;
   }
 }
+
+#endif
