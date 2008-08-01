@@ -316,11 +316,9 @@ void load_dreamload(void) {
         change_disk();
       }
       if (key_pressed(KEY_SLEEP)) {
+        reset_key(KEY_SLEEP);
         set_busy_led(0);
         set_dirty_led(1);
-        /* Wait for the "NEXT" event created by releasing the button */
-        while (!key_pressed(KEY_NEXT)) ;
-        reset_key(0xff);
         fl_track = 0;
         fl_sector = 0;
         break;

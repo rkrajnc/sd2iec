@@ -28,17 +28,19 @@
 #define TIMER_H
 
 // Bit masks for the (simulated) keys
-#define KEY_NEXT  (1<<0)
-#define KEY_PREV  (1<<1)
-#define KEY_HOME  (1<<2)
-#define KEY_SLEEP (1<<3)
+#define KEY_NEXT    (1<<0)
+#define KEY_PREV    (1<<1)
+#define KEY_HOME    (1<<2)
+#define KEY_SLEEP   (1<<3)
+
+#define IGNORE_KEYS (1<<7)
 
 /// Logical keys that were pressed - must be reset by the reader.
 extern volatile uint8_t active_keys;
 
 #define key_pressed(x) (active_keys & (x))
 #define reset_key(x) active_keys &= (uint8_t)~(x)
-
+#define ignore_keys() active_keys = IGNORE_KEYS;
 
 typedef uint16_t tick_t;
 

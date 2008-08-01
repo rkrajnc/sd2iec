@@ -38,15 +38,17 @@ volatile uint8_t active_keys;
 
 // Physical buttons
 uint8_t buttonstate;
-tick_t lastbuttonchange;
+tick_t  lastbuttonchange;
 
 /* Called by the timer interrupt when the button state has changed */
 static void buttons_changed(void) {
   /* Check if the previous state was stable for two ticks */
   if (time_after(ticks, lastbuttonchange+2)) {
-    if (!(buttonstate & (BUTTON_PREV|BUTTON_NEXT))) {
+    if (active_keys & IGNORE_KEYS) {
+      active_keys &= ~IGNORE_KEYS;
+    } else if (!(buttonstate & (BUTTON_PREV|BUTTON_NEXT))) {
       /* Both buttons held down */
-      active_keys |= KEY_HOME;
+        active_keys |= KEY_HOME;
     } else if (!(buttonstate & BUTTON_NEXT) &&
                (BUTTON_PIN & BUTTON_NEXT)) {
       /* "Next" button released */
@@ -94,7 +96,10 @@ ISR(TIMER1_COMPA_vect) {
         (buttonstate & BUTTON_PREV) &&
         time_after(ticks, lastbuttonchange+2*HZ) &&
         !key_pressed(KEY_SLEEP)) {
-      active_keys |= KEY_SLEEP;
+      /* Set ignore flag so the release doesn't trigger KEY_NEXT */
+      active_keys |= KEY_SLEEP | IGNORE_KEYS;
+      /* Avoid triggering for the next two seconds */
+      lastbuttonchange = ticks;
     }
   }
 }

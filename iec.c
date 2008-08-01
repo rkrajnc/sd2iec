@@ -559,19 +559,11 @@ void iec_mainloop(void) {
       set_busy_led(0);
       set_dirty_led(1);
 
-      /* Releasing the button creates an additional "NEXT" event, wait for that */
-      while (!key_pressed(KEY_NEXT))  ;
-      reset_key(0xff);  /* Ignore all other keys */
-
       /* Wait until the sleep key is used again */
       while (!key_pressed(KEY_SLEEP)) ;
-      reset_key(0xff);
+      reset_key(KEY_SLEEP);
 
       update_leds();
-
-      /* Eat the KEY_NEXT event too */
-      while (!key_pressed(KEY_NEXT)) ;
-      reset_key(0xff);
 
       iec_data.bus_state = BUS_IDLE;
       break;
