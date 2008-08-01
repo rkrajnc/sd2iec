@@ -473,6 +473,9 @@ will be off.
 
 Other important notes:
 ======================
+- When you hold down the disk change (forward) button during power
+  on the software will use default values instead of those stored
+  in the EEPROM.
 - File overwrite (@foo) is implemented by deleting the file first.
 - File sizes in the directory are in blocks (of 254 bytes), but
   the blocks free message actually reports free clusters. It is

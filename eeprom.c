@@ -31,6 +31,7 @@
 #include "fatops.h"
 #include "flags.h"
 #include "iec.h"
+#include "timer.h"
 #include "eeprom.h"
 
 /**
@@ -78,6 +79,12 @@ void read_configuration(void) {
   globalflags         |= FAT32_FREEBLOCKS; /* Calculate the number of free blocks on FAT32 */
   file_extension_mode  = 1;                /* Store x00 extensions except for PRG */
   drive_config         = DRIVE_CONFIG;
+
+  /* Use the NEXT button to skip reading the EEPROM configuration */
+  if (!(BUTTON_PIN & BUTTON_NEXT)) {
+    ignore_keys();
+    return;
+  }
 
   size = eeprom_read_word(&storedconfig.structsize);
 
