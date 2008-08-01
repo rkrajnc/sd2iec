@@ -521,12 +521,12 @@
 #  define IEC_INT_VECT          PCINT1_vect
 #  define IEC_INT_SETUP()       do { PCICR |= _BV(PCIE1); PCIFR |= _BV(PCIF1); } while (0)
 #  define IEC_PCMSK             PCMSK1
-#  define BUTTON_PIN            255
+#  define BUTTON_PIN            PIND
 #  define BUTTON_PORT           PORTD
 #  define BUTTON_DDR            DDRD
-#  define BUTTON_MASK           _BV(PD0)
-#  define BUTTON_NEXT           _BV(PD0)
-#  define BUTTON_PREV           _BV(PD0)
+#  define BUTTON_MASK           (_BV(PD5)|_BV(PD6))
+#  define BUTTON_NEXT           _BV(PD6)
+#  define BUTTON_PREV           _BV(PD5)
 
 
 #else
