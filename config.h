@@ -638,6 +638,6 @@
 #undef TMP_DF
 
 /* Hardcoded maximum - reducing this won't save any ram */
-#define MAX_DRIVES 16
+#define MAX_DRIVES 8
 
 #endif
