@@ -36,19 +36,7 @@ typedef enum {
   RTC_OK          /* RTC present and working           */
 } rtcstate_t;
 
-struct tm {
-  uint8_t tm_sec;  // 0..59
-  uint8_t tm_min;  // 0..59
-  uint8_t tm_hour; // 0..23
-  uint8_t tm_mday; // 1..[28..31]
-  uint8_t tm_mon;  // 0..11
-  uint8_t tm_year; // since 1900, i.e. 2000 is 100
-  uint8_t tm_wday; // 0 to 6, sunday is 6
-  // A Unix struct tm has a few more fields we don't need in this application
-};
-  
-
-# ifdef CONFIG_RTC
+# if CONFIG_RTC_VARIANT > 0
 
 extern rtcstate_t rtc_state;
 
@@ -60,17 +48,15 @@ void read_rtc(struct tm *time);
 /* Set time from struct tm */
 void set_rtc(struct tm *time);
 
-/* Return current time in FAT format */
-uint32_t get_fattime(void);
-
-# else  // CONFIG_RTC
+#  if CONFIG_RTC_VARIANT == 1
+void increment_rtc(void);
+#  endif
+# else  // CONFIG_RTC_VARIANT
 
 #  define rtc_state RTC_NOT_FOUND
 
-/* Fixed time: 1982-08-31 0:00:00, same month as the introduction of the C64 */
-#  define get_fattime() 0x51f0000
 #  define init_rtc()    do {} while(0)
 
-# endif // CONFIG_RTC
+# endif // CONFIG_RTC_VARIANT
 
 #endif

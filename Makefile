@@ -106,8 +106,11 @@ ifneq ($(CONFIG_JIFFY_ASM),y)
 endif
 
 # No hardware I2C module yet
-ifeq ($(CONFIG_RTC),y)
-  SRC += softi2c.c pcf8583.c
+ifeq ($(CONFIG_RTC_VARIANT),2)
+  SRC += rtc.c softi2c.c pcf8583.c
+endif
+ifeq ($(CONFIG_RTC_VARIANT),1)
+  SRC += rtc.c softrtc.c
 endif
 
 # Additional hardware support enabled in the config file

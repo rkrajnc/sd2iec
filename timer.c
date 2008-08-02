@@ -30,6 +30,8 @@
 #include "avrcompat.h"
 #include "diskchange.h"
 #include "led.h"
+#include "time.h"
+#include "rtc.h"
 #include "timer.h"
 
 volatile tick_t ticks;
@@ -102,6 +104,9 @@ ISR(TIMER1_COMPA_vect) {
       lastbuttonchange = ticks;
     }
   }
+#if CONFIG_RTC_VARIANT == 1
+  increment_rtc();
+#endif
 }
 
 void init_timer(void) {

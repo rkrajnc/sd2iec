@@ -140,5 +140,9 @@ CONFIG_STACK_TRACKING=n
 # Maximum number of partitions
 CONFIG_MAX_PARTITIONS=2
 
-# Use an RTC? Software I2C PCF8583 only for now.
-CONFIG_RTC=n
+# Real Time Clock option
+# Valid values are:
+#   0 - None
+#   1 - software RTC
+#   2 - PCF8563 using softi2c
+CONFIG_RTC_VARIANT=0

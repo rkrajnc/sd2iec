@@ -44,6 +44,7 @@
 #include "iec.h"
 #include "m2iops.h"
 #include "parser.h"
+#include "time.h"
 #include "rtc.h"
 #include "uart.h"
 #include "ustring.h"
@@ -91,7 +92,7 @@ void __cyg_profile_func_enter (void *this_fn, void *call_site) {
 }
 #endif
 
-#ifdef CONFIG_RTC
+#if CONFIG_RTC_VARIANT > 0
 /* Days of the week as used by the CMD FD */
 static PROGMEM uint8_t downames[] = "SUN.MON.TUESWED.THURFRI.SAT.";
 
@@ -942,7 +943,7 @@ static void parse_scratch(void) {
 }
 
 
-#ifdef CONFIG_RTC
+#if CONFIG_RTC_VARIANT > 0
 /* ------------------ */
 /*  T - Time commands */
 /* ------------------ */
@@ -1126,7 +1127,7 @@ static void parse_time(void) {
       set_error(ERROR_SYNTAX_UNKNOWN);
   }
 }
-#endif /* CONFIG_RTC */
+#endif /* CONFIG_RTC_VARIANT */
 
 
 /* ------------ */
@@ -1424,7 +1425,7 @@ void parse_doscommand(void) {
     parse_scratch();
     break;
 
-#ifdef CONFIG_RTC
+#if CONFIG_RTC_VARIANT > 0
   case 'T':
     parse_time();
     break;

@@ -42,6 +42,7 @@
 #include "iec.h"
 #include "ff.h"
 #include "led.h"
+#include "time.h"
 #include "rtc.h"
 #include "timer.h"
 #include "uart.h"

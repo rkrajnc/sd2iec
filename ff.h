@@ -310,9 +310,13 @@ char* fgets (char*, int, FIL*);                     /* Get a string from the fil
 
 /* User defined function to give a current time to fatfs module */
 
-// Defined in rtc.h
-//DWORD get_fattime (void); /* 31-25: Year(0-127 org.1980), 24-21: Month(1-12), 20-16: Day(1-31) */
+#if CONFIG_RTC_VARIANT > 0
+DWORD get_fattime (void); /* 31-25: Year(0-127 org.1980), 24-21: Month(1-12), 20-16: Day(1-31) */
                             /* 15-11: Hour(0-23), 10-5: Minute(0-59), 4-0: Second(0-29 *2) */
+#else
+/* Fixed time: 1982-08-31 0:00:00, same month as the introduction of the C64 */
+#  define get_fattime() 0x51f0000
+#endif
 
 /* File access control and file status flags (FIL.flag) */
 

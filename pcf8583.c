@@ -34,6 +34,7 @@
 #include "uart.h"
 #include "ustring.h"
 #include "utils.h"
+#include "time.h"
 #include "rtc.h"
 
 #define PCF8583_ADDR 0xa0
@@ -118,18 +119,6 @@ void set_rtc(struct tm *time) {
   tmp.words[1] = (time->tm_year + 1900) ^ 0xffffU;
   i2c_write_registers(PCF8583_ADDR, REG_YEAR1, 4, &tmp);
   i2c_write_register(PCF8583_ADDR, REG_CONTROL, CTL_START_CLOCK);
-}
-
-uint32_t get_fattime(void) {
-  struct tm time;
-
-  read_rtc(&time);
-  return ((uint32_t)time.tm_year-80) << 25 |
-    ((uint32_t)time.tm_mon+1) << 21 |
-    ((uint32_t)time.tm_mday)  << 16 |
-    ((uint32_t)time.tm_hour)  << 11 |
-    ((uint32_t)time.tm_min)   << 5  |
-    ((uint32_t)time.tm_sec)   >> 1;
 }
 
 void init_rtc(void) {
