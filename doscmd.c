@@ -967,7 +967,7 @@ static void parse_timeread(void) {
     buffers[CONFIG_BUFFER_COUNT].lastused = 25;
     memcpy_P(error_buffer+4, asciitime_skel, sizeof(asciitime_skel));
     memcpy_P(error_buffer, downames + 4*time.tm_wday, 4);
-    appendnumber(error_buffer+5, time.tm_mon);
+    appendnumber(error_buffer+5, time.tm_mon+1);
     appendnumber(error_buffer+8, time.tm_mday);
     appendnumber(error_buffer+11, time.tm_year % 100);
     appendnumber(error_buffer+14, hour);
@@ -983,7 +983,7 @@ static void parse_timeread(void) {
     buffers[CONFIG_BUFFER_COUNT].lastused = 8;
     *ptr++ = time.tm_wday;
     *ptr++ = int2bcd(time.tm_year % 100);
-    *ptr++ = int2bcd(time.tm_mon);
+    *ptr++ = int2bcd(time.tm_mon+1);
     *ptr++ = int2bcd(time.tm_mday);
     *ptr++ = int2bcd(hour);
     *ptr++ = int2bcd(time.tm_min);
@@ -996,7 +996,7 @@ static void parse_timeread(void) {
     buffers[CONFIG_BUFFER_COUNT].lastused = 8;
     *ptr++ = time.tm_wday;
     *ptr++ = time.tm_year;
-    *ptr++ = time.tm_mon;
+    *ptr++ = time.tm_mon+1;
     *ptr++ = time.tm_mday;
     *ptr++ = hour;
     *ptr++ = time.tm_min;
@@ -1032,7 +1032,7 @@ static void parse_timewrite(void) {
     }
     time.tm_wday = i;
     ptr = command_buffer + 9;
-    time.tm_mon  = parse_number(&ptr);
+    time.tm_mon  = parse_number(&ptr)-1;
     ptr++;
     time.tm_mday = parse_number(&ptr);
     ptr++;
@@ -1059,7 +1059,7 @@ static void parse_timewrite(void) {
     }
     time.tm_wday = command_buffer[4];
     time.tm_year = bcd2int(command_buffer[5]);
-    time.tm_mon  = bcd2int(command_buffer[6]);
+    time.tm_mon  = bcd2int(command_buffer[6])-1;
     time.tm_mday = bcd2int(command_buffer[7]);
     time.tm_hour = bcd2int(command_buffer[8]);
     /* Hour range is 1-12, change 12:xx to 0:xx for easier conversion */
@@ -1078,7 +1078,7 @@ static void parse_timewrite(void) {
     }
     time.tm_wday = command_buffer[4];
     time.tm_year = command_buffer[5];
-    time.tm_mon  = command_buffer[6];
+    time.tm_mon  = command_buffer[6]-1;
     time.tm_mday = command_buffer[7];
     time.tm_hour = command_buffer[8];
     /* Hour range is 1-12, change 12:xx to 0:xx for easier conversion */
@@ -1101,7 +1101,7 @@ static void parse_timewrite(void) {
 
   /* The CMD drives don't check for validity, we do - partially */
   if (time.tm_mday ==  0 || time.tm_mday >  31 ||
-      time.tm_mon  ==  0 || time.tm_mon  >  12 ||
+      time.tm_mon  >  11 ||
       time.tm_wday >   6 ||
       time.tm_hour >  23 ||
       time.tm_min  >  59 ||
