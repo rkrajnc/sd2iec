@@ -1232,7 +1232,7 @@ void init_fatops(uint8_t preserve_path) {
     if (res == FR_OK)
       max_part++;
 
-    if (res != FR_INVALID_OBJECT && part < 15 &&
+    if (res != FR_NOT_READY && res != FR_INVALID_OBJECT && part < 15 &&
         /* Don't try to mount partitions on an unpartitioned medium */
         !(res == FR_OK && part == 0))
       /* Try all partitions */
