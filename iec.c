@@ -391,7 +391,8 @@ static uint8_t iec_listen_handler(const uint8_t cmd) {
 
       /* REL files must be syncronized on EOI */
       if(buf->recordlen && (iec_data.iecflags & EOI_RECVD))
-        buf->refill(buf);
+        if (buf->refill(buf))
+          return 1;
     }
   }
 }
