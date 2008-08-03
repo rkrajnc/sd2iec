@@ -446,7 +446,7 @@ The second disk change button is on
 - PA5 for LarsP/NKC
 - PC3 for Shadowolf's MMC2IEC 1.x
 - PC2 for Shadowolf's sd2iec 1.x ("Reserve" on the header)
-- PG0 for uIEC
+- PG4 for uIEC
 
 Either of those buttons will trigger the use of AUTOSWAP.LST.
 If a swap list is already active, the first button will switch

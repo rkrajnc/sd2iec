@@ -362,6 +362,8 @@
 #  define BUTTON_NEXT           _BV(PG4)
 #  define BUTTON_PREV           _BV(PG3)
 
+/* Use diskmux code to optionally turn off second IDE drive */
+#  define NEED_DISKMUX
 
 #elif CONFIG_HARDWARE_VARIANT==5
 /* Hardware configuration: Shadowolf 2 aka sd2iec 1.x */
