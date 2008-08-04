@@ -99,10 +99,11 @@ const PROGMEM uint8_t filetypes[] = {
 
 /**
  * createentry - create a single directory entry in buf
- * @dent: directory entry to be added
- * @buf : buffer to be used
+ * @dent  : directory entry to be added
+ * @buf   : buffer to be used
+ * @format: entry format
  *
- * This function creates a directory entry for dent in 15x1 compatible format
+ * This function creates a directory entry for dent in the selected format
  * in the given buffer.
  */
 static void createentry(struct cbmdirent *dent, buffer_t *buf, dirformat_t format) {

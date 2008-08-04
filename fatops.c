@@ -383,6 +383,12 @@ static uint8_t write_data(buffer_t *buf) {
   return 0;
 }
 
+/**
+ * fat_file_write - refill-callback for files opened for writing
+ * @buf: target buffer
+ *
+ * This function writes the contents of buf to the associated file.
+ */
 static uint8_t fat_file_write(buffer_t *buf) {
   FRESULT res = FR_OK;
   uint32_t fptr;
@@ -428,6 +434,17 @@ static uint8_t fat_file_write(buffer_t *buf) {
   return 0;
 }
 
+/**
+ * fat_file_seek - callback for seek
+ * @buf     : buffer to be worked on
+ * @position: offset to seek to
+ * @index   : offset within the record to seek to
+ *
+ * This function seeks to the offset position in the file associated
+ * with the given buffer and sets the read pointer to the byte given
+ * in index, effectively seeking to (position+index) for normal files.
+ * Returns 1 if an error occured, 0 otherwise.
+ */
 uint8_t fat_file_seek(buffer_t *buf, uint32_t position, uint8_t index) {
   FRESULT res = FR_OK;
   uint32_t pos = position + buf->pvt.fat.headersize;
@@ -544,11 +561,11 @@ void fat_open_read(path_t *path, struct cbmdirent *dent, buffer_t *buf) {
 
 /**
  * create_file - creates a file
- * @path  : path of the file
- * @dent  : name of the file
- * @type  : type of the file
- * @buf   : buffer to be used
- * @length: length of record, if REL file.
+ * @path     : path of the file
+ * @dent     : name of the file
+ * @type     : type of the file
+ * @buf      : buffer to be used
+ * @recordlen: length of record, if REL file.
  *
  * This function opens a file in the FAT filesystem for writing and sets up
  * buf to access it. type is ignored here because FAT has no equivalent of
@@ -662,8 +679,11 @@ void fat_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t
  * @dent  : name of the file
  * @buf   : buffer to be used
  * @length: record length
+ * @mode  : select between new or existing file
  *
- * This function opens a rel file and prepares it for access
+ * This function opens a rel file and prepares it for access.
+ * If the mode parameter is 0, create a new file. If it is != 0,
+ * open an existing file.
  */
 void fat_open_rel(path_t *path, struct cbmdirent *dent, buffer_t *buf, uint8_t length, uint8_t mode) {
   uint8_t res;

@@ -582,6 +582,12 @@ static int8_t nextdirentry(dh_t *dh) {
   return 0;
 }
 
+/**
+ * d64_read - refill-callback used for reading
+ * @buf: target buffer
+ *
+ * This is the callback used as refill for files opened for reading.
+ */
 static uint8_t d64_read(buffer_t *buf) {
   /* Store the current sector, used for append */
   buf->pvt.d64.track  = buf->data[0];
@@ -606,11 +612,27 @@ static uint8_t d64_read(buffer_t *buf) {
   return 0;
 }
 
+/**
+ * d64_seek - seek-callback
+ * @buf     : target buffer
+ * @position: offset to seek to
+ * @index   : offset within the record to seek to
+ *
+ * This is the function used as the seek callback. Since seeking
+ * isn't supported for D64 files it just sets an error message
+ * and returns 1.
+ */
 static uint8_t d64_seek(buffer_t *buf, uint32_t position, uint8_t index) {
   set_error(ERROR_SYNTAX_UNABLE);
   return 1;
 }
 
+/**
+ * d64_write - refill-callback used for writing
+ * @buf: target buffer
+ *
+ * This is the callback used as refill for files opened for writing.
+ */
 static uint8_t d64_write(buffer_t *buf) {
   uint8_t t,s,savederror;
 
