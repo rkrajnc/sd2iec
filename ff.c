@@ -1202,8 +1202,9 @@ void create_short_name(
       while(k<len && i<11) {
         if(name[k]!=' ') {
           // build extension
-          buf[i++]=dos_char(name[k++]);
+          buf[i++]=dos_char(name[k]);
         }
+        k++;
       }
     } else
       j=6;
