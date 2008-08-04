@@ -31,6 +31,14 @@
 
 #define BUFFER_SEC_SYSTEM 100
 
+/* Flags for free_multiple_buffers */
+#define FMB_CLEAN          (1<<0)
+#define FMB_FREE_SYSTEM    (1<<1)
+#define FMB_ALL            (FMB_FREE_SYSTEM)
+#define FMB_ALL_CLEAN      (FMB_FREE_SYSTEM|FMB_CLEAN)
+#define FMB_USER           (0)
+#define FMB_USER_CLEAN     (FMB_CLEAN)
+
 typedef enum { DIR_FMT_CBM, DIR_FMT_CMD_SHORT, DIR_FMT_CMD_LONG } dirformat_t;
 
 /**
@@ -121,11 +129,8 @@ buffer_t *alloc_buffer(void);
 /* Deallocates a buffer */
 void free_buffer(buffer_t *buffer);
 
-/* Deallocates all user buffers, cleanup optional */
-uint8_t free_all_user_buffers(uint8_t cleanup);
-
-/* Deallocates all buffers, cleanup optional */
-uint8_t free_all_buffers(uint8_t cleanup);
+/* Deallocates multiple buffers */
+uint8_t free_multiple_buffers(uint8_t flags);
 
 /* Finds the buffer corresponding to a secondary address */
 /* Returns pointer to buffer on success or NULL on failure */

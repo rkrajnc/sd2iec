@@ -949,7 +949,7 @@ uint8_t fat_chdir(path_t *path, uint8_t *dirname) {
     /* Changing into a file, could be a mount request */
     if (check_imageext(dirname) != IMG_UNKNOWN) {
       /* D64/M2I mount request */
-      free_all_user_buffers(1);
+      free_multiple_buffers(FMB_USER_CLEAN);
       /* Open image file */
       res = f_open(&partition[path->part].fatfs, &partition[path->part].imagehandle, dirname, FA_OPEN_EXISTING|FA_READ|FA_WRITE);
       if (res != FR_OK) {
@@ -1274,7 +1274,7 @@ uint8_t image_unmount(uint8_t part) {
   FRESULT res;
   buffer_t *buf;
 
-  free_all_user_buffers(1);
+  free_multiple_buffers(FMB_USER_CLEAN);
 
   /* Free the BAM buffer if this was the last D64 */
   // FIXME: Move to d64ops.c/d64_unmount

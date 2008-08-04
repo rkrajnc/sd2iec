@@ -147,49 +147,31 @@ void free_buffer(buffer_t *buffer) {
 }
 
 /**
- * free_all_user_buffers - deallocates all non-system buffers
- * @cleanup: Flags if the cleanup callback should be called
+ * free_multiple_buffers - deallocates multiple buffers
+ * @flags: Defines which buffers should be deallocated
  *
- * This function calls free_buffer on all allocated buffers that have
- * a secondary smaller than BUFFER_SEC_SYSTEM, optionally calling the
- * cleanup callback if desired. Returns 0 if all cleanup calls were
- * successful (or no cleanup call was performed), non-zero otherwise.
+ * This function iterates over all buffers and frees those which match the
+ * specification in flags (see FMB_* defines). If FMB_CLEAN is set it will
+ * also call the cleanup function for those buffers which are about to be
+ * freed. When FMB_CLEAN is set, the function returns 0 if all cleanup
+ * functions returned 0 or 1 if at least one did not. When FMB_CLEAN is not
+ * set, returns 0.
  */
-uint8_t free_all_user_buffers(uint8_t cleanup) {
+uint8_t free_multiple_buffers(uint8_t flags) {
   uint8_t i,res;
 
   res = 0;
 
-  for (i=0;i<CONFIG_BUFFER_COUNT;i++)
-    if (buffers[i].allocated && buffers[i].secondary < BUFFER_SEC_SYSTEM) {
-      if (cleanup)
-        res = res || buffers[i].cleanup(&buffers[i]);
-      free_buffer(&buffers[i]);
-    }
-
-  return res;
-}
-
-/**
- * free_all_buffers - deallocates all buffers
- * @cleanup: Flags if the cleanup callback should be called
- *
- * This function calls free_buffer on all allocated buffers, optionally
- * calling the cleanup callback if desired. Returns 0 if all cleanup
- * calls were successful (or no cleanup call was performed), non-zero
- * otherwise.
- */
-uint8_t free_all_buffers(uint8_t cleanup) {
-  uint8_t i,res;
-
-  res = 0;
-
-  for (i=0;i<CONFIG_BUFFER_COUNT;i++)
+  for (i=0;i<CONFIG_BUFFER_COUNT;i++) {
     if (buffers[i].allocated) {
-      if (cleanup)
-        res = res || buffers[i].cleanup(&buffers[i]);
-      free_buffer(&buffers[i]);
+      if ((flags & FMB_FREE_SYSTEM) || buffers[i].secondary < BUFFER_SEC_SYSTEM) {
+        if (flags & FMB_CLEAN) {
+          res = res || buffers[i].cleanup(&buffers[i]);
+        }
+        free_buffer(&buffers[i]);
+      }
     }
+  }
 
   return res;
 }

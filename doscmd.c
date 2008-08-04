@@ -623,7 +623,7 @@ static void parse_initialize(void) {
   if (disk_state != DISK_OK)
     set_error_ts(ERROR_READ_NOSYNC,18,0);
   else
-    free_all_user_buffers(1);
+    free_multiple_buffers(FMB_USER_CLEAN);
 }
 
 
@@ -1179,7 +1179,7 @@ static void parse_user(void) {
   case ':':
     /* Reset - technically hard-reset */
     /* Faked because Ultima 5 sends UJ. */
-    free_all_user_buffers(0);
+    free_multiple_buffers(FMB_USER);
     set_error(ERROR_DOSVERSION);
     break;
 

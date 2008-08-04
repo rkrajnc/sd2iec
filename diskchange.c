@@ -81,7 +81,7 @@ static uint8_t mount_line(void) {
   uint16_t curpos;
 
   /* Kill all buffers */
-  free_all_user_buffers(1);
+  free_multiple_buffers(FMB_USER_CLEAN);
 
   curpos = 0;
   strend = NULL;

@@ -658,7 +658,7 @@ void iec_mainloop(void) {
         if ((cmd & 0xf0) == 0xe0) {
           if (cmd == 0xef) {
             /* Close all buffers if sec. 15 is closed */
-            if (free_all_user_buffers(1)) {
+            if (free_multiple_buffers(FMB_USER_CLEAN)) {
               /* The 1571 error generator/handler always jumps to BUS_CLEANUP */
               iec_data.bus_state = BUS_CLEANUP;
               break;
@@ -742,7 +742,7 @@ void iec_mainloop(void) {
           set_busy_led(1);
           /* If the disk was changed the buffer contents are useless */
           if (disk_state == DISK_CHANGED || disk_state == DISK_REMOVED) {
-            free_all_buffers(0);
+            free_multiple_buffers(FMB_ALL);
             init_change();
             init_fatops(0);
           } else
