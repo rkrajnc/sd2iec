@@ -243,7 +243,7 @@ static uint8_t pdir_refill(buffer_t* buf) {
   while(buf->pvt.pdir.part < max_part) {
     if (fat_getvolumename(buf->pvt.pdir.part, dent.name)) {
       free_buffer(buf);
-      return 0;
+      return 1;
     }
     dent.blocksize=++buf->pvt.pdir.part;
     dent.typeflags = TYPE_NAT;
