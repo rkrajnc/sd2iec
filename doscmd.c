@@ -376,11 +376,8 @@ static void parse_copy(void) {
 
   srcbuf = alloc_buffer();
   dstbuf = alloc_buffer();
-  if (srcbuf == NULL || dstbuf == NULL) {
-    free_buffer(srcbuf);
-    free_buffer(dstbuf);
+  if (srcbuf == NULL || dstbuf == NULL)
     return;
-  }
 
   savedtype = 0;
   srcname = ustr1tok(srcname,',',&tmp);
@@ -477,8 +474,6 @@ static void parse_copy(void) {
   /* Close the buffers */
   dstbuf->cleanup(dstbuf);
   srcbuf->cleanup(srcbuf);
-  free_buffer(srcbuf);
-  free_buffer(dstbuf);
 }
 
 

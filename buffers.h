@@ -34,10 +34,13 @@
 /* Flags for free_multiple_buffers */
 #define FMB_CLEAN          (1<<0)
 #define FMB_FREE_SYSTEM    (1<<1)
-#define FMB_ALL            (FMB_FREE_SYSTEM)
-#define FMB_ALL_CLEAN      (FMB_FREE_SYSTEM|FMB_CLEAN)
-#define FMB_USER           (0)
-#define FMB_USER_CLEAN     (FMB_CLEAN)
+#define FMB_FREE_STICKY    (1<<2)
+#define FMB_ALL            (FMB_FREE_STICKY|FMB_FREE_SYSTEM)
+#define FMB_ALL_CLEAN      (FMB_FREE_STICKY|FMB_FREE_SYSTEM|FMB_CLEAN)
+#define FMB_USER           (FMB_FREE_STICKY)
+#define FMB_USER_CLEAN     (FMB_FREE_STICKY|FMB_CLEAN)
+#define FMB_UNSTICKY       (FMB_FREE_SYSTEM)
+#define FMB_UNSTICKY_CLEAN (FMB_FREE_SYSTEM|FMB_CLEAN)
 
 typedef enum { DIR_FMT_CBM, DIR_FMT_CMD_SHORT, DIR_FMT_CMD_LONG } dirformat_t;
 
@@ -53,6 +56,7 @@ typedef enum { DIR_FMT_CBM, DIR_FMT_CMD_SHORT, DIR_FMT_CMD_LONG } dirformat_t;
  * @read     : Flags if the buffer was opened for reading
  * @write    : Flags if the buffer was opened for writing
  * @sendeoi  : Flags if the last byte should be sent with EOI
+ * @sticky   : Flags if the buffer will survive garbage collection
  * @refill   : Callback to refill/write out the buffer, returns true on error
  * @cleanup  : Callback to clean up and save remaining data, returns true on error
  *
@@ -77,6 +81,7 @@ typedef struct buffer_s {
   int     write:1;
   int     dirty:1;
   int     sendeoi:1;
+  int     sticky:1;
   uint8_t (*seek) (struct buffer_s *buffer, uint32_t position, uint8_t index);
   uint8_t (*refill)(struct buffer_s *buffer);
   uint8_t (*cleanup)(struct buffer_s *buffer);
@@ -131,6 +136,10 @@ void free_buffer(buffer_t *buffer);
 
 /* Deallocates multiple buffers */
 uint8_t free_multiple_buffers(uint8_t flags);
+
+/* Mark a buffer as sticky */
+/* Smaller than a #define for some reason: */
+static void inline stick_buffer(buffer_t *buf) { buf->sticky = 1; }
 
 /* Finds the buffer corresponding to a secondary address */
 /* Returns pointer to buffer on success or NULL on failure */

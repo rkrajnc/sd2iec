@@ -765,6 +765,9 @@ void iec_mainloop(void) {
         iec_data.iecflags &= (uint8_t)~COMMAND_RECVD;
       }
 
+      /* We're done, clean up unused buffers */
+      free_multiple_buffers(FMB_UNSTICKY);
+
       iec_data.bus_state = BUS_IDLE;
       break;
     }

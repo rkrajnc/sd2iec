@@ -539,7 +539,6 @@ void fat_open_read(path_t *path, struct cbmdirent *dent, buffer_t *buf) {
   res = f_open(&partition[path->part].fatfs,&buf->pvt.fat.fh, name, FA_READ | FA_OPEN_EXISTING);
   if (res != FR_OK) {
     parse_error(res,1);
-    free_buffer(buf);
     return;
   }
 
@@ -554,6 +553,8 @@ void fat_open_read(path_t *path, struct cbmdirent *dent, buffer_t *buf) {
   buf->cleanup   = fat_file_close;
   buf->refill    = fat_file_read;
   buf->seek      = fat_file_seek;
+
+  stick_buffer(buf);
 
   /* Call the refill once for the first block of data */
   buf->refill(buf);
@@ -600,9 +601,8 @@ uint8_t create_file(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t
     }
   } while (res == FR_EXIST);
 
-  if (res != FR_OK) {
+  if (res != FR_OK)
     return res;
-  }
 
   if (x00ext != NULL || recordlen) {
     UINT byteswritten;
@@ -625,6 +625,7 @@ uint8_t create_file(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t
       return res;
     }
   }
+
   return 0;
 }
 
@@ -658,7 +659,6 @@ void fat_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t
 
   if (res != FR_OK) {
     parse_error(res,0);
-    free_buffer(buf);
     return;
   }
 
@@ -671,6 +671,8 @@ void fat_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t
 
   /* If no data is written the file should end up with a single 0x0d byte */
   buf->data[2] = 13;
+
+  stick_buffer(buf);
 }
 
 /**
@@ -711,7 +713,6 @@ void fat_open_rel(path_t *path, struct cbmdirent *dent, buffer_t *buf, uint8_t l
 
   if (res != FR_OK || bytesread != 1) {
     parse_error(res,0);
-    free_buffer(buf);
     return;
   }
 
@@ -723,6 +724,7 @@ void fat_open_rel(path_t *path, struct cbmdirent *dent, buffer_t *buf, uint8_t l
   buf->refill    = fat_file_sync;
   buf->seek      = fat_file_seek;
 
+  stick_buffer(buf);
 
   /* read the first record */
   if(!fat_file_read(buf) && length != entrybuf[0])

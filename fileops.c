@@ -340,12 +340,12 @@ static void load_directory(uint8_t secondary) {
 
         if(command_length>3) {
           /* Parse the name pattern */
-          if (parse_path(command_buffer+3, &path, &name, 0)) {
-            free_buffer(buf);
+          if (parse_path(command_buffer+3, &path, &name, 0))
             return;
-          }
+
           buf->pvt.pdir.matchstr = name;
         }
+        stick_buffer(buf);
 
         return;
       } else if(command_buffer[2]=='T') {
@@ -358,15 +358,11 @@ static void load_directory(uint8_t secondary) {
   if (command_buffer[pos]) { /* do we have a path to scan? */
     if (command_length > 2) {
       /* Parse the name pattern */
-      if (parse_path(command_buffer+pos, &path, &name, 0)) {
-        free_buffer(buf);
+      if (parse_path(command_buffer+pos, &path, &name, 0))
         return;
-      }
 
-      if (opendir(&buf->pvt.dir.dh, &path)) {
-        free_buffer(buf);
+      if (opendir(&buf->pvt.dir.dh, &path))
         return;
-      }
 
       buf->pvt.dir.matchstr = name;
 
@@ -448,22 +444,17 @@ static void load_directory(uint8_t secondary) {
         path.part = command_buffer[1] - '0' - 1;
       if (path.part >= max_part) {
         set_error(ERROR_DRIVE_NOT_READY);
-        free_buffer(buf);
         return;
       }
       path.fat  = partition[path.part].current_dir;
-      if (opendir(&buf->pvt.dir.dh, &path)) {
-        free_buffer(buf);
+      if (opendir(&buf->pvt.dir.dh, &path))
         return;
-      }
     }
   } else {
     path.part = current_part;
     path.fat=partition[path.part].current_dir;  // if you do not do this, get_label will fail below.
-    if (opendir(&buf->pvt.dir.dh, &path)) {
-      free_buffer(buf);
+    if (opendir(&buf->pvt.dir.dh, &path))
       return;
-    }
   }
 
 scandone:
@@ -474,19 +465,18 @@ scandone:
   buf->data[HEADER_OFFSET_DRIVE] = path.part+1;
 
   /* read volume name */
-  if (disk_label(&path, buf->data+HEADER_OFFSET_NAME)) {
-    free_buffer(buf);
+  if (disk_label(&path, buf->data+HEADER_OFFSET_NAME))
     return;
-  }
 
   /* read id */
-  if (disk_id(path.part,buf->data+HEADER_OFFSET_ID)) {
-    free_buffer(buf);
+  if (disk_id(path.part,buf->data+HEADER_OFFSET_ID))
     return;
-  }
 
   /* Let the refill callback handle everything else */
   buf->refill = dir_refill;
+
+  /* Keep the buffer around */
+  stick_buffer(buf);
 
   return;
 

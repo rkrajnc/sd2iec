@@ -165,10 +165,12 @@ uint8_t free_multiple_buffers(uint8_t flags) {
   for (i=0;i<CONFIG_BUFFER_COUNT;i++) {
     if (buffers[i].allocated) {
       if ((flags & FMB_FREE_SYSTEM) || buffers[i].secondary < BUFFER_SEC_SYSTEM) {
-        if (flags & FMB_CLEAN) {
-          res = res || buffers[i].cleanup(&buffers[i]);
+        if ((flags & FMB_FREE_STICKY) || !buffers[i].sticky) {
+          if (flags & FMB_CLEAN) {
+            res = res || buffers[i].cleanup(&buffers[i]);
+          }
+          free_buffer(&buffers[i]);
         }
-        free_buffer(&buffers[i]);
       }
     }
   }

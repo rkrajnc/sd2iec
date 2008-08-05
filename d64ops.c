@@ -775,6 +775,7 @@ uint8_t d64_mount(uint8_t part) {
     bam_buffer->secondary        = BUFFER_SEC_SYSTEM;
     bam_buffer->pvt.bam.part     = 255;
     bam_buffer->cleanup          = d64_bam_flush;
+    stick_buffer(bam_buffer);
 
     partition[part].imagetype = imagetype;
   }
@@ -871,6 +872,7 @@ static void d64_open_read(path_t *path, struct cbmdirent *dent, buffer_t *buf) {
   buf->read    = 1;
   buf->refill  = d64_read;
   buf->seek    = d64_seek;
+  stick_buffer(buf);
 
   buf->refill(buf);
 }
@@ -887,10 +889,8 @@ static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
     while (!current_error && buf->data[0])
       buf->refill(buf);
 
-    if (current_error) {
-      free_buffer(buf);
+    if (current_error)
       return;
-    }
 
     /* Modify the buffer for writing */
     buf->pvt.d64.dh.track  = matchdh.dir.d64.track;
@@ -907,6 +907,7 @@ static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
     buf->cleanup    = d64_write_cleanup;
     buf->seek       = d64_seek;
     mark_write_buffer(buf);
+    stick_buffer(buf);
 
     return;
   }
@@ -917,10 +918,8 @@ static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
   d64_opendir(&dh, path);
   do {
     res = nextdirentry(&dh);
-    if (res > 0) {
-      free_buffer(buf);
+    if (res > 0)
       return;
-    }
   } while (res == 0 && entrybuf[OFS_FILE_TYPE] != 0);
 
   /* Allocate a new directory sector if no empty entries were found */
@@ -928,33 +927,25 @@ static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
     t = dh.dir.d64.track;
     s = dh.dir.d64.sector;
 
-    if (get_next_sector(path->part, &dh.dir.d64.track, &dh.dir.d64.sector)) {
-      free_buffer(buf);
+    if (get_next_sector(path->part, &dh.dir.d64.track, &dh.dir.d64.sector))
       return;
-    }
 
     /* Link the old sector to the new */
     entrybuf[0] = dh.dir.d64.track;
     entrybuf[1] = dh.dir.d64.sector;
-    if (image_write(path->part, sector_offset(t,s), entrybuf, 2, 0)) {
-      free_buffer(buf);
+    if (image_write(path->part, sector_offset(t,s), entrybuf, 2, 0))
       return;
-    }
 
-    if (allocate_sector(path->part, dh.dir.d64.track, dh.dir.d64.sector)) {
-      free_buffer(buf);
+    if (allocate_sector(path->part, dh.dir.d64.track, dh.dir.d64.sector))
       return;
-    }
 
     /* Clear the new directory sector */
     memset(entrybuf, 0, 32);
     entrybuf[1] = 0xff;
     for (uint8_t i=0;i<256/32;i++) {
       if (image_write(path->part, sector_offset(dh.dir.d64.track, dh.dir.d64.sector)+32*i,
-                      entrybuf, 32, 0)) {
-        free_buffer(buf);
+                      entrybuf, 32, 0))
         return;
-      }
 
       entrybuf[1] = 0;
     }
@@ -978,29 +969,22 @@ static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
   entrybuf[OFS_FILE_TYPE] = type;
 
   /* Find a free sector and allocate it */
-  if (get_first_sector(path->part,&t,&s)) {
-    free_buffer(buf);
+  if (get_first_sector(path->part,&t,&s))
     return;
-  }
 
   entrybuf[OFS_TRACK]  = t;
   entrybuf[OFS_SECTOR] = s;
 
-  if (allocate_sector(path->part,t,s)) {
-    free_buffer(buf);
+  if (allocate_sector(path->part,t,s))
     return;
-  }
-  if (bam_buffer->cleanup(bam_buffer)) {
-    free_buffer(buf);
+
+  if (bam_buffer->cleanup(bam_buffer))
     return;
-  }
 
   /* Write the directory entry */
   if (image_write(path->part, sector_offset(dh.dir.d64.track,dh.dir.d64.sector)+
-                  dh.dir.d64.entry*32, entrybuf, 32, 1)) {
-    free_buffer(buf);
+                  dh.dir.d64.entry*32, entrybuf, 32, 1))
     return;
-  }
 
   /* Prepare the data buffer */
   mark_write_buffer(buf);
@@ -1014,6 +998,7 @@ static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
   buf->pvt.d64.part   = path->part;
   buf->pvt.d64.track  = t;
   buf->pvt.d64.sector = s;
+  stick_buffer(buf);
 }
 
 static void d64_open_rel(path_t *path, struct cbmdirent *dent, buffer_t *buf, uint8_t length, uint8_t mode) {
@@ -1096,12 +1081,9 @@ static void d64_format(uint8_t part, uint8_t *name, uint8_t *id) {
     uint16_t i;
 
     /* Clear the data area of the disk image */
-    for (i=0;i<TOTAL_SECTORS;i++) {
-      if (image_write(part, 256L * i, buf->data, 256, 0)) {
-        free_buffer(buf);
+    for (i=0;i<TOTAL_SECTORS;i++)
+      if (image_write(part, 256L * i, buf->data, 256, 0))
         return;
-      }
-    }
 
     /* Copy the new ID into the buffer */
     idbuf[0] = id[0];
@@ -1114,10 +1096,8 @@ static void d64_format(uint8_t part, uint8_t *name, uint8_t *id) {
 
   /* Clear the first directory sector */
   buf->data[1] = 0xff;
-  if (image_write(part, sector_offset(DIR_TRACK, 1), buf->data, 256, 0)) {
-    free_buffer(buf);
+  if (image_write(part, sector_offset(DIR_TRACK, 1), buf->data, 256, 0))
     return;
-  }
 
   /* Mark all sectors as free */
   for (t=1; t<=LAST_TRACK; t++)
@@ -1145,8 +1125,6 @@ static void d64_format(uint8_t part, uint8_t *name, uint8_t *id) {
 
   /* Write the new BAM - mustflush is set because free_sector was used */
   bam_buffer->cleanup(bam_buffer);
-
-  free_buffer(buf);
 
   /* FIXME: Clear the error info block */
 }

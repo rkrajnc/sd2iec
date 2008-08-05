@@ -352,7 +352,6 @@ void load_dreamload(void) {
     fl_track = 0xff;
   }
 
-  free_buffer(buf);
 error:
   set_clock_irq(0);
   set_atn_irq(0);
