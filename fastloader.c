@@ -199,7 +199,7 @@ void save_fc3(void) {
 
   buf = find_buffer(1);
   /* Check if this is a writable file */
-  if (!buf || !buf->allocated || !buf->write)
+  if (!buf || !buf->write)
       return;
 
   /* to make sure the host pulled DATA low and is ready */
