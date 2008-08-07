@@ -318,6 +318,22 @@ static void parse_block(void) {
       set_error(ERROR_NO_CHANNEL);
       return;
     }
+    if (buf->pvt.buffer.size != 1) {
+      /* Extended position for large buffers */
+      uint8_t count = params[2];
+
+      /* Walk the chain, wrap whenever necessary */
+      buf->secondary = BUFFER_SEC_CHAIN - params[0];
+      buf = buf->pvt.buffer.first;
+      while (count--) {
+        if (buf->pvt.buffer.next != NULL)
+          buf = buf->pvt.buffer.next;
+        else
+          buf = buf->pvt.buffer.first;
+      }
+      buf->secondary = params[0];
+      buf->mustflush = 0;
+    }
     buf->position = params[1];
     break;
 

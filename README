@@ -291,8 +291,9 @@ a 70,NO CHANNEL message is set in the error channel and no file is
 opened. If the file name isn't exactly three bytes long a standard
 buffer ("#") will be allocated instead for compatibility.
 
-Support for B-P on large buffers is currently missing, the command will
-just reposition within the current 256-byte block.
+The B-P command supports a third parameter that holds the high byte
+of the buffer position, For example, "B-P 9 4 1" positions to byte
+260 (1*256+4) of the buffer on secondary address 9.
 
 No command is implemented at this time which uses large buffers.
 
