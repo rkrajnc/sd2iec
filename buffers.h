@@ -31,6 +31,9 @@
 
 #define BUFFER_SEC_SYSTEM 100
 
+/* Special-purpose buffer numbers */
+#define BUFFER_SYS_BAM    (BUFFER_SEC_SYSTEM+1)
+
 /* Flags for free_multiple_buffers */
 #define FMB_CLEAN          (1<<0)
 #define FMB_FREE_SYSTEM    (1<<1)

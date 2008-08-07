@@ -772,7 +772,7 @@ uint8_t d64_mount(uint8_t part) {
     if (!bam_buffer)
       return 1;
 
-    bam_buffer->secondary        = BUFFER_SEC_SYSTEM;
+    bam_buffer->secondary        = BUFFER_SYS_BAM;
     bam_buffer->pvt.bam.part     = 255;
     bam_buffer->cleanup          = d64_bam_flush;
     stick_buffer(bam_buffer);

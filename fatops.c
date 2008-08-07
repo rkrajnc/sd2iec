@@ -1301,7 +1301,7 @@ uint8_t image_unmount(uint8_t part) {
   /* Free the BAM buffer if this was the last D64 */
   // FIXME: Move to d64ops.c/d64_unmount
   if (partition[part].fop == &d64ops) {
-    buf = find_buffer(BUFFER_SEC_SYSTEM);
+    buf = find_buffer(BUFFER_SYS_BAM);
     if (buf) {
       buf->cleanup(buf);
       if (--buf->pvt.bam.refcount) {
