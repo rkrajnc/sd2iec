@@ -482,9 +482,125 @@ scandone:
 
 }
 
+/**
+ * largebuffer_refill - refill callback for large buffers
+ * @buf: buffer to be used
+ *
+ * This function is used as the refill callback for large buffers and
+ * will switch to the next or the first buffer in the chain. Always
+ * returns 0.
+ */
+uint8_t largebuffer_refill(buffer_t *buf) {
+  uint8_t sec = buf->secondary;
+
+  buf->secondary = BUFFER_SEC_CHAIN - sec;
+
+  if (buf->pvt.buffer.next == NULL)
+    buf = buf->pvt.buffer.first;
+  else
+    buf = buf->pvt.buffer.next;
+
+  buf->secondary = sec;
+  buf->position  = 0;
+  buf->mustflush = 0;
+  return 0;
+}
+
+/**
+ * largebuffer_cleanup - cleanup callback for large buffers
+ * @buf: buffer to be cleaned
+ *
+ * This function is used as the cleanup callback for large buffer and
+ * will free all buffers used in the large buffer chain. This does mean
+ * that the free_buffer call done after calling cleanup will be
+ * passed an already-freed buffer, but that case is accounted for in
+ * free_buffer and results in a no-op. Always returns 0.
+ */
+static uint8_t largebuffer_cleanup(buffer_t *buf) {
+  buf = buf->pvt.buffer.first;
+  while (buf != NULL) {
+    free_buffer(buf);
+    buf = buf->pvt.buffer.next;
+  }
+  return 0;
+}
+
 /* ------------------------------------------------------------------------- */
 /*  External interface for the various operations                            */
 /* ------------------------------------------------------------------------- */
+
+/**
+ * open_buffer - function to open a direct-access buffer
+ * @secondary: secondary address used
+ *
+ * This function is called when the computer wants to open a direct
+ * access buffer (#).
+ */
+static void open_buffer(uint8_t secondary) {
+  buffer_t *buf,*prev;
+  uint8_t i,count;
+
+  if (command_length == 3 && command_buffer[1] == '#') {
+    /* Open a large buffer */
+    count = command_buffer[2] - '0';
+    if (count == 0)
+      return;
+
+    /* Create a chain of linked buffers */
+    buf  = NULL; // gcc 4.1 "uninitialized" warning
+    prev = NULL;
+    i = count;
+    while (i-- > 0) {
+      buf = alloc_buffer();
+      if (buf == NULL)
+        return;
+
+      buf->pvt.buffer.next = prev;
+
+      if (prev == NULL) {
+        /* First allocated is last in the chain, must send EOI there */
+        buf->sendeoi = 1;
+      }
+
+      /* Unique secondary for every chain, but must be user */
+      buf->secondary = BUFFER_SEC_CHAIN - secondary;
+      buf->refill    = largebuffer_refill;
+      buf->cleanup   = largebuffer_cleanup;
+      buf->read      = 1;
+      buf->lastused  = 255;
+      mark_write_buffer(buf);
+
+      prev = buf;
+    }
+
+    /* Set the first buffer as active by using the real secondary */
+    prev->secondary = secondary;
+
+    /* Set up "first" pointers in all buffers and sticky them along the way */
+    do {
+      buf->pvt.buffer.first = prev;
+      buf->pvt.buffer.size  = count;
+      stick_buffer(buf);
+      buf = buf->pvt.buffer.next;
+    } while (buf != NULL);
+
+  } else {
+    /* Normal buffer request */
+    // FIXME: This command can specify a specific buffer number.
+    buf = alloc_buffer();
+    if (!buf)
+      return;
+
+    buf->secondary = secondary;
+    buf->read      = 1;
+    buf->position  = 1;  /* Sic! */
+    buf->lastused  = 255;
+    buf->sendeoi   = 1;
+    buf->pvt.buffer.size = 1;
+    mark_write_buffer(buf);
+  }
+  return;
+}
 
 /**
  * file_open - open a file on given secondary
@@ -524,17 +640,7 @@ void file_open(uint8_t secondary) {
 
   /* Direct access? */
   if (command_buffer[0] == '#') {
-    // FIXME: This command can specify a specific buffer number.
-    buf = alloc_buffer();
-    if (!buf)
-      return;
-
-    buf->secondary = secondary;
-    buf->read      = 1;
-    buf->position  = 1;  /* Sic! */
-    buf->lastused  = 255;
-    buf->sendeoi   = 1;
-    mark_write_buffer(buf);
+    open_buffer(secondary);
     return;
   }
 

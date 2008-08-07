@@ -4,6 +4,7 @@
         - Dataflash support
         - Multi-file scratch
         - Copy command
+        - Large buffer support
 
 2008-07-09 - release 0.7.3
         - Bugfix: Free buffers on error in M2I and D64

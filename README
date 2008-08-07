@@ -275,6 +275,27 @@ Supported commands:
   The user-area does not interfere with the stored configuration (XW) in
   any way.
 
+Large buffers:
+==============
+To support commands which directly access the storage devices support
+for larger buffers was added. A large buffer can be allocated by
+opening a file named "##<d>" (exactly three characters" with <d> replaced
+by a single digit specifying the number of 256-byte buffers to be
+chained into one large buffer - e.g. "##2" for a 512 byte buffer,
+"##4" for 1024 bytes etc. Unlike a standard buffer where the read/write
+pointer is set to byte 1, a large buffer will start with the r/w pointer
+pointing to byte 0 because that seems to be more sensible to the author.
+
+If there aren't enough free buffers to support the size you requested
+a 70,NO CHANNEL message is set in the error channel and no file is
+opened. If the file name isn't exactly three bytes long a standard
+buffer ("#") will be allocated instead for compatibility.
+
+Support for B-P on large buffers is currently missing, the command will
+just reposition within the current 256-byte block.
+
+No command is implemented at this time which uses large buffers.
+
 Long File Names:
 ================
 Long file names (i.e names not within the 8.3 limits) are supported on

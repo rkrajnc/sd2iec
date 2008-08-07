@@ -374,9 +374,12 @@ static uint8_t iec_listen_handler(const uint8_t cmd) {
         iec_data.iecflags |= COMMAND_RECVD;
     } else {
       /* Flush buffer if full */
-      if (buf->mustflush)
+      if (buf->mustflush) {
         if (buf->refill(buf))
           return 1;
+        /* Search the buffer again, it can change when using large buffers. */
+        buf = find_buffer(cmd & 0x0f);
+      }
 
       buf->data[buf->position] = c;
       buf->dirty = 1;
@@ -488,13 +491,19 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
       }
     } while (buf->position++ < buf->lastused);
 
-    if (buf->sendeoi && (cmd & 0x0f) != 0x0f && !buf->recordlen)
+    if (buf->sendeoi &&
+        (cmd & 0x0f) != 0x0f &&
+        !buf->recordlen &&
+        buf->refill != largebuffer_refill)
       break;
 
     if (buf->refill(buf)) {
       iec_data.bus_state = BUS_CLEANUP;
       return 1;
     }
+
+    /* Search the buffer again, it can change when using large buffers */
+    buf = find_buffer(cmd & 0x0f);
   }
 
   return 0;

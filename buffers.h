@@ -33,6 +33,7 @@
 
 /* Special-purpose buffer numbers */
 #define BUFFER_SYS_BAM    (BUFFER_SEC_SYSTEM+1)
+#define BUFFER_SEC_CHAIN  (BUFFER_SEC_SYSTEM-1)
 
 /* Flags for free_multiple_buffers */
 #define FMB_CLEAN          (1<<0)
@@ -114,6 +115,11 @@ typedef struct buffer_s {
       uint8_t track;       /* BAM-track (if more than one) */
       uint8_t sector;      /* BAM-sector (if more than one) */
     } bam;
+    struct {
+      uint8_t size;           /* Number of buffers in chain  */
+      struct buffer_s *first; /* Pointer to the first buffer */
+      struct buffer_s *next;  /* Pointer to the next buffer  */
+    } buffer;
   } pvt;
 } buffer_t;
 

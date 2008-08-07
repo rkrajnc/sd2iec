@@ -34,6 +34,9 @@
 enum open_modes { OPEN_READ, OPEN_WRITE, OPEN_APPEND, OPEN_MODIFY };
 extern const PROGMEM uint8_t filetypes[];
 
+/* Refill-callback for large buffers, only used for comparision */
+uint8_t largebuffer_refill(buffer_t *buf);
+
 /* Parses a filename in command_buffer and opens that file */
 void file_open(uint8_t secondary);
 
