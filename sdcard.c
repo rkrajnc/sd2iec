@@ -75,6 +75,11 @@
 #define FALSE 0
 #endif
 
+#ifdef CONFIG_TWINSD
+#  define MAX_CARDS 2
+#else
+#  define MAX_CARDS 1
+#endif
 
 // SD/MMC commands
 #define GO_IDLE_STATE           0
@@ -121,8 +126,11 @@
 #define STATUS_PARAMETER_ERROR 64
 
 
-static uint8_t isSDHC;
+/* Card types - cardtype == 0 is MMC */
+#define CARD_SD   (1<<0)
+#define CARD_SDHC (1<<1)
 
+static uint8_t cardtype[MAX_CARDS];
 
 static uint8_t sdResponse(uint8_t expected)
 {
@@ -281,6 +289,9 @@ static void sdInit(const uint8_t card) {
 
   // Ignore failures, there is at least one Sandisk MMC card
   // that accepts CMD55, but not ACMD41.
+  if (i == 0)
+    /* We know that a card is SD if ACMD41 was accepted. */
+    cardtype[card] |= CARD_SD;
 }
 
 /* Detect changes of SD card 0 */
@@ -356,13 +367,8 @@ DSTATUS sd_initialize(BYTE drv) {
   uint16_t counter;
   uint32_t answer;
 
-#ifdef CONFIG_TWINSD
-  if (drv > 1)
+  if (drv >= MAX_CARDS)
     return STA_NOINIT|STA_NODISK;
-#else
-  if (drv != 0)
-    return STA_NOINIT|STA_NODISK;
-#endif
 
   /* Don't bother initializing a card that isn't there */
   if (sd_status(drv) & STA_NODISK)
@@ -370,7 +376,7 @@ DSTATUS sd_initialize(BYTE drv) {
 
   disk_state = DISK_ERROR;
 
-  isSDHC   = FALSE;
+  cardtype[drv] = 0;
 
   SPI_SS_HIGH(drv);
 
@@ -413,7 +419,7 @@ DSTATUS sd_initialize(BYTE drv) {
 
     // See what card we've got
     if (answer & 0x40000000) {
-      isSDHC = TRUE;
+      cardtype[drv] |= CARD_SDHC;
     }
   }
 
@@ -477,7 +483,7 @@ DRESULT sd_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
   for (sec=0;sec<count;sec++) {
     errorcount = 0;
     while (errorcount < CONFIG_SD_AUTO_RETRIES) {
-      if (isSDHC)
+      if (cardtype[drv] & CARD_SDHC)
         res = sendCommand(drv, READ_SINGLE_BLOCK, sector+sec, 0);
       else
         res = sendCommand(drv, READ_SINGLE_BLOCK, (sector+sec) << 9, 0);
@@ -578,7 +584,7 @@ DRESULT sd_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
   for (sec=0;sec<count;sec++) {
     errorcount = 0;
     while (errorcount < CONFIG_SD_AUTO_RETRIES) {
-      if (isSDHC)
+      if (cardtype[drv] & CARD_SDHC)
         res = sendCommand(drv, WRITE_BLOCK, sector+sec, 0);
       else
         res = sendCommand(drv, WRITE_BLOCK, (sector+sec)<<9, 0);
