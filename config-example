@@ -86,10 +86,6 @@ CONFIG_DREAMLOAD=y
 CONFIG_HARDWARE_VARIANT=1
 CONFIG_HARDWARE_NAME=sd2iec-example
 
-# The following SD settings are ignored on uIEC
-# Support SDHC - disabling it saves ~220 bytes flash
-CONFIG_SDHC_SUPPORT=y
-
 # Number of retries if the SD communication fails
 CONFIG_SD_AUTO_RETRIES=10
 

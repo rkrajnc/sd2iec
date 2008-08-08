@@ -121,11 +121,7 @@
 #define STATUS_PARAMETER_ERROR 64
 
 
-#ifdef CONFIG_SDHC_SUPPORT
 static uint8_t isSDHC;
-#else
-#define isSDHC 0
-#endif
 
 
 static uint8_t sdResponse(uint8_t expected)
@@ -230,7 +226,6 @@ static int sendCommand(const uint8_t  card,
   return i;
 }
 
-#ifdef CONFIG_SDHC_SUPPORT
 // Extended init sequence for SDHC support
 static uint8_t extendedInit(const uint8_t card) {
   uint8_t  i;
@@ -263,7 +258,6 @@ static uint8_t extendedInit(const uint8_t card) {
 
   return TRUE;
 }
-#endif
 
 // SD common initialisation
 static void sdInit(const uint8_t card) {
@@ -376,9 +370,7 @@ DSTATUS sd_initialize(BYTE drv) {
 
   disk_state = DISK_ERROR;
 
-#ifdef CONFIG_SDHC_SUPPORT
   isSDHC   = FALSE;
-#endif
 
   SPI_SS_HIGH(drv);
 
@@ -393,10 +385,8 @@ DSTATUS sd_initialize(BYTE drv) {
     return STA_NOINIT | STA_NODISK;
   }
 
-#ifdef CONFIG_SDHC_SUPPORT
   if (!extendedInit(drv))
     return STA_NOINIT | STA_NODISK;
-#endif
 
   sdInit(drv);
 
@@ -421,12 +411,10 @@ DSTATUS sd_initialize(BYTE drv) {
       return STA_NOINIT | STA_NODISK;
     }
 
-#ifdef CONFIG_SDHC_SUPPORT
     // See what card we've got
     if (answer & 0x40000000) {
       isSDHC = TRUE;
     }
-#endif
   }
 
   // Keep sending CMD1 (SEND_OP_COND) command until zero response
