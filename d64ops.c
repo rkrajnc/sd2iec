@@ -573,6 +573,12 @@ static int8_t nextdirentry(dh_t *dh) {
     dh->dir.d64.entry  = 0;
   }
 
+  if (dh->dir.d64.track < 1 || dh->dir.d64.track > LAST_TRACK ||
+      dh->dir.d64.sector >= sectors_per_track(dh->dir.d64.track)) {
+    set_error_ts(ERROR_ILLEGAL_TS_LINK,dh->dir.d64.track,dh->dir.d64.sector);
+    return 1;
+  }
+
   if (image_read(dh->part, sector_offset(dh->dir.d64.track, dh->dir.d64.sector)+
                  dh->dir.d64.entry*32, entrybuf, 32))
     return 1;
