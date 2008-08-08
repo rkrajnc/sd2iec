@@ -598,6 +598,7 @@ static void open_buffer(uint8_t secondary) {
     buf->sendeoi   = 1;
     buf->pvt.buffer.size = 1;
     mark_write_buffer(buf);
+    stick_buffer(buf);
   }
   return;
 }
