@@ -104,6 +104,14 @@ static PROGMEM uint8_t asciitime_skel[] = " xx/xx/xx xx:xx:xx xM\r";
 /*  Parsing helpers                                                          */
 /* ------------------------------------------------------------------------- */
 
+/* Fill the end of the command buffer with 0x00  */
+/* so C string functions can work on file names. */
+
+static void clean_cmdbuffer(void) {
+  memset(command_buffer+command_length, 0, sizeof(command_buffer)-command_length);
+}
+
+
 /* Parse parameters of block commands in the command buffer */
 /* Returns number of parameters (up to 4) or <0 on error    */
 static int8_t parse_blockparam(uint8_t values[]) {
@@ -239,6 +247,8 @@ static void parse_rmdir(void) {
 
 /* --- CD/MD/RD subparser --- */
 static void parse_dircommand(void) {
+  clean_cmdbuffer();
+
   switch (command_buffer[0]) {
   case 'M':
     parse_mkdir();
@@ -354,6 +364,8 @@ static void parse_copy(void) {
   int8_t res;
   buffer_t *srcbuf,*dstbuf;
   struct cbmdirent dent;
+
+  clean_cmdbuffer();
 
   /* Find the = */
   srcname = ustrchr(command_buffer,'=');
@@ -502,6 +514,7 @@ static void parse_changepart(void) {
 
   switch(command_buffer[1]) {
   case 'P':
+    clean_cmdbuffer();
     str  = command_buffer + 2;
     part = parse_partition(&str);
     break;
@@ -787,6 +800,8 @@ static void parse_new(void) {
   uint8_t *name, *id;
   uint8_t part;
 
+  clean_cmdbuffer();
+
   name = command_buffer+1;
   part = parse_partition(&name);
   name = ustrchr(command_buffer, ':');
@@ -852,6 +867,8 @@ static void parse_rename(void) {
   uint8_t *oldname,*newname;
   struct cbmdirent dent;
   int8_t res;
+
+  clean_cmdbuffer();
 
   /* Find the boundary between the names */
   oldname = ustrchr(command_buffer,'=');
@@ -919,6 +936,8 @@ static void parse_scratch(void) {
   uint8_t count,cnt;
   uint8_t *filename,*tmp,*name;
   path_t  path;
+
+  clean_cmdbuffer();
 
   filename = ustr1tok(command_buffer+1,',',&tmp);
 
@@ -1225,6 +1244,8 @@ static void parse_xcommand(void) {
   uint8_t *str;
   path_t path;
 
+  clean_cmdbuffer();
+
   switch (command_buffer[1]) {
   case 'B':
     /* Free-block count faking */
@@ -1357,17 +1378,6 @@ void parse_doscommand(void) {
   if (command_length == 0) {
     set_error(ERROR_SYNTAX_UNABLE);
     return;
-  }
-
-#ifdef CONFIG_TURBODISK
-  if (detected_loader == FL_TURBODISK) {
-    /* Don't overwrite the file name in the final M-W command of Turbodisk */
-    command_buffer[command_length] = 0;
-  } else
-#endif
-  {
-    /* Clear the remainder of the command buffer, simplifies parsing */
-    memset(command_buffer+command_length, 0, sizeof(command_buffer)-command_length);
   }
 
   /* MD/CD/RD clash with other commands, so they're checked first */
