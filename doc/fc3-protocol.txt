@@ -2,6 +2,7 @@ The Final Cartridge III Fast Loader and Saver Protocol
 ======================================================
 
 analysed by Thomas Giesel
+notes about the Freezer-variation by Ingo Korb
 
 This document describes the fast loader and saver protocol of the FC3. The
 description may not be accurate in any point.
@@ -13,31 +14,34 @@ First of all the FC3 opens the file and reads the first two bytes to check the
 load address. It does not close the file before starting the fast loader, so
 that one just starts with the last sector loaded.
 
+When the loader starts it sets both data and clock to high to signal that it
+is currently busy.
+
 The FC3 does always transfer whole blocks, even if not all bytes are used.
-Each block is transferred in 65 bunches with 4 bytes each.
+Each block is transferred in 65 tuples with 4 bytes each.
 
 Before sending a block the drives pulls CLOCK low and waits for the host to
 respond by pulling DATA low. Then drive and host release these lines.
 
-The first bunch is sent about 180 us after this handshake. As each bunch has
+The first tuple is sent about 180 us after this handshake. As each tuple has
 its own synchronization this timing doesn't need to be accurate. Between two
-bunches there are about 190 us. In sd2iec these to delays are reduced to 150
-ms, which seems to work.
+tuples there are about 190 us. In sd2iec these to delays are reduced to 150 us,
+which seems to work.
 
-1st bunch:
-0: not used (always 7?)
+1st tuple:
+0: not used (always 7, data marker on disk)
 1: block counter, starting at 0
 2: 0 if all bytes must be used, number of bytes otherwise
 3: First byte of block
 
-2nd..64th bunch:
+2nd..64th tuple:
 4 bytes from block
 
-65th bunch:
+65th tuple:
 0: last byte of block
 1..3: not used
 
-Each bunch is syncronized by the drive pulling CLOCK low, then 2 bits are
+Each tuple is syncronized by the drive pulling CLOCK low, then 2 bits are
 transfered at once until the 4 bytes are done. Bit 0 is on CLOCK, Bit 1 on
 DATA and so on. Electrical 0 means binary 0. Finally CLOCK and DATA are
 released to high level.
@@ -108,6 +112,25 @@ sd2iec write
 ...----|----------------------------------------------------------------
        198   (+14)                                                           us
 
+
+Fastloader in freezed files
+===========================
+Programs freezed using the "F.DISK" command of the FC3 use a fast loader
+similiar to the normal FC3 fastloader. Like the normal fastloader it opens
+the target file for reading with the standard protocol and it also uses
+the same protocol and timing to transmit a four-byte tuple to the C64.
+However, the handshaking inbetween and the contents of the first tuple
+are different. The freezer-variant transmits the data from disk directly
+which means that the first tuple contains a 0x07, the track and sector
+of the next sector in a file and the first data byte. Everything but
+the data byte is ignored by the C64-side code.
+
+Both end-of-file and error conditions are signalled by pulling DATA low.
+A full clock/data handshake is done before the transmission of every tuple
+which means that the fixed delays between tuples can be dropped.
+
+The freeze-loader closes and reopens the data file using the standard
+protocol after the fast protocol has finished transmitting the file.
 
 SAVING
 ======

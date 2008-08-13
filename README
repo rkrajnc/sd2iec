@@ -341,6 +341,9 @@ Software fastloaders:
   same drive code, but at least for the fastloader the FC3 rom seems to
   contain two different C64-side implementations.
 
+  The slightly different fastloader used for files freezed with the FC3
+  is also supported.
+
   Action Replay 6
   ---------------
   The AR6 reads a byte from the drive rom to check which fastloader it should

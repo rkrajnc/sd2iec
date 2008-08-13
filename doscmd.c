@@ -682,10 +682,13 @@ static void handle_memexec(void) {
 #endif
 #ifdef CONFIG_FC3
   if (detected_loader == FL_FC3_LOAD && address == 0x059a) {
-    load_fc3();
+    load_fc3(0);
   }
   if (detected_loader == FL_FC3_SAVE && address == 0x059c) {
     save_fc3();
+  }
+  if (detected_loader == FL_FC3_FREEZED && address == 0x0403) {
+    load_fc3(1);
   }
 #endif
 #ifdef CONFIG_DREAMLOAD
@@ -765,6 +768,11 @@ static void handle_memwrite(void) {
   }
   else if (datacrc == 0xbe56) {
     detected_loader = FL_FC3_SAVE;
+  }
+  else if (datacrc == 0x231f) {
+    /* Feel free to change the CRC to 0xa9c8 or 0x0260 if you find a version */
+    /* that doesn't upload as much junk at the end as the one I analyzed.    */
+    detected_loader = FL_FC3_FREEZED;
   }
 #endif
 #ifdef CONFIG_DREAMLOAD

@@ -33,6 +33,7 @@
 #define FL_FC3_SAVE      3
 #define FL_DREAMLOAD     4
 #define FL_DREAMLOAD_OLD 5
+#define FL_FC3_FREEZED   6
 
 #ifndef __ASSEMBLER__
 
@@ -41,7 +42,7 @@ extern volatile uint8_t fl_track;
 extern volatile uint8_t fl_sector;
 
 void load_turbodisk(void);
-void load_fc3(void);
+void load_fc3(uint8_t freezed);
 void save_fc3(void);
 void load_dreamload(void);
 

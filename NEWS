@@ -5,6 +5,7 @@
         - Multi-file scratch
         - Copy command
         - Large buffer support
+        - Final Cartridge 3 freezed file fastloader support
 
 2008-07-09 - release 0.7.3
         - Bugfix: Free buffers on error in M2I and D64

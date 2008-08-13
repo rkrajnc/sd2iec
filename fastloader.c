@@ -29,6 +29,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
+#include <string.h>
 #include "config.h"
 #include "buffers.h"
 #include "doscmd.h"
@@ -127,9 +128,9 @@ void load_turbodisk(void) {
 #endif
 
 #ifdef CONFIG_FC3
-void load_fc3(void) {
+void load_fc3(uint8_t freezed) {
   buffer_t *buf;
-  unsigned char step;
+  unsigned char step,pos;
   unsigned char sector_counter = 0;
   unsigned char block[4];
 
@@ -141,17 +142,18 @@ void load_fc3(void) {
     return;
   }
 
-  /* FC3 reads the first two bytes before starting the speeder, rewind */
-  buf->position -= 2;
-
   /* to make sure the C64 VIC DMA is off */
   _delay_ms(20);
 
   for(;;) {
     clk_data_handshake();
 
+    /* Starting buffer position */
+    /* Rewinds by 2 bytes for the first sector and normal loader */
+    pos = 2;
+
     /* construct first 4-byte block */
-    block[0] = 7;          /* any meaning? Why not 42? */
+    /* The 0x07 in the first byte is never used */
     block[1] = sector_counter++;
     if (buf->sendeoi) {
       /* Last sector, send number of bytes */
@@ -160,17 +162,22 @@ void load_fc3(void) {
       /* Send 0 for full sector */
       block[2] = 0;
     }
-    block[3] = buf->data[buf->position++];
+    /* First data byte */
+    block[3] = buf->data[pos++];
 
-    _delay_ms(0.15);
+    if (!freezed)
+      _delay_ms(0.15);
     fastloader_fc3_send_block(block);
 
     /* send the next 64 4-byte-blocks, the last 3 bytes are read behind
        the buffer, good that we don't have an MMU ;) */
     for (step = 0; step < 64; step++) {
-      _delay_ms(0.15);
-      fastloader_fc3_send_block(buf->data + buf->position);
-      buf->position += 4;
+      if (freezed)
+        clk_data_handshake();
+      else
+        _delay_ms(0.15);
+      fastloader_fc3_send_block(buf->data + pos);
+      pos += 4;
     }
 
     if (buf->sendeoi) {
