@@ -43,7 +43,7 @@
 #define OFS_FILE_NAME    5
 #define OFS_SIZE_LOW     0x1e
 #define OFS_SIZE_HI      0x1f
-#define D64_ERROR_OFFSET 174848
+#define D41_ERROR_OFFSET 174848
 #define D71_ERROR_OFFSET 349696
 
 #define D41_BAM_TRACK           18
@@ -68,7 +68,7 @@
 
 #define D64_TYPE_MASK 3
 #define D64_TYPE_NONE 0
-#define D64_TYPE_D64  1
+#define D64_TYPE_D41  1
 #define D64_TYPE_D71  2
 #define D64_TYPE_D81  3
 #define D64_TYPE_DNP  4
@@ -128,7 +128,7 @@ static uint16_t sector_lba(uint8_t part, uint8_t track, const uint8_t sector) {
   track--; /* Track numbers are 1-based */
 
   switch (partition[part].imagetype & D64_TYPE_MASK) {
-  case D64_TYPE_D64:
+  case D64_TYPE_D41:
   case D64_TYPE_D71:
   default:
     if (track >= 35) {
@@ -170,7 +170,7 @@ static uint32_t sector_offset(uint8_t part, uint8_t track, const uint8_t sector)
  */
 static uint8_t sectors_per_track(uint8_t part, uint8_t track) {
   switch (partition[part].imagetype & D64_TYPE_MASK) {
-  case D64_TYPE_D64:
+  case D64_TYPE_D41:
   case D64_TYPE_D71:
   default:
     if (track > 35)
@@ -215,8 +215,8 @@ static uint8_t checked_read(uint8_t part, uint8_t track, uint8_t sector, uint8_t
       /* Read the error info for this track */
       memset(errorcache.errors, 1, sizeof(errorcache.errors));
       /* Needs fix for errorinfo on anything but D64/D71! */
-      if ((partition[part].imagetype & D64_TYPE_MASK) == D64_TYPE_D64) {
-        if (image_read(part, D64_ERROR_OFFSET+sector_lba(part,track,0),
+      if ((partition[part].imagetype & D64_TYPE_MASK) == D64_TYPE_D41) {
+        if (image_read(part, D41_ERROR_OFFSET+sector_lba(part,track,0),
                        errorcache.errors, sectors_per_track(part, track)) >= 2)
           return 2;
       } else {
@@ -306,7 +306,7 @@ static uint8_t move_bam_window(uint8_t part, uint8_t track, bamdata_t type, uint
   uint8_t t,s, pos;
 
   switch(partition[part].imagetype & D64_TYPE_MASK) {
-    case D64_TYPE_D64:
+    case D64_TYPE_D41:
     default:
       t   = D41_BAM_TRACK;
       s   = D41_BAM_SECTOR;
@@ -418,7 +418,7 @@ static uint8_t sectors_free(uint8_t part, uint8_t track) {
 
   case D64_TYPE_D71:
   case D64_TYPE_D81:
-  case D64_TYPE_D64:
+  case D64_TYPE_D41:
   default:
     if(move_bam_window(part,track,BAM_FREECOUNT,&trackmap))
       return 0;
@@ -825,12 +825,12 @@ uint8_t d64_mount(uint8_t part) {
 
   switch (fsize) {
   case 174848:
-    imagetype = D64_TYPE_D64;
+    imagetype = D64_TYPE_D41;
     memcpy_P(&partition[part].d64data, &d41param, sizeof(struct param_s));
     break;
 
   case 175531:
-    imagetype = D64_TYPE_D64 | D64_HAS_ERRORINFO;
+    imagetype = D64_TYPE_D41 | D64_HAS_ERRORINFO;
     memcpy_P(&partition[part].d64data, &d41param, sizeof(struct param_s));
     break;
 
@@ -955,7 +955,7 @@ static uint16_t d64_freeblocks(uint8_t part) {
   for (i=1;i<=get_param(part, LAST_TRACK);i++) {
     /* Skip directory track */
     switch (partition[part].imagetype & D64_TYPE_MASK) {
-    case D64_TYPE_D64:
+    case D64_TYPE_D41:
     case D64_TYPE_D71:
     default:
       if (i == D41_BAM_TRACK || i == D71_BAM2_TRACK)
@@ -1183,7 +1183,7 @@ static void d64_format(uint8_t part, uint8_t *name, uint8_t *id) {
   uint8_t  t,s;
 
   /* Limit to D64 until fixed */
-  if (partition[part].imagetype != D64_TYPE_D64) {
+  if (partition[part].imagetype != D64_TYPE_D41) {
     set_error(ERROR_SYNTAX_UNABLE);
     return;
   }
