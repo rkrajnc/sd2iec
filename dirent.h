@@ -176,6 +176,34 @@ typedef struct dh_s {
   } dir;
 } dh_t;
 
+/* This enum must match the struct param_s below! */
+typedef enum { DIR_TRACK = 0, DIR_START_SECTOR,
+               LAST_TRACK, LABEL_OFFSET, ID_OFFSET,
+               FILE_INTERLEAVE, DIR_INTERLEAVE } param_t;
+
+/**
+ * struct param_s - Dxx image file parameters
+ * @dir_track       : track of the (current) directory
+ * @dir_start_sector: first sector of the directory on dir_track
+ * @last_track      : highest valid track number
+ * @label_offset    : byte offset of the disk label from the beginning of dir_track/0
+ * @id_offset       : as label_offset, for the disk ID
+ * @file_interleave : interleave factor for file sectors
+ * @dir_interleave  : interleave factor for directory sectors
+ *
+ * This structure holds those parameters that differ between various Dxx
+ * disk images and which could be abstracted out easily.
+ */
+struct param_s {
+  uint8_t dir_track;
+  uint8_t dir_start_sector;
+  uint8_t last_track;
+  uint8_t label_offset;
+  uint8_t id_offset;
+  uint8_t file_interleave;
+  uint8_t dir_interleave;
+};
+
 /**
  * struct partition_t - per-partition data
  * @fatfs      : FatFs per-drive/partition structure
@@ -183,6 +211,7 @@ typedef struct dh_s {
  * @fop        : pointer to the fileops structure for this partition
  * @imagehandle: file handle of a mounted image file on this partition
  * @imagetype  : disk image type mounted on this partition
+ * @d64data    : extended information about a mounted Dxx image
  *
  * This data structure holds per-partition data.
  */
@@ -192,6 +221,7 @@ typedef struct partition_s {
   const struct fileops_s *fop;
   FIL                    imagehandle;
   uint8_t                imagetype;
+  struct param_s         d64data;
 } partition_t;
 
 #endif
