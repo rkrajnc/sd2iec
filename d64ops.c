@@ -123,14 +123,29 @@ static uint8_t get_param(uint8_t part, param_t param) {
  */
 /* This version used the least code of all tested variants. */
 static uint16_t sector_lba(uint8_t part, uint8_t track, const uint8_t sector) {
+  uint16_t offset = 0;
+
   track--; /* Track numbers are 1-based */
-  if (track < 17)
-    return track*21 + sector;
-  if (track < 24)
-    return 17*21 + (track-17)*19 + sector;
-  if (track < 30)
-    return 17*21 + 7*19 + (track-24)*18 + sector;
-  return 17*21 + 7*19 + 6*18 + (track-30)*17 + sector;
+
+  switch (partition[part].imagetype & D64_TYPE_MASK) {
+  case D64_TYPE_D64:
+  case D64_TYPE_D71:
+  default:
+    if (track >= 35) {
+      offset = 683;
+      track -= 35;
+    }
+    if (track < 17)
+      return track*21 + sector + offset;
+    if (track < 24)
+      return 17*21 + (track-17)*19 + sector + offset;
+    if (track < 30)
+      return 17*21 + 7*19 + (track-24)*18 + sector + offset;
+    return 17*21 + 7*19 + 6*18 + (track-30)*17 + sector + offset;
+
+  case D64_TYPE_D81:
+    return track*40 + sector;
+  }
 }
 
 /**
@@ -151,16 +166,26 @@ static uint32_t sector_offset(uint8_t part, uint8_t track, const uint8_t sector)
  * @track: Track number
  *
  * This function returns the number of sectors on the given track
- * of a 1541 disk. Invalid track numbers will return invalid results.
+ * of a 1541/71/81 disk. Invalid track numbers will return invalid results.
  */
 static uint8_t sectors_per_track(uint8_t part, uint8_t track) {
-  if (track < 18)
-    return 21;
-  if (track < 25)
-    return 19;
-  if (track < 31)
-    return 18;
-  return 17;
+  switch (partition[part].imagetype & D64_TYPE_MASK) {
+  case D64_TYPE_D64:
+  case D64_TYPE_D71:
+  default:
+    if (track > 35)
+      track -= 35;
+    if (track < 18)
+      return 21;
+    if (track < 25)
+      return 19;
+    if (track < 31)
+      return 18;
+    return 17;
+
+  case D64_TYPE_D81:
+    return 40;
+  }
 }
 
 /**
@@ -189,9 +214,16 @@ static uint8_t checked_read(uint8_t part, uint8_t track, uint8_t sector, uint8_t
     if (errorcache.part != part || errorcache.track != track) {
       /* Read the error info for this track */
       memset(errorcache.errors, 1, sizeof(errorcache.errors));
-      if (image_read(part, D64_ERROR_OFFSET+sector_lba(part,track,0),
-                     errorcache.errors, sectors_per_track(part, track)) >= 2)
-        return 2;
+      /* Needs fix for errorinfo on anything but D64/D71! */
+      if ((partition[part].imagetype & D64_TYPE_MASK) == D64_TYPE_D64) {
+        if (image_read(part, D64_ERROR_OFFSET+sector_lba(part,track,0),
+                       errorcache.errors, sectors_per_track(part, track)) >= 2)
+          return 2;
+      } else {
+        if (image_read(part, D71_ERROR_OFFSET+sector_lba(part,track,0),
+                       errorcache.errors, sectors_per_track(part, track)) >= 2)
+          return 2;
+      }
       errorcache.part  = part;
       errorcache.track = track;
     }
@@ -280,7 +312,7 @@ static uint8_t move_bam_window(uint8_t part, uint8_t track, bamdata_t type, uint
       s   = D41_BAM_SECTOR;
       pos = D41_BAM_BYTES_PER_TRACK * track + (type == BAM_BITFIELD ? 1:0);
       break;
-/*
+
     case D64_TYPE_D71:
       if (track > 35 && type == BAM_BITFIELD) {
         t   = D71_BAM2_TRACK;
@@ -304,7 +336,7 @@ static uint8_t move_bam_window(uint8_t part, uint8_t track, bamdata_t type, uint
         track -= 40;
       pos = D81_BAM_OFFSET + track * D81_BAM_BYTES_PER_TRACK + (type == BAM_BITFIELD ? 1:0);
       break;
-
+/*
     case D64_TYPE_DNP:
       t   = DNP_BAM_TRACK;
       s   = DNP_BAM_SECTOR + 1 + (track >> 3);
@@ -382,10 +414,10 @@ static uint8_t sectors_free(uint8_t part, uint8_t track) {
       blocks += b;
     }
     return blocks;
+*/
 
   case D64_TYPE_D71:
   case D64_TYPE_D81:
-*/
   case D64_TYPE_D64:
   default:
     if(move_bam_window(part,track,BAM_FREECOUNT,&trackmap))
@@ -475,6 +507,10 @@ static uint8_t free_sector(uint8_t part, uint8_t track, uint8_t sector) {
  * file. The algorithm is based on the description found at
  * http://ist.uwaterloo.ca/~schepers/formats/DISK.TXT
  * Returns 0 if successful or 1 if any error occured.
+ *
+ * This code will not skip track 53 of a D71 if there are any free
+ * sectors on it - this behaviour is consistent with that of a 1571
+ * with a revision 3.0 ROM.
  */
 static uint8_t get_first_sector(uint8_t part, uint8_t *track, uint8_t *sector) {
   int8_t distance = 1;
@@ -541,8 +577,13 @@ static uint8_t get_next_sector(uint8_t part, uint8_t *track, uint8_t *sector) {
     /* No more space on current track, try another */
     if (*track < get_param(part, DIR_TRACK))
       *track -= 1;
-    else
+    else {
       *track += 1;
+      /* Skip track 53 on D71 images */
+      if ((partition[part].imagetype & D64_TYPE_MASK) == D64_TYPE_D71 &&
+          *track == D71_BAM2_TRACK)
+        *track += 1;
+    }
 
     if (*track < 1) {
       *track = get_param(part, DIR_TRACK) + 1;
@@ -802,14 +843,16 @@ uint8_t d64_mount(uint8_t part) {
     imagetype = D64_TYPE_D71 | D64_HAS_ERRORINFO;
     memcpy_P(&partition[part].d64data, &d71param, sizeof(struct param_s));
     break;
-    /*
+
   case 819200:
     imagetype = D64_TYPE_D81;
     memcpy_P(&partition[part].d64data, &d81param, sizeof(struct param_s));
     break;
 
+    /* Warning: If you enable this, increase the MAX_SECTORS_PER_TRACK #define
+                and the offset calculation in checked_read!
   case 822400:
-    partition[part].imagetype = D64_TYPE_D81 | D64_HAS_ERRORINFO;
+    imagetype = D64_TYPE_D81 | D64_HAS_ERRORINFO;
     memcpy_P(&partition[part].d64data, &d81param, sizeof(struct param_s));
     break;
     */
@@ -911,8 +954,19 @@ static uint16_t d64_freeblocks(uint8_t part) {
 
   for (i=1;i<=get_param(part, LAST_TRACK);i++) {
     /* Skip directory track */
-    if (i == 18)
-      continue;
+    switch (partition[part].imagetype & D64_TYPE_MASK) {
+    case D64_TYPE_D64:
+    case D64_TYPE_D71:
+    default:
+      if (i == D41_BAM_TRACK || i == D71_BAM2_TRACK)
+        continue; // continue the for loop
+      break;      // break out of the switch
+
+    case D64_TYPE_D81:
+      if (i == D81_BAM_TRACK)
+        continue;
+      break;
+    }
 
     blocks += sectors_free(part,i);
   }
@@ -1127,6 +1181,12 @@ static void d64_format(uint8_t part, uint8_t *name, uint8_t *id) {
   uint8_t  *ptr;
   uint8_t  idbuf[2];
   uint8_t  t,s;
+
+  /* Limit to D64 until fixed */
+  if (partition[part].imagetype != D64_TYPE_D64) {
+    set_error(ERROR_SYNTAX_UNABLE);
+    return;
+  }
 
   buf = alloc_buffer();
   if (buf == NULL)

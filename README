@@ -27,6 +27,9 @@ fastloader.
 
 [1] Homepage: http://pontoppidan.info/lars/index.php?proj=mmc2iec
 
+Please note: Whenever this file talks about "D64 images" the text applies to
+all Dxx image types, i.e. D64/D41/D71/D81 unless specifically noted.
+
 Supported commands:
 ===================
 - General notes:
@@ -101,7 +104,8 @@ Supported commands:
   information is partially faked, feedback is welcome.
 
 - N:
-  Format works only if a D64 image is already mounted.
+  Format works only if a D64 image is already mounted. This command is
+  limited to 1541 disk images, usually known as .D64 or .D41.
 
 - R
   Renaming files should work the same as it does on CMD drives, although
@@ -387,11 +391,12 @@ x00 files are recognized by checking both the extension of the file
 
 Disk Images:
 ============
-Disk images are recognized by their file extension (.D64, .D41) and
-their file size (must be one of 174848, 175531).
+Disk images are recognized by their file extension (.D64, .D41, .D71, .D81)
+and their file size (must be one of 174848, 175531, 349696, 351062, 819200).
 If the image has an error info block appended it will be used to simulate
 read errors. Writing to a sector with an error will always work, but
-it will not clear the indicated error.
+it will not clear the indicated error. D81 images with error info blocks
+are not supported.
 
 M2I files:
 ==========

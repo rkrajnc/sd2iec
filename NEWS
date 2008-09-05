@@ -6,6 +6,7 @@
         - Copy command
         - Large buffer support
         - Final Cartridge 3 freezed file fastloader support
+        - D71/D81 disk image support
 
 2008-07-09 - release 0.7.3
         - Bugfix: Free buffers on error in M2I and D64

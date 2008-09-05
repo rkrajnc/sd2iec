@@ -345,8 +345,9 @@ void load_dreamload(void) {
         // slow down 18/1 loading, so diskswap has a higher chance
         tick_t targettime = ticks + MS_TO_TICKS(1000);
         while (time_before(ticks,targettime)) ;
-        // FIXME: Needs update for non-d64 images
-        read_sector(buf, current_part, 18, 1);
+        read_sector(buf, current_part,
+                    partition[current_part].d64data.dir_track,
+                    partition[current_part].d64data.dir_start_sector);
         dreamload_send_block(buf->data);
       }
       else {
