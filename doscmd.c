@@ -1193,12 +1193,12 @@ static void parse_user(void) {
     
   case 'I':
   case '9':
-    switch (command_buffer[2]) {
-    case 0:
+    if (command_length == 2) {
       /* Soft-reset - just return the dos version */
       set_error(ERROR_DOSVERSION);
-      break;
-      
+      return;
+    }
+    switch (command_buffer[2]) {
     case '+':
       globalflags &= (uint8_t)~VC20MODE;
       break;
