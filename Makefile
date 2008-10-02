@@ -2,10 +2,12 @@
 
 # Define version number
 MAJOR = 0
-MINOR = 7
-PATCHLEVEL = 3
+MINOR = 8
+PATCHLEVEL = 0
 FIX =
 
+# Forces bootloader version to 0, comment out for release
+PRERELEASE = pre1
 
 #----------------------------------------------------------------------------
 # WinAVR Makefile Template written by Eric B. Weddington, Joerg Wunsch, et al.
@@ -169,7 +171,11 @@ CSTANDARD = -std=gnu99
 CDEFS = -DF_CPU=$(F_CPU)UL
 
 # Calculate bootloader version
-BOOT_VERSION = 0x$(MAJOR)$(MINOR)$(PATCHLEVEL)$(FIX)
+ifdef PRERELEASE
+BOOT_VERSION := 0
+else
+BOOT_VERSION := 0x$(MAJOR)$(MINOR)$(PATCHLEVEL)$(FIX)
+endif
 
 # Create a version number define
 ifdef PATCHLEVEL
@@ -180,6 +186,10 @@ PROGRAMVERSION := $(MAJOR).$(MINOR).$(PATCHLEVEL)
 endif
 else
 PROGRAMVERSION := $(MAJOR).$(MINOR)
+endif
+
+ifdef PRERELEASE
+PROGRAMVERSION := $(PROGRAMVERSION)$(PRERELEASE)
 endif
 
 LONGVERSION := -$(CONFIG_MCU:atmega%=m%)$(CONFIGSUFFIX)
