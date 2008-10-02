@@ -8,6 +8,7 @@
         - Final Cartridge 3 freezed file fastloader support
         - D71/D81 disk image support
         - parse FSINFO sector for faster FAT32 free space calculation
+        - partial REL file support
 
 2008-07-09 - release 0.7.3
         - Bugfix: Free buffers on error in M2I and D64

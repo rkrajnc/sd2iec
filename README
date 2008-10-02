@@ -103,6 +103,12 @@ Supported commands:
   Get partition info, see CMD FD/HD manual for details. The reported
   information is partially faked, feedback is welcome.
 
+- P
+  Positioning doesn't just work for REL files but also for regular
+  files on a FAT partition. When used for regular files the format
+  is "P"+chr$(channel)+chr$(hi)+chr$(mid)+chr$(lo) which will seek
+  to the 0-based offset hi*65536+256*mid+lo in the file.
+
 - N:
   Format works only if a D64 image is already mounted. This command is
   limited to 1541 disk images, usually known as .D64 or .D41.
@@ -407,6 +413,14 @@ Inside an M2I file the files are always shown as 0 (DEL) or 1 blocks
 because calling stat for every file was slowing down the directory listing
 too much. For compatibility with existing M2I files the data files do not
 use P00 headers even when the file type is SEQ or USR.
+
+REL files:
+==========
+Partial REL file support is implemented. It should work fine for existing
+files, but creating new files and/or adding records to existing files
+may fail. REL files in disk images are not supported yet, only as files
+on a FAT medium. When x00 support is disabled the first byte of a REL
+file is assumed to be the record length.
 
 Changing Disk Images
 ====================
