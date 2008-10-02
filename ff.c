@@ -1021,7 +1021,7 @@ FRESULT mount_drv(
   if (fmt == FS_FAT32) {
     fs->fsi_sector = bootsect + LD_WORD(&FSBUF.data[BPB_FSInfo]);
     //if (disk_read(fs->drive, FSBUF.data, fs->fsi_sector, 1) == RES_OK &&
-    if (!move_fs_window(fs,fs->fsi_sector) &&
+    if (move_fs_window(fs,fs->fsi_sector) &&
       LD_WORD(&FSBUF.data[BS_55AA]) == 0xAA55 &&
       LD_DWORD(&FSBUF.data[FSI_LeadSig]) == 0x41615252 &&
       LD_DWORD(&FSBUF.data[FSI_StrucSig]) == 0x61417272) {
