@@ -57,7 +57,7 @@
 
 #define _PARTITION_MASK     4
 
-#define _USE_FSINFO 0
+#define _USE_FSINFO 1
 /* To enable FSInfo support on FAT32 volume, set _USE_FSINFO to 1. */
 
 #define _USE_SJIS   0

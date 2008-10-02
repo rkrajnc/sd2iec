@@ -1145,7 +1145,10 @@ uint16_t fat_freeblocks(uint8_t part) {
     return 1;
 
   if (l_getfree(fs, NULLSTRING, &clusters, 65535) == FR_OK) {
-    return clusters;
+    if (clusters > 65535)
+      return 65535;
+    else
+      return clusters;
   } else
     return 0;
 }
