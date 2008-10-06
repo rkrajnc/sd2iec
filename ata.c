@@ -105,22 +105,6 @@ static BOOL ata_wait_data(void) {
 }
 
 
-/*-----------------------------------------------------------------------*/
-/* Wait for Busy Low                                                     */
-/*-----------------------------------------------------------------------*/
-
-static BOOL ata_wait_busy(void) {
-  BYTE s;
-  DWORD i = DELAY_VALUE(1000);
-  do {
-    if(!--i) return FALSE;
-    s=ata_read_reg(ATA_REG_STATUS);
-  } while(s & ATA_STATUS_BSY);
-  if (s & ATA_STATUS_ERR) return FALSE;
-  return TRUE;
-}
-
-
 static void ata_select_sector(BYTE drv, DWORD sector, BYTE count) {
   if(ATA_drv_flags[drv] & STA_48BIT) {
     ata_write_reg (ATA_REG_COUNT, 0);
@@ -228,7 +212,6 @@ DSTATUS ata_initialize (BYTE drv) {
   ata_write_reg (ATA_REG_LBA3, ATA_LBA3_LBA | (drv ? ATA_DEV_SLAVE : ATA_DEV_MASTER));
   do {
     if (!--i) goto di_error;
-  //} while (!(ata_read_reg(ATA_REG_STATUS) & (ATA_STATUS_BSY | ATA_STATUS_DRQ)));
   } while ((ata_read_reg(ATA_REG_STATUS) & (ATA_STATUS_BSY | ATA_STATUS_DRDY)) == ATA_STATUS_BSY);
 
   ata_write_reg(ATA_REG_DEVCTRL, ATA_DEVCTRL_SRST | ATA_DEVCTRL_NIEN);  /* Software reset */
@@ -243,7 +226,10 @@ DSTATUS ata_initialize (BYTE drv) {
   ata_write_reg (ATA_REG_FEATURES, 3); /* set PIO mode 0 */
   ata_write_reg (ATA_REG_COUNT, 1);
   ATA_WRITE_CMD (ATA_CMD_SETFEATURES);
-  if (!ata_wait_busy()) goto di_error; /* Wait cmd ready */
+  i = DELAY_VALUE(1000);
+  do {
+    if(!--i) goto di_error;
+  } while(ata_read_reg(ATA_REG_STATUS) & ATA_STATUS_BSY);  /* Wait cmd ready */
   ATA_WRITE_CMD(ATA_CMD_IDENTIFY);
   if(!ata_wait_data()) goto di_error;
   ata_read_part(data, 49, 83 - 49 + 1);
@@ -323,7 +309,7 @@ DRESULT disk_read (BYTE drv, BYTE *data, DWORD sector, BYTE count) __attribute__
 
 #if _READONLY == 0
 DRESULT ata_write (BYTE drv, const BYTE *data, DWORD sector, BYTE count) {
-  BYTE c, iowr_l, iowr_h;
+  BYTE s, c, iowr_l, iowr_h;
 
   if (drv > 1 || !count) return RES_PARERR;
   if (ATA_drv_flags[drv] & STA_NOINIT) return RES_NOTRDY;
@@ -337,22 +323,27 @@ DRESULT ata_write (BYTE drv, const BYTE *data, DWORD sector, BYTE count) {
   do {
     if (!ata_wait_data()) return RES_ERROR;
     ATA_PORT_CTRL_OUT = ATA_REG_DATA;
-    ATA_PORT_DATA_LO_DDR = 0xff;  // bring to output
-    ATA_PORT_DATA_HI_DDR = 0xff;  // bring to output
+    ATA_PORT_DATA_LO_DDR = 0xff;      /* bring to output */
+    ATA_PORT_DATA_HI_DDR = 0xff;      /* bring to output */
     c = 0;
     do {
       ATA_PORT_DATA_LO_OUT = *data++; /* Set even data */
       ATA_PORT_DATA_HI_OUT = *data++; /* Set odd data */
-      ATA_PORT_CTRL_OUT = iowr_l;   /* IOWR = L */
-      ATA_PORT_CTRL_OUT = iowr_h;   /* IOWR = H */
+      ATA_PORT_CTRL_OUT = iowr_l;     /* IOWR = L */
+      ATA_PORT_CTRL_OUT = iowr_h;     /* IOWR = H */
     } while (++c);
   } while (--count);
-  ATA_PORT_DATA_LO_OUT = 0xff;  /* Set D0-D15 as input */
+  ATA_PORT_DATA_LO_OUT = 0xff;        /* Set D0-D15 as input */
   ATA_PORT_DATA_HI_OUT = 0xff;
-  ATA_PORT_DATA_LO_DDR = 0x00;  // bring to input
-  ATA_PORT_DATA_HI_DDR = 0x00;  // bring to input
+  ATA_PORT_DATA_LO_DDR = 0x00;        /* bring to input */
+  ATA_PORT_DATA_HI_DDR = 0x00;        /* bring to input */
 
-  if (!ata_wait_busy()) return RES_ERROR; /* Wait cmd ready */
+  DWORD i = DELAY_VALUE(1000);
+  do {
+    if(!--i) return RES_ERROR;
+    s=ata_read_reg(ATA_REG_STATUS);   /* Wait cmd ready */
+  } while(s & ATA_STATUS_BSY);
+  if (s & ATA_STATUS_ERR) return RES_ERROR;
   ata_read_reg(ATA_REG_ALTSTAT);
   ata_read_reg(ATA_REG_STATUS);
 
@@ -382,22 +373,22 @@ DRESULT ata_ioctl (BYTE drv, BYTE ctrl, void *buff) {
       *(WORD*)buff = 512;
       return RES_OK;
 
-    case GET_BLOCK_SIZE : /* Get erase block size in sectors (DWORD) */
+    case GET_BLOCK_SIZE :   /* Get erase block size in sectors (DWORD) */
       *(DWORD*)buff = 1;
       return RES_OK;
 
-    case CTRL_SYNC :  /* Nothing to do */
+    case CTRL_SYNC :        /* Nothing to do */
       return RES_OK;
 
-    case ATA_GET_REV :  /* Get firmware revision (8 chars) */
+    case ATA_GET_REV :      /* Get firmware revision (8 chars) */
       ofs = 23; w = 4; n = 4;
       break;
 
-    case ATA_GET_MODEL :  /* Get model name (40 chars) */
+    case ATA_GET_MODEL :    /* Get model name (40 chars) */
       ofs = 27; w = 20; n = 20;
       break;
 
-    case ATA_GET_SN : /* Get serial number (20 chars) */
+    case ATA_GET_SN :       /* Get serial number (20 chars) */
       ofs = 10; w = 10; n = 10;
       break;
 
