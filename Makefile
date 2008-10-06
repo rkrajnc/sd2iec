@@ -50,37 +50,46 @@ endif
 include $(CONFIG)
 
 # Set MCU name and length of binary for bootloader
+# WARNING: Fuse settings not tested!
 MCU := $(CONFIG_MCU)
-ifeq ($(CONFIG_BOOTLOADER),y)
-  ifeq ($(MCU),atmega32)
-    BINARY_LENGTH = 0x7800
-  else ifeq ($(MCU),atmega128)
-    BINARY_LENGTH = 0x1f000
-  else ifeq ($(MCU),atmega1281)
-    BINARY_LENGTH = 0x1f000
-  else ifeq ($(MCU),atmega2561)
-    BINARY_LENGTH = 0x3f000
-  else ifeq ($(MCU),atmega644)
-    BINARY_LENGTH = 0xf000
-  else ifeq ($(MCU),atmega644p)
-    BINARY_LENGTH = 0xf000
-  else
+ifeq ($(MCU),atmega128)
+  BINARY_LENGTH = 0x1f000
+#  EFUSE = 0xff
+#  HFUSE = 0x91
+#  LFUSE = 0xaf
+else ifeq ($(MCU),atmega1281)
+  BINARY_LENGTH = 0x1f000
+  BOOTLDRSIZE = 0x0800
+  EFUSE = 0xff
+  HFUSE = 0xd2
+  LFUSE = 0xfc
+else ifeq ($(MCU),atmega2561)
+  BINARY_LENGTH = 0x3f000
+  EFUSE = 0xfd
+  HFUSE = 0x93
+  LFUSE = 0xef
+else ifeq ($(MCU),atmega644)
+  BINARY_LENGTH = 0xf000
+  EFUSE = 0xfd
+  HFUSE = 0x91
+  LFUSE = 0xef
+else ifeq ($(MCU),atmega644p)
+  BINARY_LENGTH = 0xf000
+  EFUSE = 0xfd
+  HFUSE = 0x91
+  LFUSE = 0xef
+else
 .PHONY: nochip
 nochip:
 	@echo '=============================================================='
 	@echo 'No known target chip specified.'
 	@echo
-	@echo 'Please disable CONFIG_BOOTLOADER or add the size of the'
-	@echo 'binary to the Makefile.'
+	@echo 'Please edit the Makefile.'
 	@exit 1
-  endif
 endif
 
 # Directory for all generated files
 OBJDIR := obj-$(CONFIG_MCU:atmega%=m%)$(CONFIGSUFFIX)
-
-# CPU clock
-F_CPU := $(CONFIG_MCU_FREQ)
 
 # Output format. (can be srec, ihex, binary)
 FORMAT = ihex
@@ -168,7 +177,7 @@ CSTANDARD = -std=gnu99
 
 
 # Place -D or -U options here
-CDEFS = -DF_CPU=$(F_CPU)UL
+CDEFS = -DF_CPU=$(CONFIG_MCU_FREQ)UL
 
 # Calculate bootloader version
 ifdef PRERELEASE
@@ -305,6 +314,29 @@ AVRDUDE_PORT = lpt1    # programmer connected to serial device
 AVRDUDE_WRITE_FLASH = -U flash:w:$(TARGET).hex
 # AVRDUDE_WRITE_EEPROM = -U eeprom:w:$(TARGET).eep
 
+# Allow fuse overrides from the config file
+ifdef CONFIG_EFUSE
+  EFUSE := CONFIG_EFUSE
+endif
+ifdef CONFIG_HFUSE
+  HFUSE := CONFIG_HFUSE
+endif
+ifdef CONFIG_LFUSE
+  LFUSE := CONFIG_LFUSE
+endif
+
+# Calculate command line arguments for fuses
+AVRDUDE_WRITE_FUSES :=
+ifdef EFUSE
+  AVRDUDE_WRITE_FUSES += -U efuse:w:$(EFUSE):m
+endif
+ifdef HFUSE
+  AVRDUDE_WRITE_FUSES += -U hfuse:w:$(HFUSE):m
+endif
+ifdef LFUSE
+  AVRDUDE_WRITE_FUSES += -U lfuse:w:$(LFUSE):m
+endif
+
 
 # Uncomment the following if you want avrdude's erase cycle counter.
 # Note that this counter needs to be initialized first using -Yn,
@@ -330,7 +362,7 @@ AVRDUDE_FLAGS += $(AVRDUDE_ERASE_COUNTER)
 #---------------- Debugging Options ----------------
 
 # For simulavr only - target MCU frequency.
-DEBUG_MFREQ = $(F_CPU)
+DEBUG_MFREQ = $(CONFIG_MCU_FREQ)
 
 # Set the DEBUG_UI to either gdb or insight.
 # DEBUG_UI = gdb
@@ -434,6 +466,9 @@ AVRMEM = avr-mem.sh $(TARGET).elf $(MCU)
 program: $(TARGET).hex $(TARGET).eep
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH)  $(AVRDUDE_WRITE_EEPROM)
 
+# Set fuses of the device
+fuses: $(CONFIG)
+	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FUSES)
 
 # Generate avr-gdb config/init file which does the following:
 #     define the reset signal, load the target file, connect to target, and set 
