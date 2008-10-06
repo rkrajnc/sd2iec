@@ -49,11 +49,11 @@
 
 #define _MULTI_PARTITION    1
 /* When _MULTI_PARTITION is set to 0, each logical drive is bound to the same
- * physical drive number and can mount only 1st primary partition.
- *
- * When it is set to 1, the low _PARTITION_MASK bits of each partition represent
- * the partition and the high (8-_PARTITION_MASK) bits represent the physical
- *  drive */
+/  physical drive number and can mount only 1st primary partition.
+/
+/  When it is set to 1, the low _PARTITION_MASK bits of each partition represent
+/  the partition and the high (8-_PARTITION_MASK) bits represent the physical
+/  drive */
 
 #define _PARTITION_MASK     4
 
@@ -81,14 +81,31 @@
 /* represents the characters needed, not bytes      */
 #define _MAX_LFN_LENGTH 20
 
+/* When _USE_LFN_DBCS is set to 1, FILINFO.lfn will contain a DBCS string, not
+/  a simple ASCII string  */
 #define _USE_LFN_DBCS 0
 
+/* When set to 1, All FIL objects will use the buffer.  This reduces memory
+/  requirements as open files will only require space for a FIL object, but
+/  operate slower. When set, ff.c will behave like tff.c, but will allow
+/  multiple filesystems.  */
 #define _USE_FS_BUF 1
 
+/* When set to 1, All objects will use a static  buffer.  This reduces memory
+/  requirements to the absolute minimum ~512 bytes for the buffer, but will
+/  operate slower.  This option can only be set if _USE_FS_BUF is set.  */
 #define _USE_1_BUF 1
 
+/* If set to 1, FatFs will manage the FATFS structures after mounting.  If
+/  set to 0, the caller must send the correct drive FATFS structure for each
+/  call.  Normally, this should be set to 1, but if the caller wants to use
+/  low level l_* functions or skip sending the drive number in the path string,
+/  this must be turned off.  */
 #define _USE_DRIVE_PREFIX 0
 
+/* If set to 1, FatFS will delay mounting the drive until first use.  Normally,
+/  this should be turned on.  However, it cannot be used with
+/  _USE_DRIVE_PREFIX = 0  */
 #define _USE_DEFERRED_MOUNT 0
 
 /* New features in 0.05a, not required yet */
@@ -120,7 +137,7 @@
 
 typedef struct _BUF {
   DWORD sect;
-  BYTE  dirty;              /* win[] dirty flag (1:must be written back) */
+  BYTE  dirty;              /* dirty flag (1:must be written back) */
 //BYTE  pad1;
 #if _USE_1_BUF != 0
   struct _FATFS *fs;
