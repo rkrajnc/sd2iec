@@ -717,9 +717,19 @@ void file_open(uint8_t secondary) {
   }
 
   /* Filename matching */
-  res = first_match(&path, fname, FLAG_HIDDEN, &dent);
-  if (res > 0)
+  if (opendir(&matchdh, &path))
     return;
+
+  while(1) {
+    res = next_match(&matchdh, fname, NULL, NULL, FLAG_HIDDEN, &dent);
+    if (res < 0) {
+      set_error(ERROR_FILE_NOT_FOUND);
+      return;
+    }
+
+    if((dent.typeflags & TYPE_MASK) != TYPE_DEL)
+      break;
+  }
 
   if(res && filetype == TYPE_REL && !recordlen) {
     set_error(ERROR_SYNTAX_UNABLE);
@@ -754,15 +764,6 @@ void file_open(uint8_t secondary) {
   default:
     if (filetype == TYPE_DEL)
       filetype = TYPE_SEQ;
-  }
-
-  /* Partial type checking (15x1 drives are stricter)    */
-  /* Just disallow loading a DEL file as a program here, */
-  /* way too many decorated directories start with a DEL */
-  /* entry that would crash the C64 without this check.  */
-  if (filetype == TYPE_PRG && !res && (dent.typeflags & TYPE_MASK) == TYPE_DEL) {
-    set_error(ERROR_FILE_TYPE_MISMATCH);
-    return;
   }
 
   if (mode == OPEN_WRITE) {
