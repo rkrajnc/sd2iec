@@ -9,7 +9,7 @@
 /
 / * The FatFs module is a free software and there is no warranty.
 / * You can use, modify and/or redistribute it for personal, non-profit or
-/   commercial use without any restriction under your responsibility.
+/ * commercial use without any restriction under your responsibility.
 / * Redistributions of source code must retain the above copyright notice.
 /
 /---------------------------------------------------------------------------*/

@@ -224,6 +224,32 @@ Supported commands:
              0 and 255). Default is whatever your chip defaults to. This
              value can be saved in the EEPROM using XW.
 
+  - XDdrv=val Configure drives.  On ATA-based units or units with multiple
+             drive types, this command can be used to enable or reorder
+             the drives.  drv is the drive slot (0-7), while val is one
+             of:
+                0: Master ATA device
+                1: Slave ATA device
+                4: Primary SD/MMC device
+                5: Secondary SD/MMC device
+                6: Dataflash device
+               15: no device
+
+             Note that only devices supported by the specific hardware
+             can be selected.  Unsupported device types will return an
+             error if requested.  Also, note that you cannot select a device
+             in multiple drive slots.  Finally, while it is possible to
+             re-order ATA devices using this functionality, it is strongly
+             discouraged.  Use the master/slave jumpers on the ATA devices
+             instead.  To reset the drive configuration, set all drive slots
+             to "no device".  This value can be permanently saved in the
+             EEPROM using XW.
+
+    XD?      View the current drive configuration.  Example result:
+             "03,D:00=04:01=00:02=01,10,01".  The track indicates the
+             current device address, while the sector indicates extended
+             drive configuration status information.
+
   - X        X without any following characters reports the current state
              of all extended parameters via the error channel, similiar
              to DolphinDOS. Example result: "03,J-:C152:E01+:B+:*+,08,00"

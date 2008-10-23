@@ -74,7 +74,10 @@ extern uint32_t drive_config;
 
 uint32_t get_default_driveconfig(void);
 
-#  define map_drive(drv) ((drive_config >> (4 * drive)) & 0x0f)
+#  define set_map_drive(drv,val) (drive_config = \
+      (drive_config & (0xffffffff - (0x0f << (drv * 4)))) \
+                    | (val << (drv * 4)))
+#  define map_drive(drv) ((drive_config >> (4 * drv)) & 0x0f)
 #  define set_drive_config(config)  drive_config = config
 
 /* Number of bits used for the drive, the disk type */
@@ -92,6 +95,7 @@ uint32_t get_default_driveconfig(void);
 
 #else // NEED_DISKMUX
 
+#  define set_map_drive(drv,val) do {} while(0)
 #  define map_drive(drv) (drv)
 #  define set_drive_config(conf) do {} while(0)
 #  define get_default_driveconfig() 0

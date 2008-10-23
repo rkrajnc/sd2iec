@@ -31,6 +31,7 @@
 #include <string.h>
 #include "config.h"
 #include "buffers.h"
+#include "diskio.h"
 #include "fatops.h"
 #include "flags.h"
 #include "led.h"
@@ -180,6 +181,7 @@ void set_error(uint8_t errornum) {
 
 void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
   uint8_t *msg = error_buffer;
+  uint8_t i = 0;
 
   current_error = errornum;
   buffers[CONFIG_BUFFER_COUNT].data     = error_buffer;
@@ -191,23 +193,40 @@ void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
   *msg++ = ',';
 
   if (errornum == ERROR_STATUS) {
-    msg = appendbool(msg, 'J', globalflags & JIFFY_ENABLED);
+    switch(sector) {
+    case 0:
+    default:
+      msg = appendbool(msg, 'J', globalflags & JIFFY_ENABLED);
 
-    *msg++ = 'C';
-    msg = appendnumber(msg, OSCCAL);
-    *msg++ = ':';
+      *msg++ = 'C';
+      msg = appendnumber(msg, OSCCAL);
+      *msg++ = ':';
 
-    *msg++ = 'E';
-    msg = appendnumber(msg, file_extension_mode);
-    msg = appendbool(msg, 0, globalflags & EXTENSION_HIDING);
+      *msg++ = 'E';
+      msg = appendnumber(msg, file_extension_mode);
+      msg = appendbool(msg, 0, globalflags & EXTENSION_HIDING);
 
-    msg = appendbool(msg, '*', globalflags & POSTMATCH);
+      msg = appendbool(msg, '*', globalflags & POSTMATCH);
 
-    msg = appendbool(msg, 'B', globalflags & FAT32_FREEBLOCKS);
+      msg = appendbool(msg, 'B', globalflags & FAT32_FREEBLOCKS);
 
-    msg--;
+      msg--;
+      break;
+    case 1: // Drive Config
+      *msg++ = 'D';
+      while(i < 8) {
+        if(map_drive(i) != 0x0f) {
+          *msg++ = ':';
+          msg = appendnumber(msg,i);
+          *msg++ = '=';
+          msg = appendnumber(msg,map_drive(i));
+        }
+        i++;
+      }
+      break;
+    }
+
   } else if (errornum == ERROR_LONGVERSION || errornum == ERROR_DOSVERSION) {
-    uint8_t i = 0;
     /* Start with the name and version number */
     while ((*msg++ = pgm_read_byte(versionstr+i++))) ;
 

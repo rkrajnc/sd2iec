@@ -1308,6 +1308,65 @@ static void parse_xcommand(void) {
     set_error_ts(ERROR_STATUS,device_address,0);
     break;
 
+  case 'D':
+    /* drive config */
+#ifdef NEED_DISKMUX
+    str = command_buffer+2;
+    if(*str == '?') {
+      set_error_ts(ERROR_STATUS,device_address,1);
+      break;
+    }
+    num = parse_number(&str);
+    if(num < 8) {
+      while(*str == ' ')
+        str++;
+      if(*str == '=') {
+        uint8_t val, i;
+        str++;
+        val = parse_number(&str);
+        if(val <= 0x0f) {
+          for(i = 0;(val != 0x0f) && i < 8; i++) {
+            if(i != num && map_drive(num) == val) {
+              /* Trying to set the same drive mapping in two places. */
+              set_error(ERROR_SYNTAX_UNKNOWN);
+              break;
+            }
+          }
+          switch(val >> DRIVE_BITS) {
+          case DISK_TYPE_NONE:
+#ifdef HAVE_DF
+          case DISK_TYPE_DF:
+#endif
+#ifdef HAVE_SD
+          case DISK_TYPE_SD:
+#endif
+#ifdef HAVE_ATA
+          case DISK_TYPE_ATA:
+#endif
+            if(map_drive(num) != val) {
+              set_map_drive(num,val);
+              /* sanity check.  If the user has truly turned off all drives, turn the
+               * defaults back on
+               */
+              if(drive_config == 0xffffffff)
+                set_drive_config(get_default_driveconfig());
+              init_fatops(0);
+            }
+            break;
+          default:
+            set_error(ERROR_SYNTAX_UNKNOWN);
+            break;
+          }
+          break;
+        }
+      }
+    }
+    set_error(ERROR_SYNTAX_UNKNOWN);
+#else
+    // silently ignore D on systems without MUX
+#endif
+    break;
+
   case 'W':
     /* Write configuration */
     write_configuration();
@@ -1389,7 +1448,7 @@ void parse_doscommand(void) {
   }
 
   /* MD/CD/RD clash with other commands, so they're checked first */
-  if (command_buffer[1] == 'D') {
+  if (command_buffer[0] != 'X' && command_buffer[1] == 'D') {
     parse_dircommand();
     return;
   }
