@@ -720,16 +720,15 @@ void file_open(uint8_t secondary) {
   if (opendir(&matchdh, &path))
     return;
 
-  while(1) {
+  do {
     res = next_match(&matchdh, fname, NULL, NULL, FLAG_HIDDEN, &dent);
-    if (res < 0) {
-      set_error(ERROR_FILE_NOT_FOUND);
+    if (res > 0)
+      /* Error, abort */
       return;
-    }
 
     if((dent.typeflags & TYPE_MASK) != TYPE_DEL)
       break;
-  }
+  } while (res == 0);
 
   if(res && filetype == TYPE_REL && !recordlen) {
     set_error(ERROR_SYNTAX_UNABLE);
