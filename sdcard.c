@@ -448,7 +448,7 @@ DSTATUS sd_initialize(BYTE drv) {
   // Send MMC CMD16(SET_BLOCKLEN) to 512 bytes
   i = sendCommand(drv, SET_BLOCKLEN, 512, 1);
   if (i != 0) {
-    return FALSE;
+    return STA_NOINIT | STA_NODISK;
   }
 
   // Thats it!
