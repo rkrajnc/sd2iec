@@ -28,7 +28,7 @@ fastloader.
 [1] Homepage: http://pontoppidan.info/lars/index.php?proj=mmc2iec
 
 Please note: Whenever this file talks about "D64 images" the text applies to
-all Dxx image types, i.e. D64/D41/D71/D81 unless specifically noted.
+all Dxx image types, i.e. D64/D71/D81 unless specifically noted.
 
 Supported commands:
 ===================
@@ -111,7 +111,7 @@ Supported commands:
 
 - N:
   Format works only if a D64 image is already mounted. This command is
-  limited to 1541 disk images, usually known as .D64 or .D41.
+  limited to 1541 disk images, usually known as .D64.
 
 - R
   Renaming files should work the same as it does on CMD drives, although
@@ -389,7 +389,7 @@ Software fastloaders:
   Dreamload
   ---------
   Dreamload uses direct track/sector access, so it is only supported
-  on D41 or similiar disk image formats. As sd2iec has to wait for commands
+  on D64 or similiar disk image formats. As sd2iec has to wait for commands
   from the C64 constantly the disk change buttons may become unresponsive,
   try multiple times if you need to. Dreamload is a "captive" fastloader,
   sd2iec stay in Dreamload mode until it receives a "quit loader" command
