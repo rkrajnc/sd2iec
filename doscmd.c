@@ -1360,10 +1360,11 @@ static void parse_xcommand(void) {
           break;
         }
       }
-    }
-    set_error(ERROR_SYNTAX_UNKNOWN);
+    } else
+      set_error(ERROR_SYNTAX_UNKNOWN);
 #else
-    // silently ignore D on systems without MUX
+    // return error for units without MUX support
+    set_error(ERROR_SYNTAX_UNKNOWN);
 #endif
     break;
 
