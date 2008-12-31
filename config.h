@@ -333,6 +333,14 @@
 #  define CFCARD_DETECT_SETUP() do { DDRE &= ~_BV(PE7); PORTE |= _BV(PE7); } while(0)
 #  define CF_CHANGE_SETUP()     do { EICRB |= _BV(ISC70); EIMSK |= _BV(INT7); } while(0)
 #  define CF_CHANGE_VECT        INT7_vect
+#  define HAVE_SD
+#  define SDCARD_DETECT         (!(PINB & _BV(PB7)))
+#  define SDCARD_DETECT_SETUP() do { DDRB &= ~_BV(PB7); PORTB |= _BV(PB7); } while(0)
+#  define SD_CHANGE_SETUP()     do { PCICR |= _BV(PCIE0); PCIFR |= _BV(PCIF0); } while (0)
+#  define SD_CHANGE_VECT        PCINT0_vect
+#  define SDCARD_WP             (PINB & _BV(PB6))
+#  define SDCARD_WP_SETUP()     do { DDRB &= ~ _BV(PB6); PORTB |= _BV(PB6); } while(0)
+#  define SD_SUPPLY_VOLTAGE     (1L<<21)
 /* No device jumpers on uIEC */
 #  define DEVICE_SELECT         10
 #  define DEVICE_SELECT_SETUP() do {} while (0)

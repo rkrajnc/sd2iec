@@ -28,76 +28,29 @@
 # This file is included in the main sd2iec Makefile and also parsed
 # into autoconf.h.
 
-# MCU to compile for
 CONFIG_MCU=atmega1281
-
-# Use the -relax parameter when linking?
-# Passing -O9 and -relax to the linker saves ~650 bytes of flash,
-# but the option is broken in certain binutils versions.
-# (known troublemakers: binutils 2.17, 2.18 seems fine)
 CONFIG_LINKER_RELAX=n
-
-# MCU frequency in Hz - the fastloader code is hardcoded for 8MHz
 CONFIG_MCU_FREQ=8000000
-
-# Add a bootloader signature
 CONFIG_BOOTLOADER=y
-
-# Value of the signature word
 CONFIG_BOOT_DEVID=0x32304955
-
-# Enable UART debugging - requires 24 bytes plus buffer size in RAM
 CONFIG_UART_DEBUG=y
-
-# Baud rate of the UART, not used if CONFIG_UART_DEBUG is disabled
 CONFIG_UART_BAUDRATE=38400
-
-# log2 of the UART buffer size, i.e. 6 for 64, 7 for 128, 8 for 256 etc.
 CONFIG_UART_BUF_SHIFT=6
-
 CONFIG_DEADLOCK_ME_HARDER=y
-
-# Output a hex dump of all received commands via serial?
-# Not used if CONFIG_UART_DEBUG is disabled.
 CONFIG_COMMAND_CHANNEL_DUMP=y
-
-
-# Enable Turbodisk soft fastloader support
-# This option requires an external crystal oscillator!
 CONFIG_TURBODISK=y
 CONFIG_JIFFY_ASM=y
 CONFIG_FC3=y
 CONFIG_DREAMLOAD=n
-
-# Select which hardware to compile for
-# Valid values:
-#   1 - custom configuration in config.h
-#   2 - Shadowolf MMC2IEC PCBs version 1.x
-#   3 - original MMC2IEC
-#   4 - uIEC
-#   5 - Shadowolf sd2iec PCBs version 1.x
 CONFIG_HARDWARE_VARIANT=4
 CONFIG_HARDWARE_NAME=uIEC
-
-
-# The following SD settings are ignored on uIEC
-# Length of error message buffer - 1571 uses 36 bytes
+CONFIG_SD_AUTO_RETRIES=10
+CONFIG_SD_DATACRC=y
 CONFIG_ERROR_BUFFER_SIZE=46
-
-# Length of command/filename buffer - 1571 uses 42 bytes
-# The buffer is actually 2 bytes larger to simplify parsing.
 CONFIG_COMMAND_BUFFER_SIZE=254
-
-# Number of sector buffers (256 byte+a bit of overhead)
-#  In general: More buffers -> More open files at the same time
 CONFIG_BUFFER_COUNT=15
-
-# Size of the EEPROM user area
 CONFIG_EEPROM_SIZE=512
-
-# Offset of the EEPROM user area
 CONFIG_EEPROM_OFFSET=512
-
 CONFIG_MAX_PARTITIONS=20
-
 CONFIG_RTC_VARIANT=1
+CONFIG_ADD_ATA=1
