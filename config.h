@@ -500,6 +500,53 @@
 #  define BUTTON_PREV           _BV(PA5)
 
 
+#elif CONFIG_HARDWARE_VARIANT == 7
+/* Hardware configuration: uIEC v3 */
+#  define HW_NAME "UIEC"
+#  define HAVE_SD
+#  define SDCARD_DETECT         (!(PINE & _BV(PE6)))
+#  define SDCARD_DETECT_SETUP() do { DDRE &= ~_BV(PE6); PORTE |= _BV(PE6); } while(0)
+#  define SD_CHANGE_SETUP()     do { EICRB |= _BV(ISC60); EIMSK |= _BV(INT6); } while(0)
+#  define SD_CHANGE_VECT        INT6_vect
+#  define SDCARD_WP             (PINE & _BV(PE2))
+#  define SDCARD_WP_SETUP()     do { DDRE &= ~ _BV(PE2); PORTE |= _BV(PE2); } while(0)
+#  define SD_SUPPLY_VOLTAGE     (1L<<21)
+/* No device jumpers on uIEC */
+#  define DEVICE_SELECT         10
+#  define DEVICE_SELECT_SETUP() do {} while (0)
+#  define SINGLE_LED
+#  define DIRTY_LED_SETDDR()    DDRG  |= _BV(PG0)
+#  define DIRTY_LED_ON()        PORTG |= _BV(PG0)
+#  define DIRTY_LED_OFF()       PORTG &= ~_BV(PG0)
+#  define DIRTY_LED_PORT        PORTG
+#  define DIRTY_LED_BIT()       _BV(PG0)
+#  define AUX_LED_SETDDR()      DDRG  |= _BV(PG1)
+#  define AUX_LED_ON()          PORTG &= ~_BV(PG1)
+#  define AUX_LED_OFF()         PORTG |= _BV(PG1)
+#  define IEC_PIN               PINB
+#  define IEC_DDRIN             DDRB
+#  define IEC_PORTIN            PORTB
+#  define IEC_PIN_ATN           PB4
+#  define IEC_PIN_DATA          PB5
+#  define IEC_PIN_CLOCK         PB6
+#  define IEC_PIN_SRQ           PB7
+#  define IEC_SEPARATE_OUT
+#  define IEC_PORT              PORTD
+#  define IEC_DDROUT            DDRD
+#  define IEC_OPIN_ATN          PD4
+#  define IEC_OPIN_DATA         PD5
+#  define IEC_OPIN_CLOCK        PD6
+#  define IEC_OPIN_SRQ          PD7
+#  define IEC_INT_VECT          PCINT0_vect
+#  define IEC_INT_SETUP()       do { PCICR |= _BV(PCIE0); PCIFR |= _BV(PCIF0); } while (0)
+#  define IEC_PCMSK             PCMSK0
+#  define BUTTON_PIN            PING
+#  define BUTTON_PORT           PORTG
+#  define BUTTON_DDR            DDRG
+#  define BUTTON_MASK           (_BV(PG3)|_BV(PG4))
+#  define BUTTON_NEXT           _BV(PG4)
+#  define BUTTON_PREV           _BV(PG3)
+
 #elif CONFIG_HARDWARE_VARIANT == 99
 /* Hardware configuration: sdlite - not for production use */
 #  define HW_NAME "SD2IEC"
