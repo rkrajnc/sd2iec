@@ -1,3 +1,8 @@
+2009-xx-xx - release 0.8.0
+        - ignore DEL files in file_open
+        - drive mapper
+        - EXOS V3 fastloader support
+
 2008-10-02 - release 0.8.0pre1
         - Implement Dreamload emulation
         - RTC support

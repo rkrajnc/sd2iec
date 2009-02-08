@@ -2,7 +2,7 @@ The Final Cartridge III Fast Loader and Saver Protocol
 ======================================================
 
 analysed by Thomas Giesel
-notes about the Freezer-variation by Ingo Korb
+notes about the Freezer-variation and EXOS V3 by Ingo Korb
 
 This document describes the fast loader and saver protocol of the FC3. The
 description may not be accurate in any point.
@@ -25,14 +25,18 @@ respond by pulling DATA low. Then drive and host release these lines.
 
 The first tuple is sent about 180 us after this handshake. As each tuple has
 its own synchronization this timing doesn't need to be accurate. Between two
-tuples there are about 190 us. In sd2iec these to delays are reduced to 150 us,
-which seems to work.
+tuples there are about 190 us. In sd2iec these to delays were originally
+reduced to 150 us which works fine for the FC3, but fails with EXOS.
 
 1st tuple:
 0: not used (always 7, data marker on disk)
 1: block counter, starting at 0
 2: 0 if all bytes must be used, number of bytes otherwise
 3: First byte of block
+
+The protocol is able to transfer sectors out-of-file-order as they are read
+from disk, the block counter is used to store them in the correct order on
+the C64 side.
 
 2nd..64th tuple:
 4 bytes from block
@@ -123,7 +127,8 @@ However, the handshaking inbetween and the contents of the first tuple
 are different. The freezer-variant transmits the data from disk directly
 which means that the first tuple contains a 0x07, the track and sector
 of the next sector in a file and the first data byte. Everything but
-the data byte is ignored by the C64-side code.
+the data byte is ignored by the C64-side code, so the blocks must
+be sent in file order.
 
 Both end-of-file and error conditions are signalled by pulling DATA low.
 A full clock/data handshake is done before the transmission of every tuple
@@ -131,6 +136,20 @@ which means that the fixed delays between tuples can be dropped.
 
 The freeze-loader closes and reopens the data file using the standard
 protocol after the fast protocol has finished transmitting the file.
+
+EXOS V3
+=======
+The protocol used by the EXOS V3 kernal by J. Schemmel is exactly the same
+as the one used by the FC3, but it seems that the C64-side code is slightly
+less efficient - the delay between two tuples must be increased a bit
+(150us fails, 190us works, exact limit not tested) or loading will hang.
+
+Judging from the code differences and the relative release dates both
+are probably derived from a common source whose code was optimized in
+different ways by the two authors.
+
+There is also a kernal called "The Beast System" which is based on EXOS
+and uses the same fast loader code.
 
 SAVING
 ======

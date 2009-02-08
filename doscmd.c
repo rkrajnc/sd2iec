@@ -681,7 +681,9 @@ static void handle_memexec(void) {
   }
 #endif
 #ifdef CONFIG_FC3
-  if (detected_loader == FL_FC3_LOAD && address == 0x059a) {
+  if (detected_loader == FL_FC3_LOAD &&
+      (address == 0x059a || address == 0x0400)) {
+    /* FC3 LOAD uses 0x059a, EXOS uses 0x0400 */
     load_fc3(0);
   }
   if (detected_loader == FL_FC3_SAVE && address == 0x059c) {
@@ -763,7 +765,8 @@ static void handle_memwrite(void) {
     datacrc = _crc16_update(datacrc, command_buffer[i]);
 
 #ifdef CONFIG_FC3
-  if (datacrc == 0xf1bd) {
+  if (datacrc == 0xf1bd || datacrc == 0x70de) {
+    /* 0xf1bd is a FC3 cart, 0x70de is a protocol-compatible EXOS v3 kernal */
     detected_loader = FL_FC3_LOAD;
   }
   else if (datacrc == 0xbe56) {

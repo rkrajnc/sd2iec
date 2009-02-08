@@ -166,7 +166,7 @@ void load_fc3(uint8_t freezed) {
     block[3] = buf->data[pos++];
 
     if (!freezed)
-      _delay_ms(0.15);
+      _delay_ms(0.19);
     fastloader_fc3_send_block(block);
 
     /* send the next 64 4-byte-blocks, the last 3 bytes are read behind
@@ -175,7 +175,7 @@ void load_fc3(uint8_t freezed) {
       if (freezed)
         clk_data_handshake();
       else
-        _delay_ms(0.15);
+        _delay_ms(0.19);
       fastloader_fc3_send_block(buf->data + pos);
       pos += 4;
     }

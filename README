@@ -380,6 +380,11 @@ Software fastloaders:
   The slightly different fastloader used for files freezed with the FC3
   is also supported.
 
+  EXOS V3 and The Beast System
+  ----------------------------
+  Both supported, the loader used by these kernals is very similiar to
+  the FC3 fast loader.
+
   Action Replay 6
   ---------------
   The AR6 reads a byte from the drive rom to check which fastloader it should
