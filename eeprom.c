@@ -56,7 +56,7 @@ static EEMEM struct {
   uint8_t  checksum;
   uint16_t structsize;
   uint8_t  osccal;
-  uint8_t  globalflags;
+  uint8_t  global_flags;
   uint8_t  address;
   uint8_t  hardaddress;
   uint8_t  fileexts;
@@ -104,7 +104,7 @@ void read_configuration(void) {
   /* Read data from EEPROM */
   OSCCAL = eeprom_read_byte(&storedconfig.osccal);
 
-  tmp = eeprom_read_byte(&storedconfig.globalflags);
+  tmp = eeprom_read_byte(&storedconfig.global_flags);
   globalflags &= (uint8_t)~(JIFFY_ENABLED | POSTMATCH |
                             EXTENSION_HIDING | FAT32_FREEBLOCKS);
   globalflags |= tmp;
@@ -145,7 +145,7 @@ void write_configuration(void) {
   /* Write configuration to EEPROM */
   eeprom_write_word(&storedconfig.structsize, sizeof(storedconfig));
   eeprom_write_byte(&storedconfig.osccal, OSCCAL);
-  eeprom_write_byte(&storedconfig.globalflags,
+  eeprom_write_byte(&storedconfig.global_flags,
                     globalflags & (JIFFY_ENABLED | POSTMATCH |
                                    EXTENSION_HIDING | FAT32_FREEBLOCKS));
   eeprom_write_byte(&storedconfig.address, device_address);

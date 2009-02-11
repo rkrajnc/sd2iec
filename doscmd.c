@@ -71,7 +71,10 @@ static const PROGMEM magic_value_t c1541_magics[] = {
   { 0,      { 0, 0 } }        /* end mark */
 };
 
+#ifndef __AVR__
+/* AVR uses GPIOR for this */
 uint8_t globalflags;
+#endif
 
 uint8_t command_buffer[CONFIG_COMMAND_BUFFER_SIZE+2];
 uint8_t command_length;
