@@ -29,6 +29,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
+#include <util/atomic.h>
 #include <string.h>
 #include "config.h"
 #include "buffers.h"
@@ -71,55 +72,55 @@ void load_turbodisk(void) {
   file_open(0);
   buf = find_buffer(0);
   if (!buf) {
-    cli();
-    turbodisk_byte(0xff);
-    set_clock(1);
-    set_data(1);
-    sei();
+    ATOMIC_BLOCK( ATOMIC_FORCEON ) {
+      turbodisk_byte(0xff);
+      set_clock(1);
+      set_data(1);
+    }
     return;
   }
 
   firstsector = 1;
 
-  cli();
-  while (1) {
-    /* Send the status byte */
-    if (buf->sendeoi) {
-      turbodisk_byte(0);
-    } else {
-      turbodisk_byte(1);
-    }
+  ATOMIC_BLOCK( ATOMIC_FORCEON ) {
+    while (1) {
+      /* Send the status byte */
+      if (buf->sendeoi) {
+        turbodisk_byte(0);
+      } else {
+        turbodisk_byte(1);
+      }
 
-    if (firstsector) {
-      /* Load address is transferred seperately */
-      i = buf->position;
-      turbodisk_byte(buf->data[i++]);
-      turbodisk_byte(buf->data[i++]);
-      buf->position  = i;
-      firstsector    = 0;
-    }
+      if (firstsector) {
+        /* Load address is transferred seperately */
+        i = buf->position;
+        turbodisk_byte(buf->data[i++]);
+        turbodisk_byte(buf->data[i++]);
+        buf->position  = i;
+        firstsector    = 0;
+      }
 
-    if (buf->sendeoi) {
-      /* Last sector is sent byte-by-byte */
-      turbodisk_byte(buf->lastused - buf->position + 2);
+      if (buf->sendeoi) {
+        /* Last sector is sent byte-by-byte */
+        turbodisk_byte(buf->lastused - buf->position + 2);
 
-      i = buf->position;
-      do {
-        turbodisk_byte(buf->data[i]);
-      } while (i++ < buf->lastused);
+        i = buf->position;
+        do {
+          turbodisk_byte(buf->data[i]);
+        } while (i++ < buf->lastused);
 
-      break;
-    } else {
-      /* Send the complete 254 byte buffer */
-      turbodisk_buffer(buf->data + buf->position, 254);
-      if (buf->refill(buf)) {
-        /* Some error, abort */
-        turbodisk_byte(0xff);
         break;
+      } else {
+        /* Send the complete 254 byte buffer */
+        turbodisk_buffer(buf->data + buf->position, 254);
+        if (buf->refill(buf)) {
+          /* Some error, abort */
+          turbodisk_byte(0xff);
+          break;
+        }
       }
     }
   }
-  sei();
   buf->cleanup(buf);
   free_buffer(buf);
 
@@ -261,23 +262,23 @@ static void dreamload_send_block(const uint8_t* p) {
   uint8_t checksum = 0;
   int     n;
 
-  cli();
+  ATOMIC_BLOCK( ATOMIC_FORCEON ) {
 
-  // checksum is EOR of all bytes
-  for (n = 0; n < 256; n++)
-    checksum ^= p[n];
+    // checksum is EOR of all bytes
+    for (n = 0; n < 256; n++)
+      checksum ^= p[n];
 
-  // send status, data bytes and checksum
-  dreamload_send_byte(0);
-  for (n = 0; n < 256; n++) {
-    dreamload_send_byte(*p);
-    p++;
+    // send status, data bytes and checksum
+    dreamload_send_byte(0);
+    for (n = 0; n < 256; n++) {
+      dreamload_send_byte(*p);
+      p++;
+    }
+    dreamload_send_byte(checksum);
+
+    // release CLOCK and DATA
+    IEC_OUT &= (uint8_t)~(IEC_OBIT_ATN|IEC_OBIT_DATA|IEC_OBIT_CLOCK|IEC_OBIT_SRQ);
   }
-  dreamload_send_byte(checksum);
-
-  // release CLOCK and DATA
-  IEC_OUT &= (uint8_t)~(IEC_OBIT_ATN|IEC_OBIT_DATA|IEC_OBIT_CLOCK|IEC_OBIT_SRQ);
-  sei();
 }
 
 void load_dreamload(void) {
@@ -286,29 +287,29 @@ void load_dreamload(void) {
   buffer_t *buf;
 
   /* disable IRQs while loading the final code, so no jobcodes are read */
-  cli();
-  set_clock_irq(0);
-  set_atn_irq(0);
+  ATOMIC_BLOCK( ATOMIC_FORCEON ) {
+    set_clock_irq(0);
+    set_atn_irq(0);
 
-  // Release clock and data
-  IEC_OUT &= (uint8_t)~(IEC_OBIT_ATN|IEC_OBIT_DATA|IEC_OBIT_CLOCK|IEC_OBIT_SRQ);
+    // Release clock and data
+    IEC_OUT &= (uint8_t)~(IEC_OBIT_ATN|IEC_OBIT_DATA|IEC_OBIT_CLOCK|IEC_OBIT_SRQ);
 
-  /* load final drive code, fixed length */
-  type = 0;
-  for (n = 4 * 256; n != 0; --n) {
-    type ^= dreamload_get_byte();
+    /* load final drive code, fixed length */
+    type = 0;
+    for (n = 4 * 256; n != 0; --n) {
+      type ^= dreamload_get_byte();
+    }
+
+    if ((type == 0xac) || (type == 0xdc)) {
+      set_atn_irq(1);
+      detected_loader = FL_DREAMLOAD_OLD;
+    } else {
+      set_clock_irq(1);
+    }
+
+    /* mark no job waiting, enable IRQs to get job codes */
+    fl_track = 0xff;
   }
-
-  if ((type == 0xac) || (type == 0xdc)) {
-    set_atn_irq(1);
-    detected_loader = FL_DREAMLOAD_OLD;
-  } else {
-    set_clock_irq(1);
-  }
-
-  /* mark no job waiting, enable IRQs to get job codes */
-  fl_track = 0xff;
-  sei();
 
   buf = alloc_system_buffer();
   if (!buf) {
@@ -363,6 +364,5 @@ void load_dreamload(void) {
 error:
   set_clock_irq(0);
   set_atn_irq(0);
-  sei();
 }
 #endif

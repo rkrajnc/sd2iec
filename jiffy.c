@@ -29,6 +29,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
+#include <util/atomic.h>
 #include "config.h"
 #include "avrcompat.h"
 #include "iec-ll.h"
@@ -45,78 +46,78 @@ uint8_t jiffy_receive(uint8_t *busstate) {
   uint8_t data,tmp;
 
   data = 0;
-  cli();
+  ATOMIC_BLOCK( ATOMIC_FORCEON ) {
 
-  /* Set clock+data high */
-  set_clock(1);
-  set_data(1);
+    /* Set clock+data high */
+    set_clock(1);
+    set_data(1);
 
-  /* Wait until clock is high and emulate ATN-Ack */
-  while (!IEC_CLOCK) {
-    if (!IEC_ATN)
-      set_data(0);
+    /* Wait until clock is high and emulate ATN-Ack */
+    while (!IEC_CLOCK) {
+      if (!IEC_ATN)
+        set_data(0);
+    }
+
+    /* Wait for 13us from clock high (plus offset to center sampling window) */
+    start_timeout(TIMEOUT_US(13 + JIFFY_OFFSET_RECV));
+    while (!has_timed_out());
+
+    /* Start the next timeout */
+    start_timeout(TIMEOUT_US(13));
+
+    /* Calculate data values */
+    tmp = IEC_PIN;
+    if (tmp & IEC_BIT_DATA)
+      data |= _BV(5);
+    if (tmp & IEC_BIT_CLOCK)
+      data |= _BV(4);
+
+    /* Wait for the timeout */
+    while (!has_timed_out()) ;
+
+    /* Bits 7+6 */
+    start_timeout(TIMEOUT_US(11));
+
+    tmp = IEC_PIN;
+    if (tmp & IEC_BIT_DATA)
+      data |= _BV(7);
+    if (tmp & IEC_BIT_CLOCK)
+      data |= _BV(6);
+
+    while (!has_timed_out()) ;
+
+    /* Bits 1+3 */
+    start_timeout(TIMEOUT_US(13));
+
+    tmp = IEC_PIN;
+    if (tmp & IEC_BIT_DATA)
+      data |= _BV(1);
+    if (tmp & IEC_BIT_CLOCK)
+      data |= _BV(3);
+
+    while (!has_timed_out()) ;
+
+    /* Bits 0+2 */
+    start_timeout(TIMEOUT_US(13));
+
+    tmp = IEC_PIN;
+    if (tmp & IEC_BIT_DATA)
+      data |= _BV(0);
+    if (tmp & IEC_BIT_CLOCK)
+      data |= _BV(2);
+
+    while (!has_timed_out()) ;
+
+    /* Read EOI mark */
+    start_timeout(TIMEOUT_US(6));
+    *busstate = IEC_PIN;
+
+    while (!has_timed_out()) ;
+
+    /* Data low */
+    set_data(0);
+
   }
-
-  /* Wait for 13us from clock high (plus offset to center sampling window) */
-  start_timeout(TIMEOUT_US(13 + JIFFY_OFFSET_RECV));
-  while (!has_timed_out());
-
-  /* Start the next timeout */
-  start_timeout(TIMEOUT_US(13));
-
-  /* Calculate data values */
-  tmp = IEC_PIN;
-  if (tmp & IEC_BIT_DATA)
-    data |= _BV(5);
-  if (tmp & IEC_BIT_CLOCK)
-    data |= _BV(4);
-
-  /* Wait for the timeout */
-  while (!has_timed_out()) ;
-
-  /* Bits 7+6 */
-  start_timeout(TIMEOUT_US(11));
-
-  tmp = IEC_PIN;
-  if (tmp & IEC_BIT_DATA)
-    data |= _BV(7);
-  if (tmp & IEC_BIT_CLOCK)
-    data |= _BV(6);
-
-  while (!has_timed_out()) ;
-
-  /* Bits 1+3 */
-  start_timeout(TIMEOUT_US(13));
-
-  tmp = IEC_PIN;
-  if (tmp & IEC_BIT_DATA)
-    data |= _BV(1);
-  if (tmp & IEC_BIT_CLOCK)
-    data |= _BV(3);
-
-  while (!has_timed_out()) ;
-
-  /* Bits 0+2 */
-  start_timeout(TIMEOUT_US(13));
-
-  tmp = IEC_PIN;
-  if (tmp & IEC_BIT_DATA)
-    data |= _BV(0);
-  if (tmp & IEC_BIT_CLOCK)
-    data |= _BV(2);
-
-  while (!has_timed_out()) ;
-
-  /* Read EOI mark */
-  start_timeout(TIMEOUT_US(6));
-  *busstate = IEC_PIN;
-
-  while (!has_timed_out()) ;
-
-  /* Data low */
-  set_data(0);
-
-  sei();
 
   return data ^ 0xff;
 }
@@ -125,100 +126,100 @@ uint8_t jiffy_receive(uint8_t *busstate) {
 uint8_t jiffy_send(uint8_t value, uint8_t eoi, uint8_t loadflags) {
   uint8_t waitcond, eoimark, tmp;
 
-  cli();
-  if (loadflags)
-    waitcond = IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA;
-  else
-    waitcond = IEC_BIT_ATN | IEC_BIT_CLOCK;
+  ATOMIC_BLOCK( ATOMIC_FORCEON ) {
+    if (loadflags)
+      waitcond = IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA;
+    else
+      waitcond = IEC_BIT_ATN | IEC_BIT_CLOCK;
 
-  loadflags &= 0x7f;
+    loadflags &= 0x7f;
 
-  if (eoi)
-    eoimark = IEC_PULLUPS | IEC_OBIT_DATA;
-  else
-    eoimark = IEC_PULLUPS | IEC_OBIT_CLOCK;
+    if (eoi)
+      eoimark = IEC_PULLUPS | IEC_OBIT_DATA;
+    else
+      eoimark = IEC_PULLUPS | IEC_OBIT_CLOCK;
 
-  set_data(1);
-  set_clock(1);
-  _delay_us(1); // let the bus settle
+    set_data(1);
+    set_clock(1);
+    _delay_us(1); // let the bus settle
 
-  value ^= 0xff;
+    value ^= 0xff;
 
-  while ((IEC_PIN & (IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA)) == waitcond) ;
+    while ((IEC_PIN & (IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA)) == waitcond) ;
 
-  /* first bitpair */
-  start_timeout(TIMEOUT_US(6 + JIFFY_OFFSET_SEND));
+    /* first bitpair */
+    start_timeout(TIMEOUT_US(6 + JIFFY_OFFSET_SEND));
 
-  /* Calculate next output value */
-  tmp = IEC_PULLUPS;
-  if (value & _BV(0))
-    tmp |= IEC_OBIT_CLOCK;
-  if (value & _BV(1))
-    tmp |= IEC_OBIT_DATA;
+    /* Calculate next output value */
+    tmp = IEC_PULLUPS;
+    if (value & _BV(0))
+      tmp |= IEC_OBIT_CLOCK;
+    if (value & _BV(1))
+      tmp |= IEC_OBIT_DATA;
 
-  value >>= 2;
+    value >>= 2;
 
-  /* Wait until the timeout is reached */
-  while (!has_timed_out()) ;
-
-  /* Send the data */
-  IEC_OUT = tmp;
-
-  /* 10 microseconds until the next transmission */
-  start_timeout(TIMEOUT_US(10));
-
-  /* For some reason gcc generates much smaller code here when using copy&paste. */
-  /* A version using a for loop used ~640 bytes more flash than this.            */
-
-  /* second bitpair */
-  tmp = IEC_PULLUPS;
-  if (value & _BV(0))
-    tmp |= IEC_OBIT_CLOCK;
-  if (value & _BV(1))
-    tmp |= IEC_OBIT_DATA;
-
-  value >>= 2;
-  while (!has_timed_out()) ;
-  IEC_OUT = tmp;
-
-  start_timeout(TIMEOUT_US(11));
-
-  /* third bitpair */
-  tmp = IEC_PULLUPS;
-  if (value & _BV(0))
-    tmp |= IEC_OBIT_CLOCK;
-  if (value & _BV(1))
-    tmp |= IEC_OBIT_DATA;
-
-  value >>= 2;
-  while (!has_timed_out()) ;
-  IEC_OUT = tmp;
-
-  start_timeout(TIMEOUT_US(10));
-
-  /* fourth bitpair */
-  tmp = IEC_PULLUPS;
-  if (value & _BV(0))
-    tmp |= IEC_OBIT_CLOCK;
-  if (value & _BV(1))
-    tmp |= IEC_OBIT_DATA;
-
-  while (!has_timed_out()) ;
-  IEC_OUT = tmp;
-
-  start_timeout(TIMEOUT_US(11));
-
-  /* EOI marker */
-  if (!loadflags) {
+    /* Wait until the timeout is reached */
     while (!has_timed_out()) ;
-    IEC_OUT = eoimark;
-    _delay_us(1);
-    /* Wait until Data and/or ATN are low */
-    while ((IEC_PIN & (IEC_BIT_ATN | IEC_BIT_DATA)) == (IEC_BIT_ATN | IEC_BIT_DATA)) ;
-    sei();
-    return !IEC_ATN;
+
+    /* Send the data */
+    IEC_OUT = tmp;
+
+    /* 10 microseconds until the next transmission */
+    start_timeout(TIMEOUT_US(10));
+
+    /* For some reason gcc generates much smaller code here when using copy&paste. */
+    /* A version using a for loop used ~640 bytes more flash than this.            */
+
+    /* second bitpair */
+    tmp = IEC_PULLUPS;
+    if (value & _BV(0))
+      tmp |= IEC_OBIT_CLOCK;
+    if (value & _BV(1))
+      tmp |= IEC_OBIT_DATA;
+
+    value >>= 2;
+    while (!has_timed_out()) ;
+    IEC_OUT = tmp;
+
+    start_timeout(TIMEOUT_US(11));
+
+    /* third bitpair */
+    tmp = IEC_PULLUPS;
+    if (value & _BV(0))
+      tmp |= IEC_OBIT_CLOCK;
+    if (value & _BV(1))
+      tmp |= IEC_OBIT_DATA;
+
+    value >>= 2;
+    while (!has_timed_out()) ;
+    IEC_OUT = tmp;
+
+    start_timeout(TIMEOUT_US(10));
+
+    /* fourth bitpair */
+    tmp = IEC_PULLUPS;
+    if (value & _BV(0))
+      tmp |= IEC_OBIT_CLOCK;
+    if (value & _BV(1))
+      tmp |= IEC_OBIT_DATA;
+
+    while (!has_timed_out()) ;
+    IEC_OUT = tmp;
+
+    start_timeout(TIMEOUT_US(11));
+
+    tmp = 0;
+    /* EOI marker */
+    if (!loadflags) {
+      while (!has_timed_out()) ;
+      IEC_OUT = eoimark;
+      _delay_us(1);
+      /* Wait until Data and/or ATN are low */
+      while ((IEC_PIN & (IEC_BIT_ATN | IEC_BIT_DATA)) == (IEC_BIT_ATN | IEC_BIT_DATA)) ;
+      tmp = !IEC_ATN;
+    }
+    // FIXME: Check original roms
   }
-  // FIXME: Check original roms
-  sei();
-  return 0;
+  return tmp;
 }

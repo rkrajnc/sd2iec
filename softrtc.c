@@ -29,6 +29,7 @@
 #include <inttypes.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
+#include <util/atomic.h>
 #include "config.h"
 #include "time.h"
 #include "rtc.h"
@@ -125,22 +126,20 @@ void increment_rtc(void) {
 /* Read the current time from the RTC */
 void read_rtc(struct tm *time) {
   time_t t;
-  uint8_t sreg = SREG;
 
-  cli();
-  t = rtc;
-  SREG = sreg;
+  ATOMIC_BLOCK( ATOMIC_RESTORESTATE ) {
+    t = rtc;
+  }
   gmtime(&t,time);
 }
 
 /* Set the time in the RTC */
 void set_rtc(struct tm *time) {
   time_t t = mktime(time);
-  uint8_t sreg = SREG;
 
-  cli();
-  rtc = t;
-  SREG = sreg;
+  ATOMIC_BLOCK( ATOMIC_RESTORESTATE ) {
+    rtc = t;
+  }
 }
 
 void init_rtc(void) {

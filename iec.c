@@ -33,6 +33,7 @@
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
+#include <util/atomic.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -225,9 +226,9 @@ static int16_t _iec_getc(void) {
 static int16_t iec_getc(void) {
   int16_t val;
 
-  cli();
-  val = _iec_getc();
-  sei();
+  ATOMIC_BLOCK( ATOMIC_FORCEON ) {
+    val = _iec_getc();
+  }
   return val;
 }
 
@@ -757,7 +758,7 @@ void iec_mainloop(void) {
           } else
             /* Disk state indicated an error, try to recover by initialising */
             init_fatops(1);
-          
+
           update_leds();
         }
 #endif
