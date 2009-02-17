@@ -568,6 +568,8 @@ Other important notes:
 
 Compilation notes:
 ==================
+sd2iec requires avr-libc version 1.6.x.
+
 sd2iec is set up to be compiled in multiple configurations, controlled by
 configuration files. By default the Makefile looks for a file named
 'config', but you can override it by providing the name on the make

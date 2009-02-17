@@ -2,6 +2,7 @@
         - ignore DEL files in file_open
         - drive mapper
         - EXOS V3 fastloader support
+        - requires avr-libc 1.6.x
 
 2008-10-02 - release 0.8.0pre1
         - Implement Dreamload emulation
