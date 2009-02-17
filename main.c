@@ -88,6 +88,9 @@ void poison_memory(void) {
 }
 #endif
 
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ > 1)
+int main(void) __attribute__((OS_main));
+#endif
 int main(void) {
 #if defined __AVR_ATmega644__ || defined __AVR_ATmega644P__ || defined __AVR_ATmega2561__
   asm volatile("in  r24, %0\n"

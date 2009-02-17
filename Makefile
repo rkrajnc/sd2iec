@@ -7,7 +7,7 @@ PATCHLEVEL = 0
 FIX =
 
 # Forces bootloader version to 0, comment out for release
-PRERELEASE = pre1
+PRERELEASE = PRE1
 
 #----------------------------------------------------------------------------
 # WinAVR Makefile Template written by Eric B. Weddington, Joerg Wunsch, et al.
@@ -22,6 +22,7 @@ PRERELEASE = pre1
 # Markus Pfaff
 # Sander Pool
 # Frederik Rouleau
+# Carlos Lamas
 #
 #
 # Extensively modified for sd2iec by Ingo Korb
@@ -219,6 +220,22 @@ CFLAGS += -Wa,-adhlns=$(OBJDIR)/$(<:.c=.lst)
 CFLAGS += -I$(OBJDIR)
 CFLAGS += $(patsubst %,-I%,$(EXTRAINCDIRS))
 CFLAGS += $(CSTANDARD)
+CFLAGS += -ffunction-sections -fdata-sections
+#CFLAGS += -mcall-prologues
+
+# these are needed for GCC 4.3.2, which is more aggressive at inlining
+CFLAGS += --param inline-call-cost=3
+CFLAGS += -fno-inline-small-functions
+CFLAGS += -fno-move-loop-invariants
+CFLAGS += -fno-split-wide-types
+
+
+# turn these on to keep the functions in the same order as in the source
+# this is only useful if you're looking at disassembly
+#CFLAGS += -fno-reorder-blocks
+#CFLAGS += -fno-reorder-blocks-and-partition
+#CFLAGS += -fno-reorder-functions
+#CFLAGS += -fno-toplevel-reorder
 
 ifeq ($(CONFIG_STACK_TRACKING),y)
   CFLAGS += -finstrument-functions
@@ -285,8 +302,9 @@ EXTMEMOPTS =
 LDFLAGS = -Wl,-Map=$(TARGET).map,--cref
 LDFLAGS += $(EXTMEMOPTS)
 LDFLAGS += $(PRINTF_LIB) $(SCANF_LIB) $(MATH_LIB)
+LDFLAGS += -Wl,--gc-sections
 ifeq ($(CONFIG_LINKER_RELAX),y)
-  LDFLAGS += -Wl,-O9,-relax
+  LDFLAGS += -Wl,-O9,--relax
 endif
 
 
