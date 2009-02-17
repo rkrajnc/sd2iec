@@ -127,7 +127,7 @@ void increment_rtc(void) {
 void read_rtc(struct tm *time) {
   time_t t;
 
-  ATOMIC_BLOCK( ATOMIC_RESTORESTATE ) {
+  ATOMIC_BLOCK( ATOMIC_FORCEON ) {
     t = rtc;
   }
   gmtime(&t,time);
@@ -137,7 +137,7 @@ void read_rtc(struct tm *time) {
 void set_rtc(struct tm *time) {
   time_t t = mktime(time);
 
-  ATOMIC_BLOCK( ATOMIC_RESTORESTATE ) {
+  ATOMIC_BLOCK( ATOMIC_FORCEON ) {
     rtc = t;
   }
 }
