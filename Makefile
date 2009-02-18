@@ -224,11 +224,12 @@ CFLAGS += -ffunction-sections -fdata-sections
 #CFLAGS += -mcall-prologues
 
 # these are needed for GCC 4.3.2, which is more aggressive at inlining
+# gcc-4.2 knows one of those, but it tends to increase code size
+ifeq ($(shell $(CC) --version|gawk -f gcctest.awk),YES)
 CFLAGS += --param inline-call-cost=3
 CFLAGS += -fno-inline-small-functions
 CFLAGS += -fno-move-loop-invariants
 CFLAGS += -fno-split-wide-types
-
 
 # turn these on to keep the functions in the same order as in the source
 # this is only useful if you're looking at disassembly
@@ -236,6 +237,7 @@ CFLAGS += -fno-split-wide-types
 #CFLAGS += -fno-reorder-blocks-and-partition
 #CFLAGS += -fno-reorder-functions
 #CFLAGS += -fno-toplevel-reorder
+endif
 
 ifeq ($(CONFIG_STACK_TRACKING),y)
   CFLAGS += -finstrument-functions
