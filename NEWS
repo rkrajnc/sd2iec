@@ -1,3 +1,7 @@
+2009-03-07 - release 0.6.7
+        - Bugfix: Close previous file if secondary is reused without close
+        - Bugfix: Minor Jiffy timing fix on EOI
+
 2008-05-22 - release 0.6.6
         - Tell AR6 to disable its fastloader
         - Backported FC3 fastload/-save
