@@ -76,5 +76,7 @@ DRESULT ata_write (BYTE drv, const BYTE *data, DWORD sector, BYTE count);
 #if _USE_IOCTL != 0
 DRESULT ata_ioctl (BYTE drv, BYTE ctrl, void *buff);
 #endif
+DRESULT ata_getinfo(BYTE drv, BYTE page, void *buffer);
+
 
 #endif /*ATA_H_*/

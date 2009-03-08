@@ -334,3 +334,18 @@ DRESULT df_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
   return RES_OK;
 }
 DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) __attribute__ ((weak, alias("df_write")));
+
+DRESULT df_getinfo(BYTE drv, BYTE page, void *buffer) {
+  diskinfo0_t *di = buffer;
+
+  if (page != 0)
+    return RES_ERROR;
+
+  di->validbytes  = sizeof(diskinfo0_t);
+  di->disktype    = DISK_TYPE_DF;
+  di->sectorsize  = 2;
+  di->sectorcount = SECTORS_PER_DEVICE * PAGES_PER_SECTOR;
+
+  return RES_OK;
+}
+DRESULT disk_getinfo(BYTE drv, BYTE page, void *buffer) __attribute__ ((weak, alias("df_getinfo")));

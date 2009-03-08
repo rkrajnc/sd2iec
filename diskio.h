@@ -49,6 +49,24 @@ typedef enum {
         RES_PARERR              /* 4: Invalid Parameter */
 } DRESULT;
 
+/**
+ * struct diskinfo0_t - disk info data structure for page 0
+ * @validbytes : Number of valid bytes in this struct
+ * @maxpage    : Highest diskinfo page supported
+ * @disktype   : type of the disk (DISK_TYPE_* values)
+ * @sectorsize : sector size divided by 256
+ * @sectorcount: number of sectors on the disk
+ *
+ * This is the struct returned in the data buffer when disk_getinfo
+ * is called with page=0.
+ */
+typedef struct {
+  uint8_t  validbytes;
+  uint8_t  maxpage;
+  uint8_t  disktype;
+  uint8_t  sectorsize;   /* divided by 256 */
+  uint32_t sectorcount;  /* 2 TB should be enough... (512 byte sectors) */
+} diskinfo0_t;
 
 /*---------------------------------------*/
 /* Prototypes for disk control functions */
@@ -58,6 +76,7 @@ DSTATUS disk_status (BYTE);
 DRESULT disk_read (BYTE, BYTE*, DWORD, BYTE);
 DRESULT disk_write (BYTE, const BYTE*, DWORD, BYTE);
 #define disk_ioctl(a,b,c) RES_OK
+DRESULT disk_getinfo(BYTE drv, BYTE page, void *buffer);
 
 void init_disk(void);
 
@@ -65,6 +84,13 @@ void init_disk(void);
 enum diskstates { DISK_CHANGED = 0, DISK_REMOVED, DISK_OK, DISK_ERROR };
 
 extern volatile enum diskstates disk_state;
+
+/* Disk type - part of the external API except for ATA2! */
+#define DISK_TYPE_ATA        0
+#define DISK_TYPE_ATA2       1
+#define DISK_TYPE_SD         2
+#define DISK_TYPE_DF         3
+#define DISK_TYPE_NONE       7
 
 #ifdef NEED_DISKMUX
 
@@ -83,12 +109,6 @@ uint32_t get_default_driveconfig(void);
 /* Number of bits used for the drive, the disk type */
 /* uses the remainder (4 bits per entry).           */
 #  define DRIVE_BITS           1
-
-#  define DISK_TYPE_ATA        0
-#  define DISK_TYPE_ATA2       1
-#  define DISK_TYPE_SD         2
-#  define DISK_TYPE_DF         3
-#  define DISK_TYPE_NONE       7
 
 /* Calculate mask from the shift value */
 #  define DRIVE_MASK           ((1 << DRIVE_BITS)-1)

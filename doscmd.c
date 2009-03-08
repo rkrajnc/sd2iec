@@ -542,6 +542,102 @@ static void parse_changepart(void) {
 
 
 /* ------------ */
+/*  D commands  */
+/* ------------ */
+static void parse_direct(void) {
+  buffer_t *buf;
+  uint8_t drive;
+  uint32_t sector;
+  DRESULT res;
+
+  /* This also guards against attempts to use the old Duplicate command. */
+  /* Its syntax is D1=0, so buffer[2] would never have a value that is   */
+  /* a valid secondary address.                                          */
+  buf = find_buffer(command_buffer[2]);
+  if (!buf) {
+    set_error(ERROR_NO_CHANNEL);
+    return;
+  }
+
+  if (buf->pvt.buffer.size > 1) {
+    uint8_t oldsec = buf->secondary;
+    buf->secondary = BUFFER_SEC_CHAIN - oldsec;
+    buf = buf->pvt.buffer.first;
+    buf->secondary = oldsec;
+  }
+
+  buf->position = 0;
+  buf->lastused = 255;
+
+  drive = command_buffer[3];
+  sector = *((uint32_t *)(command_buffer+4));
+
+  switch (command_buffer[1]) {
+  case 'I':
+    /* Get information */
+    memset(buf->data,0,256);
+    if (disk_getinfo(drive, command_buffer[4], buf->data) != RES_OK) {
+      set_error(ERROR_DRIVE_NOT_READY);
+      return;
+    }
+    break;
+
+  case 'R':
+    /* Read sector */
+    if (buf->pvt.buffer.size < 2) { // FIXME: Assumes 512-byte sectors
+      set_error(ERROR_BUFFER_TOO_SMALL);
+      return;
+    }
+    res = disk_read(drive, buf->data, sector, 1);
+    switch (res) {
+    case RES_OK:
+      return;
+
+    case RES_ERROR:
+      set_error(ERROR_READ_NOHEADER); // Any random READ ERROR
+      return;
+
+    case RES_PARERR:
+    case RES_NOTRDY:
+    default:
+      set_error_ts(ERROR_DRIVE_NOT_READY,res,0);
+      return;
+    }
+
+  case 'W':
+    /* Write sector */
+    if (buf->pvt.buffer.size < 2) { // FIXME: Assumes 512-byte sectors
+      set_error(ERROR_BUFFER_TOO_SMALL);
+      return;
+    }
+    res = disk_write(drive, buf->data, sector, 1);
+    switch(res) {
+    case RES_OK:
+      return;
+
+    case RES_WRPRT:
+      set_error(ERROR_WRITE_PROTECT);
+      return;
+
+    case RES_ERROR:
+      set_error(ERROR_WRITE_VERIFY);
+      return;
+
+    case RES_NOTRDY:
+    case RES_PARERR:
+    default:
+      set_error_ts(ERROR_DRIVE_NOT_READY,res,0);
+      return;
+    }
+
+  default:
+    set_error(ERROR_SYNTAX_UNABLE);
+    break;
+  }
+}
+
+
+/* ------------ */
 /*  E commands  */
 /* ------------ */
 
@@ -1473,6 +1569,11 @@ void parse_doscommand(void) {
     else
       /* Copy a file */
       parse_copy();
+    break;
+
+  case 'D':
+    /* Direct sector access (was duplicate in CBM drives) */
+    parse_direct();
     break;
 
   case 'E':

@@ -35,5 +35,6 @@ DSTATUS df_status(BYTE drv);
 DSTATUS df_initialize(BYTE drv);
 DRESULT df_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count);
 DRESULT df_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count);
+DRESULT df_getinfo(BYTE drv, BYTE page, void *buffer);
 
 #endif

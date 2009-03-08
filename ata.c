@@ -409,3 +409,21 @@ DRESULT ata_ioctl (BYTE drv, BYTE ctrl, void *buff) {
 DRESULT disk_ioctl (BYTE drv, BYTE ctrl, void *buff) __attribute__ ((weak, alias("ata_ioctl")));
 #endif /*  _USE_IOCTL != 0 */
 
+DRESULT ata_getinfo(BYTE drv, BYTE page, void *buffer) {
+  diskinfo0_t *di = buffer;
+
+  if (page != 0)
+    return RES_ERROR;
+
+  ATA_WRITE_CMD(ATA_CMD_IDENTIFY);
+  if (!ata_wait_data()) return RES_ERROR;
+
+  ata_read_part((BYTE *)&di->sectorcount, 60, 2);
+
+  di->validbytes = sizeof(diskinfo0_t);
+  di->disktype   = DISK_TYPE_ATA;
+  di->sectorsize = 2;
+
+  return RES_OK;
+}
+DRESULT disk_getinfo(BYTE drv, BYTE page, void *buffer) __attribute__ ((weak, alias("ata_getinfo")));

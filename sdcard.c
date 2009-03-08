@@ -132,6 +132,42 @@
 
 static uint8_t cardtype[MAX_CARDS];
 
+/**
+ * getbits - read value from bit buffer
+ * @buffer: pointer to the data buffer
+ * @start : index of the first bit in the value
+ * @bits  : number of bits in the value
+ *
+ * This function returns a value from the memory region passed as
+ * buffer, starting with bit "start" and "bits" bit long. The buffer
+ * is assumed to be MSB first, passing 0 for start will read starting
+ * from the highest-value bit of the first byte of the buffer.
+ */
+static uint32_t getbits(void *buffer, uint16_t start, int8_t bits) {
+  uint8_t *buf = buffer;
+  uint32_t result = 0;
+
+  if ((start % 8) != 0) {
+    /* Unaligned start */
+    result += buf[start / 8] & (0xff >> (start % 8));
+    bits  -= 8 - (start % 8);
+    start += 8 - (start % 8);
+  }
+  while (bits >= 8) {
+    result = (result << 8) + buf[start / 8];
+    start += 8;
+    bits -= 8;
+  }
+  if (bits > 0) {
+    result = result << bits;
+    result = result + (buf[start / 8] >> (8-bits));
+  } else if (bits < 0) {
+    /* Fraction of a single byte */
+    result = result >> -bits;
+  }
+  return result;
+}
+
 static uint8_t sdResponse(uint8_t expected)
 {
   unsigned short count = 0x0FFF;
@@ -646,3 +682,56 @@ DRESULT sd_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
   return RES_OK;
 }
 DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) __attribute__ ((weak, alias("sd_write")));
+
+DRESULT sd_getinfo(BYTE drv, BYTE page, void *buffer) {
+  uint8_t i;
+  uint8_t buf[18];
+  uint32_t capacity;
+
+  if (drv >= MAX_CARDS)
+    return RES_NOTRDY;
+
+  if (sd_status(drv) & STA_NODISK)
+    return RES_NOTRDY;
+
+  if (page != 0)
+    return RES_ERROR;
+
+  /* Try to calculate the total number of sectors on the card */
+  /* FIXME: Write a generic data read function and merge with sd_read */
+  if (sendCommand(drv, SEND_CSD, 0, 0) != 0) {
+    deselectCard(drv);
+    return RES_ERROR;
+  }
+
+  /* Wait for data token */
+  if (!sdResponse(0xfe)) {
+    deselectCard(drv);
+    return RES_ERROR;
+  }
+
+  for (i=0;i<18;i++) {
+    buf[i] = spiTransferByte(0xff);
+  }
+  deselectCard(drv);
+
+  if (cardtype[drv] & CARD_SDHC) {
+    /* Special CSD for SDHC cards */
+    capacity = (1 + getbits(buf,127-69,22)) * 1024;
+  } else {
+    /* Assume that MMC-CSD 1.0/1.1/1.2 and SD-CSD 1.1 are the same... */
+    uint8_t exponent = 2 + getbits(buf, 127-49, 3);
+    capacity = 1 + getbits(buf, 127-73, 12);
+    exponent += getbits(buf, 127-83,4) - 9;
+    while (exponent--) capacity *= 2;
+  }
+
+  diskinfo0_t *di = buffer;
+  di->validbytes  = sizeof(diskinfo0_t);
+  di->disktype    = DISK_TYPE_SD;
+  di->sectorsize  = 2;
+  di->sectorcount = capacity;
+
+  return RES_OK;
+}
+DRESULT disk_getinfo(BYTE drv, BYTE page, void *buffer) __attribute__ ((weak, alias("sd_getinfo")));

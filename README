@@ -99,6 +99,90 @@ Supported commands:
   Copying REL files should work, but isn't tested well. Mixing REL and
   non-REL files in an append operation isn't supported.
 
+- D
+  Direct sector access, this is a command group introduced by sd2iec.
+  Some Commodore drives use D for disk duplication between two drives
+  in the same unit, an attempt to use that command with sd2iec should
+  result in an error message.
+
+  D has three subcommands: DI (Info), DR (Read) and DW (Write).
+  Each of those commands requires a buffer to be opened (similiar
+  to U1/U2), but due to the larger sector size of the storage devices
+  used by sd2iec it needs to be a large buffer of size 2 (512 bytes)
+  or larger. The exception is the DI command with page set to 0,
+  its result will always fir into a standard 256 byte buffer.
+  If you try to use one of the commands with a buffer that is too
+  small a new error message is returned, "78,BUFFER TOO SMALL,00,00".
+
+  In the following paragraphs the secondary address that was used
+  to open the buffer is called "bufchan".
+
+  - DI
+    In BASIC notation the command format is
+      "DI"+chr$(bufchan)+chr$(device)+chr$(page)
+
+    "device" is the number of the physical device to be queried,
+    "page" the information page to be retrieved. Currently the
+    only page implemented is page 0 which will return the
+    following data structure:
+     1 byte : Number of valid bytes in this structure
+              This includes this byte and is meant to provide
+              backwards compatibility if this structure is extended
+              at a later time. New fields will always be added to
+              the end so old programs can still read the fields
+              they know about.
+     1 byte : Highest diskinfo page supported
+              Always 0 for now, will increase if more information
+              pages are added (planned: Complete ATA IDENTIFY
+              output for IDE and CSD for SD)
+     1 byte : Disk type
+              This field identifies the device type, currently
+              implemented values are:
+                0  IDE
+                2  SD
+                3  Dataflash
+     1 byte : Sector size divided by 256
+              This field holds the sector size of the storage device
+              divided by 256.
+     4 bytes: Number of sectors on the device 
+              A little-endian (same byte order as the 6502) value
+              of the number of sectors on the storage device.
+              If there is ever a need to increase the reported
+              capacity beyond 2TB (for 512 byte sectors) this
+              field will return 0 and a 64-bit value will be added
+              to this diskinfo page.
+
+    If you want to determine if there is a device that responds
+    to a given number, read info page 0 for it. If there is no
+    device present that corresponds to the number you will see
+    a DRIVE NOT READY error on the error channel and the
+    "number of valid bytes" entry in the structure will be 0.
+
+    Do not assume that device numbers are stable between releases
+    and do not assume that they are continuous either. To scan
+    for all present devices you should query at least 0-7 for now,
+    but this limit may increase in later releases.
+
+  - DR/DW
+    In BASIC notation the command format would be
+      "DR"+chr$(bufchan)+chr$(device)
+          +chr$(sector AND 255)
+          +chr$((sector/256) AND 255)
+          +chr$((sector/65536) AND 255)
+          +chr$((sector/16777216) AND 255)
+    (or "DW" instead of "DR)
+    but this won't work on the C64 because AND does not accept
+    parameters larger than 32767. The principle should be clear
+    though, the last four bytes are a 32 bit sector number in
+    little-endian byte order.
+
+    DR reads the sector to the buffer, DW writes the contents
+    of the buffer to the sector. Both commands will update the
+    error channel if an error occurs, for DR the 20,READ ERROR
+    was chosen to represent read errors; for write problems
+    during DW it sets 25,WRITE ERROR for errors and 26,WRITE
+    PROTECT ON if the device is read-only.
+
 - G-P
   Get partition info, see CMD FD/HD manual for details. The reported
   information is partially faked, feedback is welcome.

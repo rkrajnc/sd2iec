@@ -170,4 +170,30 @@ DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
   }
 }
 
+DRESULT disk_getinfo(BYTE drv, BYTE page, void *buffer) {
+  switch(drv >> DRIVE_BITS) {
+#ifdef HAVE_DF
+  case DISK_TYPE_DF:
+    return df_getinfo(drv & DRIVE_MASK,page,buffer);
+#endif
+
+#ifdef HAVE_ATA
+  case DISK_TYPE_ATA:
+    return ata_getinfo(drv & DRIVE_MASK,page,buffer);
+
+  case DISK_TYPE_ATA2:
+    return ata_getinfo((drv & DRIVE_MASK) + 2,page,buffer);
+#endif
+
+#ifdef HAVE_SD
+  case DISK_TYPE_SD:
+    return sd_getinfo(drv & DRIVE_MASK,page,buffer);
+#endif
+
+  default:
+    return RES_ERROR;
+  }
+}
+
+
 #endif
