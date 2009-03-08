@@ -169,6 +169,9 @@ DRESULT df_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
   uint16_t i,crc,recvcrc,wcount;
   uint8_t tmp,sec;
 
+  if (drv != 0)
+    return RES_PARERR;
+
   for (sec=0;sec<count;sec++) {
     if (sector >= SECTORS_PER_DEVICE * PAGES_PER_SECTOR)
       return RES_ERROR;
@@ -230,6 +233,9 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) __attribute_
 DRESULT df_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
   uint8_t sec,j;
   uint16_t crc,i,wcount;
+
+  if (drv != 0)
+    return RES_PARERR;
 
   for (sec=0;sec<count;sec++) {
     select_df(1);

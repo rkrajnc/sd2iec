@@ -476,9 +476,8 @@ DRESULT sd_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
   uint8_t sec,res,tmp,errorcount;
   uint16_t crc,recvcrc;
 
-#ifndef CONFIG_TWINSD
-  drv = 0;
-#endif
+  if (drv >= MAX_CARDS)
+    return RES_PARERR;
 
   for (sec=0;sec<count;sec++) {
     errorcount = 0;
@@ -570,9 +569,10 @@ DRESULT sd_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
   uint8_t res,sec,errorcount,status;
   uint16_t crc;
 
-#ifndef CONFIG_TWINSD
-  drv = 0;
-#else
+  if (drv >= MAX_CARDS)
+    return RES_PARERR;
+
+#ifdef CONFIG_TWINSD
   if (drv != 0) {
     if (SD2_PIN & SD2_WP)
       return RES_WRPRT;
