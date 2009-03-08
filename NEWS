@@ -1,4 +1,4 @@
-2009-xx-xx - release 0.8.0
+2009-08-08 - release 0.8.0
         - direct sector access of the real storage device
         - ignore DEL files in file_open
         - drive mapper
