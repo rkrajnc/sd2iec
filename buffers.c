@@ -80,6 +80,23 @@ void init_buffers(void) {
 }
 
 /**
+ * alloc_specific_buffer - allocate a specific buffer for system use
+ *
+ * This function allocates the specified buffer and marks it as used.
+ * Returns without doing anything if the buffer is already allocated.
+ */
+static void alloc_specific_buffer(uint8_t bufnum) {
+  if (!buffers[bufnum].allocated) {
+    /* Clear everything except the data pointer */
+    memset(sizeof(uint8_t *)+(char *)&(buffers[bufnum]),0,sizeof(buffer_t)-sizeof(uint8_t *));
+    buffers[bufnum].allocated = 1;
+    buffers[bufnum].secondary = BUFFER_SEC_SYSTEM;
+    buffers[bufnum].refill    = callback_dummy;
+    buffers[bufnum].cleanup   = callback_dummy;
+  }
+}
+
+/**
  * alloc_system_buffer - allocate a buffer for system use
  *
  * This function allocates a buffer and marks it as used. Returns a
@@ -90,12 +107,7 @@ buffer_t *alloc_system_buffer(void) {
 
   for (i=0;i<CONFIG_BUFFER_COUNT;i++) {
     if (!buffers[i].allocated) {
-      /* Clear everything except the data pointer */
-      memset(sizeof(uint8_t *)+(char *)&(buffers[i]),0,sizeof(buffer_t)-sizeof(uint8_t *));
-      buffers[i].allocated = 1;
-      buffers[i].secondary = BUFFER_SEC_SYSTEM;
-      buffers[i].refill    = callback_dummy;
-      buffers[i].cleanup   = callback_dummy;
+      alloc_specific_buffer(i);
       return &buffers[i];
     }
   }
@@ -119,6 +131,58 @@ buffer_t *alloc_buffer(void) {
     set_busy_led(1);
   }
   return buf;
+}
+
+/**
+ * alloc_linked_buffers - allocates linked buffers
+ * @count    : Number of buffers to allocate
+ *
+ * This function allocates count buffers, marks them as used and
+ * links them. It will also turn on the busy LED to notify the user.
+ * Returns a pointer to the first buffer structure or NULL if
+ * not enough buffers are free. The data segments of the allocated
+ * buffers are guranteed to be continuous.
+ */
+buffer_t *alloc_linked_buffers(uint8_t count) {
+  uint8_t i,freebufs,start;
+
+  freebufs = 0;
+  start    = 0;
+  for (i=0;i<CONFIG_BUFFER_COUNT;i++) {
+    if (buffers[i].allocated) {
+      /* Look for continuous buffers */
+      /* Switching data segments is possible, but probably not required */
+      freebufs = 0;
+    } else {
+      if (freebufs == 0)
+        start = i;
+      freebufs++;
+      /* Found enough free space */
+      if (freebufs == count)
+        break;
+    }
+  }
+
+  if (freebufs < count) {
+    set_error(ERROR_NO_CHANNEL);
+    return NULL;
+  }
+
+  /* Chain the buffers */
+  for (i=0;i<count;i++) {
+    alloc_specific_buffer(start+i);
+    active_buffers++;
+    buffers[start+i].secondary = 0;
+    buffers[start+i].pvt.buffer.next  = &buffers[start+i+1];
+    buffers[start+i].pvt.buffer.first = &buffers[start];
+    buffers[start+i].pvt.buffer.size  = count;
+  }
+
+  set_busy_led(1);
+
+  buffers[start+count-1].pvt.buffer.next = NULL;
+
+  return &buffers[start];
 }
 
 /**

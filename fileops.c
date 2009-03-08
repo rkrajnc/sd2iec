@@ -538,7 +538,7 @@ static uint8_t largebuffer_cleanup(buffer_t *buf) {
  */
 static void open_buffer(uint8_t secondary) {
   buffer_t *buf,*prev;
-  uint8_t i,count;
+  uint8_t count;
 
   if (command_length == 3 && command_buffer[1] == '#') {
     /* Open a large buffer */
@@ -546,43 +546,28 @@ static void open_buffer(uint8_t secondary) {
     if (count == 0)
       return;
 
-    /* Create a chain of linked buffers */
-    buf  = NULL; // gcc 4.1 "uninitialized" warning
-    prev = NULL;
-    i = count;
-    while (i-- > 0) {
-      buf = alloc_buffer();
-      if (buf == NULL)
-        return;
+    /* Allocate a chain of linked buffers */
+    buf = alloc_linked_buffers(count);
+    if (buf == NULL)
+      return;
 
-      buf->pvt.buffer.next = prev;
-
-      if (prev == NULL) {
-        /* First allocated is last in the chain, must send EOI there */
-        buf->sendeoi = 1;
-      }
-
-      /* Unique secondary for every chain, but must be user */
+    do {
       buf->secondary = BUFFER_SEC_CHAIN - secondary;
       buf->refill    = largebuffer_refill;
       buf->cleanup   = largebuffer_cleanup;
       buf->read      = 1;
       buf->lastused  = 255;
-      mark_write_buffer(buf);
-
-      prev = buf;
-    }
-
-    /* Set the first buffer as active by using the real secondary */
-    prev->secondary = secondary;
-
-    /* Set up "first" pointers in all buffers and sticky them along the way */
-    do {
-      buf->pvt.buffer.first = prev;
-      buf->pvt.buffer.size  = count;
       stick_buffer(buf);
+      mark_write_buffer(buf);
+      prev = buf;
       buf = buf->pvt.buffer.next;
     } while (buf != NULL);
+
+    prev->sendeoi = 1;
+    buf = prev->pvt.buffer.first;
+
+    /* Set the first buffer as active by using the real secondary */
+    buf->secondary = secondary;
 
   } else {
     /* Normal buffer request */

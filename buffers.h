@@ -140,6 +140,10 @@ buffer_t *alloc_system_buffer(void);
 /* Allocates a buffer - returns pointer to buffer or NULL if failure */
 buffer_t *alloc_buffer(void);
 
+/* Allocates linked buffers - returns pointer to first buffer or NULL if failure */
+/* Buffers are guranteed to have continuous data segments. */
+buffer_t *alloc_linked_buffers(uint8_t count);
+
 /* Deallocates a buffer */
 void free_buffer(buffer_t *buffer);
 
