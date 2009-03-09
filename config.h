@@ -336,7 +336,7 @@
 #  define HAVE_SD
 #  define SDCARD_DETECT         (!(PINB & _BV(PB7)))
 #  define SDCARD_DETECT_SETUP() do { DDRB &= ~_BV(PB7); PORTB |= _BV(PB7); } while(0)
-#  define SD_CHANGE_SETUP()     do { PCICR |= _BV(PCIE0); PCIFR |= _BV(PCIF0); } while (0)
+#  define SD_CHANGE_SETUP()     do { PCMSK0 |= _BV(PCINT7); PCICR |= _BV(PCIE0); PCIFR |= _BV(PCIF0); } while (0)
 #  define SD_CHANGE_VECT        PCINT0_vect
 #  define SDCARD_WP             (PINB & _BV(PB6))
 #  define SDCARD_WP_SETUP()     do { DDRB &= ~ _BV(PB6); PORTB |= _BV(PB6); } while(0)
