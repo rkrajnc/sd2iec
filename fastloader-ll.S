@@ -43,17 +43,17 @@
 
         .section .text
 
-#ifdef IEC_INT_VECT
+#ifdef IEC_ATN_INT_VECT
         ;; ===================================================================
-        ;; Interrupt service routine for IEC bus
+        ;; ATN(+CLK) Interrupt service routine for IEC bus
         ;; ===================================================================
         ;
         ; Functions called from here may change these registers:
         ; r0, r18, r19, r24
         ; Other registers must be saved and restored by the called functions
         ;
-        .global IEC_INT_VECT
-IEC_INT_VECT:
+        .global IEC_ATN_INT_VECT
+IEC_ATN_INT_VECT:
         ; functions called from here must only change these registers:
         push    r18
         in      r18, _SFR_IO_ADDR(SREG)
@@ -66,6 +66,7 @@ IEC_INT_VECT:
         lds     r18, _SFR_ADDR(IEC_PCMSK)
         bst     r18, IEC_PIN_ATN        ; only check ATN
         brtc    iiv_atn_irq_end         ; if it is an IRQ source
+#endif
 
         ; check if ATN is low
         sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_ATN
@@ -85,6 +86,7 @@ iiv_not_fl_dreamload_old:
         sbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA    ; DATA low
 
 iiv_atn_irq_end:
+#ifdef IEC_PCMSK
         lds     r18, _SFR_ADDR(IEC_PCMSK)
         bst     r18, IEC_PIN_CLOCK      ; only check CLOCK
         brtc    iiv_clock_irq_end       ; if it is an IRQ source
@@ -102,16 +104,10 @@ iiv_atn_irq_end:
         rcall   dreamload_get_command
         rjmp    iiv_clock_irq_end       ; no other CLOCK action needed
 iiv_not_fl_dreamload:
-#endif
+#endif // ifdef CONFIG_DREAMLOAD
+#endif // ifdef IEC_PCMSK
 
 iiv_clock_irq_end:
-
-#else // ifdef IEC_PCMSK
-        ; basic IRQ functionality w/o PCINT: ATN ACK
-        ; check if ATN is low
-        sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_ATN
-        sbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA    ; DATA low
-#endif
 
         pop     r0
         pop     r24
@@ -120,7 +116,54 @@ iiv_clock_irq_end:
         out     _SFR_IO_ADDR(SREG), r18
         pop     r18
         reti
-#endif // ifdef IEC_INT_VECT
+#endif // ifdef IEC_ATN_INT_VECT
+
+
+#ifdef IEC_CLK_INT_VECT
+        ;; ===================================================================
+        ;; CLK Interrupt service routine for IEC bus
+        ;; ===================================================================
+        ;
+        ; Functions called from here may change these registers:
+        ; r0, r18, r19, r24
+        ; Other registers must be saved and restored by the called functions
+        ;
+        .global IEC_CLK_INT_VECT
+IEC_CLK_INT_VECT:
+        ; functions called from here must only change these registers:
+        push    r18
+        in      r18, _SFR_IO_ADDR(SREG)
+        push    r18
+        push    r19
+        push    r24
+        push    r0
+
+        ; check if CLOCK is low
+        sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
+        rjmp    clk_irq_end
+
+        ; CLOCK is low, continue depending from active fast loader
+#ifdef CONFIG_DREAMLOAD
+        lds     r18, detected_loader
+        cpi     r18, FL_DREAMLOAD
+        brne    clk_not_fl_dreamload
+        ; dreamload, receive a command code
+        rcall   dreamload_get_command
+        rjmp    clk_irq_end       ; no other CLOCK action needed
+clk_not_fl_dreamload:
+#endif // ifdef CONFIG_DREAMLOAD
+
+clk_irq_end:
+
+        pop     r0
+        pop     r24
+        pop     r19
+        pop     r18
+        out     _SFR_IO_ADDR(SREG), r18
+        pop     r18
+        reti
+#endif // ifdef IEC_CLK_INT_VECT
+
 
 #if defined(CONFIG_JIFFY_ASM) || defined(CONFIG_TURBODISK) || defined(CONFIG_FC3)
         ;; ===================================================================

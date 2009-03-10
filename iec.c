@@ -116,7 +116,7 @@ static uint8_t check_atn(void) {
       return 0;
 }
 
-#ifndef IEC_INT_VECT
+#ifndef IEC_ATN_INT_VECT
 
 /// Interrupt routine that simulates the hardware-auto-acknowledge of ATN
 /* This currently runs once every 500 microseconds, keep small! */
@@ -532,10 +532,11 @@ void init_iec(void) {
   IEC_PORT &= (uint8_t)~(IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA | IEC_BIT_SRQ);
 #endif
 
-  /* Prepare IEC interrupt (if any) */
-  IEC_INT_SETUP();
+  /* Prepare IEC interrupts (if any) */
+  IEC_ATN_INT_SETUP();
+  IEC_CLK_INT_SETUP();
 
-#ifndef IEC_INT_VECT
+#ifndef IEC_ATN_INT_VECT
   /* Issue an interrupt every 500us with timer 2 for ATN-Acknowledge.    */
   /* The exact timing isn't critical, it just has to be faster than 1ms. */
   /* Every 800us was too slow in rare situations.                        */

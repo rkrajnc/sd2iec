@@ -254,8 +254,8 @@ void save_fc3(void) {
 #endif
 
 #ifdef CONFIG_DREAMLOAD
-#ifndef IEC_PCMSK
-#  error "Sorry, DreamLoad is only supported on platforms using PCINT IEC"
+#ifndef set_clock_irq
+#  error "Sorry, DreamLoad is only supported on platforms with a CLK interrupt"
 #endif
 
 static void dreamload_send_block(const uint8_t* p) {
@@ -335,6 +335,12 @@ void load_dreamload(void) {
 
     set_busy_led(1);
 
+    /* Output the track/sector for debugging purposes */
+    uart_puthex(fl_track);
+    uart_putc('/');
+    uart_puthex(fl_sector);
+    uart_putcrlf();
+
     if (fl_track == 0) {
       // check special commands first
       if (fl_sector == 0) {
@@ -352,6 +358,7 @@ void load_dreamload(void) {
         dreamload_send_block(buf->data);
       }
       else {
+        // fl_sector == 2 is canonical
         set_busy_led(0);
       }
     } else {

@@ -187,12 +187,21 @@
 //#  define IEC_DDROUT     DDRY
 //#  define IEC_PORTIN     PORTX
 
-/* ATN interrupt line (not required) */
+/* ATN interrupt (not required) */
 /* If this is commented out, the ATN line will be polled by a timer interrupt instead */
-//#  define ATN_INT_VECT    PCINT0_vect
-//#  define ATN_INT_SETUP() do { PCMSK0 = _BV(PCINT0); PCIFR |= _BV(PCIF0); } while (0)
-//#  define set_atnack(x)   if (x) { PCICR |= _BV(PCIE0); } else { PCICR &= (uint8_t)~_BV(PCIE0); }
-#  define ATN_INT_SETUP() do {} while (0)
+//#  define IEC_ATN_INT         PCINT0
+//#  define IEC_ATN_INT_VECT    PCINT0_vect
+//#  define IEC_ATN_INT_SETUP() do { PCMSK0 = _BV(PCINT0); PCIFR |= _BV(PCIF0); } while (0)
+
+/* CLK interrupt (not required) */
+/* Dreamload requires interrupts for both the ATN and CLK lines. If both are served by */
+/* the same PCINT vector, define that as ATN interrupt above and define IEC_PCMSK.     */
+//#  define IEC_PCMSK             PCMSK0
+/* If the CLK line has its own dedicated interrupt, use the following definitions: */
+//#  define IEC_CLK_INT           INT5
+//#  define IEC_CLK_INT_VECT      INT5_vect
+//#  define IEC_CLK_INT_SETUP()   do { EICRB |= _BV(ISC50); } while (0)
+
 
 /*** User interface ***/
 /* Macros for the registers of the port where the buttons are connected */
@@ -262,8 +271,8 @@
 #  define IEC_PIN_DATA          PA1
 #  define IEC_PIN_CLOCK         PA2
 #  define IEC_PIN_SRQ           PA3
-#  define IEC_INT_VECT          PCINT0_vect
-#  define IEC_INT_SETUP()       do { PCICR |= _BV(PCIE0); PCIFR |= _BV(PCIF0); } while (0)
+#  define IEC_ATN_INT_VECT      PCINT0_vect
+#  define IEC_ATN_INT_SETUP()   do { PCICR |= _BV(PCIE0); PCIFR |= _BV(PCIF0); } while (0)
 #  define IEC_PCMSK             PCMSK0
 #  define BUTTON_PIN            PINC
 #  define BUTTON_PORT           PORTC
@@ -314,8 +323,8 @@
 #  define IEC_PIN_DATA          PC1
 #  define IEC_PIN_CLOCK         PC2
 #  define IEC_PIN_SRQ           PC3
-#  define IEC_INT_VECT          PCINT2_vect
-#  define IEC_INT_SETUP()       do { PCICR |= _BV(PCIE2); PCIFR |= _BV(PCIF2); } while (0)
+#  define IEC_ATN_INT_VECT      PCINT2_vect
+#  define IEC_ATN_INT_SETUP()   do { PCICR |= _BV(PCIE2); PCIFR |= _BV(PCIF2); } while (0)
 #  define IEC_PCMSK             PCMSK2
 #  define BUTTON_PIN            PINA
 #  define BUTTON_PORT           PORTA
@@ -360,8 +369,12 @@
 #  define IEC_PIN_DATA          PE4
 #  define IEC_PIN_CLOCK         PE5
 #  define IEC_PIN_SRQ           PE2
-#  define IEC_INT_VECT          INT6_vect
-#  define IEC_INT_SETUP()       do { EICRB |= _BV(ISC60); } while (0)
+#  define IEC_ATN_INT           INT6
+#  define IEC_ATN_INT_VECT      INT6_vect
+#  define IEC_CLK_INT           INT5
+#  define IEC_CLK_INT_VECT      INT5_vect
+#  define IEC_ATN_INT_SETUP()   do { EICRB |= _BV(ISC60); } while (0)
+#  define IEC_CLK_INT_SETUP()   do { EICRB |= _BV(ISC50); } while (0)
 #  undef  IEC_PCMSK
 #  define BUTTON_PIN            PING
 #  define BUTTON_PORT           PORTG
@@ -418,8 +431,8 @@
 #  define IEC_OPIN_DATA         PA5
 #  define IEC_OPIN_CLOCK        PA6
 #  define IEC_OPIN_SRQ          PA7
-#  define IEC_INT_VECT          PCINT0_vect
-#  define IEC_INT_SETUP()       do { PCICR |= _BV(PCIE0); PCIFR |= _BV(PCIF0); } while (0)
+#  define IEC_ATN_INT_VECT      PCINT0_vect
+#  define IEC_ATN_INT_SETUP()   do { PCICR |= _BV(PCIE0); PCIFR |= _BV(PCIF0); } while (0)
 #  define IEC_PCMSK             PCMSK0
 #  define BUTTON_PIN            PINC
 #  define BUTTON_PORT           PORTC
@@ -489,8 +502,8 @@
 #  define IEC_PIN_DATA          PB1
 #  define IEC_PIN_CLOCK         PB2
 #  define IEC_PIN_SRQ           PB3
-#  define IEC_INT_VECT          PCINT1_vect
-#  define IEC_INT_SETUP()       do { PCICR |= _BV(PCIE1); PCIFR |= _BV(PCIF1); } while (0)
+#  define IEC_ATN_INT_VECT      PCINT1_vect
+#  define IEC_ATN_INT_SETUP()   do { PCICR |= _BV(PCIE1); PCIFR |= _BV(PCIF1); } while (0)
 #  define IEC_PCMSK             PCMSK1
 #  define BUTTON_PIN            PINA
 #  define BUTTON_PORT           PORTA
@@ -537,8 +550,8 @@
 #  define IEC_OPIN_DATA         PD5
 #  define IEC_OPIN_CLOCK        PD6
 #  define IEC_OPIN_SRQ          PD7
-#  define IEC_INT_VECT          PCINT0_vect
-#  define IEC_INT_SETUP()       do { PCICR |= _BV(PCIE0); PCIFR |= _BV(PCIF0); } while (0)
+#  define IEC_ATN_INT_VECT      PCINT0_vect
+#  define IEC_ATN_INT_SETUP()   do { PCICR |= _BV(PCIE0); PCIFR |= _BV(PCIF0); } while (0)
 #  define IEC_PCMSK             PCMSK0
 #  define BUTTON_PIN            PING
 #  define BUTTON_PORT           PORTG
@@ -578,8 +591,8 @@
 #  define IEC_PIN_DATA          PB2
 #  define IEC_PIN_CLOCK         PB1
 #  define IEC_PIN_SRQ           PB3
-#  define IEC_INT_VECT          PCINT1_vect
-#  define IEC_INT_SETUP()       do { PCICR |= _BV(PCIE1); PCIFR |= _BV(PCIF1); } while (0)
+#  define IEC_ATN_INT_VECT      PCINT1_vect
+#  define IEC_ATN_INT_SETUP()   do { PCICR |= _BV(PCIE1); PCIFR |= _BV(PCIF1); } while (0)
 #  define IEC_PCMSK             PCMSK1
 #  define BUTTON_PIN            PIND
 #  define BUTTON_PORT           PORTD
@@ -637,10 +650,32 @@
      if (x) { IEC_PCMSK |= _BV(IEC_PIN_CLOCK); } \
      else { IEC_PCMSK &= (uint8_t)~_BV(IEC_PIN_CLOCK); }
 #else
-   /* That's for uIEC */
-#  define set_atn_irq(x) \
-     if (x) { EIMSK |= _BV(INT6); } \
-     else { EIMSK &= (uint8_t)~_BV(INT6); }
+#  ifdef IEC_ATN_INT
+     /* Hardware has an ATN interrupt */
+#    define set_atn_irq(x) \
+       if (x) { EIMSK |= _BV(IEC_ATN_INT); } \
+       else { EIMSK &= (uint8_t)~_BV(IEC_ATN_INT); }
+#  else
+     /* Polling: Yuck. */
+#    define set_atn_irq(x) \
+       if (x) { TIMSK2 |= _BV(OCIE2A); } \
+       else { TIMSK2 &= (uint8_t)~_BV(OCIE2A); }
+#  endif // IEC_ATN_INT
+
+#  ifdef IEC_CLK_INT
+     /* Hardware has a CLK interrupt */
+#    define set_clock_irq(x) \
+       if (x) { EIMSK |= _BV(IEC_CLK_INT); } \
+       else { EIMSK &= (uint8_t)~_BV(IEC_CLK_INT); }
+#  endif
+#endif
+
+/* Create no-op interrupt setups if they are undefined */
+#ifndef IEC_ATN_INT_SETUP
+#  define IEC_ATN_INT_SETUP() do {} while (0)
+#endif
+#ifndef IEC_CLK_INT_SETUP
+#  define IEC_CLK_INT_SETUP() do {} while (0)
 #endif
 
 /* Disable COMMAND_CHANNEL_DUMP if UART_DEBUG is disabled */
