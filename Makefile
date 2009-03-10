@@ -476,7 +476,7 @@ ELFSIZE = $(SIZE) -A $(TARGET).elf
 AVRMEM = avr-mem.sh $(TARGET).elf $(MCU)
 
 # Program the device.  
-program: $(TARGET).hex $(TARGET).eep
+program: bin hex eep
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH)  $(AVRDUDE_WRITE_EEPROM)
 
 # Set fuses of the device
