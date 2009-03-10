@@ -39,8 +39,4 @@
 #define IEC_CLOCK (IEC_PIN & IEC_BIT_CLOCK)
 #define IEC_SRQ   (IEC_PIN & IEC_BIT_SRQ)
 
-#ifndef set_atnack
-#  define set_atnack(state) do { if (state) TIMSK2 |= _BV(OCIE2A); else TIMSK2 &= ~_BV(OCIE2A); } while(0)
-#endif
-
 #endif
