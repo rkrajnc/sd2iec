@@ -108,6 +108,9 @@ void set_rtc(struct tm *time) {
     uint16_t words[2];
   } tmp;
 
+  if (rtc_state == RTC_NOT_FOUND)
+    return;
+
   i2c_write_register(PCF8583_ADDR, REG_CONTROL, CTL_STOP_CLOCK);
   tmp.bytes[0] = int2bcd(time->tm_sec);
   tmp.bytes[1] = int2bcd(time->tm_min);
@@ -119,6 +122,7 @@ void set_rtc(struct tm *time) {
   tmp.words[1] = (time->tm_year + 1900) ^ 0xffffU;
   i2c_write_registers(PCF8583_ADDR, REG_YEAR1, 4, &tmp);
   i2c_write_register(PCF8583_ADDR, REG_CONTROL, CTL_START_CLOCK);
+  rtc_state = RTC_OK;
 }
 
 void init_rtc(void) {
