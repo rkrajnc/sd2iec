@@ -354,7 +354,6 @@ ISR(SD2_CHANGE_VECT) {
 // Public functions
 //
 void init_sd(void) {
-  spiInit();
   SDCARD_DETECT_SETUP();
   SDCARD_WP_SETUP();
   SD_CHANGE_SETUP();
@@ -409,6 +408,12 @@ DSTATUS sd_initialize(BYTE drv) {
   /* Don't bother initializing a card that isn't there */
   if (sd_status(drv) & STA_NODISK)
     return sd_status(drv);
+
+  /* JLB: Should be in sd_init, but some uIEC versions have
+   * IEC lines tied to SPI, so I moved it here to resolve the
+   * conflict.
+   */
+  spiInit();
 
   disk_state = DISK_ERROR;
 
