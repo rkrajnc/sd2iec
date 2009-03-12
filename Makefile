@@ -543,8 +543,8 @@ $(OBJDIR)/%.bin: $(OBJDIR)/%.elf
 	$(Q)$(OBJCOPY) -O binary -R .eeprom $< $@
 	$(E) "  CRCGEN $@"
 	-$(Q)crcgen-new $@ $(BINARY_LENGTH) $(CONFIG_BOOT_DEVID) $(BOOT_VERSION)
-	$(E) "  COPY   $(CONFIG_HARDWARE_NAME)-bootloader-$(PROGRAMVERSION).bin"
-	$(Q)$(COPY) $@ $(OBJDIR)/$(CONFIG_HARDWARE_NAME)-bootloader-$(PROGRAMVERSION).bin
+	$(E) "  COPY   $(CONFIG_HARDWARE_NAME)-firmware-$(PROGRAMVERSION).bin"
+	$(Q)$(COPY) $@ $(OBJDIR)/$(CONFIG_HARDWARE_NAME)-firmware-$(PROGRAMVERSION).bin
 else
 $(OBJDIR)/%.bin: $(OBJDIR)/%.elf
 	$(E) "  BIN    $@"
