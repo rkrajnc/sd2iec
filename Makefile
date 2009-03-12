@@ -216,7 +216,7 @@ CFLAGS += $(CDEFS) $(CINCS)
 CFLAGS += -O$(OPT)
 CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 CFLAGS += -Wall -Wstrict-prototypes -Werror
-CFLAGS += -Wa,-adhlns=$(OBJDIR)/$(<:.c=.lst)
+#CFLAGS += -Wa,-adhlns=$(OBJDIR)/$(<:.c=.lst)
 CFLAGS += -I$(OBJDIR)
 CFLAGS += $(patsubst %,-I%,$(EXTRAINCDIRS))
 CFLAGS += $(CSTANDARD)
@@ -428,12 +428,12 @@ LST := $(patsubst %,$(OBJDIR)/%,$(CSRC:.c=.lst) $(ASRC:.S=.lst))
 
 
 # Compiler flags to generate dependency files.
-GENDEPFLAGS = -MD -MP -MF .dep/$(@F).d
+GENDEPFLAGS = -MM -MD -MP -MF .dep/$(@F).d
 
 
 # Combine all necessary flags and optional flags.
 # Add target processor to flags.
-ALL_CFLAGS = -mmcu=$(MCU) -I. $(CFLAGS) $(GENDEPFLAGS)
+ALL_CFLAGS = -mmcu=$(MCU) -I. $(CFLAGS)
 ALL_ASFLAGS = -mmcu=$(MCU) -I. -x assembler-with-cpp $(ASFLAGS) $(CDEFS)
 
 
@@ -583,6 +583,7 @@ $(OBJDIR)/%.elf: $(OBJ)
 # Compile: create object files from C source files.
 $(OBJDIR)/%.o : %.c | $(OBJDIR) $(OBJDIR)/autoconf.h
 	$(E) "  CC     $<"
+	$(Q)$(CC) $(ALL_CFLAGS) $(GENDEPFLAGS) $<
 	$(Q)$(CC) -c $(ALL_CFLAGS) $< -o $@ 
 
 
