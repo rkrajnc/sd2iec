@@ -88,7 +88,7 @@ static inline void send_address(uint16_t page, uint16_t byte) {
   spiTransferByte(byte & 0xff);
 }
 
-void init_df(void) {
+void df_init(void) {
   uint8_t  i;
   uint16_t j,maxwrites,maxbelow10k,tmp;
 
@@ -129,7 +129,7 @@ void init_df(void) {
 
   disk_state = DISK_OK;
 }
-void init_disk(void) __attribute__ ((weak, alias("init_df")));
+void disk_init(void) __attribute__ ((weak, alias("df_init")));
 
 
 DSTATUS df_status(BYTE drv) {
@@ -145,7 +145,7 @@ DSTATUS disk_status(BYTE drv) __attribute__ ((weak, alias("df_status")));
 
 
 DSTATUS df_initialize(BYTE drv) {
-  /* Dataflash initialisation already happened in init_disk */
+  /* Dataflash initialisation already happened in disk_init */
   if (drv == 0)
     return RES_OK;
   else

@@ -29,7 +29,7 @@
 
 extern uint8_t device_address;
 
-void init_iec(void);
+void iec_init(void);
 
 void iec_mainloop(void) __attribute__ ((noreturn));
 void iec_mainloop(void);

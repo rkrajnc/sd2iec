@@ -109,7 +109,7 @@ ISR(TIMER1_COMPA_vect) {
 #endif
 }
 
-void init_timer(void) {
+void timer_init(void) {
   /* Count F_CPU/8 in timer 0 */
   TCCR0B = _BV(CS01);
 

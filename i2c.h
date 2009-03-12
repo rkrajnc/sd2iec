@@ -32,7 +32,7 @@
 #ifndef I2C_H
 #define I2C_H
 
-void init_i2c(void);
+void i2c_init(void);
 uint8_t i2c_write_register(uint8_t address, uint8_t reg, uint8_t val);
 uint8_t i2c_write_registers(uint8_t address, uint8_t startreg, uint8_t count, void *data);
 int16_t i2c_read_register(uint8_t address, uint8_t reg);

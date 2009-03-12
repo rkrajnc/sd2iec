@@ -125,10 +125,10 @@ void set_rtc(struct tm *time) {
   rtc_state = RTC_OK;
 }
 
-void init_rtc(void) {
+void rtc_init(void) {
   uint8_t tmp[4];
 
-  init_i2c();
+  i2c_init();
   rtc_state = RTC_NOT_FOUND;
   uart_puts_P(PSTR("RTC "));
   if (i2c_write_register(PCF8583_ADDR, REG_CONTROL, CTL_START_CLOCK) ||

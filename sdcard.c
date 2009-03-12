@@ -353,7 +353,7 @@ ISR(SD2_CHANGE_VECT) {
 //
 // Public functions
 //
-void init_sd(void) {
+void sd_init(void) {
   SDCARD_DETECT_SETUP();
   SDCARD_WP_SETUP();
   SD_CHANGE_SETUP();
@@ -363,7 +363,7 @@ void init_sd(void) {
   SD2_CHANGE_SETUP();
 #endif
 }
-void init_disk(void) __attribute__ ((weak, alias("init_sd")));
+void disk_init(void) __attribute__ ((weak, alias("sd_init")));
 
 
 DSTATUS sd_status(BYTE drv) {

@@ -78,7 +78,7 @@ DRESULT disk_write (BYTE, const BYTE*, DWORD, BYTE);
 #define disk_ioctl(a,b,c) RES_OK
 DRESULT disk_getinfo(BYTE drv, BYTE page, void *buffer);
 
-void init_disk(void);
+void disk_init(void);
 
 /* Will be set to DISK_ERROR if any access on the card fails */
 enum diskstates { DISK_CHANGED = 0, DISK_REMOVED, DISK_OK, DISK_ERROR };

@@ -93,6 +93,6 @@ extern volatile tick_t ticks;
  */
 #define has_timed_out() (TIFR0 & _BV(TOV0))
 
-void init_timer(void);
+void timer_init(void);
 
 #endif

@@ -1452,7 +1452,7 @@ static void parse_xcommand(void) {
                */
               if(drive_config == 0xffffffff)
                 set_drive_config(get_default_driveconfig());
-              init_fatops(0);
+              fatops_init(0);
             }
             break;
           default:

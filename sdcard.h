@@ -29,8 +29,8 @@
 
 #include "diskio.h"
 
-/* These functions are weak-aliased to init_disk/disk_... */
-void    init_sd(void);
+/* These functions are weak-aliased to disk_... */
+void    sd_init(void);
 DSTATUS sd_status(BYTE drv);
 DSTATUS sd_initialize(BYTE drv);
 DRESULT sd_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count);

@@ -128,17 +128,17 @@ int main(void) {
   set_busy_led(1);
   set_dirty_led(0);
 
-  init_serial();
+  uart_init();
   sei();
-  init_buffers();
-  init_timer();
-  init_iec();
-  init_rtc();
-  init_disk();
+  buffers_init();
+  timer_init();
+  iec_init();
+  rtc_init();
+  disk_init();
   read_configuration();
 
-  init_fatops(0);
-  init_change();
+  fatops_init(0);
+  change_init();
 
   uart_puts_P(PSTR("\nsd2iec " VERSION " #"));
   uart_puthex(device_address);

@@ -1230,14 +1230,14 @@ void fat_rename(path_t *path, struct cbmdirent *dent, uint8_t *newname) {
 }
 
 /**
- * init_fatops - Initialize fatops module
+ * fatops_init - Initialize fatops module
  * @preserve_path: Preserve the current directory if non-zero
  *
  * This function will initialize the fatops module and force
  * mounting of the card. It can safely be called again if re-mounting
  * is required.
  */
-void init_fatops(uint8_t preserve_path) {
+void fatops_init(uint8_t preserve_path) {
   FRESULT res;
   uint8_t realdrive,drive,part;
 

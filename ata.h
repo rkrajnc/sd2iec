@@ -67,8 +67,8 @@
 
 #define RESET_DELAY          100   /* ms to hold RESET line low to init CF and IDE */
 
-/* These functions are weak-aliased to init_disk/disk_... */
-void init_ata(void);
+/* These functions are weak-aliased to disk_... */
+void ata_init(void);
 DSTATUS ata_initialize (BYTE drv);
 DSTATUS ata_status (BYTE drv);
 DRESULT ata_read (BYTE drv, BYTE *data, DWORD sector, BYTE count);

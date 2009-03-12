@@ -142,6 +142,6 @@ void set_rtc(struct tm *time) {
   }
 }
 
-void init_rtc(void) {
+void rtc_init(void) {
   rtc_state = RTC_OK;
 }

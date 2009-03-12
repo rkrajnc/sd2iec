@@ -192,7 +192,7 @@ uint8_t i2c_read_registers(uint8_t address, uint8_t startreg, uint8_t count, voi
   return 0;
 }
 
-void init_i2c(void) {
+void i2c_init(void) {
   /* Set I2C pins to input -> high with external pullups */
   SOFTI2C_DDR  &= (uint8_t)~(SOFTI2C_SCL|SOFTI2C_SDA);
   SOFTI2C_PORT &= (uint8_t)~(SOFTI2C_SCL|SOFTI2C_SDA);

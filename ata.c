@@ -180,7 +180,7 @@ ISR(CF_CHANGE_VECT) {
 #endif
 
 
-void init_ata(void) {
+void ata_init(void) {
   CFCARD_DETECT_SETUP();
   CF_CHANGE_SETUP();
   disk_state=DISK_OK;
@@ -193,7 +193,7 @@ void init_ata(void) {
   ATA_PORT_CTRL_OUT=0xff;
   ATA_PORT_CTRL_DDR=0xff;
 }
-void init_disk(void) __attribute__ ((weak, alias("init_ata")));
+void disk_init(void) __attribute__ ((weak, alias("ata_init")));
 
 
 /*-----------------------------------------------------------------------*/

@@ -33,7 +33,7 @@
 #include "ff.h"
 
 /* API */
-void     init_fatops(uint8_t preserve_dir);
+void     fatops_init(uint8_t preserve_dir);
 void     parse_error(FRESULT res, uint8_t readflag);
 uint8_t  fat_delete(path_t *path, struct cbmdirent *dent);
 uint8_t  fat_chdir(path_t *path, uint8_t *dirname);

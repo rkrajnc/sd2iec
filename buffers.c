@@ -58,11 +58,11 @@ uint8_t callback_dummy(buffer_t *buf) {
 }
 
 /**
- * init_buffers - initializes the buffer data structures
+ * buffers_init - initializes the buffer data structures
  *
  * This function initialized all the buffer-related data structures.
  */
-void init_buffers(void) {
+void buffers_init(void) {
   uint8_t i;
 
   memset(buffers,0,sizeof(buffers));

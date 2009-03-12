@@ -31,7 +31,7 @@
 
 #include <avr/pgmspace.h>
 
-void init_serial(void);
+void uart_init(void);
 unsigned char uart_getc(void);
 void uart_putc(char c);
 void uart_puthex(uint8_t num);
@@ -45,7 +45,7 @@ void uart_putcrlf(void);
 
 #else
 
-#define init_serial()  do {} while(0)
+#define uart_init()    do {} while(0)
 #define uart_getc()    0
 #define uart_putc(x)   do {} while(0)
 #define uart_puthex(x) do {} while(0)

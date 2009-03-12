@@ -40,7 +40,7 @@ typedef enum {
 
 extern rtcstate_t rtc_state;
 
-void init_rtc(void);
+void rtc_init(void);
 
 /* Return current time in struct tm */
 void read_rtc(struct tm *time);
@@ -55,7 +55,7 @@ void increment_rtc(void);
 
 #  define rtc_state RTC_NOT_FOUND
 
-#  define init_rtc()    do {} while(0)
+#  define rtc_init()    do {} while(0)
 
 # endif // CONFIG_RTC_VARIANT
 

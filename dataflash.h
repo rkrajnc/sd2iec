@@ -29,8 +29,8 @@
 
 #include "diskio.h"
 
-/* These functions are weak-aliased to init_disk/disk_... */
-void    init_df(void);
+/* These functions are weak-aliased to disk_... */
+void    df_init(void);
 DSTATUS df_status(BYTE drv);
 DSTATUS df_initialize(BYTE drv);
 DRESULT df_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count);

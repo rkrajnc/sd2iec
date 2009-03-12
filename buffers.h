@@ -129,7 +129,7 @@ extern buffer_t buffers[];   /// Simplifies access to the error buffer length
 extern uint8_t entrybuf[33]; /// Buffer for directory entries to be parsed
 
 /* Initializes the buffer structures */
-void init_buffers(void);
+void buffers_init(void);
 
 /* Dummy callback */
 uint8_t callback_dummy(buffer_t *buf);

@@ -58,15 +58,15 @@ uint32_t get_default_driveconfig(void) {
   return result;
 }
 
-void init_disk(void) {
+void disk_init(void) {
 #ifdef HAVE_SD
-  init_sd();
+  sd_init();
 #endif
 #ifdef HAVE_ATA
-  init_ata();
+  ata_init();
 #endif
 #ifdef HAVE_DF
-  init_df();
+  df_init();
 #endif
 }
 

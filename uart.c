@@ -142,7 +142,7 @@ void uart_putcrlf(void) {
 
 static FILE mystdout = FDEV_SETUP_STREAM(ioputc, NULL, _FDEV_SETUP_WRITE);
 
-void init_serial(void) {
+void uart_init(void) {
   /* Seriellen Port konfigurieren */
 
   UBRRH = (int)((double)F_CPU/(16.0*CONFIG_UART_BAUDRATE)-1) >> 8;

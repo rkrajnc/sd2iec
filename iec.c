@@ -517,7 +517,7 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
 /* ------------------------------------------------------------------------- */
 
 
-void init_iec(void) {
+void iec_init(void) {
 #ifdef IEC_SEPARATE_OUT
   /* Set up the port: Output bits as output, all others as input */
   IEC_DDROUT |=            IEC_OBIT_ATN | IEC_OBIT_CLOCK | IEC_OBIT_DATA | IEC_OBIT_SRQ;
@@ -754,11 +754,11 @@ void iec_mainloop(void) {
           /* If the disk was changed the buffer contents are useless */
           if (disk_state == DISK_CHANGED || disk_state == DISK_REMOVED) {
             free_multiple_buffers(FMB_ALL);
-            init_change();
-            init_fatops(0);
+            change_init();
+            fatops_init(0);
           } else
             /* Disk state indicated an error, try to recover by initialising */
-            init_fatops(1);
+            fatops_init(1);
 
           update_leds();
         }
