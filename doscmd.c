@@ -667,20 +667,20 @@ static void handle_eewrite(uint16_t address, uint8_t length) {
 static void parse_eeprom(void) {
   uint16_t address = command_buffer[3] + (command_buffer[4] << 8);
   uint8_t  length  = command_buffer[5];
-      
+
   if (command_length < 6) {
     set_error(ERROR_SYNTAX_UNKNOWN);
     return;
   }
-      
+
   if (command_buffer[1] != '-' || (command_buffer[2] != 'W' && command_buffer[2] != 'R'))
     set_error(ERROR_SYNTAX_UNKNOWN);
-      
+
   if (address > CONFIG_EEPROM_SIZE || address+length > CONFIG_EEPROM_SIZE) {
     set_error(ERROR_SYNTAX_TOOLONG);
     return;
   }
-      
+
   if (command_buffer[2] == 'W')
     handle_eewrite(address, length);
   else
@@ -1284,7 +1284,7 @@ static void parse_user(void) {
     command_buffer[1] = 'R';
     parse_block();
     break;
-    
+
   case 'B':
   case '2':
     /* Tiny little hack: see above case for rationale */
@@ -1292,7 +1292,7 @@ static void parse_user(void) {
     command_buffer[1] = 'W';
     parse_block();
     break;
-    
+
   case 'I':
   case '9':
     if (command_length == 2) {
@@ -1304,17 +1304,17 @@ static void parse_user(void) {
     case '+':
       globalflags &= (uint8_t)~VC20MODE;
       break;
-      
+
     case '-':
       globalflags |= VC20MODE;
       break;
-      
+
     default:
       set_error(ERROR_SYNTAX_UNKNOWN);
       break;
     }
     break;
-    
+
   case 'J':
   case ':':
     /* Reset - technically hard-reset */
@@ -1328,7 +1328,7 @@ static void parse_user(void) {
     cli();
     restart_call();
     break;
-    
+
   case '0':
     /* U0 - only device address changes for now */
     if ((command_buffer[2] & 0x1f) == 0x1e &&
@@ -1338,7 +1338,7 @@ static void parse_user(void) {
       break;
     }
     /* Fall through */
-    
+
   default:
     set_error(ERROR_SYNTAX_UNKNOWN);
     break;

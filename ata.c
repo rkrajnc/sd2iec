@@ -1,6 +1,6 @@
 /*
     Copyright Jim Brain and Brain Innovations, 2005
-  
+
     This file is part of uIEC.
 
     uIEC is free software; you can redistribute it and/or modify
@@ -203,7 +203,7 @@ void init_disk(void) __attribute__ ((weak, alias("init_ata")));
 DSTATUS ata_initialize (BYTE drv) {
   BYTE data[(83 - 49 + 1) * 2];
   DWORD i = DELAY_VALUE(ATA_INIT_TIMEOUT);
-  
+
   if(drv>1) return STA_NOINIT;
   if(!(ATA_drv_flags[drv] & STA_FIRSTTIME) && disk_state != DISK_OK)
     reset_disk();
@@ -401,7 +401,7 @@ DRESULT ata_ioctl (BYTE drv, BYTE ctrl, void *buff) {
   ata_read_part(ptr, ofs, w);
   while (n--) {
     dl = *ptr; dh = *(ptr+1);
-    *ptr++ = dh; *ptr++ = dl; 
+    *ptr++ = dh; *ptr++ = dl;
   }
 
   return RES_OK;

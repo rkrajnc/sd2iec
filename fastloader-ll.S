@@ -478,7 +478,7 @@ tdbitloop:
         bld     r19, IEC_OPIN_DATA  ; 1 - store in data bit
         lsl     r24                 ; 1 - remove source bits
         lsl     r24                 ; 1
-        
+
         ;; Wait for 28us from data high -> 224-9=215 cycles
         delay_cycles 215        ; 215
 

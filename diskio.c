@@ -119,7 +119,7 @@ DSTATUS disk_initialize(BYTE drv) {
     return STA_NOINIT|STA_NODISK;
   }
 }
-  
+
 DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
   switch(drv >> DRIVE_BITS) {
 #ifdef HAVE_DF
@@ -144,7 +144,7 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
     return RES_ERROR;
   }
 }
-  
+
 DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
   switch(drv >> DRIVE_BITS) {
 #ifdef HAVE_DF

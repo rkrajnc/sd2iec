@@ -80,7 +80,7 @@ BYTE LFN_pos[13]={1,3,5,7,9,14,16,18,20,22,24,28,30};
 
 #if _USE_1_BUF != 0
 # define FSBUF static_buf
-static 
+static
 BUF static_buf;
 #else
 # define FSBUF (fs->buf)
@@ -272,7 +272,7 @@ BOOL put_cluster (      /* TRUE: successful, FALSE: failed */
     p = &FSBUF.data[bc & (SS(fs) - 1)];
     *p = (clust & 1) ? ((*p & 0x0F) | ((BYTE)val << 4)) : (BYTE)val;
     bc++;
-    FSBUF.dirty = TRUE; 
+    FSBUF.dirty = TRUE;
     if (!move_fs_window(fs, fatsect + (bc / SS(fs)))) return FALSE;
     p = &FSBUF.data[bc & (SS(fs) - 1)];
     *p = (clust & 1) ? (BYTE)(val >> 4) : ((*p & 0xF0) | ((BYTE)(val >> 8) & 0x0F));
@@ -475,7 +475,7 @@ void get_fileinfo (     /* No return code */
     }
   }
   *p = '\0';
-  
+
   finfo->fattrib = dir[DIR_Attr];               /* Attribute */
   finfo->fsize = LD_DWORD(&dir[DIR_FileSize]);  /* Size */
   finfo->fdate = LD_WORD(&dir[DIR_WrtDate]);    /* Date */
@@ -624,14 +624,14 @@ FRESULT trace_path (     /* FR_OK(0): successful, !=0: error code */
 #if _USE_LFN != 0
   //fileobj->id=dj->id;
   fileobj->fs=dj->fs;
-#endif    
+#endif
 
 #if _USE_CHDIR != 0
   while (path[0] == '/') path++;
 #endif
 
   if (*path == '\0') {          /* Null path means the root directory */
-    *dir = NULL; return FR_OK;  
+    *dir = NULL; return FR_OK;
   }
 
   for (;;) {
@@ -639,14 +639,14 @@ FRESULT trace_path (     /* FR_OK(0): successful, !=0: error code */
     *spath=path;     // save this off, as we may need it for the LFN
     match=TRUE;
     l=0;
-#endif    
+#endif
     ds = make_dirfile(&path, fn, &lfn);     /* Get a paragraph into fn[] */
 #if _USE_LFN != 0
     if(lfn)
       *len=path-*spath-1; /* this might not be ANSI-compatible, not sure */
     else
       *len=0;
-#endif    
+#endif
     if (ds == 1) return FR_INVALID_NAME;
     for (;;) {
       if (!move_fs_window(fs, dj->sect)) return FR_RW_ERROR;
@@ -765,9 +765,9 @@ FRESULT reserve_direntry (  /* FR_OK: successful, FR_DENIED: no free entry, FR_R
   BYTE entries=0;
   WORD isave=0;
   DWORD csave=0,ssave=0;
-  
+
   len=(len+25)/13;
-#endif      
+#endif
   /* Re-initialize directory object */
   clust = dj->sclust;
   if (clust != 0) {     /* Dynamic directory table */
@@ -799,7 +799,7 @@ FRESULT reserve_direntry (  /* FR_OK: successful, FR_DENIED: no free entry, FR_R
       }
     } else if(entries!=len){
       entries=0;
-#else      
+#else
       *dir = dptr; return FR_OK;
 #endif
     }
@@ -1183,13 +1183,13 @@ BYTE dos_char(
 static
 void create_short_name(
   const UCHAR* name,
-  UINT len, 
+  UINT len,
   UCHAR* buf
 )
 {
   BYTE i=0,k,l=0;
   BYTE j=len;
-  
+
   memset(buf,' ',11);
   buf[11]=0;
   if(name[0]!='.') {
@@ -1271,7 +1271,7 @@ FRESULT chk_filename( /* FR_EXIST means name is taken. */
   BYTE *dptr;
   FATFS *fs = dj->fs;
   DWORD clust;
-  
+
   /* Re-initialize directory object */
   clust = dj->sclust;
   if (clust) {          /* Dyanmic directory table */
@@ -1287,7 +1287,7 @@ FRESULT chk_filename( /* FR_EXIST means name is taken. */
     dptr = &FSBUF.data[(dj->index & ((SS(fs) - 1) / 32)) * 32]; /* Pointer to the directory entry */
     if(dptr[DIR_Name] == 0) {         /* if we got here, we have a match */
       return FR_OK;
-    } else if(*dptr!=0xe5 
+    } else if(*dptr!=0xe5
               && (dptr[DIR_Attr] & AM_LFN) != AM_LFN
               && !(dptr[DIR_Attr] & AM_VOL)
               && !memcmp(&dptr[DIR_Name], fn, 8+3) )  /* start over. */
@@ -1296,7 +1296,7 @@ FRESULT chk_filename( /* FR_EXIST means name is taken. */
   /* Reached to end of the directory table */
   return FR_OK;
 }
-  
+
 FRESULT add_direntry(
   DIR *dj,              /* Target directory to create new entry */
   BYTE **dir,           /* pointer to created entry */
@@ -1312,7 +1312,7 @@ FRESULT add_direntry(
   BYTE chk;
 
   entries=i=(len+12)/13;
-  
+
   fn[11]=0;             /* ALL uppercase */
 
   clust = dj->clust;    /* save off entries needed. */
@@ -1421,7 +1421,7 @@ FRESULT f_open (
 #endif
 
 
-#if _USE_FS_BUF == 0 
+#if _USE_FS_BUF == 0
   FPBUF.dirty=FALSE;
 #endif
   fp->fs = NULL;        /* Clear file object */
@@ -1973,10 +1973,10 @@ FRESULT f_readdir (
 # ifdef _MAX_LFN_LENGTH
   BOOL skiplfn = FALSE;
 # endif
-  
+
   if (finfo->lfn) {
     finfo->lfn[0]=0;   /* set first char to null */
-# if _USE_LFN_DBCS != 0 
+# if _USE_LFN_DBCS != 0
     finfo->lfn[1]=0;
 # endif
   }
@@ -2003,7 +2003,7 @@ FRESULT f_readdir (
         }
 # endif
         i=0;
-        while(i<13) { 
+        while(i<13) {
           if(!dir[pgm_read_byte(LFN_pos+i)] && !dir[pgm_read_byte(LFN_pos+i)+1])
             break;
           if (pos >= _MAX_LFN_LENGTH) {
@@ -2013,7 +2013,7 @@ FRESULT f_readdir (
             break;
           }
           finfo->lfn[pos]=dir[pgm_read_byte(LFN_pos+i)];
-# if _USE_LFN_DBCS != 0 
+# if _USE_LFN_DBCS != 0
           finfo->lfn[pos+1]=dir[pgm_read_byte(LFN_pos+i)+1];
 # endif
           pos+=S_LFN_INCREMENT;
@@ -2311,7 +2311,7 @@ FRESULT f_unlink (
     FSBUF.dirty = TRUE;
     if (len && !next_dir_entry(&fileobj))             /* Next directory pointer */
       return FR_RW_ERROR;
-  }    
+  }
 #else
   if (!move_fs_window(fs, dsect)) return FR_RW_ERROR; /* Mark the directory entry 'deleted' */
   dir[DIR_Name] = 0xE5;
@@ -2651,7 +2651,7 @@ FRESULT f_rename (
     FSBUF.dirty = TRUE;
     if (!next_dir_entry(&fileobj))                     /* Next directory pointer */
       return FR_RW_ERROR;
-  }    
+  }
 #else
   if (!move_fs_window(fs, sect_old)) return FR_RW_ERROR;          /* Remove old entry */
   dir_old[DIR_Name] = 0xE5;

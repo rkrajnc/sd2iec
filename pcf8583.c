@@ -85,7 +85,7 @@ void read_rtc(struct tm *time) {
   time->tm_mday = bcd2int(tmp.bytes[3] & 0b00111111);
   time->tm_mon  = bcd2int(tmp.bytes[4] & 0b00011111)-1;
   time->tm_wday = bcd2int(tmp.bytes[4] >> 5);
-  
+
   /* Check for year rollover */
   tmp.bytes[4] = tmp.bytes[3] >> 6;
   i2c_read_registers(PCF8583_ADDR, REG_YEAR1, 4, &tmp);

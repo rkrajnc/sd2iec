@@ -69,7 +69,7 @@ uint8_t device_address;
  * @jiffy_active   : JiffyDOS-capable master detected
  * @jiffy_load     : JiffyDOS LOAD operation detected
  *
- * This is a bitfield for a number of boolean variables used 
+ * This is a bitfield for a number of boolean variables used
  */
 
 #define EOI_RECVD       (1<<0)

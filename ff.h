@@ -132,7 +132,7 @@
 
 #if _USE_1_BUF == 1 && _USE_FS_BUF == 0
 #error You can only use 1_BUF with _USE_FS_BUF at present
-#define _USE_1_BUF 0 
+#define _USE_1_BUF 0
 #endif
 
 typedef struct _BUF {
@@ -204,7 +204,7 @@ typedef struct _FIL {
     DWORD   dir_sect;       /* Sector containing the directory entry */
     BYTE*   dir_ptr;        /* Ponter to the directory entry in the window */
 #endif
-#if _USE_LESS_BUF == 0 && _USE_1_BUF == 0 
+#if _USE_LESS_BUF == 0 && _USE_1_BUF == 0
     BUF   buf;              /* File R/W buffer */
 #endif
 } FIL;

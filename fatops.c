@@ -198,7 +198,7 @@ static imgtype_t check_imageext(uint8_t *name) {
         ((s == '4' || s == '7' || s == '8') &&
          (t == '1')))
       return IMG_IS_DISK;
- 
+
  return IMG_UNKNOWN;
 }
 
