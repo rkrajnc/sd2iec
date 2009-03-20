@@ -59,6 +59,7 @@ static void start_condition(void) {
 
 static void stop_condition(void) {
   set_sda(0);
+  _delay_us(SOFTI2C_DELAY);
   set_scl(1);
   _delay_us(SOFTI2C_DELAY);
   set_sda(1);
