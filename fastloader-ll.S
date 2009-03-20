@@ -624,17 +624,23 @@ get_bits_from_clk_data:
         ;; Do this kind of handshake:
         ;; set CLOCK low, wait for DATA going low,
         ;; release CLOCK, wait for DATA going high
+        ;; returns without waiting if ATN is low
         ;;
         .global clk_data_handshake
 clk_data_handshake:
         sbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_CLOCK
 1:
+        sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_ATN
+        rjmp    2f
         sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_DATA
         rjmp    1b
         cbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_CLOCK
 1:
+        sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_ATN
+        rjmp    2f
         sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_DATA
         rjmp    1b
+2:
         ret
 
         ;;
