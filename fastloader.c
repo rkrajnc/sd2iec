@@ -173,6 +173,9 @@ void load_fc3(uint8_t freezed) {
     /* send the next 64 4-byte-blocks, the last 3 bytes are read behind
        the buffer, good that we don't have an MMU ;) */
     for (step = 0; step < 64; step++) {
+      if (!IEC_ATN)
+        goto cleanup;
+
       if (freezed)
         clk_data_handshake();
       else
@@ -194,6 +197,7 @@ void load_fc3(uint8_t freezed) {
     }
   }
 
+ cleanup:
   buf->cleanup(buf);
 
   free_buffer(buf);
