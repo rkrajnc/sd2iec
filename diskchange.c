@@ -80,6 +80,9 @@ static uint8_t mount_line(void) {
   uint8_t i,*str,*strend;
   uint16_t curpos;
 
+  uint8_t olderror = current_error;
+  current_error = ERROR_OK;
+
   /* Kill all buffers */
   free_multiple_buffers(FMB_USER_CLEAN);
 
@@ -142,14 +145,18 @@ static uint8_t mount_line(void) {
   current_part = swappath.part;
   partition[current_part].current_dir = swappath.fat;
 
-  if (parse_path(command_buffer, &path, &str, 0))
+  if (parse_path(command_buffer, &path, &str, 0)) {
+    current_error = olderror;
     return 0;
+  }
 
   /* Mount the disk image */
   fat_chdir(&path, str);
 
-  if (current_error != 0 && current_error != ERROR_DOSVERSION)
+  if (current_error != 0 && current_error != ERROR_DOSVERSION) {
+    current_error = olderror;
     return 0;
+  }
 
   return 1;
 }
