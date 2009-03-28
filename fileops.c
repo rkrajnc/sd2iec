@@ -136,6 +136,7 @@ static void createentry(struct cbmdirent *dent, buffer_t *buf, dirformat_t forma
   *data++ = dent->blocksize >> 8;
 
   /* Filler before file name */
+  data++;
   if (dent->blocksize < 100)
     data++;
   if (dent->blocksize < 10)
