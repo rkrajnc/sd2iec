@@ -759,8 +759,11 @@ void file_open(uint8_t secondary) {
           return;
         }
 
+        /* Copy dent because file_delete may change it */
+        struct cbmdirent dentcopy = dent;
+
         /* Rewrite existing file: Delete the old one */
-        if (file_delete(&path, &dent) == 255)
+        if (file_delete(&path, &dentcopy) == 255)
           return;
       } else {
         /* Write existing file without replacement: Raise error */
