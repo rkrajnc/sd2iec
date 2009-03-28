@@ -32,21 +32,27 @@
 #define SOFTI2C_SDA _BV(SOFTI2C_BIT_SDA)
 #define SOFTI2C_SCL _BV(SOFTI2C_BIT_SCL)
 
-#define set_scl(x) if (x) {               \
-   SOFTI2C_DDR  &= (uint8_t)~SOFTI2C_SCL; \
-   SOFTI2C_PORT |= SOFTI2C_SCL;           \
- } else {                                 \
-   SOFTI2C_DDR  |= SOFTI2C_SCL;           \
-   SOFTI2C_PORT &= (uint8_t)~SOFTI2C_SCL; \
- }
+static void set_scl(uint8_t x) {
+  if (x) {
+    SOFTI2C_DDR  &= (uint8_t)~SOFTI2C_SCL;
+    SOFTI2C_PORT |= SOFTI2C_SCL;
+    // Clock stretching
+    loop_until_bit_is_set(SOFTI2C_PIN, SOFTI2C_BIT_SCL);
+  } else {
+    SOFTI2C_DDR  |= SOFTI2C_SCL;
+    SOFTI2C_PORT &= (uint8_t)~SOFTI2C_SCL;
+  }
+}
 
-#define set_sda(x) if (x) {               \
-   SOFTI2C_DDR  &= (uint8_t)~SOFTI2C_SDA; \
-   SOFTI2C_PORT |= SOFTI2C_SDA;           \
- } else {                                 \
-   SOFTI2C_DDR  |= SOFTI2C_SDA;           \
-   SOFTI2C_PORT &= (uint8_t)~SOFTI2C_SDA; \
- }
+static void set_sda(uint8_t x) {
+  if (x) {
+    SOFTI2C_DDR  &= (uint8_t)~SOFTI2C_SDA;
+    SOFTI2C_PORT |= SOFTI2C_SDA;
+  } else {
+    SOFTI2C_DDR  |= SOFTI2C_SDA;
+    SOFTI2C_PORT &= (uint8_t)~SOFTI2C_SDA;
+  }
+}
 
 
 static void start_condition(void) {
@@ -55,6 +61,7 @@ static void start_condition(void) {
   _delay_us(SOFTI2C_DELAY);
   set_sda(0);
   _delay_us(SOFTI2C_DELAY);
+  set_scl(0);
 }
 
 static void stop_condition(void) {
@@ -76,7 +83,6 @@ static uint8_t i2c_send_byte(uint8_t value) {
     set_sda(value & 128);
     _delay_us(SOFTI2C_DELAY/2);
     set_scl(1);
-    //loop_until_bit_is_set(SOFTI2C_PIN, SOFTI2C_BIT_SCL);
     _delay_us(SOFTI2C_DELAY);
     value <<= 1;
   }
@@ -85,7 +91,6 @@ static uint8_t i2c_send_byte(uint8_t value) {
   set_sda(1);
   _delay_us(SOFTI2C_DELAY/2);
   set_scl(1);
-  //loop_until_bit_is_set(SOFTI2C_PIN, SOFTI2C_BIT_SCL);
   _delay_us(SOFTI2C_DELAY/2);
   i = !!(SOFTI2C_PIN & SOFTI2C_SDA);
   _delay_us(SOFTI2C_DELAY/2);
@@ -104,7 +109,6 @@ static uint8_t i2c_recv_byte(uint8_t sendack) {
   for (i=8;i!=0;i--) {
     _delay_us(SOFTI2C_DELAY/2);
     set_scl(1);
-    //loop_until_bit_is_set(SOFTI2C_PIN,SOFTI2C_BIT_SCL);
     _delay_us(SOFTI2C_DELAY/2);
     value = (value << 1) + !!(SOFTI2C_PIN & SOFTI2C_SDA);
     _delay_us(SOFTI2C_DELAY/2);
@@ -114,7 +118,6 @@ static uint8_t i2c_recv_byte(uint8_t sendack) {
   set_sda(!sendack);
   _delay_us(SOFTI2C_DELAY/2);
   set_scl(1);
-  //loop_until_bit_is_set(SOFTI2C_PIN, SOFTI2C_BIT_SCL);
   _delay_us(SOFTI2C_DELAY);
   set_scl(0);
   set_sda(1);
