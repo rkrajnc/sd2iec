@@ -449,13 +449,13 @@
 
 #  ifdef CONFIG_TWINSD
 /* Support for multiple SD cards */
-#   define SD2_PORT             PORTC
-#   define SD2_PIN              PINC
+#   define SD2_PORT             PORTD
+#   define SD2_PIN              PIND
 #   define SD2_PRESENT          _BV(PB2)
-#   define SD2_CS               _BV(PC6)
+#   define SD2_CS               _BV(PD3)
 #   define SD2_WP               (PINC & _BV(PC7))
 #   define SD2_DETECT           (!(PINB & SD2_PRESENT))
-#   define SD2_SETUP()          do { SD2_PORT |= SD2_CS|SD2_WP; DDRC |= SD2_CS; DDRC &= ~SD2_WP; DDRB &= ~SD2_PRESENT; PORTB |= SD2_PRESENT; } while (0)
+#   define SD2_SETUP()          do { SD2_PORT |= SD2_CS; PORTC |= SD2_WP; DDRD |= SD2_CS; DDRC &= ~SD2_WP; DDRB &= ~SD2_PRESENT; PORTB |= SD2_PRESENT; } while (0)
 #   define SD2_CHANGE_VECT      INT2_vect
 #   define SD2_CHANGE_SETUP()   do { EICRA |= _BV(ISC20); EIMSK |= _BV(INT2);  } while (0)
 #  endif
