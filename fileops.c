@@ -765,6 +765,10 @@ void file_open(uint8_t secondary) {
         /* Rewrite existing file: Delete the old one */
         if (file_delete(&path, &dentcopy) == 255)
           return;
+
+        /* Force fatops to create a new name based on the (long) CBM- */
+        /* name instead of creating one with the old SFN and no LFN. gi */
+        dent.realname[0] = 0;
       } else {
         /* Write existing file without replacement: Raise error */
         set_error(ERROR_FILE_EXISTS);
