@@ -710,7 +710,8 @@ void file_open(uint8_t secondary) {
       /* Error, abort */
       return;
 
-    if((dent.typeflags & TYPE_MASK) != TYPE_DEL)
+    if((dent.typeflags & TYPE_MASK) != TYPE_DEL &&
+       (dent.typeflags & TYPE_MASK) != TYPE_DIR)
       break;
   } while (res == 0);
 
