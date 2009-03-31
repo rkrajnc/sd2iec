@@ -44,7 +44,9 @@
 #    define UCSZ1 UCSZ11
 #    define UDR   UDR1
 #    define UDRIE UDRIE1
+#    define RXCIE RXCIE1
 #    define USART_UDRE_vect USART1_UDRE_vect
+#    define USART_RX_vect   USART1_RX_vect
 #  else
      /* Default is USART0 */
 #    define RXC   RXC0
@@ -60,8 +62,27 @@
 #    define UCSZ1 UCSZ01
 #    define UDR   UDR0
 #    define UDRIE UDRIE0
+#    define RXCIE RXCIE0
 #    define USART_UDRE_vect USART0_UDRE_vect
+#    define USART_RX_vect   USART0_RX_vect
 #  endif
+
+#elif defined __AVR_ATmega48__ || defined __AVR_ATmega88__ || defined __AVR_ATmega168__
+/* These chips include the USART number in their register names, */
+/* but not in the ISR name. */
+#    define RXC   RXC0
+#    define RXEN  RXEN0
+#    define TXC   TXC0
+#    define TXEN  TXEN0
+#    define UBRRH UBRR0H
+#    define UBRRL UBRR0L
+#    define UCSRA UCSR0A
+#    define UCSRB UCSR0B
+#    define UCSRC UCSR0C
+#    define UCSZ0 UCSZ00
+#    define UCSZ1 UCSZ01
+#    define UDR   UDR0
+#    define UDRIE UDRIE0
 
 #elif defined __AVR_ATmega32__
 #  define TIMER2_COMPA_vect TIMER2_COMP_vect
@@ -92,30 +113,48 @@
 #  define OCR2A  OCR2
 
 #else
-#  error Unknown chip!
+#  error Unknown chip! (USART)
 #endif
 
-/* SPI */
+/* SPI and I2C */
 #if defined __AVR_ATmega32__ || defined __AVR_ATmega644__ || defined __AVR_ATmega644P__
 
-#  define SPI_PORT PORTB
-#  define SPI_DDR  DDRB
-#  define SPI_SS   _BV(PB4)
-#  define SPI_MOSI _BV(PB5)
-#  define SPI_MISO _BV(PB6)
-#  define SPI_SCK  _BV(PB7)
+#  define SPI_PORT   PORTB
+#  define SPI_DDR    DDRB
+#  define SPI_SS     _BV(PB4)
+#  define SPI_MOSI   _BV(PB5)
+#  define SPI_MISO   _BV(PB6)
+#  define SPI_SCK    _BV(PB7)
+#  define HWI2C_PORT PORTC
+#  define HWI2C_SDA  _BV(PC1)
+#  define HWI2C_SCL  _BV(PC0)
 
 #elif defined __AVR_ATmega128__ || defined __AVR_ATmega1281__ || defined __AVR_ATmega2561__
 
-#  define SPI_PORT PORTB
-#  define SPI_DDR  DDRB
-#  define SPI_SS   _BV(PB0)
-#  define SPI_SCK  _BV(PB1)
-#  define SPI_MOSI _BV(PB2)
-#  define SPI_MISO _BV(PB3)
+#  define SPI_PORT  PORTB
+#  define SPI_DDR   DDRB
+#  define SPI_SS    _BV(PB0)
+#  define SPI_SCK   _BV(PB1)
+#  define SPI_MOSI  _BV(PB2)
+#  define SPI_MISO  _BV(PB3)
+#  define HWI2C_PORT PORTD
+#  define HWI2C_SDA  _BV(PD1)
+#  define HWI2C_SCL  _BV(PD0)
+
+#elif defined __AVR_ATmega48__ || defined __AVR_ATmega88__ || defined __AVR_ATmega168__
+
+#  define SPI_PORT   PORTB
+#  define SPI_DDR    DDRB
+#  define SPI_SS     _BV(PB2)
+#  define SPI_SCK    _BV(PB5)
+#  define SPI_MOSI   _BV(PB3)
+#  define SPI_MISO   _BV(PB4)
+#  define HWI2C_PORT PORTC
+#  define HWI2C_SDA  _BV(PC4)
+#  define HWI2C_SCL  _BV(PC5)
 
 #else
-#  error Unknown chip!
+#  error Unknown chip! (SPI/TWI)
 #endif
 
 #define SPI_MASK (SPI_SS|SPI_MOSI|SPI_MISO|SPI_SCK)
