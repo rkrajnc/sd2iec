@@ -200,6 +200,8 @@ void i2c_init(void) {
   /* Set I2C pins to input -> high with external pullups */
   SOFTI2C_DDR  &= (uint8_t)~(SOFTI2C_SCL|SOFTI2C_SDA);
   SOFTI2C_PORT &= (uint8_t)~(SOFTI2C_SCL|SOFTI2C_SDA);
+  /* Enable pullup on the interrupt line */
+  SOFTI2C_PORT |= _BV(SOFTI2C_BIT_INTRQ);
 
   set_sda(1);
   set_scl(1);

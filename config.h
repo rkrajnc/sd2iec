@@ -226,7 +226,7 @@
 #  define SOFTI2C_DDR     DDRC
 #  define SOFTI2C_BIT_SCL PC4
 #  define SOFTI2C_BIT_SDA PC5
-#  define SOFTI2C_DELAY   20
+#  define SOFTI2C_DELAY   6
 
 
 /* Pre-configurated hardware variants */
@@ -445,7 +445,8 @@
 #  define SOFTI2C_DDR           DDRC
 #  define SOFTI2C_BIT_SCL       PC4
 #  define SOFTI2C_BIT_SDA       PC5
-#  define SOFTI2C_DELAY         20
+#  define SOFTI2C_BIT_INTRQ     PC6
+#  define SOFTI2C_DELAY         6
 
 #  ifdef CONFIG_TWINSD
 /* Support for multiple SD cards */

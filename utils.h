@@ -27,6 +27,18 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+/* Side-effect safe min/max */
+#define max(a,b) \
+       ({ typeof (a) _a = (a); \
+           typeof (b) _b = (b); \
+         _a > _b ? _a : _b; })
+
+#define min(a,b) \
+       ({ typeof (a) _a = (a); \
+           typeof (b) _b = (b); \
+         _a < _b ? _a : _b; })
+
+
 /* Write a number to a string as ASCII */
 uint8_t *appendnumber(uint8_t *msg, uint8_t value);
 

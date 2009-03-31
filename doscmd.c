@@ -36,6 +36,7 @@
 #include "dirent.h"
 #include "diskchange.h"
 #include "diskio.h"
+#include "display.h"
 #include "eeprom.h"
 #include "errormsg.h"
 #include "fastloader.h"
@@ -203,12 +204,18 @@ static void parse_chdir(void) {
       if ((dent.typeflags & TYPE_MASK) != TYPE_DIR) {
         if (chdir(&path, dent.name))
           return;
-      } else
+      } else {
         partition[path.part].current_dir = dent.fatcluster;
+        display_current_directory(path.part, ustrlen(dent.name), dent.name);
+      }
     }
   } else {
     if (ustrchr(command_buffer, '/')) {
       partition[path.part].current_dir = path.fat;
+      if (display_found) {
+        fat_getdirname(&path, dent.name);
+        display_current_directory(path.part, ustrlen(dent.name), dent.name);
+      }
     } else {
       set_error(ERROR_FILE_NOT_FOUND_39);
       return;
@@ -537,6 +544,8 @@ static void parse_changepart(void) {
   if (globalflags & AUTOSWAP_ACTIVE)
     set_changelist(NULL, NULLSTRING);
 
+  display_current_part(current_part);
+
   set_error_ts(ERROR_PARTITION_SELECTED, part+1, 0);
 }
 
@@ -843,6 +852,7 @@ static void handle_memwrite(void) {
   if (address == 119) {
     /* Change device address, 1541 style */
     device_address = command_buffer[6] & 0x1f;
+    display_address(device_address);
     return;
   }
 
@@ -1335,6 +1345,7 @@ static void parse_user(void) {
         command_buffer[3] >= 4 &&
         command_buffer[3] <= 30) {
       device_address = command_buffer[3];
+      display_address(device_address);
       break;
     }
     /* Fall through */
@@ -1549,6 +1560,9 @@ void parse_doscommand(void) {
     set_error(ERROR_SYNTAX_UNABLE);
     return;
   }
+
+  /* Send command to display */
+  display_doscommand(command_length, command_buffer);
 
   /* MD/CD/RD clash with other commands, so they're checked first */
   if (command_buffer[0] != 'X' && command_buffer[1] == 'D') {

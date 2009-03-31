@@ -42,6 +42,7 @@
 #include "buffers.h"
 #include "diskchange.h"
 #include "diskio.h"
+#include "display.h"
 #include "doscmd.h"
 #include "errormsg.h"
 #include "fastloader.h"
@@ -590,6 +591,9 @@ void iec_mainloop(void) {
           reset_key(KEY_SLEEP);
           iec_data.bus_state = BUS_SLEEP;
           break;
+        } else if (display_found && key_pressed(KEY_DISPLAY)) {
+          display_service();
+          reset_key(KEY_DISPLAY);
         }
       }
 

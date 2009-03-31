@@ -34,6 +34,7 @@
 #include "d64ops.h"
 #include "diskchange.h"
 #include "diskio.h"
+#include "display.h"
 #include "doscmd.h"
 #include "errormsg.h"
 #include "ff.h"
@@ -54,8 +55,6 @@
 static const PROGMEM char p00marker[] = "C64File";
 
 typedef enum { EXT_UNKNOWN, EXT_IS_X00, EXT_IS_TYPE } exttype_t;
-
-typedef enum { IMG_UNKNOWN, IMG_IS_M2I, IMG_IS_DISK } imgtype_t;
 
 uint8_t file_extension_mode;
 
@@ -179,7 +178,7 @@ static exttype_t check_extension(uint8_t *name, uint8_t **ext) {
  * IMG_IS_DISK for D64/D41/D71/D81 files or IMG_UNKNOWN for an unknown
  * file extension.
  */
-static imgtype_t check_imageext(uint8_t *name) {
+imgtype_t check_imageext(uint8_t *name) {
   uint8_t f,s,t;
   uint8_t *ext = ustrrchr(name, '.');
 
@@ -967,6 +966,13 @@ uint8_t fat_chdir(path_t *path, uint8_t *dirname) {
   if (finfo.fattrib & AM_DIR) {
     /* It's a directory, change to its cluster */
     partition[path->part].current_dir= finfo.clust;
+
+    if (display_found) {
+      /* Get directory name for display */
+      path->fat = finfo.clust;
+      fat_getdirname(path, command_buffer);
+      display_current_directory(path->part,ustrlen(command_buffer),command_buffer);
+    }
   } else {
     /* Changing into a file, could be a mount request */
     if (check_imageext(dirname) != IMG_UNKNOWN) {
@@ -988,6 +994,11 @@ uint8_t fat_chdir(path_t *path, uint8_t *dirname) {
       }
 
       partition[path->part].current_dir = partition[path->part].fatfs.curr_dir;
+
+      if (display_found) {
+        asc2pet(dirname);
+        display_current_directory(path->part,ustrlen(dirname),dirname);
+      }
       return 0;
     }
   }
@@ -1295,6 +1306,7 @@ void fatops_init(uint8_t preserve_path) {
 
   if (!preserve_path) {
     current_part = 0;
+    display_current_part(0);
     set_changelist(NULL, NULLSTRING);
   }
 
@@ -1340,6 +1352,16 @@ uint8_t image_unmount(uint8_t part) {
         bam_buffer = NULL;
       }
     }
+  }
+
+  if (display_found) {
+    /* Send current path to display */
+    path_t path;
+
+    path.part = part;
+    path.fat  = partition[part].current_dir;
+    fat_getdirname(&path, entrybuf);
+    display_current_directory(part,ustrlen(entrybuf),entrybuf);
   }
 
   partition[part].fop = &fatops;

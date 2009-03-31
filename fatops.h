@@ -60,4 +60,8 @@ void    image_mkdir(path_t *path, uint8_t *dirname);
 uint8_t image_read(uint8_t part, DWORD offset, void *buffer, uint16_t bytes);
 uint8_t image_write(uint8_t part, DWORD offset, void *buffer, uint16_t bytes, uint8_t flush);
 
+typedef enum { IMG_UNKNOWN, IMG_IS_M2I, IMG_IS_DISK } imgtype_t;
+
+imgtype_t check_imageext(uint8_t *name);
+
 #endif

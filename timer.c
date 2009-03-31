@@ -29,6 +29,7 @@
 #include <avr/io.h>
 #include "avrcompat.h"
 #include "diskchange.h"
+#include "display.h"
 #include "led.h"
 #include "time.h"
 #include "rtc.h"
@@ -107,6 +108,11 @@ ISR(TIMER1_COMPA_vect) {
 #if CONFIG_RTC_VARIANT == 1
   increment_rtc();
 #endif
+
+  /* Check if the display wants to be queried */
+  if (display_found && !(SOFTI2C_PIN & _BV(SOFTI2C_BIT_INTRQ))) {
+    active_keys |= KEY_DISPLAY;
+  }
 }
 
 void timer_init(void) {

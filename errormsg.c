@@ -32,6 +32,7 @@
 #include "config.h"
 #include "buffers.h"
 #include "diskio.h"
+#include "display.h"
 #include "fatops.h"
 #include "flags.h"
 #include "led.h"
@@ -120,12 +121,6 @@ static const prog_uint8_t messages[] = {
 #  warning "VERSION not defined, using dummy"
 #  define VERSION "X.X"
 #endif
-
-/// Version number string, will be added to message 73
-static const prog_uint8_t versionstr[] = HW_NAME " V" VERSION;
-
-/// Long version string, used for message 9
-static const prog_uint8_t longverstr[] = LONGVERSION;
 
 static uint8_t *appendmsg(uint8_t *msg, const prog_uint8_t *table, const uint8_t entry) {
   uint8_t i,tmp;
@@ -260,6 +255,8 @@ void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
     set_error_led(0);
   }
   buffers[CONFIG_BUFFER_COUNT].lastused = msg - error_buffer;
+  /* Send message without the final 0x0d */
+  display_errorchannel(msg - error_buffer, error_buffer);
 }
 
 /* Callback for the error channel buffer */

@@ -27,6 +27,7 @@
 #ifndef ERRORMSG_H
 #define ERRORMSG_H
 
+#include <avr/pgmspace.h>
 #include <stdint.h>
 #include "buffers.h"
 
@@ -77,5 +78,11 @@ uint8_t set_ok_message(buffer_t *buf);
 #define ERROR_PARTITION_ILLEGAL  77
 #define ERROR_BUFFER_TOO_SMALL   78
 #define ERROR_IMAGE_INVALID      79
+
+/// Version number string, will be added to message 73
+static const char PROGMEM versionstr[] = HW_NAME " V" VERSION;
+
+/// Long version string, used for message 9
+static const char PROGMEM longverstr[] = LONGVERSION;
 
 #endif

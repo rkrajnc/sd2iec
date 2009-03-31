@@ -36,16 +36,21 @@
 #include "buffers.h"
 #include "diskchange.h"
 #include "diskio.h"
+#include "display.h"
 #include "eeprom.h"
 #include "errormsg.h"
 #include "fatops.h"
-#include "iec.h"
 #include "ff.h"
+#include "i2c.h"
+#include "iec.h"
 #include "led.h"
 #include "time.h"
 #include "rtc.h"
 #include "timer.h"
 #include "uart.h"
+#include "ustring.h"
+#include "utils.h"
+
 
 /* Make sure the watchdog is disabled as soon as possible    */
 /* Copy this code to your bootloader if you use one and your */
@@ -143,6 +148,15 @@ int main(void) {
   uart_puts_P(PSTR("\nsd2iec " VERSION " #"));
   uart_puthex(device_address);
   uart_putcrlf();
+
+#ifdef CONFIG_REMOTE_DISPLAY
+  ustrcpy_P(entrybuf,versionstr);
+  ustrcpy_P(entrybuf+strlen(versionstr),longverstr);
+  if (display_init(ustrlen(entrybuf), entrybuf)) {
+    display_address(device_address);
+    display_current_part(0);
+  }
+#endif
 
   set_busy_led(0);
 

@@ -30,6 +30,7 @@
 #include "config.h"
 #include "buffers.h"
 #include "dirent.h"
+#include "display.h"
 #include "doscmd.h"
 #include "errormsg.h"
 #include "fatops.h"
@@ -805,11 +806,13 @@ void file_open(uint8_t secondary) {
   case OPEN_READ:
     /* Modify is the same as read, but allows reading *ed files.        */
     /* FAT doesn't have anything equivalent, so both are mapped to READ */
+    display_filename_read(path.part,CBM_NAME_LENGTH,dent.name);
     open_read(&path, &dent, buf);
     break;
 
   case OPEN_WRITE:
   case OPEN_APPEND:
+    display_filename_write(path.part,CBM_NAME_LENGTH,dent.name);
     open_write(&path, &dent, filetype, buf, (mode == OPEN_APPEND));
     break;
   }

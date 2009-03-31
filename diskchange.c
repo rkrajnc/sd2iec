@@ -29,6 +29,7 @@
 #include <string.h>
 #include "config.h"
 #include "buffers.h"
+#include "display.h"
 #include "doscmd.h"
 #include "errormsg.h"
 #include "fatops.h"
@@ -143,6 +144,7 @@ static uint8_t mount_line(void) {
 
   /* Start in the partition+directory of the swap list */
   current_part = swappath.part;
+  display_current_part(current_part);
   partition[current_part].current_dir = swappath.fat;
 
   if (parse_path(command_buffer, &path, &str, 0)) {

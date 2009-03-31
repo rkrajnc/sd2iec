@@ -142,3 +142,11 @@ CONFIG_MAX_PARTITIONS=2
 #   1 - software RTC
 #   2 - PCF8563 using softi2c
 CONFIG_RTC_VARIANT=0
+
+# I2C display
+CONFIG_REMOTE_DISPLAY=y
+
+# Display buffer size
+# This buffer is used as temporary space when sending commands to
+# the display. Longer texts will be truncated.
+CONFIG_DISPLAY_BUFFER_SIZE=40
