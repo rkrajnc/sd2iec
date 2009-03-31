@@ -27,6 +27,8 @@
 #ifndef TIMER_H
 #define TIMER_H
 
+#include <util/atomic.h>
+
 // Bit masks for the (simulated) keys
 #define KEY_NEXT    (1<<0)
 #define KEY_PREV    (1<<1)
@@ -47,8 +49,22 @@ extern volatile uint8_t active_keys;
 typedef uint16_t tick_t;
 
 /// Global timing variable, 100 ticks per second
+/// Use atomic access or getticks() !
 extern volatile tick_t ticks;
 #define HZ 100
+
+/**
+ * getticks - return the current system tick count
+ *
+ * This inline function returns the current system tick count.
+ */
+static inline tick_t getticks(void) {
+  tick_t tmp;
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    tmp = ticks;
+  }
+  return tmp;
+}
 
 #define MS_TO_TICKS(x) (x/10)
 
