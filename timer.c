@@ -109,10 +109,12 @@ ISR(TIMER1_COMPA_vect) {
   increment_rtc();
 #endif
 
+#ifdef CONFIG_REMOTE_DISPLAY
   /* Check if the display wants to be queried */
-  if (display_found && !(SOFTI2C_PIN & _BV(SOFTI2C_BIT_INTRQ))) {
+  if (!(SOFTI2C_PIN & _BV(SOFTI2C_BIT_INTRQ))) {
     active_keys |= KEY_DISPLAY;
   }
+#endif
 }
 
 void timer_init(void) {
