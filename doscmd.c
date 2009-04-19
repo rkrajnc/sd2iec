@@ -937,7 +937,7 @@ static void parse_position(void) {
   buffer_t *buf;
   uint8_t hi = 0, lo, pos;
 
-  if(command_length < 2 || (buf = find_buffer(command_buffer[1] & 0x5f)) == NULL) {
+  if(command_length < 2 || (buf = find_buffer(command_buffer[1] & 0x0f)) == NULL) {
     set_error(ERROR_NO_CHANNEL);
     return;
   }
