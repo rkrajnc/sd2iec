@@ -203,6 +203,19 @@ CDEFS += -DVERSION=\"$(PROGRAMVERSION)\" -DLONGVERSION=\"$(LONGVERSION)\"
 CINCS =
 
 
+# Define programs and commands.
+# CC must be defined here to generate the correct CFLAGS
+SHELL = sh
+CC = avr-gcc
+OBJCOPY = avr-objcopy
+OBJDUMP = avr-objdump
+SIZE = avr-size
+NM = avr-nm
+AVRDUDE = avrdude
+REMOVE = rm -f
+COPY = cp
+WINSHELL = cmd
+
 
 #---------------- Compiler Options ----------------
 #  -g*:          generate debugging information
@@ -402,19 +415,6 @@ DEBUG_HOST = localhost
 
 
 #============================================================================
-
-
-# Define programs and commands.
-SHELL = sh
-CC = avr-gcc
-OBJCOPY = avr-objcopy
-OBJDUMP = avr-objdump
-SIZE = avr-size
-NM = avr-nm
-AVRDUDE = avrdude
-REMOVE = rm -f
-COPY = cp
-WINSHELL = cmd
 
 
 # De-dupe the list of C source files
