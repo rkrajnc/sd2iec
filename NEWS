@@ -1,3 +1,15 @@
+2009-05-20 - release 0.8.1
+        - Fix uIEC/IDE SD card change detection
+        - Dreamload support for uIEC
+        - Mark the RTC time as valid after setting the clock
+        - Delay SPI initialisation until absolutely required
+        - Show disk change confirmation even when the error blink is active
+        - Exit the FC3 fastloader if ATN is active
+        - Fix indentation of 1000+ block files
+        - Remove 0-byte from the long version message
+        - Fix multiple save-with-replace bugs
+        - Ignore directories when matching file name wildcards
+
 2009-03-08 - release 0.8.0
         - direct sector access of the real storage device
         - ignore DEL files in file_open
