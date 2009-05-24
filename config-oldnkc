@@ -23,6 +23,8 @@
 #
 # config-nkc: sd2iec configuration for the NKC version of MMC2IEC
 #
+# Please use config-sw2 for the new NKC SD2IEC boards.
+#
 #
 # This file is included in the main sd2iec Makefile and also parsed
 # into autoconf.h.
