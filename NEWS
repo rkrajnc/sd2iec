@@ -2,6 +2,9 @@
         - Remove XC command
         - Bugfix: Image files not mountable if read-only file or media
 
+2009-05-24 - release 0.8.1a
+        - Fix bootloader version number generation
+
 2009-05-20 - release 0.8.1
         - Fix uIEC/IDE SD card change detection
         - Dreamload support for uIEC
