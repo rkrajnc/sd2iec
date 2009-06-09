@@ -553,12 +553,12 @@ void iec_init(void) {
   DEVICE_SELECT_SETUP();
   _delay_ms(1);
   device_address = DEVICE_SELECT;
-
-  set_error(ERROR_DOSVERSION);
 }
 
 void iec_mainloop(void) {
   int16_t cmd = 0; // make gcc happy...
+
+  set_error(ERROR_DOSVERSION);
 
   iec_data.bus_state = BUS_IDLE;
 
