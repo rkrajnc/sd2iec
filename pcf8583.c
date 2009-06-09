@@ -139,6 +139,10 @@ void init_rtc(void) {
         tmp[1] == (tmp[3] ^ 0xff)) {
       rtc_state = RTC_OK;
       uart_puts_P(PSTR("ok"));
+
+      /* Dummy RTC read to update the year if required */
+      struct tm time;
+      read_rtc(&time);
     } else {
       rtc_state = RTC_INVALID;
       uart_puts_P(PSTR("invalid"));
