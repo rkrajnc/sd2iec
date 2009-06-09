@@ -1,3 +1,6 @@
+2009-xx-xx - release x.x.x
+        - Bugfix: Image files not mountable if read-only file or media
+
 2009-05-24 - release 0.8.1a
         - Fix bootloader version number generation
 

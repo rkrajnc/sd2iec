@@ -325,6 +325,12 @@ static void m2i_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
   uint8_t i;
   FRESULT res;
 
+  /* Check for read-only image file */
+  if (!(partition[path->part].imagehandle.flag & FA_WRITE)) {
+    set_error(ERROR_WRITE_PROTECT);
+    return;
+  }
+
   if (append) {
     open_existing(path, dent, type, buf, 1);
   } else {

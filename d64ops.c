@@ -996,6 +996,12 @@ static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
   uint8_t t,s;
   uint8_t *ptr;
 
+  /* Check for read-only image file */
+  if (!(partition[path->part].imagehandle.flag & FA_WRITE)) {
+    set_error(ERROR_WRITE_PROTECT);
+    return;
+  }
+
   if (append) {
     /* Append case: Open the file and read the last sector */
     d64_open_read(path, dent, buf);

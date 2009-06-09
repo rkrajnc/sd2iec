@@ -974,6 +974,11 @@ uint8_t fat_chdir(path_t *path, uint8_t *dirname) {
       free_multiple_buffers(FMB_USER_CLEAN);
       /* Open image file */
       res = f_open(&partition[path->part].fatfs, &partition[path->part].imagehandle, dirname, FA_OPEN_EXISTING|FA_READ|FA_WRITE);
+
+      /* Try to open read-only if medium or file is read-only */
+      if (res == FR_DENIED || res == FR_WRITE_PROTECTED)
+        res = f_open(&partition[path->part].fatfs, &partition[path->part].imagehandle, dirname, FA_OPEN_EXISTING|FA_READ);
+
       if (res != FR_OK) {
         parse_error(res,1);
         return 1;
