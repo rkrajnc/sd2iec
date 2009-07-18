@@ -583,7 +583,7 @@ void fat_open_read(path_t *path, struct cbmdirent *dent, buffer_t *buf) {
  * buf to access it. type is ignored here because FAT has no equivalent of
  * file types.
  */
-uint8_t create_file(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t *buf, uint8_t recordlen) {
+FRESULT create_file(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t *buf, uint8_t recordlen) {
   FRESULT res;
   uint8_t *name, *x00ext;
 
@@ -637,7 +637,7 @@ uint8_t create_file(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t
     }
   }
 
-  return 0;
+  return FR_OK;
 }
 
 /**
@@ -699,7 +699,7 @@ void fat_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t
  * open an existing file.
  */
 void fat_open_rel(path_t *path, struct cbmdirent *dent, buffer_t *buf, uint8_t length, uint8_t mode) {
-  uint8_t res;
+  FRESULT res;
   uint8_t *ext;
   UINT bytesread;
 
@@ -813,8 +813,8 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
         dent->typeflags |= FLAG_HIDDEN;
     } else {
       /* Search for the file extension */
-      res = check_extension(finfo.fname, &ptr);
-      if (res == EXT_IS_X00) {
+      exttype_t ext = check_extension(finfo.fname, &ptr);
+      if (ext == EXT_IS_X00) {
         /* [PSRU]00 file - try to read the internal name */
         UINT bytesread;
 
@@ -845,14 +845,14 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
 
         finfo.fsize -= P00_HEADER_SIZE;
 
-      } else if (res == EXT_IS_TYPE && (globalflags & EXTENSION_HIDING)) {
+      } else if (ext == EXT_IS_TYPE && (globalflags & EXTENSION_HIDING)) {
         /* Type extension */
         typechar = *ptr;
         uint8_t i = ustrlen(dent->name)-4;
         memset(dent->name+i, 0, sizeof(dent->name)-i);
         ustrcpy(dent->realname, finfo.fname);
 
-      } else { /* res == EXT_UNKNOWN or EXT_IS_TYPE but hiding disabled */
+      } else { /* ext == EXT_UNKNOWN or EXT_IS_TYPE but hiding disabled */
         /* Unknown extension: PRG */
         typechar = 'P';
       }
