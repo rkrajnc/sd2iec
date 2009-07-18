@@ -362,10 +362,10 @@ static uint8_t write_data(buffer_t *buf) {
     parse_error(res,1);
     f_close(&buf->pvt.fat.fh);
     free_buffer(buf);
-    return res;
+    return 1;
   }
 
-  if (byteswritten != buf->lastused-1) {
+  if (byteswritten != buf->lastused-1U) {
     uart_putc('l');
     set_error(ERROR_DISK_FULL);
     f_close(&buf->pvt.fat.fh);
@@ -396,14 +396,23 @@ static uint8_t fat_file_write(buffer_t *buf) {
   fptr = buf->pvt.fat.fh.fsize - buf->pvt.fat.headersize;
 
   // on a REL file, the fptr will be be at the end of the record we just read.  Reposition.
-  if(buf->fptr != fptr)
+  if (buf->fptr != fptr) {
     res = f_lseek(&buf->pvt.fat.fh, buf->pvt.fat.headersize + buf->fptr);
+    if (res != FR_OK) {
+      parse_error(res,1);
+      f_close(&buf->pvt.fat.fh);
+      free_buffer(buf);
+      return 1;
+    }
+  }
 
   if(buf->fptr > fptr)
     i = buf->fptr - fptr;
 
-  if(res == FR_OK)
-    res = write_data(buf);
+  if (res == FR_OK) {
+    if (write_data(buf))
+      return 1;
+  }
 
   if(i) {
     // we need to fill bytes.
