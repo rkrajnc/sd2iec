@@ -454,26 +454,29 @@ static uint8_t fat_file_write(buffer_t *buf) {
  * Returns 1 if an error occured, 0 otherwise.
  */
 uint8_t fat_file_seek(buffer_t *buf, uint32_t position, uint8_t index) {
-  FRESULT res = FR_OK;
   uint32_t pos = position + buf->pvt.fat.headersize;
 
-  if(buf->dirty)
-    res = fat_file_write(buf);
-  if(res == FR_OK) {
-    if(buf->pvt.fat.fh.fsize >= pos) {
-      res = f_lseek(&buf->pvt.fat.fh, pos);
-      if(res == FR_OK)
-        res = fat_file_read(buf);
-    } else {
-      buf->data[2]  = (buf->recordlen ? 255:13);
-      buf->lastused = 2;
-      buf->fptr     = position;
-      set_error(ERROR_RECORD_MISSING);
-    }
-  }
+  if (buf->dirty)
+    if (fat_file_write(buf))
+      return 1;
 
-  if (res != FR_OK)
-    return 1;
+  if (buf->pvt.fat.fh.fsize >= pos) {
+    FRESULT res = f_lseek(&buf->pvt.fat.fh, pos);
+    if (res != FR_OK) {
+      parse_error(res,0);
+      f_close(&buf->pvt.fat.fh);
+      free_buffer(buf);
+      return 1;
+    }
+
+    if (fat_file_read(buf))
+      return 1;
+  } else {
+    buf->data[2]  = (buf->recordlen ? 255:13);
+    buf->lastused = 2;
+    buf->fptr     = position;
+    set_error(ERROR_RECORD_MISSING);
+  }
 
   buf->position = index + 2;
   if(index + 2 > buf->lastused)
