@@ -41,7 +41,6 @@
 
 uint8_t current_error;
 uint8_t error_buffer[CONFIG_ERROR_BUFFER_SIZE];
-volatile uint8_t led_state;
 
 #define EC(x) x+0x80
 
