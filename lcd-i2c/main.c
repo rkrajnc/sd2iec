@@ -466,6 +466,20 @@ static void update_display(void) {
 
 
 int main(void) {
+  // Disable JTAG
+#if defined __AVR_ATmega644__ || defined __AVR_ATmega644P__ || defined __AVR_ATmega2561__
+  asm volatile("in  r24, %0\n"
+               "ori r24, 0x80\n"
+               "out %0, r24\n"
+               "out %0, r24\n"
+               :
+               : "I" (_SFR_IO_ADDR(MCUCR))
+               : "r24"
+               );
+#else
+#  error Unknown chip!
+#endif
+
   /* I2C initialisation, no need to set TWBR because we don't act as master */
   HWI2C_PORT |= HWI2C_SDA | HWI2C_SCL;
   TWAR = DISPLAY_I2C_ADDR;
