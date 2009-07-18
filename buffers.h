@@ -159,7 +159,7 @@ static void inline stick_buffer(buffer_t *buf) { buf->sticky = 1; }
 buffer_t *find_buffer(uint8_t secondary);
 
 /* Number of currently allocated buffers + 16 * number of write buffers */
-uint8_t active_buffers;
+extern uint8_t active_buffers;
 
 /* Check if any buffers are free */
 #define check_free_buffers() ((active_buffers & 0x0f) < CONFIG_BUFFER_COUNT)
