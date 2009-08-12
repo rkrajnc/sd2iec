@@ -332,6 +332,12 @@
 #  define BUTTON_MASK           (_BV(PA4)|_BV(PA5))
 #  define BUTTON_NEXT           _BV(PA4)
 #  define BUTTON_PREV           _BV(PA5)
+#  define SOFTI2C_PORT          PORTC
+#  define SOFTI2C_PIN           PINC
+#  define SOFTI2C_DDR           DDRC
+#  define SOFTI2C_BIT_SCL       PC6
+#  define SOFTI2C_BIT_SDA       PC5
+#  define SOFTI2C_DELAY         6
 
 
 #elif CONFIG_HARDWARE_VARIANT == 4
