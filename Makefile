@@ -100,7 +100,7 @@ FORMAT = ihex
 TARGET = $(OBJDIR)/sd2iec
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = buffers.c fatops.c fileops.c iec.c main.c errormsg.c doscmd.c ff.c fastloader.c m2iops.c d64ops.c diskchange.c eeprom.c parser.c utils.c timer.c led.c diskio.c sdcard.c spi.c crc7.c
+SRC = buffers.c fatops.c fileops.c iec.c main.c errormsg.c doscmd.c ff.c fastloader.c m2iops.c d64ops.c diskchange.c eeprom.c parser.c utils.c timer.c led.c diskio.c sdcard.c spi.c
 
 ifeq ($(CONFIG_UART_DEBUG),y)
   SRC += uart.c
@@ -131,7 +131,7 @@ endif
 
 # Additional hardware support enabled in the config file
 ifdef CONFIG_ADD_SD
-  SRC += sdcard.c spi.c crc7.c
+  SRC += sdcard.c spi.c
 endif
 
 ifdef CONFIG_ADD_ATA
@@ -149,7 +149,7 @@ endif
 #     Even though the DOS/Win* filesystem matches both .s and .S the same,
 #     it will preserve the spelling of the filenames, and gcc itself does
 #     care about how the name is spelled on its command-line.
-ASRC = fastloader-ll.S
+ASRC = fastloader-ll.S crc7asm.S
 
 
 # Optimization level, can be [0, 1, 2, 3, s].

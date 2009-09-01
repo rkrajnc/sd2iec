@@ -27,7 +27,7 @@
 #ifndef CRC7_H
 #define CRC7_H
 
-uint8_t crc7update(uint8_t crc, const uint8_t data);
+uint8_t crc7update(uint8_t crc, uint8_t data);
 
 #endif
 
