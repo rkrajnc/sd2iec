@@ -32,6 +32,7 @@
 #include <avr/power.h>
 #include <util/atomic.h>
 #include <util/delay.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #include "avrcompat.h"
@@ -248,6 +249,8 @@ static void parse_display(uint8_t length, uint8_t *data) {
     for (i=0;i<sizeof(lcdline)/sizeof(linebuffer_t);i++) {
       memset(&lcdline[i],0,sizeof(linebuffer_t));
     }
+    for (i=0;i<length-1;i++)
+      data[i+1] = tolower(data[i+1]);
     set_line(0, length-1, data+1, 0);
     strcpy_P(lcdline[3].contents, status_line_str);
     break;
