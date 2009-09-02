@@ -25,7 +25,8 @@
 */
 
 #include <stdint.h>
-#include "ustring.h"
+#include <stddef.h>
+#include "utils.h"
 
 uint8_t *appendnumber(uint8_t *msg, uint8_t value) {
   if (value >= 100) {
