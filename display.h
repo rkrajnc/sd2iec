@@ -31,9 +31,12 @@
 
 extern uint8_t display_found;
 
+#include "i2c.h"
+
 void display_send_prefixed(uint8_t cmd, uint8_t prefixbyte, uint8_t len, uint8_t *buffer);
 uint8_t display_init(uint8_t len, uint8_t *message);
 void display_service(void);
+# define display_send_cmd(cmd,len,buf) while (display_found && i2c_write_registers(DISPLAY_I2C_ADDR,cmd,len,buf))
 
 #else // CONFIG_REMOTE_DISPLAY
 
@@ -41,10 +44,9 @@ void display_service(void);
 # define display_send_prefixed(a,b,c,d) do { } while (0)
 # define display_init(a,b)              0
 # define display_service()              do {} while (0)
+# define display_send_cmd(cmd,len,buf)  do {} while (0)
 
 #endif // CONFIG_REMOTE_DISPLAY
-
-#include "i2c.h"
 
 #define DISPLAY_I2C_ADDR 0x64
 
@@ -64,8 +66,6 @@ enum display_commands {
   DISPLAY_MENU_GETSELECTION, // returns the number of the selected menu entry
   DISPLAY_MENU_GETENTRY,     // returns the text of the selected menu entry
 };
-
-#define display_send_cmd(cmd,len,buf) while (display_found && i2c_write_registers(DISPLAY_I2C_ADDR,cmd,len,buf))
 
 static inline void display_menu_show(uint8_t start) {
   display_send_cmd(DISPLAY_MENU_SHOW, 1, &start);
