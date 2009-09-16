@@ -41,7 +41,7 @@
  * @dummy      : EEPROM position 0 is unused
  * @checksum   : Checksum over the EEPROM contents
  * @structsize : size of the eeprom structure
- * @osccal     : stored value of OSCCAL
+ * @unused     : unused byte kept for structure compatibility
  * @globalflags: subset of the globalflags variable
  * @address    : device address set by software
  * @hardaddress: device address set by jumpers
@@ -50,12 +50,15 @@
  * @drvflags1  : 16 bits of drv mappings, organized as 4 nybbles.
  *
  * This is the data structure for the contents of the EEPROM.
+ *
+ * Do not remove any fields!
+ * Only add fields at the end!
  */
 static EEMEM struct {
   uint8_t  dummy;
   uint8_t  checksum;
   uint16_t structsize;
-  uint8_t  osccal;
+  uint8_t  unused;
   uint8_t  global_flags;
   uint8_t  address;
   uint8_t  hardaddress;
@@ -102,8 +105,6 @@ void read_configuration(void) {
   }
 
   /* Read data from EEPROM */
-  OSCCAL = eeprom_read_byte(&storedconfig.osccal);
-
   tmp = eeprom_read_byte(&storedconfig.global_flags);
   globalflags &= (uint8_t)~(JIFFY_ENABLED | POSTMATCH |
                             EXTENSION_HIDING | FAT32_FREEBLOCKS);
@@ -144,7 +145,6 @@ void write_configuration(void) {
 
   /* Write configuration to EEPROM */
   eeprom_write_word(&storedconfig.structsize, sizeof(storedconfig));
-  eeprom_write_byte(&storedconfig.osccal, OSCCAL);
   eeprom_write_byte(&storedconfig.global_flags,
                     globalflags & (JIFFY_ENABLED | POSTMATCH |
                                    EXTENSION_HIDING | FAT32_FREEBLOCKS));

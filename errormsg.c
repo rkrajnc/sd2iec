@@ -194,8 +194,6 @@ void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
     default:
       msg = appendbool(msg, 'J', globalflags & JIFFY_ENABLED);
 
-      *msg++ = 'C';
-      msg = appendnumber(msg, OSCCAL);
       *msg++ = ':';
 
       *msg++ = 'E';

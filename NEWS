@@ -1,4 +1,5 @@
 2009-xx-xx - release x.x.x
+        - Remove XC command
         - Bugfix: Image files not mountable if read-only file or media
 
 2009-05-20 - release 0.8.1

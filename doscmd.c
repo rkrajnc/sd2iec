@@ -1414,13 +1414,6 @@ static void parse_xcommand(void) {
     }
     break;
 
-  case 'C':
-    /* Calibration */
-    str = command_buffer+2;
-    OSCCAL = parse_number(&str);
-    set_error_ts(ERROR_STATUS,device_address,0);
-    break;
-
   case 'D':
     /* drive config */
 #ifdef NEED_DISKMUX

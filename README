@@ -303,10 +303,6 @@ Supported commands:
              This flag can be saved in the EEPROM using XW, the default value
              is enabled (+).
 
-  - XCnum    Set oscillator calibration value to num (must be between
-             0 and 255). Default is whatever your chip defaults to. This
-             value can be saved in the EEPROM using XW.
-
   - XDdrv=val Configure drives.  On ATA-based units or units with multiple
              drive types, this command can be used to enable or reorder
              the drives.  drv is the drive slot (0-7), while val is one
@@ -347,10 +343,10 @@ Supported commands:
              any changes you made will persist even after turning off
              the hardware.
 
-             The stored configuration includes the oscillator calibration
-             value, the JiffyDOS protocol support flag, the extension mode
-             and the current device address. If you have changed the device
-             address by software, sd2iec will power up with that address unless
+             The stored configuration includes the JiffyDOS protocol support
+             flag, the extension mode and the current device address.
+             If you have changed the device address by software,
+             sd2iec will power up with that address unless
              you have changed the device address jumpers (if available) to
              a different setting than the one active at the time the
              configuration was saved. You can think of this feature as
@@ -442,23 +438,22 @@ third character of the command.
 
 Software fastloaders:
 =====================
+Note: Using sd2iec without an external crystal or similiar precise
+      clock source is not a supported configuration.
+      If you try that anyway, be prepared to suffer from random
+      data corruption. You have been warned.
+
   Turbodisk
   ---------
   Turbodisk is detected by the CRC of its 493 byte long floppy code and
   the M-E address 0x0303. The same code seems to be used under various names,
-  among them "Turbodisk" (both 2.1 and 2.2) and "Fast-Load". Unfortunately
-  the timing requirements are extremely tight and cannot be met with the
-  internal RC oscillator of the AVR even if calibrated. You really need an
-  external 8MHz crystal or the data read by the C64 will be gibberish.
+  among them "Turbodisk" (both 2.1 and 2.2) and "Fast-Load".
   It is not known if there is an NTSC-compatible version of this fastloader.
 
   Final Cartridge III
   -------------------
   Both the fast loader and the fast saver of Final Cartridge III are supported.
-  The fast loader seems to work without a crystal, the fast saver was not
-  tested. It is not known if there is an NTSC-compatible version using the
-  same drive code, but at least for the fastloader the FC3 rom seems to
-  contain two different C64-side implementations.
+  The FC3 is both PAL and NTSC compatible.
 
   The slightly different fastloader used for files freezed with the FC3
   is also supported.
@@ -491,11 +486,6 @@ JiffyDOS:
 =========
 The JiffyDOS protocol has very relaxed timing constraints compared to
 Turbodisk, but still not as relaxed as the standard Commodore IEC protocol.
-Jiffy seems to tolerate slightly mis-tuned RC oscillators, but you still
-shouldn't expect it to work without oscillator calibration. If the
-frequency error is too big you WILL get wrong data which usually manifests
-as a FILE NOT FOUND error because the name the drive received was already
-garbled.
 
 x00 files:
 ==========
