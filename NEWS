@@ -1,6 +1,13 @@
 2009-xx-xx - release x.x.x
         - Remove XC command
+
+2009-09-27 - release 0.8.2
+        - Bugfix: Prevent random storage corruption on FAT32 media
         - Bugfix: Image files not mountable if read-only file or media
+        - Bugfix: Do not clear error channel if sec. 15 is closed
+        - Add a dummy RTC read during init (to update year if required)
+        - Enable I2C RTC support in LarsP configuration for Final Expansion 3
+        - Acknowledge ATN during initialisation to stall C64 if required
 
 2009-05-24 - release 0.8.1a
         - Fix bootloader version number generation
