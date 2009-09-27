@@ -1488,7 +1488,6 @@ FRESULT f_open (
       dir[DIR_Attr] = 0;                  /* Reset attribute */
       ps = get_fattime();
       ST_DWORD(&dir[DIR_CrtTime], ps);    /* Created time */
-      sync(fs); /* not sure if this is needed in all cases, but kept */
       mode |= FA__WRITTEN;        /* Set file changed flag */
     }
   }
@@ -1504,6 +1503,8 @@ FRESULT f_open (
   }
 
   fp->dir_sect = FSBUF.sect;          /* Pointer to the directory entry */
+  sync(fs);                           /* sync buffer in case the file was just created */
+                                      /* can't sync earlier, modifies FSBUF.sect       */
   fp->dir_ptr = dir;
 #endif
   fp->flag = mode;                    /* File access mode */
