@@ -572,7 +572,7 @@ tdbitloop2:
         ret
 #endif
 
-#if defined(CONFIG_DREAMLOAD) || defined(CONFIG_FC3)
+#if defined(CONFIG_DREAMLOAD) || defined(CONFIG_FC3) || defined(CONFIG_ULOAD3)
         ;;
         ;; Set bit 0 of r0 on CLOCK and bit 1 on DATA
         ;; A bit value of one means pull down
@@ -611,6 +611,7 @@ send_bits_to_clk_data:
 get_bits_from_clk_data:
         ; rcall                         ; 3
         in      r19, _SFR_IO_ADDR(IEC_PIN)  ; 1
+        sbi     _SFR_IO_ADDR(IEC_PIN), IEC_OPIN_SRQ
         bst     r19, IEC_PIN_DATA       ; 1
         bld     r24, 0                  ; 1
         bst     r19, IEC_PIN_CLOCK      ; 1
@@ -619,12 +620,14 @@ get_bits_from_clk_data:
 
 #endif
 
-#ifdef CONFIG_FC3
+#if defined(CONFIG_FC3) || defined(CONFIG_ULOAD3)
         ;;
         ;; Do this kind of handshake:
         ;; set CLOCK low, wait for DATA going low,
         ;; release CLOCK, wait for DATA going high
         ;; returns without waiting if ATN is low
+        ;;
+        ;; cycles from DATA high to return to caller: 5-10
         ;;
         .global clk_data_handshake
 clk_data_handshake:
@@ -642,7 +645,9 @@ clk_data_handshake:
         rjmp    1b
 2:
         ret
+#endif
 
+#ifdef CONFIG_FC3
         ;;
         ;; Sends four bytes at r24/r25 using the FC3 protocol
         ;;
@@ -859,4 +864,97 @@ dsb_bitloop:
         brne    dsb_bitloop     ; loop until done
         ret
 #endif
+
+#ifdef CONFIG_ULOAD3
+        ;;
+        ;; Receive a byte using the ULoad Model 3 protocol
+        ;;
+        .global uload3_get_byte
+uload3_get_byte:
+        cli
+        ldi     r25, 0xff       ; prepare a negative return value
+        clr     r24
+        rcall   clk_data_handshake
+        sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_ATN ;skip ret if ATN is high
+        rjmp    uload3_abort                       ;return if ATN is low
+
+        ;; assuming an average of 10 cycles between DATA high and the following instruction
+        delay_cycles 14 * 8 - 10 - 4
+
+        ;; read bits 7/5
+        rcall   get_bits_from_clk_data ;4+8 r24 = _____7_5
+        lsl     r24                    ;1   r24 = ____7_5_
+
+        delay_cycles 10 * 8 - 13
+
+        ;; read bits 6/4
+        rcall   get_bits_from_clk_data ;4+8 r24 = ____7654
+        swap    r24                    ;1   r24 = 7654____
+        lsr     r24                    ;1   r24 = _7654___
+
+        delay_cycles 14 * 8 - 14
+
+        ;; read bits 3/1
+        rcall   get_bits_from_clk_data ;4+8 r24 = _76543_1
+        lsl     r24                    ;1   r24 = 76543_1_
+
+        delay_cycles 10 * 8 - 13
+
+        ;; read bits 2/0
+        rcall   get_bits_from_clk_data ;4+8 r24 = 76543210
+
+        delay_cycles 20*8       ; wait a bit so the C64 can return the bus to idle state
+
+        clr     r25             ; clear upper byte of return value
+        com     r24             ; invert data byte
+
+uload3_abort:
+        sei
+        ret
+
+
+        ;;
+        ;; Send a byte using the ULoad Model 3 protocol
+        ;;
+        .global uload3_send_byte
+uload3_send_byte:
+        cli
+
+        ;; DATA low
+        sbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA
+
+        ;; wait for CLOCK low
+1:      sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
+        rjmp    1b
+
+        ;; DATA high
+        cbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA
+
+        ;; wait for CLOCK high - 2 to 5 cycles, assuming 3
+1:      sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
+        rjmp    1b
+
+        ;; prepare transmission
+        mov     r0, r24         ;1 - move data to output register
+        com     r0              ;1 - invert byte
+        ldi     r24, 4          ;1 - number of loops
+        delay_cycles (14-8) * 8 - 6 + 6 + 3 ; initial delay before first bit pair
+
+uload3_bitloop:
+        delay_cycles 8 * 8 - 16 - 3   ; delay between bit pairs
+        rcall   send_bits_to_clk_data ;10+6
+        dec     r24                   ;1 - decrement pair counter
+        brne    uload3_bitloop        ;2 - continue loop
+
+        delay_cycles 10*8 - 9   ; delay before releasing clock/data
+
+        ;; release CLOCK+DATA
+        cbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_CLOCK
+        cbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA
+        rcall   delay1us        ; safety
+
+        sei
+        ret
+#endif
+
         .end

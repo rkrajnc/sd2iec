@@ -66,8 +66,8 @@ typedef struct magic_value_s {
 /* Currently we remember two bytes per address since that's the longest  */
 /* block required. */
 static const PROGMEM magic_value_t c1541_magics[] = {
-  { 0xfea0, { 0x0d, 0xed } }, /* used by DreamLoad */
-  { 0xe5c6, { 0x34, 0xb1 } }, /* used by DreamLoad */
+  { 0xfea0, { 0x0d, 0xed } }, /* used by DreamLoad and ULoad Model 3 */
+  { 0xe5c6, { 0x34, 0xb1 } }, /* used by DreamLoad and ULoad Model 3 */
   { 0xfffe, { 0x00, 0x00 } }, /* Disable AR6 fastloader */
   { 0,      { 0, 0 } }        /* end mark */
 };
@@ -806,6 +806,11 @@ static void handle_memexec(void) {
     load_dreamload();
   }
 #endif
+#ifdef CONFIG_ULOAD3
+  if (detected_loader == FL_ULOAD3 && address == 0x0336) {
+    load_uload3();
+  }
+#endif
 
   detected_loader = FL_NONE;
 }
@@ -887,9 +892,16 @@ static void handle_memwrite(void) {
     detected_loader = FL_FC3_FREEZED;
   }
 #endif
+
 #ifdef CONFIG_DREAMLOAD
   if (datacrc == 0x1f5b) {
     detected_loader = FL_DREAMLOAD;
+  }
+#endif
+
+#ifdef CONFIG_ULOAD3
+  if (datacrc == 0xf758) {
+    detected_loader = FL_ULOAD3;
   }
 #endif
 

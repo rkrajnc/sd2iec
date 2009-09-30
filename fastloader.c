@@ -34,6 +34,7 @@
 #include "config.h"
 #include "buffers.h"
 #include "doscmd.h"
+#include "errormsg.h"
 #include "fileops.h"
 #include "parser.h"
 #include "wrapops.h"
@@ -373,7 +374,125 @@ void load_dreamload(void) {
   }
 
 error:
+  free_buffer(buf);
   set_clock_irq(0);
   set_atn_irq(0);
+}
+#endif
+
+#ifdef CONFIG_ULOAD3
+static uint8_t uload3_transferchain(uint8_t track, uint8_t sector, uint8_t saving) {
+  buffer_t *buf;
+  uint8_t i,bytecount,first;
+
+  first = 1;
+
+  buf = alloc_buffer();
+  if (!buf) {
+    uload3_send_byte(0xff);
+    return 0;
+  }
+
+  do {
+    /* read current sector */
+    read_sector(buf, current_part, track, sector);
+    if (current_error != 0) {
+      uload3_send_byte(0xff);
+      return 0;
+    }
+
+    /* send number of bytes in sector */
+    if (buf->data[0] == 0) {
+      bytecount = buf->data[1]-1;
+    } else {
+      bytecount = 254;
+    }
+    uload3_send_byte(bytecount);
+
+    if (saving) {
+      if (first) {
+        /* send load address */
+        first = 0;
+        uload3_send_byte(buf->data[2]);
+        uload3_send_byte(buf->data[3]);
+        i = 2;
+      } else
+        i = 0;
+
+      /* receive sector contents */
+      for (;i<bytecount;i++) {
+        int16_t tmp = uload3_get_byte();
+        if (tmp < 0)
+          return 1;
+
+        buf->data[i+2] = tmp;
+      }
+
+      /* write sector */
+      write_sector(buf, current_part, track, sector);
+      if (current_error != 0) {
+        uload3_send_byte(0xff);
+        return 0;
+      }
+    } else {
+      /* reading: send sector contents */
+      for (i=0;i<bytecount;i++)
+        uload3_send_byte(buf->data[i+2]);
+    }
+
+    track  = buf->data[0];
+    sector = buf->data[1];
+  } while (track != 0);
+
+  /* send end marker */
+  uload3_send_byte(0);
+
+  free_buffer(buf);
+  return 0;
+}
+
+void load_uload3(void) {
+  int16_t cmd,tmp;
+  uint8_t t,s;
+
+  while (1) {
+    /* read command */
+    cmd = uload3_get_byte();
+    if (cmd < 0) {
+      /* ATN received */
+      break;
+    }
+
+    switch (cmd) {
+    case 1: /* load a file */
+    case 2: /* save and replace a file */
+      tmp = uload3_get_byte();
+      if (tmp < 0)
+        return;
+      t = tmp;
+
+      tmp = uload3_get_byte();
+      if (tmp < 0)
+        /* ATN received */
+        return;
+      s = tmp;
+
+      if (uload3_transferchain(t,s, (cmd == 2)))
+        return;
+
+      break;
+
+    case '$':
+      /* read directory */
+      uload3_transferchain(partition[current_part].d64data.dir_track,
+                           partition[current_part].d64data.dir_start_sector, 0);
+      break;
+
+    default:
+      /* unknown command */
+      uload3_send_byte(0xff);
+      break;
+    }
+  }
 }
 #endif

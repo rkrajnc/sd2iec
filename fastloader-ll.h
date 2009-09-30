@@ -40,4 +40,7 @@ uint8_t fc3_get_byte(void);
 uint8_t dreamload_get_byte(void);
 void dreamload_send_byte(uint8_t byte);
 
+int16_t uload3_get_byte(void);
+void uload3_send_byte(uint8_t byte);
+
 #endif

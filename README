@@ -482,6 +482,20 @@ Note: Using sd2iec without an external crystal or similiar precise
   Please note that Dreamload does not work with more than one device on the
   serial bus due to the way it uses the ATN line.
 
+  ULoad Model 3
+  -------------
+  ULoad Model 3 uses direct track/sector access, so it is only supported
+  on D64 or similiar disk image formats. Currently there is exactly one
+  supported variant of ULoad Model 3, which is the one used by
+  Ultima 3 Gold. There are no other known variants at this time, but
+  this may change.
+
+  If you are a coder and want to use ULoad Model 3 in your own program,
+  either configure it to produce the same drive code as U3Gold or
+  contact me so we can work out a way to trigger ULoad M3 support
+  without uploading any drive code at all.
+
+
 JiffyDOS:
 =========
 The JiffyDOS protocol has very relaxed timing constraints compared to

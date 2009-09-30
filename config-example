@@ -75,6 +75,9 @@ CONFIG_FC3=y
 # Enable Dreamload fast loader
 CONFIG_DREAMLOAD=y
 
+# Enable ULoad Model 3 fast loader
+CONFIG_ULOAD3=y
+
 # Select which hardware to compile for
 # Valid values:
 #   1 - custom configuration in config.h
