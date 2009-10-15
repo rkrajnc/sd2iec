@@ -153,6 +153,13 @@
 #  define DIRTY_LED_PORT     PORTC
 #  define DIRTY_LED_BIT()    _BV(PC1)
 
+/* Software power LED */
+/* Currently used on uIEC/SD only */
+//#  define POWER_LED_DDR         DDRG
+//#  define POWER_LED_PORT        PORTG
+//#  define POWER_LED_BIT         _BV(PG1)
+//#  define POWER_LED_POLARITY    0
+
 
 /*** IEC signals ***/
 /* R.Riedel - using PORTA instead of the original PORTC for the IEC */
@@ -520,6 +527,10 @@
 #  define DIRTY_LED_OFF()       PORTG &= ~_BV(PG0)
 #  define DIRTY_LED_PORT        PORTG
 #  define DIRTY_LED_BIT()       _BV(PG0)
+#  define POWER_LED_DDR         DDRG
+#  define POWER_LED_PORT        PORTG
+#  define POWER_LED_BIT         _BV(PG1)
+#  define POWER_LED_POLARITY    0
 #  define IEC_PIN               PINB
 #  define IEC_DDRIN             DDRB
 #  define IEC_PORTIN            PORTB
