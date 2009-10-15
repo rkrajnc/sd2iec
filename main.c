@@ -127,9 +127,7 @@ int main(void) {
 
   BUSY_LED_SETDDR();
   DIRTY_LED_SETDDR();
-  AUX_LED_SETDDR();
 
-  AUX_LED_OFF();
   set_busy_led(1);
   set_dirty_led(0);
 

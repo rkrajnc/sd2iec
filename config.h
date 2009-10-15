@@ -153,11 +153,6 @@
 #  define DIRTY_LED_PORT     PORTC
 #  define DIRTY_LED_BIT()    _BV(PC1)
 
-/* Auxiliary LED for debugging */
-#  define AUX_LED_SETDDR()   do {} while (0)
-#  define AUX_LED_ON()       do {} while (0)
-#  define AUX_LED_OFF()      do {} while (0)
-
 
 /*** IEC signals ***/
 /* R.Riedel - using PORTA instead of the original PORTC for the IEC */
@@ -261,9 +256,6 @@
 #  define DIRTY_LED_OFF()       PORTC &= ~_BV(PC1)
 #  define DIRTY_LED_PORT        PORTC
 #  define DIRTY_LED_BIT()       _BV(PC1)
-#  define AUX_LED_SETDDR()      do {} while (0)
-#  define AUX_LED_ON()          do {} while (0)
-#  define AUX_LED_OFF()         do {} while (0)
 #  define IEC_PIN               PINA
 #  define IEC_DDR               DDRA
 #  define IEC_PORT              PORTA
@@ -313,9 +305,6 @@
 #  define DIRTY_LED_OFF()       PORTA |= _BV(PA1)
 #  define DIRTY_LED_PORT        PORTA
 #  define DIRTY_LED_BIT()       _BV(PA1)
-#  define AUX_LED_SETDDR()      do {} while (0)
-#  define AUX_LED_ON()          do {} while (0)
-#  define AUX_LED_OFF()         do {} while (0)
 #  define IEC_PIN               PINC
 #  define IEC_DDR               DDRC
 #  define IEC_PORT              PORTC
@@ -365,9 +354,6 @@
 #  define DIRTY_LED_OFF()       PORTE &= ~_BV(PE3)
 #  define DIRTY_LED_PORT        PORTE
 #  define DIRTY_LED_BIT()       _BV(PE3)
-#  define AUX_LED_SETDDR()      do {} while (0)
-#  define AUX_LED_ON()          do {} while (0)
-#  define AUX_LED_OFF()         do {} while (0)
 #  define IEC_PIN               PINE
 #  define IEC_DDR               DDRE
 #  define IEC_PORT              PORTE
@@ -422,9 +408,6 @@
 #  define DIRTY_LED_OFF()       PORTC &= ~_BV(PC1)
 #  define DIRTY_LED_PORT        PORTC
 #  define DIRTY_LED_BIT()       _BV(PC1)
-#  define AUX_LED_SETDDR()      do {} while (0)
-#  define AUX_LED_ON()          do {} while (0)
-#  define AUX_LED_OFF()         do {} while (0)
 #  define IEC_PIN               PINA
 #  define IEC_DDR               DDRA
 #  define IEC_PORT              PORTA
@@ -499,9 +482,6 @@
 #  define DIRTY_LED_OFF()       PORTA |= _BV(PA1)
 #  define DIRTY_LED_PORT        PORTA
 #  define DIRTY_LED_BIT()       _BV(PA1)
-#  define AUX_LED_SETDDR()      do {} while (0)
-#  define AUX_LED_ON()          do {} while (0)
-#  define AUX_LED_OFF()         do {} while (0)
 #  define IEC_PIN               PINB
 #  define IEC_DDR               DDRB
 #  define IEC_PORT              PORTB
@@ -540,9 +520,6 @@
 #  define DIRTY_LED_OFF()       PORTG &= ~_BV(PG0)
 #  define DIRTY_LED_PORT        PORTG
 #  define DIRTY_LED_BIT()       _BV(PG0)
-#  define AUX_LED_SETDDR()      DDRG  |= _BV(PG1)
-#  define AUX_LED_ON()          PORTG &= ~_BV(PG1)
-#  define AUX_LED_OFF()         PORTG |= _BV(PG1)
 #  define IEC_PIN               PINB
 #  define IEC_DDRIN             DDRB
 #  define IEC_PORTIN            PORTB
@@ -588,9 +565,6 @@
 #  define DIRTY_LED_OFF()       PORTD &= ~_BV(PD7)
 #  define DIRTY_LED_PORT        PORTD
 #  define DIRTY_LED_BIT()       _BV(PD7)
-#  define AUX_LED_SETDDR()      do {} while (0)
-#  define AUX_LED_ON()          do {} while (0)
-#  define AUX_LED_OFF()         do {} while (0)
 #  define IEC_PIN               PINB
 #  define IEC_DDR               DDRB
 #  define IEC_PORT              PORTB
