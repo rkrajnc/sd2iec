@@ -483,14 +483,14 @@ scandone:
 }
 
 /**
- * largebuffer_refill - refill callback for large buffers
+ * directbuffer_refill - refill callback for direct buffers
  * @buf: buffer to be used
  *
- * This function is used as the refill callback for large buffers and
- * will switch to the next or the first buffer in the chain. Always
+ * This function is used as the refill callback for direct buffers ('#')
+ * and will switch to the next or the first buffer in the chain. Always
  * returns 0.
  */
-uint8_t largebuffer_refill(buffer_t *buf) {
+uint8_t directbuffer_refill(buffer_t *buf) {
   uint8_t sec = buf->secondary;
 
   buf->secondary = BUFFER_SEC_CHAIN - sec;
@@ -553,7 +553,7 @@ static void open_buffer(uint8_t secondary) {
 
     do {
       buf->secondary = BUFFER_SEC_CHAIN - secondary;
-      buf->refill    = largebuffer_refill;
+      buf->refill    = directbuffer_refill;
       buf->cleanup   = largebuffer_cleanup;
       buf->read      = 1;
       buf->lastused  = 255;
@@ -581,7 +581,10 @@ static void open_buffer(uint8_t secondary) {
     buf->position  = 1;  /* Sic! */
     buf->lastused  = 255;
     buf->sendeoi   = 1;
-    buf->pvt.buffer.size = 1;
+    buf->pvt.buffer.size  = 1;
+    /* directbuffer_refill is used to check for # buffers in iec.c */
+    buf->refill           = directbuffer_refill;
+    buf->pvt.buffer.first = buf;
     mark_write_buffer(buf);
     stick_buffer(buf);
   }

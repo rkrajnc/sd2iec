@@ -496,8 +496,10 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
     if (buf->sendeoi &&
         (cmd & 0x0f) != 0x0f &&
         !buf->recordlen &&
-        buf->refill != largebuffer_refill)
+        buf->refill != directbuffer_refill) {
+      buf->read = 0;
       break;
+    }
 
     if (buf->refill(buf)) {
       iec_data.bus_state = BUS_CLEANUP;
