@@ -37,12 +37,6 @@
 #include "wrapops.h"
 #include "d64ops.h"
 
-#define OFS_FILE_TYPE    2
-#define OFS_TRACK        3
-#define OFS_SECTOR       4
-#define OFS_FILE_NAME    5
-#define OFS_SIZE_LOW     0x1e
-#define OFS_SIZE_HI      0x1f
 #define D41_ERROR_OFFSET 174848
 #define D71_ERROR_OFFSET 349696
 
@@ -801,9 +795,9 @@ static uint8_t d64_write_cleanup(buffer_t *buf) {
   if (image_read(buf->pvt.d64.part, sector_offset(buf->pvt.d64.part,t,s)+32*buf->pvt.d64.dh.entry, entrybuf, 32))
     return 1;
 
-  entrybuf[OFS_FILE_TYPE] |= FLAG_SPLAT;
-  entrybuf[OFS_SIZE_LOW]   = buf->pvt.d64.blocks & 0xff;
-  entrybuf[OFS_SIZE_HI]    = buf->pvt.d64.blocks >> 8;
+  entrybuf[DIR_OFS_FILE_TYPE] |= FLAG_SPLAT;
+  entrybuf[DIR_OFS_SIZE_LOW]   = buf->pvt.d64.blocks & 0xff;
+  entrybuf[DIR_OFS_SIZE_HI]    = buf->pvt.d64.blocks >> 8;
 
   if (image_write(buf->pvt.d64.part, sector_offset(buf->pvt.d64.part,t,s)+32*buf->pvt.d64.dh.entry, entrybuf, 32, 1))
     return 1;
@@ -901,21 +895,21 @@ static int8_t d64_readdir(dh_t *dh, struct cbmdirent *dent) {
     if (res)
       return res;
 
-    if (entrybuf[OFS_FILE_TYPE] != 0)
+    if (entrybuf[DIR_OFS_FILE_TYPE] != 0)
       break;
   } while (1);
 
   memset(dent, 0, sizeof(struct cbmdirent));
 
-  dent->typeflags = entrybuf[OFS_FILE_TYPE] ^ FLAG_SPLAT;
+  dent->typeflags = entrybuf[DIR_OFS_FILE_TYPE] ^ FLAG_SPLAT;
 
   if ((dent->typeflags & TYPE_MASK) >= TYPE_DIR)
     /* Change invalid types (includes DIR for now) to DEL */
     dent->typeflags &= (uint8_t)~TYPE_MASK;
 
-  dent->blocksize = entrybuf[OFS_SIZE_LOW] + 256*entrybuf[OFS_SIZE_HI];
+  dent->blocksize = entrybuf[DIR_OFS_SIZE_LOW] + 256*entrybuf[DIR_OFS_SIZE_HI];
   dent->remainder = 0xff;
-  memcpy(dent->name, entrybuf+OFS_FILE_NAME, CBM_NAME_LENGTH);
+  memcpy(dent->name, entrybuf+DIR_OFS_FILE_NAME, CBM_NAME_LENGTH);
   strnsubst(dent->name, 16, 0xa0, 0);
 
   /* Fake Date/Time */
@@ -977,8 +971,8 @@ static uint16_t d64_freeblocks(uint8_t part) {
 static void d64_open_read(path_t *path, struct cbmdirent *dent, buffer_t *buf) {
   /* WARNING: Ugly hack used here. The directory entry is still in  */
   /*          entrybuf because of match_entry in fatops.c/file_open */
-  buf->data[0] = entrybuf[OFS_TRACK];
-  buf->data[1] = entrybuf[OFS_SECTOR];
+  buf->data[0] = entrybuf[DIR_OFS_TRACK];
+  buf->data[1] = entrybuf[DIR_OFS_SECTOR];
 
   buf->pvt.d64.part = path->part;
 
@@ -1015,7 +1009,7 @@ static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
     buf->pvt.d64.dh.track  = matchdh.dir.d64.track;
     buf->pvt.d64.dh.sector = matchdh.dir.d64.sector;
     buf->pvt.d64.dh.entry  = matchdh.dir.d64.entry-1;
-    buf->pvt.d64.blocks    = entrybuf[OFS_SIZE_LOW] + 256*entrybuf[OFS_SIZE_HI]-1;
+    buf->pvt.d64.blocks    = entrybuf[DIR_OFS_SIZE_LOW] + 256*entrybuf[DIR_OFS_SIZE_HI]-1;
     buf->read       = 0;
     buf->position   = buf->lastused+1;
     if (buf->position == 0)
@@ -1039,7 +1033,7 @@ static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
     res = nextdirentry(&dh);
     if (res > 0)
       return;
-  } while (res == 0 && entrybuf[OFS_FILE_TYPE] != 0);
+  } while (res == 0 && entrybuf[DIR_OFS_FILE_TYPE] != 0);
 
   /* Allocate a new directory sector if no empty entries were found */
   if (res < 0) {
@@ -1085,17 +1079,17 @@ static void d64_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
   /* Create directory entry in entrybuf */
   uint8_t *name = dent->name;
   memset(entrybuf+2, 0, sizeof(entrybuf)-2);  /* Don't overwrite the link pointer! */
-  memset(entrybuf+OFS_FILE_NAME, 0xa0, CBM_NAME_LENGTH);
-  ptr = entrybuf+OFS_FILE_NAME;
+  memset(entrybuf+DIR_OFS_FILE_NAME, 0xa0, CBM_NAME_LENGTH);
+  ptr = entrybuf+DIR_OFS_FILE_NAME;
   while (*name) *ptr++ = *name++;
-  entrybuf[OFS_FILE_TYPE] = type;
+  entrybuf[DIR_OFS_FILE_TYPE] = type;
 
   /* Find a free sector and allocate it */
   if (get_first_sector(path->part,&t,&s))
     return;
 
-  entrybuf[OFS_TRACK]  = t;
-  entrybuf[OFS_SECTOR] = s;
+  entrybuf[DIR_OFS_TRACK]  = t;
+  entrybuf[DIR_OFS_SECTOR] = s;
 
   if (allocate_sector(path->part,t,s))
     return;
@@ -1133,8 +1127,8 @@ static uint8_t d64_delete(path_t *path, struct cbmdirent *dent) {
   uint8_t linkbuf[2];
 
   /* Free the sector chain in the BAM */
-  linkbuf[0] = entrybuf[OFS_TRACK];
-  linkbuf[1] = entrybuf[OFS_SECTOR];
+  linkbuf[0] = entrybuf[DIR_OFS_TRACK];
+  linkbuf[1] = entrybuf[DIR_OFS_SECTOR];
   do {
     free_sector(path->part, linkbuf[0], linkbuf[1]);
 
@@ -1143,7 +1137,7 @@ static uint8_t d64_delete(path_t *path, struct cbmdirent *dent) {
   } while (linkbuf[0]);
 
   /* Clear directory entry */
-  entrybuf[OFS_FILE_TYPE] = 0;
+  entrybuf[DIR_OFS_FILE_TYPE] = 0;
   if (image_write(path->part, sector_offset(path->part,matchdh.dir.d64.track,matchdh.dir.d64.sector)
                  +32*(matchdh.dir.d64.entry-1), entrybuf, 32, 1))
     return 255;
@@ -1173,8 +1167,8 @@ static void d64_rename(path_t *path, struct cbmdirent *dent, uint8_t *newname) {
   /* We're assuming that the caller has looked up the old name just   */
   /* before calling us  so entrybuf holds the correct directory entry */
   /* and matchdh has the track/sector/offset we need.                 */
-  memset(entrybuf+OFS_FILE_NAME, 0xa0, CBM_NAME_LENGTH);
-  ptr = entrybuf+OFS_FILE_NAME;
+  memset(entrybuf+DIR_OFS_FILE_NAME, 0xa0, CBM_NAME_LENGTH);
+  ptr = entrybuf+DIR_OFS_FILE_NAME;
   while (*newname) *ptr++ = *newname++;
 
   image_write(path->part,
@@ -1259,6 +1253,22 @@ static void d64_format(uint8_t part, uint8_t *name, uint8_t *id) {
   bam_buffer->cleanup(bam_buffer);
 
   /* FIXME: Clear the error info block */
+}
+
+/**
+ * d64_raw_directory - open directory track as file
+ * @buf: target buffer
+ *
+ * This function opens the directory track as a file on the
+ * buffer passed in buf. Used when $ is opened on a secondary
+ * address > 0.
+ */
+void d64_raw_directory(path_t *path, buffer_t *buf) {
+  /* Let's pile one hack on the other and use d64_open_read */
+  entrybuf[DIR_OFS_TRACK]  = get_param(path->part, DIR_TRACK);
+  entrybuf[DIR_OFS_SECTOR] = 0;
+
+  d64_open_read(path, NULL, buf);
 }
 
 const PROGMEM fileops_t d64ops = {

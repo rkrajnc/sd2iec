@@ -29,6 +29,7 @@
 #include <string.h>
 #include "config.h"
 #include "buffers.h"
+#include "d64ops.h"
 #include "dirent.h"
 #include "display.h"
 #include "doscmd.h"
@@ -50,6 +51,11 @@
 #define HEADER_OFFSET_DRIVE 4
 #define HEADER_OFFSET_NAME  8
 #define HEADER_OFFSET_ID   26
+
+/* offsets within a D64 BAM sector for raw directory emulation */
+#define BAM_OFFSET_NAME  0x90
+#define BAM_OFFSET_ID    0xa2
+#define BAM_A0_AREA_SIZE (0xaa - 0x90 + 1)
 
 /* NOTE: I wonder if RLE-packing would save space in flash? */
 const PROGMEM uint8_t dirheader[] = {
@@ -297,6 +303,76 @@ static uint8_t dir_refill(buffer_t *buf) {
 }
 
 /**
+ * rawdir_dummy_refill - generate raw dummy directory entries
+ * @buf: buffer to be used
+ *
+ * This function generates an empty raw directory entry which is
+ * used to pad a raw directory to its correct size.
+ */
+static uint8_t rawdir_dummy_refill(buffer_t *buf) {
+  if (buf->pvt.dir.filetype++)
+    buf->position = 0;
+  else
+    buf->position = 2;
+
+  if (buf->pvt.dir.filetype == 8)
+    buf->sendeoi = 1;
+
+  return 0;
+}
+
+/**
+ * rawdir_refill - generate the next raw directory entry
+ * @buf: buffer to be used
+ *
+ * This function generates a single raw directory entry for the next file.
+ * Used as a callback during directory generation.
+ */
+static uint8_t rawdir_refill(buffer_t *buf) {
+  struct cbmdirent dent;
+
+  memset(buf->data, 0, 32);
+
+  switch (readdir(&buf->pvt.dir.dh, &dent)) {
+  case -1:
+    /* last entry, switch to dummy entries */
+    return rawdir_dummy_refill(buf);
+
+  default:
+    /* error in readdir */
+    free_buffer(buf);
+    return 1;
+
+  case 0:
+    /* entry found, creation below */
+    break;
+  }
+
+  buf->data[DIR_OFS_TRACK]     = 1;
+  buf->data[DIR_OFS_SIZE_LOW]  = dent.blocksize & 0xff;
+  buf->data[DIR_OFS_SIZE_HI ]  = dent.blocksize >> 8;
+  buf->data[DIR_OFS_FILE_TYPE] = dent.typeflags ^ FLAG_SPLAT;
+
+  /* Copy file name without 0-byte */
+  memset(buf->data + DIR_OFS_FILE_NAME, 0xa0, CBM_NAME_LENGTH);
+  memcpy(buf->data + DIR_OFS_FILE_NAME, dent.name, ustrlen(dent.name));
+
+  /* Every 8th entry is two bytes shorter   */
+  /* because the t/s link bytes are skipped */
+  if (buf->pvt.dir.filetype++)
+    buf->position = 0;
+  else
+    buf->position = 2;
+
+  buf->lastused = 31;
+
+  if (buf->pvt.dir.filetype == 8)
+    buf->pvt.dir.filetype = 0;
+
+  return 0;
+}
+
+/**
  * load_directory - Prepare directory generation and create header
  * @secondary: secondary address used for reading the directory
  *
@@ -322,7 +398,7 @@ static void load_directory(uint8_t secondary) {
   buf->read      = 1;
   buf->lastused  = 31;
 
-  if (command_length > 2) {
+  if (command_length > 2 && secondary == 0) {
     if(command_buffer[1]=='=') {
       if(command_buffer[2]=='P') {
         /* Parse Partition Directory */
@@ -458,22 +534,59 @@ static void load_directory(uint8_t secondary) {
   }
 
 scandone:
-  /* copy static header to start of buffer */
-  memcpy_P(buf->data, dirheader, sizeof(dirheader));
+  if (secondary != 0) {
+    /* Raw directory */
 
-  /* set partition number */
-  buf->data[HEADER_OFFSET_DRIVE] = path.part+1;
+    if (partition[path.part].fop == &d64ops) {
+      /* No need to fake it for D64 files */
+      d64_raw_directory(&path, buf);
+      return;
+    }
 
-  /* read volume name */
-  if (disk_label(&path, buf->data+HEADER_OFFSET_NAME))
-    return;
+    /* prepare a fake BAM sector */
+    memset(buf->data, 0, 256);
+    memset(buf->data + BAM_OFFSET_NAME - 2, 0xa0, BAM_A0_AREA_SIZE);
 
-  /* read id */
-  if (disk_id(path.part,buf->data+HEADER_OFFSET_ID))
-    return;
+    /* fill label and id */
+    if (disk_label(&path, buf->data + BAM_OFFSET_NAME - 2))
+      return;
 
-  /* Let the refill callback handle everything else */
-  buf->refill = dir_refill;
+    if (disk_id(path.part, buf->data + BAM_OFFSET_ID - 2))
+      return;
+
+    /* change padding of label and id to 0xa0 */
+    name = buf->data + BAM_OFFSET_NAME - 2 + CBM_NAME_LENGTH;
+    while (*--name == ' ')
+      *name = 0xa0;
+
+    if (buf->data[BAM_OFFSET_ID+2-2] == 0x20)
+      buf->data[BAM_OFFSET_ID+2-2] = 0xa0;
+
+    /* DOS version marker */
+    buf->data[0] = 'A';
+
+    buf->refill = rawdir_refill;
+    buf->lastused = 253;
+    buf->pvt.dir.filetype = 0; // misused as entry counter
+  } else {
+
+    /* copy static header to start of buffer */
+    memcpy_P(buf->data, dirheader, sizeof(dirheader));
+
+    /* set partition number */
+    buf->data[HEADER_OFFSET_DRIVE] = path.part+1;
+
+    /* read volume name */
+    if (disk_label(&path, buf->data+HEADER_OFFSET_NAME))
+      return;
+
+    /* read id */
+    if (disk_id(path.part,buf->data+HEADER_OFFSET_ID))
+      return;
+
+    /* Let the refill callback handle everything else */
+    buf->refill = dir_refill;
+  }
 
   /* Keep the buffer around */
   stick_buffer(buf);
@@ -622,7 +735,6 @@ void file_open(uint8_t secondary) {
 
   /* Load directory? */
   if (command_buffer[0] == '$') {
-    // FIXME: Secondary != 0? Compare D7F7-D7FF
     load_directory(secondary);
     return;
   }

@@ -29,10 +29,20 @@
 
 #include "wrapops.h"
 
+/* Offsets in a D64 directory entry, also needed for raw dirs */
+#define DIR_OFS_FILE_TYPE       2
+#define DIR_OFS_TRACK           3
+#define DIR_OFS_SECTOR          4
+#define DIR_OFS_FILE_NAME       5
+#define DIR_OFS_SIZE_LOW        0x1e
+#define DIR_OFS_SIZE_HI         0x1f
+
 extern const fileops_t d64ops;
 
 extern buffer_t *bam_buffer;
 
 uint8_t d64_mount(uint8_t part);
+
+void d64_raw_directory(path_t *path, buffer_t *buf);
 
 #endif
