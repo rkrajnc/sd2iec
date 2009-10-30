@@ -868,39 +868,39 @@ static void handle_memwrite(void) {
 
 #ifdef CONFIG_TURBODISK
   /* Turbodisk sends the filename in the last M-W, check the previous CRC */
-  if (datacrc == 0xe1cb) {
+  if (datacrc == 0x9c9f) {
     detected_loader = FL_TURBODISK;
   } else
 #endif
     detected_loader = FL_NONE;
 
 
-  for (i=0;i<command_length;i++)
-    datacrc = _crc16_update(datacrc, command_buffer[i]);
+  for (i=0;i<command_buffer[5];i++)
+    datacrc = _crc16_update(datacrc, command_buffer[i+6]);
 
 #ifdef CONFIG_FC3
-  if (datacrc == 0xf1bd || datacrc == 0x70de) {
-    /* 0xf1bd is a FC3 cart, 0x70de is a protocol-compatible EXOS v3 kernal */
+  if (datacrc == 0x6510 || datacrc == 0x7e38) {
+    /* 0x6510 is a FC3 cart, 0x7e38 is a protocol-compatible EXOS v3 kernal */
     detected_loader = FL_FC3_LOAD;
   }
-  else if (datacrc == 0xbe56) {
+  else if (datacrc == 0x2c86) {
     detected_loader = FL_FC3_SAVE;
   }
-  else if (datacrc == 0x231f) {
-    /* Feel free to change the CRC to 0xa9c8 or 0x0260 if you find a version */
+  else if (datacrc == 0x9930) {
+    /* Feel free to change the CRC to 0x9e56 or 0xdf44 if you find a version */
     /* that doesn't upload as much junk at the end as the one I analyzed.    */
     detected_loader = FL_FC3_FREEZED;
   }
 #endif
 
 #ifdef CONFIG_DREAMLOAD
-  if (datacrc == 0x1f5b) {
+  if (datacrc == 0x2e69) {
     detected_loader = FL_DREAMLOAD;
   }
 #endif
 
 #ifdef CONFIG_ULOAD3
-  if (datacrc == 0xf758) {
+  if (datacrc == 0xdd81) {
     detected_loader = FL_ULOAD3;
   }
 #endif
