@@ -73,7 +73,7 @@ IEC_ATN_INT_VECT:
         rjmp    iiv_atn_irq_end
 
         ; ATN is low, continue depending from active fast loader
-#ifdef CONFIG_DREAMLOAD
+#ifdef CONFIG_LOADER_DREAMLOAD
         lds     r18, detected_loader
         cpi     r18, FL_DREAMLOAD_OLD
         brne    iiv_not_fl_dreamload_old
@@ -96,7 +96,7 @@ iiv_atn_irq_end:
         rjmp    iiv_clock_irq_end
 
         ; CLOCK is low, continue depending from active fast loader
-#ifdef CONFIG_DREAMLOAD
+#ifdef CONFIG_LOADER_DREAMLOAD
         lds     r18, detected_loader
         cpi     r18, FL_DREAMLOAD
         brne    iiv_not_fl_dreamload
@@ -104,7 +104,7 @@ iiv_atn_irq_end:
         rcall   dreamload_get_command
         rjmp    iiv_clock_irq_end       ; no other CLOCK action needed
 iiv_not_fl_dreamload:
-#endif // ifdef CONFIG_DREAMLOAD
+#endif // ifdef CONFIG_LOADER_DREAMLOAD
 #endif // ifdef IEC_PCMSK
 
 iiv_clock_irq_end:
@@ -143,7 +143,7 @@ IEC_CLK_INT_VECT:
         rjmp    clk_irq_end
 
         ; CLOCK is low, continue depending from active fast loader
-#ifdef CONFIG_DREAMLOAD
+#ifdef CONFIG_LOADER_DREAMLOAD
         lds     r18, detected_loader
         cpi     r18, FL_DREAMLOAD
         brne    clk_not_fl_dreamload
@@ -151,7 +151,7 @@ IEC_CLK_INT_VECT:
         rcall   dreamload_get_command
         rjmp    clk_irq_end       ; no other CLOCK action needed
 clk_not_fl_dreamload:
-#endif // ifdef CONFIG_DREAMLOAD
+#endif // ifdef CONFIG_LOADER_DREAMLOAD
 
 clk_irq_end:
 
@@ -165,7 +165,7 @@ clk_irq_end:
 #endif // ifdef IEC_CLK_INT_VECT
 
 
-#if defined(CONFIG_JIFFY_ASM) || defined(CONFIG_TURBODISK) || defined(CONFIG_FC3)
+#if defined(CONFIG_JIFFY_ASM) || defined(CONFIG_LOADER_TURBODISK) || defined(CONFIG_LOADER_FC3)
         ;; ===================================================================
         ;;  Utility routines
         ;; ===================================================================
@@ -439,7 +439,7 @@ js_finish:
 
 #endif  // CONFIG_JIFFY_ASM
 
-#ifdef CONFIG_TURBODISK
+#ifdef CONFIG_LOADER_TURBODISK
         ;; ====================================================================
         ;;  Turbodisk
         ;; ====================================================================
@@ -572,7 +572,7 @@ tdbitloop2:
         ret
 #endif
 
-#if defined(CONFIG_DREAMLOAD) || defined(CONFIG_FC3) || defined(CONFIG_ULOAD3)
+#if defined(CONFIG_LOADER_DREAMLOAD) || defined(CONFIG_LOADER_FC3) || defined(CONFIG_LOADER_ULOAD3)
         ;;
         ;; Set bit 0 of r0 on CLOCK and bit 1 on DATA
         ;; A bit value of one means pull down
@@ -620,7 +620,7 @@ get_bits_from_clk_data:
 
 #endif
 
-#if defined(CONFIG_FC3) || defined(CONFIG_ULOAD3)
+#if defined(CONFIG_LOADER_FC3) || defined(CONFIG_LOADER_ULOAD3)
         ;;
         ;; Do this kind of handshake:
         ;; set CLOCK low, wait for DATA going low,
@@ -647,7 +647,7 @@ clk_data_handshake:
         ret
 #endif
 
-#ifdef CONFIG_FC3
+#ifdef CONFIG_LOADER_FC3
         ;;
         ;; Sends four bytes at r24/r25 using the FC3 protocol
         ;;
@@ -753,7 +753,7 @@ fc3_get_byte:
         ret
 #endif
 
-#ifdef CONFIG_DREAMLOAD
+#ifdef CONFIG_LOADER_DREAMLOAD
         ;;
         ;; Receive a command (track/sector) using the DreamLoad protocol
         ;;
@@ -865,7 +865,7 @@ dsb_bitloop:
         ret
 #endif
 
-#ifdef CONFIG_ULOAD3
+#ifdef CONFIG_LOADER_ULOAD3
         ;;
         ;; Receive a byte using the ULoad Model 3 protocol
         ;;

@@ -53,7 +53,7 @@ volatile uint8_t fl_track;
 /* sector to load, used as a kind of jobcode */
 volatile uint8_t fl_sector;
 
-#ifdef CONFIG_TURBODISK
+#ifdef CONFIG_LOADER_TURBODISK
 void load_turbodisk(void) {
   uint8_t i,len,firstsector;
   buffer_t *buf;
@@ -129,7 +129,7 @@ void load_turbodisk(void) {
 }
 #endif
 
-#ifdef CONFIG_FC3
+#ifdef CONFIG_LOADER_FC3
 void load_fc3(uint8_t freezed) {
   buffer_t *buf;
   unsigned char step,pos;
@@ -258,7 +258,7 @@ void save_fc3(void) {
 }
 #endif
 
-#ifdef CONFIG_DREAMLOAD
+#ifdef CONFIG_LOADER_DREAMLOAD
 #ifndef set_clock_irq
 #  error "Sorry, DreamLoad is only supported on platforms with a CLK interrupt"
 #endif
@@ -380,7 +380,7 @@ error:
 }
 #endif
 
-#ifdef CONFIG_ULOAD3
+#ifdef CONFIG_LOADER_ULOAD3
 static uint8_t uload3_transferchain(uint8_t track, uint8_t sector, uint8_t saving) {
   buffer_t *buf;
   uint8_t i,bytecount,first;

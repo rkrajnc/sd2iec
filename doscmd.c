@@ -782,13 +782,13 @@ static void handle_memexec(void) {
   datacrc = 0xffff;
 
   address = command_buffer[3] + (command_buffer[4]<<8);
-#ifdef CONFIG_TURBODISK
+#ifdef CONFIG_LOADER_TURBODISK
   if (detected_loader == FL_TURBODISK && address == 0x0303) {
     /* Looks like Turbodisk */
     load_turbodisk();
   }
 #endif
-#ifdef CONFIG_FC3
+#ifdef CONFIG_LOADER_FC3
   if (detected_loader == FL_FC3_LOAD &&
       (address == 0x059a || address == 0x0400)) {
     /* FC3 LOAD uses 0x059a, EXOS uses 0x0400 */
@@ -801,12 +801,12 @@ static void handle_memexec(void) {
     load_fc3(1);
   }
 #endif
-#ifdef CONFIG_DREAMLOAD
+#ifdef CONFIG_LOADER_DREAMLOAD
   if (detected_loader == FL_DREAMLOAD && address == 0x0700) {
     load_dreamload();
   }
 #endif
-#ifdef CONFIG_ULOAD3
+#ifdef CONFIG_LOADER_ULOAD3
   if (detected_loader == FL_ULOAD3 && address == 0x0336) {
     load_uload3();
   }
@@ -866,7 +866,7 @@ static void handle_memwrite(void) {
     return;
   }
 
-#ifdef CONFIG_TURBODISK
+#ifdef CONFIG_LOADER_TURBODISK
   /* Turbodisk sends the filename in the last M-W, check the previous CRC */
   if (datacrc == 0x9c9f) {
     detected_loader = FL_TURBODISK;
@@ -878,7 +878,7 @@ static void handle_memwrite(void) {
   for (i=0;i<command_buffer[5];i++)
     datacrc = _crc16_update(datacrc, command_buffer[i+6]);
 
-#ifdef CONFIG_FC3
+#ifdef CONFIG_LOADER_FC3
   if (datacrc == 0x6510 || datacrc == 0x7e38) {
     /* 0x6510 is a FC3 cart, 0x7e38 is a protocol-compatible EXOS v3 kernal */
     detected_loader = FL_FC3_LOAD;
@@ -893,13 +893,13 @@ static void handle_memwrite(void) {
   }
 #endif
 
-#ifdef CONFIG_DREAMLOAD
+#ifdef CONFIG_LOADER_DREAMLOAD
   if (datacrc == 0x2e69) {
     detected_loader = FL_DREAMLOAD;
   }
 #endif
 
-#ifdef CONFIG_ULOAD3
+#ifdef CONFIG_LOADER_ULOAD3
   if (datacrc == 0xdd81) {
     detected_loader = FL_ULOAD3;
   }

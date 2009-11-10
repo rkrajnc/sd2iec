@@ -63,20 +63,20 @@ CONFIG_COMMAND_CHANNEL_DUMP=y
 
 # Enable Turbodisk soft fastloader support
 # This option requires an external crystal oscillator!
-CONFIG_TURBODISK=y
+CONFIG_LOADER_TURBODISK=y
 
 # Use the assembler JiffyDos module
 # Currently there is no known reason to set this option to "n".
 CONFIG_JIFFY_ASM=y
 
 # Enable Final Cartridge III fast loader
-CONFIG_FC3=y
+CONFIG_LOADER_FC3=y
 
 # Enable Dreamload fast loader
-CONFIG_DREAMLOAD=y
+CONFIG_LOADER_DREAMLOAD=y
 
 # Enable ULoad Model 3 fast loader
-CONFIG_ULOAD3=y
+CONFIG_LOADER_ULOAD3=y
 
 # Select which hardware to compile for
 # Valid values:
