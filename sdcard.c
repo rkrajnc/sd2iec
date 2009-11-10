@@ -65,6 +65,7 @@
 #include "crc7.h"
 #include "diskio.h"
 #include "spi.h"
+#include "timer.h"
 #include "uart.h"
 #include "sdcard.h"
 
@@ -168,26 +169,29 @@ static uint32_t getbits(void *buffer, uint16_t start, int8_t bits) {
   return result;
 }
 
-static uint8_t sdResponse(uint8_t expected)
-{
-  unsigned short count = 0x0FFF;
+/**
+ * wait_for_response - waits for a response from the SD card
+ * @expected: expected data byte (0 for anything != 0)
+ *
+ * This function waits until reading from the SD card returns the
+ * byte in expected or until reading returns a non-zero byte if
+ * expected is 0. Returns false if the expected response wasn't
+ * received within 500ms or true if it was.
+ */
+static uint8_t wait_for_response(uint8_t expected) {
+  tick_t timeout = getticks() + HZ/2;
 
-  while ((spiTransferByte(0xFF) != expected) && count )
-    count--;
+  while (time_before(getticks(), timeout)) {
+    uint8_t byte = spiTransferByte(0xff);
 
-  // If count didn't run out, return success
-  return (count != 0);
-}
+    if (expected == 0 && byte != 0)
+      return 1;
 
-static uint8_t sdWaitWriteFinish(void)
-{
-  unsigned short count = 0xFFFF; // wait for quite some time
+    if (expected != 0 && byte == expected)
+      return 1;
+  }
 
-  while ((spiTransferByte(0xFF) == 0) && count )
-    count--;
-
-  // If count didn't run out, return success
-  return (count != 0);
+  return 0;
 }
 
 static void deselectCard(uint8_t card) {
@@ -216,8 +220,8 @@ static int sendCommand(const uint8_t  card,
     uint8_t  c[4];
   } long2char;
 
-  uint8_t  i,crc,errorcount;
-  uint16_t counter;
+  uint8_t i,crc,errorcount;
+  tick_t  timeout;
 
   long2char.l = parameter;
   crc = crc7update(0  , 0x40+command);
@@ -243,11 +247,10 @@ static int sendCommand(const uint8_t  card,
     spiTransferByte(crc);
 
     // Wait for a valid response
-    counter = 0;
+    timeout = getticks() + HZ/2;
     do {
       i = spiTransferByte(0xff);
-      counter++;
-    } while (i & 0x80 && counter < 0x1000);
+    } while (i & 0x80 && time_before(getticks(), timeout));
 
 #ifdef CONFIG_TWINSD
     if (card == 0 && command == GO_IDLE_STATE)
@@ -535,7 +538,7 @@ DRESULT sd_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
       }
 
       // Wait for data token
-      if (!sdResponse(0xFE)) {
+      if (!wait_for_response(0xFE)) {
         SPI_SS_HIGH(drv);
         disk_state = DISK_ERROR;
         return RES_ERROR;
@@ -668,7 +671,7 @@ DRESULT sd_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
       }
 
       // Wait for write finish
-      if (!sdWaitWriteFinish()) {
+      if (!wait_for_response(0)) {
         SPI_SS_HIGH(drv);
         disk_state = DISK_ERROR;
         return RES_ERROR;
@@ -710,7 +713,7 @@ DRESULT sd_getinfo(BYTE drv, BYTE page, void *buffer) {
   }
 
   /* Wait for data token */
-  if (!sdResponse(0xfe)) {
+  if (!wait_for_response(0xfe)) {
     deselectCard(drv);
     return RES_ERROR;
   }
