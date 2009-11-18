@@ -53,6 +53,22 @@ volatile uint8_t fl_track;
 /* sector to load, used as a kind of jobcode */
 volatile uint8_t fl_sector;
 
+/* Small helper for fastloaders that need to detect disk changes */
+static uint8_t check_keys(void) {
+  /* Check for disk changes etc. */
+  if (key_pressed(KEY_NEXT | KEY_PREV | KEY_HOME)) {
+    change_disk();
+  }
+  if (key_pressed(KEY_SLEEP)) {
+    reset_key(KEY_SLEEP);
+    set_busy_led(0);
+    set_dirty_led(1);
+    return 1;
+  }
+
+  return 0;
+}
+
 #ifdef CONFIG_LOADER_TURBODISK
 void load_turbodisk(void) {
   uint8_t i,len,firstsector;
@@ -325,13 +341,7 @@ void load_dreamload(void) {
   for (;;) {
 
     while (fl_track == 0xff) {
-      if (key_pressed(KEY_NEXT | KEY_PREV | KEY_HOME)) {
-        change_disk();
-      }
-      if (key_pressed(KEY_SLEEP)) {
-        reset_key(KEY_SLEEP);
-        set_busy_led(0);
-        set_dirty_led(1);
+      if (check_keys()) {
         fl_track = 0;
         fl_sector = 0;
         break;
@@ -492,6 +502,154 @@ void load_uload3(void) {
       /* unknown command */
       uload3_send_byte(0xff);
       break;
+    }
+  }
+}
+#endif
+
+#ifdef CONFIG_LOADER_GIJOE
+/* Returns the byte read or <0 if ATN is low */
+static int16_t gijoe_read_byte(void) {
+  uint8_t i;
+  uint8_t value = 0;
+
+  for (i=0;i<4;i++) {
+    while (IEC_CLOCK)
+      if (check_keys())
+        return -1;
+
+    _delay_us(5);
+
+    value >>= 1;
+
+    if (!IEC_DATA)
+      value |= 0x80;
+
+    while (!IEC_CLOCK)
+      if (check_keys())
+        return -1;
+
+    _delay_us(5);
+
+    value >>= 1;
+
+    if (!IEC_DATA)
+      value |= 0x80;
+  }
+
+  return value;
+}
+
+static void gijoe_send_byte(uint8_t value) {
+  uint8_t i;
+
+  ATOMIC_BLOCK( ATOMIC_FORCEON ) {
+    for (i=0;i<4;i++) {
+      /* Wait for clock high */
+      while (!IEC_CLOCK) ;
+
+      set_data(value & 1);
+      value >>= 1;
+
+      /* Wait for clock low */
+      while (IEC_CLOCK) ;
+
+      set_data(value & 1);
+      value >>= 1;
+    }
+  }
+}
+
+void load_gijoe(void) {
+  buffer_t *buf;
+
+  set_data(1);
+  set_clock(1);
+  set_atn_irq(0);
+
+  /* Wait until the bus has settled */
+  _delay_ms(10);
+  while (!IEC_DATA || !IEC_CLOCK) ;
+
+  while (1) {
+    /* Handshake */
+    set_clock(0);
+
+    while (IEC_DATA)
+      if (check_keys())
+        return;
+
+    set_clock(1);
+
+    /* First byte is ignored */
+    if (gijoe_read_byte() < 0)
+      return;
+
+    /* Read two file name characters */
+    command_buffer[0] = gijoe_read_byte();
+    command_buffer[1] = gijoe_read_byte();
+
+    set_clock(0);
+
+    command_buffer[2] = '*';
+    command_buffer[3] = 0;
+    command_length = 3;
+
+    /* Open the file */
+    file_open(0);
+    uart_flush();
+    buf = find_buffer(0);
+    if (!buf) {
+      set_clock(1);
+      gijoe_send_byte(0xfe);
+      gijoe_send_byte(0xfe);
+      gijoe_send_byte(0xac);
+      gijoe_send_byte(0xf7);
+      continue;
+    }
+
+    /* file is open, transfer */
+    while (1) {
+      uint8_t i = buf->position;
+
+      set_clock(1);
+      _delay_us(2);
+
+      do {
+        if (buf->data[i] == 0xac)
+          gijoe_send_byte(0xac);
+
+        gijoe_send_byte(buf->data[i]);
+      } while (i++ < buf->lastused);
+
+      /* Send end marker and wait for the next name */
+      if (buf->sendeoi) {
+        gijoe_send_byte(0xac);
+        gijoe_send_byte(0xff);
+
+        buf->cleanup(buf);
+        free_buffer(buf);
+        break;
+      }
+
+      /* Send "another sector following" marker */
+      gijoe_send_byte(0xac);
+      gijoe_send_byte(0xc3);
+      _delay_us(50);
+      set_clock(0);
+
+      /* Read next block */
+      if (buf->refill(buf)) {
+        /* Send error marker */
+        gijoe_send_byte(0xfe);
+        gijoe_send_byte(0xfe);
+        gijoe_send_byte(0xac);
+        gijoe_send_byte(0xf7);
+
+        buf->cleanup(buf);
+        free_buffer(buf);
+        break;
+      }
     }
   }
 }

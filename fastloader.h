@@ -35,6 +35,7 @@
 #define FL_DREAMLOAD_OLD 5
 #define FL_FC3_FREEZED   6
 #define FL_ULOAD3        7
+#define FL_GI_JOE        8
 
 #ifndef __ASSEMBLER__
 
@@ -47,6 +48,7 @@ void load_fc3(uint8_t freezed);
 void save_fc3(void);
 void load_dreamload(void);
 void load_uload3(void);
+void load_gijoe(void);
 
 #endif
 #endif

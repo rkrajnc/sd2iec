@@ -811,6 +811,11 @@ static void handle_memexec(void) {
     load_uload3();
   }
 #endif
+#ifdef CONFIG_LOADER_GIJOE
+  if (detected_loader == FL_GI_JOE && address == 0x0500) {
+    load_gijoe();
+  }
+#endif
 
   detected_loader = FL_NONE;
 }
@@ -872,11 +877,17 @@ static void handle_memwrite(void) {
     detected_loader = FL_TURBODISK;
   } else
 #endif
-    detected_loader = FL_NONE;
+    if (detected_loader != FL_GI_JOE)
+      detected_loader = FL_NONE;
 
-
-  for (i=0;i<command_buffer[5];i++)
+  for (i=0;i<command_buffer[5];i++) {
     datacrc = _crc16_update(datacrc, command_buffer[i+6]);
+#ifdef CONFIG_LOADER_GIJOE
+    /* Identical code, but lots of different upload variations */
+    if (datacrc == 0x38a2 && command_buffer[i+6] == 0x60)
+      detected_loader = FL_GI_JOE;
+#endif
+  }
 
 #ifdef CONFIG_LOADER_FC3
   if (datacrc == 0x6510 || datacrc == 0x7e38) {

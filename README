@@ -495,6 +495,16 @@ Note: Using sd2iec without an external crystal or similiar precise
   contact me so we can work out a way to trigger ULoad M3 support
   without uploading any drive code at all.
 
+  G.I. Joe Loader
+  ---------------
+  Said to be the most-ripped IRQ loader. Unfortunately this is a
+  "captive" fastloader similiar to dreamload (but not restricted
+  to disk images because it is file name-based) and there is no
+  reliable way to detect if the computer has been reset to switch
+  back to the standard protocol. To exit this loader, hold down
+  the disk change button until the red LED turns on, just like
+  sleep mode.
+
 
 JiffyDOS:
 =========
