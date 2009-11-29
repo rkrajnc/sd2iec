@@ -512,6 +512,7 @@ static void parse_copy(void) {
   /* Close the buffers */
   dstbuf->cleanup(dstbuf);
   srcbuf->cleanup(srcbuf);
+  free_buffer(dstbuf);
 }
 
 
