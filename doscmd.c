@@ -475,7 +475,7 @@ static void parse_copy(void) {
       memcpy(dstbuf->data + dstbuf->position,
              srcbuf->data + srcbuf->position,
              tocopy);
-      dstbuf->dirty     = 1;
+      mark_buffer_dirty(dstbuf);
       srcbuf->position += tocopy-1;  /* add 1 less, simplifies the test later */
       dstbuf->position += tocopy;
       dstbuf->lastused  = dstbuf->position-1;

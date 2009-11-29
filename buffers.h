@@ -164,13 +164,26 @@ extern uint8_t active_buffers;
 /* Check if any buffers are free */
 #define check_free_buffers() ((active_buffers & 0x0f) < CONFIG_BUFFER_COUNT)
 
-/* Check if any buffers are open for writing */
-#define check_write_buf_count() ((active_buffers & 0xf0) != 0)
+/* Return the number of dirty buffers */
+#define get_dirty_buffer_count() (active_buffers >> 4)
 
 /* Mark a buffer as write-buffer */
-void mark_write_buffer(buffer_t *buf);
+static inline void mark_write_buffer(buffer_t *buf) {
+  buf->write = 1;
+}
 
+/* Mark a buffer as dirty */
+void mark_buffer_dirty(buffer_t *buf);
+
+/* Mark a buffer as clean */
+void mark_buffer_clean(buffer_t *buf);
+
+
+#ifdef __AVR__
 /* AVR-specific hack: Address 1 is r1 which is always zero in C code */
-#define NULLSTRING ((uint8_t *)1)
+#  define NULLSTRING ((uint8_t *)1)
+#else
+#  define NULLSTRING ""
+#endif
 
 #endif

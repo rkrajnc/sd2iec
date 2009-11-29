@@ -42,7 +42,7 @@ buffer_t buffers[CONFIG_BUFFER_COUNT+1];
 /// The actual data buffers
 static uint8_t bufferdata[CONFIG_BUFFER_COUNT*256];
 
-/// Number of active data buffers + 16 * number of write buffers
+/// Number of active data buffers + 16 * number of dirty buffers
 uint8_t active_buffers;
 
 /**
@@ -202,7 +202,7 @@ void free_buffer(buffer_t *buffer) {
 
   buffer->allocated = 0;
 
-  if (buffer->write)
+  if (buffer->dirty)
     active_buffers -= 16;
   if (buffer->secondary < BUFFER_SEC_SYSTEM)
     active_buffers--;
@@ -261,14 +261,32 @@ buffer_t *find_buffer(uint8_t secondary) {
 }
 
 /**
- * mark_write_buffer - mark a buffer as used for writing
+ * mark_buffer_dirty - mark a buffer as dirty
  * @buf: pointer to the buffer
  *
- * This function marks the given buffer as used for writing, tracks
+ * This function marks the given buffer as dirty, tracks
  * this in active_buffers and turns on the dirty LED.
  */
-void mark_write_buffer(buffer_t *buf) {
-  buf->write = 1;
-  active_buffers += 16;
-  set_dirty_led(1);
+void mark_buffer_dirty(buffer_t *buf) {
+  if (!buf->dirty) {
+    buf->dirty = 1;
+    active_buffers += 16;
+    set_dirty_led(1);
+  }
+}
+
+/**
+ * mark_buffer_clean - mark a buffer as clean
+ * @buf: pointer to the buffer
+ *
+ * This function marks the given buffer as clean, tracks
+ * this in active_buffers and turns off the dirty LED if required.
+ */
+void mark_buffer_clean(buffer_t *buf) {
+  if (buf->dirty) {
+    buf->dirty = 0;
+    active_buffers -= 16;
+    if (get_dirty_buffer_count() == 0)
+      set_dirty_led(0);
+  }
 }

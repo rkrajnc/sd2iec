@@ -384,7 +384,7 @@ static uint8_t iec_listen_handler(const uint8_t cmd) {
       }
 
       buf->data[buf->position] = c;
-      buf->dirty = 1;
+      mark_buffer_dirty(buf);
 
       if (buf->lastused < buf->position)
         buf->lastused = buf->position;

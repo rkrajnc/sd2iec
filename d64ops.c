@@ -761,7 +761,7 @@ static uint8_t d64_write(buffer_t *buf) {
   buf->position  = 2;
   buf->lastused  = 1;
   buf->mustflush = 0;
-  buf->dirty     = 0;
+  mark_buffer_clean(buf);
 
   if (savederror) {
     set_error(savederror);

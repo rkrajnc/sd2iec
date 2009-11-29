@@ -373,8 +373,8 @@ static uint8_t write_data(buffer_t *buf) {
     return 1;
   }
 
+  mark_buffer_clean(buf);
   buf->mustflush = 0;
-  buf->dirty     = 0;
   buf->position  = 2;
   buf->lastused  = 2;
   buf->fptr      = buf->pvt.fat.fh.fptr - buf->pvt.fat.headersize;

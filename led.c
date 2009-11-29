@@ -36,11 +36,11 @@ volatile uint8_t led_state;
  *
  * This function sets the busy/dirty LEDs to correspond to the current state
  * of the buffers, i.e. busy on of at least one non-system buffer is
- * allocated and dirty on if at least one buffer is allocated for writing.
+ * allocated and dirty on if at least one buffer is dirty.
  * Call if you have manually changed the LEDs and you want to restore the
  * "default" state.
  */
 void update_leds(void) {
   set_busy_led(active_buffers != 0);
-  set_dirty_led(check_write_buf_count() != 0);
+  set_dirty_led(get_dirty_buffer_count() != 0);
 }
