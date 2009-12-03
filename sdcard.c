@@ -69,13 +69,6 @@
 #include "uart.h"
 #include "sdcard.h"
 
-#ifndef TRUE
-#define TRUE -1
-#endif
-#ifndef FALSE
-#define FALSE 0
-#endif
-
 #ifdef CONFIG_TWINSD
 #  define MAX_CARDS 2
 #else
@@ -284,7 +277,7 @@ static uint8_t extendedInit(const uint8_t card) {
   if (i > 1) {
     // Card returned an error, ok (MMC oder SD1.x) but not SDHC
     deselectCard(card);
-    return TRUE;
+    return 1;
   }
 
   // No error, continue SDHC initialization
@@ -293,17 +286,17 @@ static uint8_t extendedInit(const uint8_t card) {
 
   if (((answer >> 8) & 0x0f) != 0b0001) {
     // Card didn't accept our voltage specification
-    return FALSE;
+    return 0;
   }
 
   // Verify echo-back of check pattern
   if ((answer & 0xff) != 0b10101010) {
     // Check pattern mismatch, working but not SD2.0 compliant
     // The specs say we should not use the card, but let's try anyway.
-    return TRUE;
+    return 1;
   }
 
-  return TRUE;
+  return 1;
 }
 
 // SD common initialisation
