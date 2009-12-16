@@ -1503,8 +1503,6 @@ FRESULT f_open (
   }
 
   fp->dir_sect = FSBUF.sect;          /* Pointer to the directory entry */
-  sync(fs);                           /* sync buffer in case the file was just created */
-                                      /* can't sync earlier, modifies FSBUF.sect       */
   fp->dir_ptr = dir;
 #endif
   fp->flag = mode;                    /* File access mode */
@@ -1515,6 +1513,11 @@ FRESULT f_open (
   fp->csect = 1;                                    /* Sector counter */
   fp->fs = fs; //fp->id = fs->id;       /* Owner file system object of the file */
 
+#if !_FS_READONLY
+  if (mode & (FA_CREATE_ALWAYS|FA_OPEN_ALWAYS|FA_CREATE_NEW))
+    sync(fs);                         /* sync buffer in case the file was just created */
+                                      /* can't sync earlier, modifies FSBUF.sect       */
+#endif
   return FR_OK;
 }
 
