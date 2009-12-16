@@ -1,3 +1,7 @@
+2009-12-16 - release 0.8.3
+        - Bugfix: Really prevent random corruption on FAT32 media
+        - Bugfix: Free buffer after copying files
+
 2009-09-27 - release 0.8.2
         - Bugfix: Prevent random storage corruption on FAT32 media
         - Bugfix: Image files not mountable if read-only file or media
