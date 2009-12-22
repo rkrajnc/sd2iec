@@ -505,6 +505,10 @@ Note: Using sd2iec without an external crystal or similiar precise
   the disk change button until the red LED turns on, just like
   sleep mode.
 
+  Epyx FastLoad Cartridge
+  -----------------------
+  ONLY the fast loader from this cartridge is supported, no
+  disk editor/copier/whatever functions.
 
 JiffyDOS:
 =========

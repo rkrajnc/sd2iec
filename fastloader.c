@@ -507,8 +507,9 @@ void load_uload3(void) {
 }
 #endif
 
-#ifdef CONFIG_LOADER_GIJOE
-/* Returns the byte read or <0 if ATN is low */
+#if defined(CONFIG_LOADER_GIJOE) || defined(CONFIG_LOADER_EPYXCART)
+/* Returns the byte read or <0 if the user aborts */
+/* Aborting on ATN is not reliable for at least one version */
 static int16_t gijoe_read_byte(void) {
   uint8_t i;
   uint8_t value = 0;
@@ -517,8 +518,6 @@ static int16_t gijoe_read_byte(void) {
     while (IEC_CLOCK)
       if (check_keys())
         return -1;
-
-    _delay_us(5);
 
     value >>= 1;
 
@@ -529,8 +528,6 @@ static int16_t gijoe_read_byte(void) {
       if (check_keys())
         return -1;
 
-    _delay_us(5);
-
     value >>= 1;
 
     if (!IEC_DATA)
@@ -539,7 +536,9 @@ static int16_t gijoe_read_byte(void) {
 
   return value;
 }
+#endif
 
+#ifdef CONFIG_LOADER_GIJOE
 static void gijoe_send_byte(uint8_t value) {
   uint8_t i;
 
@@ -580,6 +579,7 @@ void load_gijoe(void) {
         return;
 
     set_clock(1);
+    uart_flush();
 
     /* First byte is ignored */
     if (gijoe_read_byte() < 0)
@@ -652,5 +652,106 @@ void load_gijoe(void) {
       }
     }
   }
+}
+#endif
+
+#ifdef CONFIG_LOADER_EPYXCART
+void load_epyxcart(void) {
+  uint8_t checksum = 0;
+  int16_t b,i;
+
+  uart_flush(); // Pending output can mess up our timing
+
+  /* Initial handshake */
+  set_data(1);
+  set_clock(0);
+  set_atn_irq(0);
+
+  while (IEC_DATA)
+    if (!IEC_ATN)
+      return;
+
+  set_clock(1);
+
+  /* Receive and checksum stage 2 */
+  for (i=0;i<256;i++) {
+    b = gijoe_read_byte();
+
+    if (b < 0)
+      return;
+
+    if (i < 238)
+      /* Stage 2 has some junk bytes at the end, ignore them */
+      checksum ^= b;
+  }
+
+  /* Check for known stage2 loader */
+  if (checksum != 0x50) {
+    return;
+  }
+
+  /* Receive file name */
+  i = gijoe_read_byte();
+  if (i < 0) {
+    return;
+  }
+
+  command_length = i;
+
+  do {
+    b = gijoe_read_byte();
+    if (b < 0)
+      return;
+
+    command_buffer[--i] = b;
+  } while (i > 0);
+
+  set_clock(0);
+
+  /* Open the file */
+  file_open(0);
+
+  buffer_t *buf = find_buffer(0);
+  if (buf == NULL) {
+    set_clock(1);
+    return;
+  }
+
+  /* Transfer data */
+  ATOMIC_BLOCK(ATOMIC_FORCEON) {
+    while (1) {
+      set_clock(1);
+      set_data(1);
+
+      /* send number of bytes in sector */
+      if (epyxcart_send_byte(buf->lastused-1)) {
+        break;
+      }
+
+      /* send data */
+      for (i=2;i<=buf->lastused;i++) {
+        if (epyxcart_send_byte(buf->data[i])) {
+          break;
+        }
+      }
+
+      if (!IEC_ATN)
+        break;
+
+      /* exit after final sector */
+      if (buf->sendeoi)
+        break;
+
+      /* read next sector */
+      set_clock(0);
+      if (buf->refill(buf))
+        break;
+    }
+  }
+
+  set_clock(1);
+  set_data(1);
+  buf->cleanup(buf);
+  free_buffer(buf);
 }
 #endif

@@ -1,6 +1,8 @@
 2009-xx-xx - release x.x.x
         - Remove XC command
         - New fastloader: ULoad Model 3
+        - New fastloader: G.I. Joe (said to be commonly ripped)
+        - New fastloader: Epyx FastLoad cartridge
         - Support reading raw directory ($ with secondary > 0)
 
 2009-09-27 - release 0.8.2

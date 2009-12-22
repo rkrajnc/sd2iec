@@ -36,6 +36,7 @@
 #define FL_FC3_FREEZED   6
 #define FL_ULOAD3        7
 #define FL_GI_JOE        8
+#define FL_EPYXCART      9
 
 #ifndef __ASSEMBLER__
 
@@ -49,6 +50,7 @@ void save_fc3(void);
 void load_dreamload(void);
 void load_uload3(void);
 void load_gijoe(void);
+void load_epyxcart(void);
 
 #endif
 #endif

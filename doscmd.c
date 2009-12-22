@@ -817,6 +817,11 @@ static void handle_memexec(void) {
     load_gijoe();
   }
 #endif
+#ifdef CONFIG_LOADER_EPYXCART
+  if (detected_loader == FL_EPYXCART && address == 0x01a9) {
+    load_epyxcart();
+  }
+#endif
 
   detected_loader = FL_NONE;
 }
@@ -914,6 +919,12 @@ static void handle_memwrite(void) {
 #ifdef CONFIG_LOADER_ULOAD3
   if (datacrc == 0xdd81) {
     detected_loader = FL_ULOAD3;
+  }
+#endif
+
+#ifdef CONFIG_LOADER_EPYXCART
+  if (datacrc == 0x5a01) {
+    detected_loader = FL_EPYXCART;
   }
 #endif
 

@@ -43,4 +43,6 @@ void dreamload_send_byte(uint8_t byte);
 int16_t uload3_get_byte(void);
 void uload3_send_byte(uint8_t byte);
 
+uint8_t epyxcart_send_byte(uint8_t byte);
+
 #endif

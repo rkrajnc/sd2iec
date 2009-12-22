@@ -165,7 +165,7 @@ clk_irq_end:
 #endif // ifdef IEC_CLK_INT_VECT
 
 
-#if defined(CONFIG_JIFFY_ASM) || defined(CONFIG_LOADER_TURBODISK) || defined(CONFIG_LOADER_FC3)
+#if defined(CONFIG_JIFFY_ASM) || defined(CONFIG_LOADER_TURBODISK) || defined(CONFIG_LOADER_FC3) || defined(CONFIG_LOADER_EPYXCART)
         ;; ===================================================================
         ;;  Utility routines
         ;; ===================================================================
@@ -611,7 +611,6 @@ send_bits_to_clk_data:
 get_bits_from_clk_data:
         ; rcall                         ; 3
         in      r19, _SFR_IO_ADDR(IEC_PIN)  ; 1
-        sbi     _SFR_IO_ADDR(IEC_PIN), IEC_OPIN_SRQ
         bst     r19, IEC_PIN_DATA       ; 1
         bld     r24, 0                  ; 1
         bst     r19, IEC_PIN_CLOCK      ; 1
@@ -955,6 +954,67 @@ uload3_bitloop:
 
         sei
         ret
+#endif
+
+#ifdef CONFIG_LOADER_EPYXCART
+        ;; send bits 7 and 5 of r0 to clock/data
+        ;; masked contents of IEC_OUT expected in r19
+        ;; 8 cycles from rcall to out, 4 to return
+epyx_bitpair:
+        ;; rcall - 3
+        bst     r0, 7                      ; 1
+        bld     r19, IEC_OPIN_CLOCK        ; 1
+        bst     r0, 5                      ; 1
+        bld     r19, IEC_OPIN_DATA         ; 1
+        out     _SFR_IO_ADDR(IEC_OUT), r19 ; 1
+        ret                                ; 4
+
+        ;;
+        ;; Send a byte using the Epyx Fastload cartridge protocol
+        ;;
+        .global epyxcart_send_byte
+epyxcart_send_byte:
+        ;; DATA and CLOCK high
+        cbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA
+        cbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_CLOCK
+        rcall   delay1us
+
+        ;; prepare data
+        in      r19, _SFR_IO_ADDR(IEC_OUT)
+        andi    r19, ~(IEC_OBIT_DATA|IEC_OBIT_CLOCK|IEC_OBIT_ATN|IEC_OBIT_SRQ)
+
+        ;; wait for DATA high or ATN low
+1:      sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_ATN
+        rjmp    epyxcart_atnabort
+        sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_DATA
+        rjmp    1b
+
+        mov     r0, r24             ; 1
+        delay_cycles (10*8 - 9)
+        rcall   epyx_bitpair        ; 8+4 - bits 7 and 5
+
+        lsl     r0                  ; 1
+        delay_cycles (10*8 - 13)
+        rcall   epyx_bitpair        ; 8+4 - bits 6 and 4
+
+        swap    r24                 ; 1
+        mov     r0, r24             ; 1
+        delay_cycles (10*8 - 14)
+        rcall   epyx_bitpair        ; 8+4 - bits 3 and 1
+
+        lsl     r0                  ; 1
+        delay_cycles (10*8 - 13)
+        rcall   epyx_bitpair        ; 8+4 - bits 2 and 0
+
+        delay_cycles 20*8  ; final delay so the data stays valid long enough
+
+        clr     r24
+        ret
+
+epyxcart_atnabort:
+        ldi     r24, 1
+        ret
+
 #endif
 
         .end
