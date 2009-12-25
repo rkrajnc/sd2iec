@@ -97,7 +97,8 @@ void poison_memory(void) {
 int main(void) __attribute__((OS_main));
 #endif
 int main(void) {
-#if defined __AVR_ATmega644__ || defined __AVR_ATmega644P__ || defined __AVR_ATmega2561__
+#if defined __AVR_ATmega644__  || defined __AVR_ATmega644P__ || \
+    defined __AVR_ATmega1281__ || defined __AVR_ATmega2561__
   asm volatile("in  r24, %0\n"
                "ori r24, 0x80\n"
                "out %0, r24\n"
