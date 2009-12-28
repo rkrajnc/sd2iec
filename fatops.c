@@ -1095,8 +1095,10 @@ uint8_t fat_getdirname(path_t *path, uint8_t *label) {
 
   if((res = l_opendir(&partition[path->part].fatfs,path->fat,&dh)) != FR_OK)
     goto gdn_error;
+
   while ((res = f_readdir(&dh, &finfo)) == FR_OK) {
     if(finfo.fname[0] == '\0' || finfo.fname[0] != '.') {
+      label[0] = 0;
       return res;
     }
     if(finfo.fname[0] == '.' && finfo.fname[1] == '.' && finfo.fname[2] == 0) {
