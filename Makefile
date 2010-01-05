@@ -228,6 +228,7 @@ AVRDUDE = avrdude
 REMOVE = rm -f
 COPY = cp
 WINSHELL = cmd
+AWK = awk
 
 
 #---------------- Compiler Options ----------------
@@ -251,7 +252,7 @@ CFLAGS += -ffunction-sections -fdata-sections
 
 # these are needed for GCC 4.3.2, which is more aggressive at inlining
 # gcc-4.2 knows one of those, but it tends to increase code size
-ifeq ($(shell $(CC) --version|gawk -f gcctest.awk),YES)
+ifeq ($(shell $(CC) --version|$(AWK) -f gcctest.awk),YES)
 CFLAGS += --param inline-call-cost=3
 CFLAGS += -fno-inline-small-functions
 CFLAGS += -fno-move-loop-invariants
@@ -547,7 +548,7 @@ extcoff: $(TARGET).elf
 .PRECIOUS : $(OBJDIR)/autoconf.h
 $(OBJDIR)/autoconf.h: $(CONFIG) | $(OBJDIR)
 	$(E) "  CONF2H $(CONFIG)"
-	$(Q)gawk -f conf2h.awk $(CONFIG) > $(OBJDIR)/autoconf.h
+	$(Q)$(AWK) -f conf2h.awk $(CONFIG) > $(OBJDIR)/autoconf.h
 
 # Create final output files (.hex, .eep) from ELF output file.
 ifeq ($(CONFIG_BOOTLOADER),y)
