@@ -1,5 +1,5 @@
 /* sd2iec - SD/MMC to Commodore serial bus interface/controller
-   Copyright (C) 2007-2009  Ingo Korb <ingo@akana.de>
+   Copyright (C) 2007-2010  Ingo Korb <ingo@akana.de>
    Final Cartridge III, DreamLoad fastloader support:
    Copyright (C) 2008  Thomas Giesel <skoe@directbox.com>
 

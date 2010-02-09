@@ -1,5 +1,5 @@
 sd2iec - a controller/interface adapting storage devices to the CBM serial bus
-Copyright (C) 2007-2009  Ingo Korb <ingo@akana.de>
+Copyright (C) 2007-2010  Ingo Korb <ingo@akana.de>
 Parts based on code from others, see comments in main.c for details.
 JiffyDos send based on code by M.Kiesel
 Fat LFN support and lots of other ideas+code by Jim Brain
