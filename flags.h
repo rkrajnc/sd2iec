@@ -37,7 +37,7 @@ extern uint8_t globalflags;
 
 /* Values for those flags */
 #define VC20MODE         (1<<0)
-#define JIFFY_ENABLED    (1<<1)
+/* 1<<1 was JIFFY_ENABLED */
 #define AUTOSWAP_ACTIVE  (1<<2)
 #define EXTENSION_HIDING (1<<3)
 #define POSTMATCH        (1<<4)

@@ -79,7 +79,6 @@ void read_configuration(void) {
   uint8_t checksum, tmp;
 
   /* Set default values */
-  globalflags         |= JIFFY_ENABLED;        /* JiffyDos enabled */
   globalflags         |= POSTMATCH;            /* Post-* matching enabled */
   globalflags         |= FAT32_FREEBLOCKS;     /* Calculate the number of free blocks on FAT32 */
   file_extension_mode  = 1;                    /* Store x00 extensions except for PRG */
@@ -106,7 +105,7 @@ void read_configuration(void) {
 
   /* Read data from EEPROM */
   tmp = eeprom_read_byte(&storedconfig.global_flags);
-  globalflags &= (uint8_t)~(JIFFY_ENABLED | POSTMATCH |
+  globalflags &= (uint8_t)~(POSTMATCH |
                             EXTENSION_HIDING | FAT32_FREEBLOCKS);
   globalflags |= tmp;
 
@@ -146,7 +145,7 @@ void write_configuration(void) {
   /* Write configuration to EEPROM */
   eeprom_write_word(&storedconfig.structsize, sizeof(storedconfig));
   eeprom_write_byte(&storedconfig.global_flags,
-                    globalflags & (JIFFY_ENABLED | POSTMATCH |
+                    globalflags & (POSTMATCH |
                                    EXTENSION_HIDING | FAT32_FREEBLOCKS));
   eeprom_write_byte(&storedconfig.address, device_address);
   eeprom_write_byte(&storedconfig.hardaddress, DEVICE_SELECT);

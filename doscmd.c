@@ -1436,19 +1436,6 @@ static void parse_xcommand(void) {
     set_error_ts(ERROR_STATUS,device_address,0);
     break;
 
-  case 'J':
-    /* Jiffy enable/disable */
-    num = parse_bool();
-    if (num != 255) {
-      if (num)
-        globalflags |= JIFFY_ENABLED;
-      else
-        globalflags &= (uint8_t)~JIFFY_ENABLED;
-
-      set_error_ts(ERROR_STATUS,device_address,0);
-    }
-    break;
-
   case 'D':
     /* drive config */
 #ifdef NEED_DISKMUX

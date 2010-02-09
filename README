@@ -294,9 +294,6 @@ Supported commands:
              two seconds at most. This flag can be saved in the EEPROM using
              XW, the default value is enabled (+).
 
-  - XJ+/XJ-  Set or reset the JiffyDOS protocol support flag. This flag can be
-             saved in the EEPROM using XW, the default value is enabled (+).
-
   - X*+/X*-  Enable/disable 1581-style * matching. If enabled, characters
              after a * will be matched against the end of the file name.
              If disabled, any characters after a * will be ignored.
@@ -343,8 +340,8 @@ Supported commands:
              any changes you made will persist even after turning off
              the hardware.
 
-             The stored configuration includes the JiffyDOS protocol support
-             flag, the extension mode and the current device address.
+             The stored configuration include the extension mode,
+             drive configuration and the current device address.
              If you have changed the device address by software,
              sd2iec will power up with that address unless
              you have changed the device address jumpers (if available) to

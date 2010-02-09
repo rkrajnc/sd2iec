@@ -180,7 +180,7 @@ static int16_t _iec_getc(void) {
   for (i=0;i<8;i++) {
     /* Check for JiffyDOS                                       */
     /*   Source: http://home.arcor.de/jochen.adler/ajnjil-t.htm */
-    if (iec_data.bus_state == BUS_ATNACTIVE && (globalflags & JIFFY_ENABLED) && i == 7) {
+    if (iec_data.bus_state == BUS_ATNACTIVE && i == 7) {
       start_timeout(TIMEOUT_US(218));
 
       do {

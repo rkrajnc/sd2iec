@@ -192,10 +192,6 @@ void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
     switch(sector) {
     case 0:
     default:
-      msg = appendbool(msg, 'J', globalflags & JIFFY_ENABLED);
-
-      *msg++ = ':';
-
       *msg++ = 'E';
       msg = appendnumber(msg, file_extension_mode);
       msg = appendbool(msg, 0, globalflags & EXTENSION_HIDING);
