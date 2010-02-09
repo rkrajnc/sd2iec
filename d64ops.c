@@ -1193,6 +1193,7 @@ static void d64_format(uint8_t part, uint8_t *name, uint8_t *id) {
     return;
 
   mark_write_buffer(buf);
+  mark_buffer_dirty(buf);
   memset(buf->data, 0, 256);
 
   /* Flush BAM buffer and mark its contents as invalid */
