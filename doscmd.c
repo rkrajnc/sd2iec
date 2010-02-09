@@ -980,25 +980,12 @@ static void parse_new(void) {
 /* -------------- */
 static void parse_position(void) {
   buffer_t *buf;
-  uint8_t hi = 0, lo, pos;
+
+  clean_cmdbuffer();
 
   if(command_length < 2 || (buf = find_buffer(command_buffer[1] & 0x0f)) == NULL) {
     set_error(ERROR_NO_CHANNEL);
     return;
-  }
-
-  lo = pos = (buf->recordlen? 1:0); // REL file start indexes at one.
-
-  if(command_length > 1)
-    lo = command_buffer[2];
-  if(command_length > 2)
-    hi = command_buffer[3];
-  if(command_length > 3) {
-    pos = command_buffer[4];
-    if(buf->recordlen && pos >= buf->recordlen) {
-      set_error(ERROR_RECORD_OVERFLOW);
-      return;
-    }
   }
 
   if (buf->seek == NULL) {
@@ -1006,11 +993,44 @@ static void parse_position(void) {
     return;
   }
 
-  if(buf->recordlen) { // REL files start indexes at 1.
+  if (buf->recordlen) {
+    /* REL file */
+    uint8_t hi, lo, pos;
+    hi  = 0;
+    lo  = 1;
+    pos = 1;
+
+    if (command_length > 1)
+      lo = command_buffer[2];
+    if (command_length > 2)
+      hi = command_buffer[3];
+    if (command_length > 3)
+      pos = command_buffer[4];
+
+    if (pos >= buf->recordlen) {
+      set_error(ERROR_RECORD_OVERFLOW);
+      return;
+    }
+
     lo--;
     pos--;
+    buf->seek(buf, (hi * 256UL + lo) * (uint32_t)buf->recordlen * pos, pos);
+  } else {
+    /* Non-REL seek uses a straight little-endian offset */
+    union {
+      uint32_t l;
+      uint8_t  c[4];
+    } offset;
+
+    // smaller than memcpy
+    /* WARNING: Endian-dependant */
+    offset.c[0] = command_buffer[2];
+    offset.c[1] = command_buffer[3];
+    offset.c[2] = command_buffer[4];
+    offset.c[3] = command_buffer[5];
+
+    buf->seek(buf, offset.l, 0);
   }
-  buf->seek(buf,(hi * 256UL + lo) * (uint32_t)(buf->recordlen ? buf->recordlen : 256),pos);
 }
 
 

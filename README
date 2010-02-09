@@ -189,8 +189,10 @@ Supported commands:
 - P
   Positioning doesn't just work for REL files but also for regular
   files on a FAT partition. When used for regular files the format
-  is "P"+chr$(channel)+chr$(hi)+chr$(mid)+chr$(lo) which will seek
-  to the 0-based offset hi*65536+256*mid+lo in the file.
+  is "P"+chr$(channel)+chr$(lo)+chr$(midlo)+chr$(midhi)+chr$(hi)
+  which will seek to the 0-based offset hi*2^24+midhi*65536+256*midlo+lo
+  in the file. If you send less than four bytes for the offset, the
+  missing bytes are assumed to be zero.
 
 - N:
   Format works only if a D64 image is already mounted. This command is
