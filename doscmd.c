@@ -1516,6 +1516,17 @@ static void parse_xcommand(void) {
 #endif
     break;
 
+  case 'I':
+    /* image-as-directory mode */
+    str = command_buffer + 2;
+    num = parse_number(&str);
+    if (num <= 2) {
+      image_as_dir = num;
+    } else {
+      set_error(ERROR_SYNTAX_UNKNOWN);
+    }
+    break;
+
   case 'W':
     /* Write configuration */
     write_configuration();

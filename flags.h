@@ -43,4 +43,11 @@ extern uint8_t globalflags;
 #define POSTMATCH        (1<<4)
 #define FAT32_FREEBLOCKS (1<<5)
 
+/* Disk image-as-directory mode, defined in fileops.c */
+extern uint8_t image_as_dir;
+
+#define IMAGE_DIR_NORMAL 0
+#define IMAGE_DIR_DIR    1
+#define IMAGE_DIR_BOTH   2
+
 #endif

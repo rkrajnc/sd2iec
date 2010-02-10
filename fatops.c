@@ -791,6 +791,8 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
     memset(dent->name, 0, sizeof(dent->name));
     memset(dent->realname, 0, sizeof(dent->realname));
 
+    ustrcpy(dent->realname, finfo.fname);
+
     if (!finfo.lfn[0] || ustrlen(finfo.lfn) > CBM_NAME_LENGTH) {
       ustrcpy(dent->name, finfo.fname);
 
@@ -834,9 +836,6 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
         memset(dent->name, 0, sizeof(dent->name));
         ustrcpy(dent->name, entrybuf+P00_CBMNAME_OFFSET);
 
-        /* Remember the real file name */
-        ustrcpy(dent->realname, finfo.fname);
-
         /* Some programs pad the name with 0xa0 instead of 0 */
         ptr = dent->name;
         for (uint8_t i=0;i<16;i++,ptr++)
@@ -850,7 +849,6 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
         typechar = *ptr;
         uint8_t i = ustrlen(dent->name)-4;
         memset(dent->name+i, 0, sizeof(dent->name)-i);
-        ustrcpy(dent->realname, finfo.fname);
 
       } else { /* ext == EXT_UNKNOWN or EXT_IS_TYPE but hiding disabled */
         /* Unknown extension: PRG */

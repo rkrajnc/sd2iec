@@ -48,6 +48,7 @@
  * @fileexts   : file extension mapping mode
  * @drvflags0  : 16 bits of drv mappings, organized as 4 nybbles.
  * @drvflags1  : 16 bits of drv mappings, organized as 4 nybbles.
+ * @imagedirs  : Disk images-as-directory mode
  *
  * This is the data structure for the contents of the EEPROM.
  *
@@ -65,6 +66,7 @@ static EEMEM struct {
   uint8_t  fileexts;
   uint16_t drvconfig0;
   uint16_t drvconfig1;
+  uint8_t  imagedirs;
 } storedconfig;
 
 /**
@@ -129,6 +131,9 @@ void read_configuration(void) {
     set_drive_config(get_default_driveconfig());
 #endif
 
+  if (size > 13)
+    image_as_dir = eeprom_read_byte(&storedconfig.imagedirs);
+
   /* Paranoia: Set EEPROM address register to the dummy entry */
   EEAR = 0;
 }
@@ -154,6 +159,7 @@ void write_configuration(void) {
   eeprom_write_word(&storedconfig.drvconfig0, drive_config);
   eeprom_write_word(&storedconfig.drvconfig1, drive_config >> 16);
 #endif
+  eeprom_write_byte(&storedconfig.imagedirs, image_as_dir);
 
   /* Calculate checksum over EEPROM contents */
   checksum = 0;

@@ -35,6 +35,7 @@
 #include "doscmd.h"
 #include "errormsg.h"
 #include "fatops.h"
+#include "flags.h"
 #include "ff.h"
 #include "m2iops.h"
 #include "parser.h"
@@ -43,6 +44,8 @@
 #include "utils.h"
 #include "wrapops.h"
 #include "fileops.h"
+
+uint8_t image_as_dir;
 
 /* ------------------------------------------------------------------------- */
 /*  Some constants used for directory generation                             */
@@ -283,6 +286,15 @@ static uint8_t dir_refill(buffer_t *buf) {
 
   buf->position = 0;
 
+  if (buf->pvt.dir.counter) {
+    /* Redisplay image file as directory */
+    buf->pvt.dir.counter = 0;
+    memcpy(&dent, buf->data+256-sizeof(dent), sizeof(dent));
+    dent.typeflags = TYPE_DIR;
+    createentry(&dent, buf, buf->pvt.dir.format);
+    return 0;
+  }
+
   switch (next_match(&buf->pvt.dir.dh,
                      buf->pvt.dir.matchstr,
                      buf->pvt.dir.match_start,
@@ -290,6 +302,17 @@ static uint8_t dir_refill(buffer_t *buf) {
                      buf->pvt.dir.filetype,
                      &dent)) {
   case 0:
+    if (image_as_dir != IMAGE_DIR_NORMAL &&
+        check_imageext(dent.realname) != IMG_UNKNOWN) {
+      if (image_as_dir == IMAGE_DIR_DIR) {
+        dent.typeflags = (dent.typeflags & 0xf0) | TYPE_DIR;
+      } else {
+        /* Prepare to redisplay image file as directory */
+        buf->pvt.dir.counter = 1;
+        /* Use the end of the buffer as temporary storage */
+        memcpy(buf->data+256-sizeof(dent), &dent, sizeof(dent));
+      }
+    }
     createentry(&dent, buf, buf->pvt.dir.format);
     return 0;
 
@@ -315,7 +338,7 @@ static uint8_t rawdir_dummy_refill(buffer_t *buf) {
   else
     buf->position = 2;
 
-  if (buf->pvt.dir.filetype == 8)
+  if (buf->pvt.dir.counter == 8)
     buf->sendeoi = 1;
 
   return 0;
@@ -333,19 +356,37 @@ static uint8_t rawdir_refill(buffer_t *buf) {
 
   memset(buf->data, 0, 32);
 
-  switch (readdir(&buf->pvt.dir.dh, &dent)) {
-  case -1:
-    /* last entry, switch to dummy entries */
-    return rawdir_dummy_refill(buf);
+  if ((buf->pvt.dir.counter & 0x80) == 0) {
+    switch (readdir(&buf->pvt.dir.dh, &dent)) {
+    case -1:
+      /* last entry, switch to dummy entries */
+      return rawdir_dummy_refill(buf);
 
-  default:
-    /* error in readdir */
-    free_buffer(buf);
-    return 1;
+    default:
+      /* error in readdir */
+      free_buffer(buf);
+      return 1;
 
-  case 0:
-    /* entry found, creation below */
-    break;
+    case 0:
+      /* entry found, creation below */
+      break;
+    }
+
+    if (image_as_dir != IMAGE_DIR_NORMAL &&
+        check_imageext(dent.realname) != IMG_UNKNOWN) {
+      if (image_as_dir == IMAGE_DIR_DIR) {
+        dent.typeflags = (dent.typeflags & 0xf0) | TYPE_DIR;
+      } else {
+        /* Prepare to redisplay image file as directory */
+        buf->pvt.dir.counter |= 0x80;
+        memcpy(buf->data+256-sizeof(dent), &dent, sizeof(dent));
+      }
+    }
+  } else {
+    /* Redisplay image file as directory */
+    buf->pvt.dir.counter &= 0x7f;
+    memcpy(&dent, buf->data+256-sizeof(dent), sizeof(dent));
+    dent.typeflags = TYPE_DIR;
   }
 
   buf->data[DIR_OFS_TRACK]     = 1;
@@ -359,15 +400,15 @@ static uint8_t rawdir_refill(buffer_t *buf) {
 
   /* Every 8th entry is two bytes shorter   */
   /* because the t/s link bytes are skipped */
-  if (buf->pvt.dir.filetype++)
+  if ((buf->pvt.dir.counter++) & 0x7f)
     buf->position = 0;
   else
     buf->position = 2;
 
   buf->lastused = 31;
 
-  if (buf->pvt.dir.filetype == 8)
-    buf->pvt.dir.filetype = 0;
+  if ((buf->pvt.dir.counter & 0x7f) == 8)
+    buf->pvt.dir.counter &= 0x80;
 
   return 0;
 }
@@ -567,7 +608,6 @@ scandone:
 
     buf->refill = rawdir_refill;
     buf->lastused = 253;
-    buf->pvt.dir.filetype = 0; // misused as entry counter
   } else {
 
     /* copy static header to start of buffer */

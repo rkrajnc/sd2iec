@@ -288,6 +288,22 @@ Supported commands:
              This flag can be saved in the EEPROM using XW, the default
              value is disabled (-).
 
+  - XInum    Switches the display mode for mountables files (i.e. disk images
+             and M2I). num can be 0, in which case the file will be shown
+             with its normal type in the directory or 1 which will show all
+             mountable files as DIRectory entries (but they can still be
+             accessed as files too) or 2 in which case they will show up
+             twice - once with its normal type and once as directory.
+             The default value is 0 and this setting can be stored
+             permanently using XW.
+
+             It may be useful to set it to 1 or 2 when using software that
+             was originally written for CMD devices and which wouldn't
+             recognize disk images/M2I files as mountable on its own.
+             However, due to limitations of the current implementation of
+             the CD command such software may still fail to mount a disk
+             image with this option enabled.
+
   - XB+/XB-  Enable/disable free block calculation for FAT32 drives.
              As the free block calculation for FAT32 can take a lot of time
              it can be disabled using XB-. If it is disabled, sd2iec will

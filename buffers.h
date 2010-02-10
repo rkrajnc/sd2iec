@@ -99,6 +99,7 @@ typedef struct buffer_s {
       uint8_t *matchstr;   /* Pointer to filename pattern */
       date_t *match_start; /* Start matching date */
       date_t *match_end;   /* End matching date */
+      uint8_t counter;     /* used for counting raw entries */
     } dir;
     struct {
       FIL fh;              /* File access via FAT */
