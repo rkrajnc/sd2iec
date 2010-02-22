@@ -108,6 +108,7 @@ typedef enum {
  * @pvt       : fileops-specific private data
  * @pvt.fat.cluster : Start cluster of the entry
  * @pvt.fat.realname: Actual 8.3 name of the file (preferred if present)
+ * @pvt.m2i.offset  : Offset in the M2I file
  *
  * This structure holds a CBM filename, its type and its size. The typeflags
  * are almost compatible to the file type byte in a D64 image, but the splat
@@ -134,7 +135,10 @@ typedef struct {
       uint32_t cluster;
       uint8_t  realname[8+3+1+1];
     } fat;
-    // Nothing for m2i/d64 yet
+    // Nothing for d64 yet
+    struct {
+      uint16_t offset;
+    } m2i;
   } pvt;
 } cbmdirent_t;
 

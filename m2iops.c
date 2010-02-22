@@ -39,6 +39,7 @@
 #include "wrapops.h"
 #include "m2iops.h"
 
+
 #define M2I_ENTRY_LEN      33
 #define M2I_ENTRY_OFFSET   18
 #define M2I_CBMNAME_OFFSET 15
@@ -127,47 +128,6 @@ static uint8_t load_entry(uint8_t part, uint16_t offset) {
 }
 
 /**
- * find_entry - locate a CBM file name in an M2I file
- * @part: partition number
- * @name: name to be located
- *
- * This function searches for a given CBM file name in the currently
- * mounted M2I File. Returns 0 if not found, 1 on errors or the
- * offset of the M2I line if found.
- */
-static uint16_t find_entry(uint8_t part, uint8_t *name) {
-  uint16_t pos = M2I_ENTRY_OFFSET;
-  uint8_t i;
-  uint8_t *srcname, *dstname;
-
-  while (1) {
-    i = load_entry(part,pos);
-    pos += M2I_ENTRY_LEN;
-
-    if (i) {
-      if (i == 1)
-        return 0;
-      else
-        return 1;
-    }
-
-    /* Skip deleted entries */
-    if (entrybuf[0] == '-')
-      continue;
-
-    name_repad(' ',0);
-    srcname = name;
-    dstname = entrybuf + M2I_CBMNAME_OFFSET;
-    dstname[CBM_NAME_LENGTH] = 0;
-
-    if (ustrcmp(srcname, dstname))
-      continue;
-
-    return pos - M2I_ENTRY_LEN;
-  }
-}
-
-/**
  * find_empty_entry - returns the offset of the first empty M2I entry
  * @part: partition number
  *
@@ -210,10 +170,7 @@ static uint16_t find_empty_entry(uint8_t part) {
  * the appropiate fat_* functions.
  */
 static void open_existing(path_t *path, cbmdirent_t *dent, uint8_t type, buffer_t *buf, uint8_t appendflag) {
-  uint16_t offset;
-
-  offset = find_entry(path->part, dent->name);
-  if (offset < M2I_ENTRY_OFFSET) {
+  if (load_entry(path->part, dent->pvt.m2i.offset)) {
     set_error(ERROR_FILE_NOT_FOUND);
     return;
   }
@@ -223,7 +180,7 @@ static void open_existing(path_t *path, cbmdirent_t *dent, uint8_t type, buffer_
     return;
   }
 
-  ustrcpy(dent->name, entrybuf+M2I_FATNAME_OFFSET);
+  ustrcpy(dent->pvt.fat.realname, entrybuf+M2I_FATNAME_OFFSET);
 
   if (appendflag)
     fat_open_write(path, dent, type, buf, 1);
@@ -253,14 +210,16 @@ static int8_t m2i_readdir(dh_t *dh, cbmdirent_t *dent) {
         return -1;
     }
 
+    memset(dent, 0, sizeof(cbmdirent_t));
+    dent->pvt.m2i.offset = dh->dir.m2i;
+
     dh->dir.m2i += M2I_ENTRY_LEN;
 
     /* Check file type */
     if (parsetype())
       continue;
 
-    memset(dent, 0, sizeof(cbmdirent_t));
-
+    dent->opstype   = OPSTYPE_M2I;
     dent->typeflags = entrybuf[0];
 
     /* Copy CBM file name */
@@ -314,7 +273,6 @@ static uint8_t m2i_getlabel(path_t *path, uint8_t *label) {
 }
 
 static void m2i_open_read(path_t *path, cbmdirent_t *dent, buffer_t *buf) {
-  /* The type isn't checked anyway */
   open_existing(path, dent, TYPE_RAW, buf, 0);
 }
 
@@ -405,8 +363,8 @@ static void m2i_open_write(path_t *path, cbmdirent_t *dent, uint8_t type, buffer
     while (*nameptr)
       *str++ = *nameptr++;
 
-    /* Overwrite the original name */
-    ustrcpy(dent->name, entrybuf+M2I_FATNAME_OFFSET);
+    /* Update dent with the new FAT name */
+    ustrcpy(dent->pvt.fat.realname, entrybuf+M2I_FATNAME_OFFSET);
 
     /* Finish creating the M2I entry */
     entrybuf[M2I_FATNAME_OFFSET+8]  = ' ';
@@ -437,12 +395,9 @@ static void m2i_open_rel(path_t *path, cbmdirent_t *dent, buffer_t *buf, uint8_t
 static uint8_t m2i_delete(path_t *path, cbmdirent_t *dent) {
   uint16_t offset;
 
-  offset = find_entry(path->part, dent->name);
-  if (offset == 1)
+  offset = dent->pvt.m2i.offset;// find_entry
+  if (load_entry(path->part, offset))
     return 255;
-
-  if (offset == 0)
-    return 0;
 
   /* Ignore the result, we'll have to delete the entry anyway */
   ustrcpy(dent->name, entrybuf+M2I_FATNAME_OFFSET);
@@ -461,20 +416,14 @@ static void m2i_rename(path_t *path, cbmdirent_t *dent, uint8_t *newname) {
 
   set_busy_led(1);
   /* Locate entry in the M2I file */
-  offset = find_entry(path->part, dent->name);
-  if (offset == 1) {
+  offset = dent->pvt.m2i.offset;
+  if (load_entry(path->part, offset)) {
     update_leds();
     return;
   }
 
-  if (offset == 0) {
-    set_error(ERROR_FILE_NOT_FOUND);
-    update_leds();
-    return;
-  }
-
-  /* Re-load the entry because find_entry modifies it */
-  /* Assume this never fails because find_entry was successful */
+  /* Re-load the entry because load_entry modifies it */
+  /* Assume this never fails because load_entry was successful */
   image_read(path->part, offset, entrybuf, M2I_ENTRY_LEN);
 
   /* Copy the new filename */
