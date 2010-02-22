@@ -89,15 +89,25 @@ typedef struct {
   uint32_t fat;
 } path_t;
 
+/* Ops type selector for cbmdirent_t */
+typedef enum {
+  OPSTYPE_UNDEFINED = 0,
+  OPSTYPE_FAT,
+  OPSTYPE_M2I,
+  OPSTYPE_DXX
+} opstype_t;
+
 /**
  * struct cbmdirent_t - directory entry for CBM names
+ * @name      : 0-padded commodore file name
+ * @typeflags : OR of file type and flags
  * @blocksize : Size in blocks of 254 bytes
  * @remainder : (filesize MOD 254) or 0xff if unknown
- * @typeflags : OR of file type and flags
- * @fatcluster: Start cluster of the entry (if on FAT)
- * @name      : 0-padded commodore file name
- * @realname  : Actual 8.3 name of the file (if on FAT and different from name)
  * @date      : Last modified date
+ * @opstype   : selects which part of the pvt union is valid
+ * @pvt       : fileops-specific private data
+ * @pvt.fat.cluster : Start cluster of the entry
+ * @pvt.fat.realname: Actual 8.3 name of the file (preferred if present)
  *
  * This structure holds a CBM filename, its type and its size. The typeflags
  * are almost compatible to the file type byte in a D64 image, but the splat
@@ -112,14 +122,20 @@ typedef struct {
  * It is recommended to set it to 1982-08-31 00:00:00 if unknown because
  * this is currently the value used by FatFs for new files.
  */
-typedef struct xxxcbmdirent {
-  uint16_t blocksize;
-  uint8_t  remainder;
-  uint8_t  typeflags;
-  uint32_t fatcluster;
-  uint8_t  name[CBM_NAME_LENGTH+1];
-  uint8_t  realname[8+3+1+1];
-  date_t   date;
+typedef struct {
+  uint8_t   name[CBM_NAME_LENGTH+1];
+  uint8_t   typeflags;
+  uint16_t  blocksize;
+  uint8_t   remainder;
+  date_t    date;
+  opstype_t opstype;
+  union {
+    struct {
+      uint32_t cluster;
+      uint8_t  realname[8+3+1+1];
+    } fat;
+    // Nothing for m2i/d64 yet
+  } pvt;
 } cbmdirent_t;
 
 /**

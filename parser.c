@@ -192,7 +192,7 @@ int8_t next_match(dh_t *dh, uint8_t *matchstr, date_t *start, date_t *end, uint8
 
       /* Skip if the name doesn't match */
       if (matchstr) {
-        if (dent->fatcluster != 0 && dent->realname[0] == 0) {
+        if (dent->opstype == OPSTYPE_FAT && dent->pvt.fat.realname[0] == 0) {
           /* FAT: Ignore case */
           if (!match_name(matchstr, dent, 1))
             continue;
@@ -322,7 +322,7 @@ uint8_t parse_path(uint8_t *in, path_t *path, uint8_t **name, uint8_t parse_alwa
 
           /* Match found, move path */
           /* This will break for image files with TYPE_DIR entries */
-          path->fat = dent.fatcluster;
+          path->fat = dent.pvt.fat.cluster;
           *end = saved;
           in = end;
           break;

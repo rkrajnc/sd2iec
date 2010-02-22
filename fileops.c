@@ -303,7 +303,8 @@ static uint8_t dir_refill(buffer_t *buf) {
                      &dent)) {
   case 0:
     if (image_as_dir != IMAGE_DIR_NORMAL &&
-        check_imageext(dent.realname) != IMG_UNKNOWN) {
+        dent.opstype == OPSTYPE_FAT &&
+        check_imageext(dent.pvt.fat.realname) != IMG_UNKNOWN) {
       if (image_as_dir == IMAGE_DIR_DIR) {
         dent.typeflags = (dent.typeflags & 0xf0) | TYPE_DIR;
       } else {
@@ -373,7 +374,8 @@ static uint8_t rawdir_refill(buffer_t *buf) {
     }
 
     if (image_as_dir != IMAGE_DIR_NORMAL &&
-        check_imageext(dent.realname) != IMG_UNKNOWN) {
+        dent.opstype == OPSTYPE_FAT &&
+        check_imageext(dent.pvt.fat.realname) != IMG_UNKNOWN) {
       if (image_as_dir == IMAGE_DIR_DIR) {
         dent.typeflags = (dent.typeflags & 0xf0) | TYPE_DIR;
       } else {
@@ -925,7 +927,8 @@ void file_open(uint8_t secondary) {
 
         /* Force fatops to create a new name based on the (long) CBM- */
         /* name instead of creating one with the old SFN and no LFN. gi */
-        dent.realname[0] = 0;
+        if (dent.opstype == OPSTYPE_FAT)
+          dent.pvt.fat.realname[0] = 0;
       } else {
         /* Write existing file without replacement: Raise error */
         set_error(ERROR_FILE_EXISTS);

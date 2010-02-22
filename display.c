@@ -98,9 +98,8 @@ static void menu_chdir(void) {
     if (!(dent.typeflags & FLAG_HIDDEN)) {
       if ((dent.typeflags & TYPE_MASK) == TYPE_DIR) {
         display_menu_add(dent.name);
-      } else if (partition[current_part].fop == &fatops &&
-                 dent.realname[0] == 0 &&
-                 check_imageext(dent.name) != IMG_UNKNOWN) {
+      } else if (dent.opstype == OPSTYPE_FAT &&
+                 check_imageext(dent.pvt.fat.realname) != IMG_UNKNOWN) {
         display_menu_add(dent.name);
       }
     }

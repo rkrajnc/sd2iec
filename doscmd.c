@@ -205,7 +205,7 @@ static void parse_chdir(void) {
         if (chdir(&path, dent.name))
           return;
       } else {
-        partition[path.part].current_dir = dent.fatcluster;
+        partition[path.part].current_dir = dent.pvt.fat.cluster;
         display_current_directory(path.part, ustrlen(dent.name), dent.name);
       }
     }
