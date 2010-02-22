@@ -546,7 +546,7 @@ void fat_open_read(path_t *path, cbmdirent_t *dent, buffer_t *buf) {
   else
     name = dent->name;
 
-  partition[path->part].fatfs.curr_dir = path->fat;
+  partition[path->part].fatfs.curr_dir = path->dir.fat;
   res = f_open(&partition[path->part].fatfs,&buf->pvt.fat.fh, name, FA_READ | FA_OPEN_EXISTING);
   if (res != FR_OK) {
     parse_error(res,1);
@@ -598,7 +598,7 @@ FRESULT create_file(path_t *path, cbmdirent_t *dent, uint8_t type, buffer_t *buf
     name = entrybuf;
   }
 
-  partition[path->part].fatfs.curr_dir = path->fat;
+  partition[path->part].fatfs.curr_dir = path->dir.fat;
   do {
     res = f_open(&partition[path->part].fatfs, &buf->pvt.fat.fh, name,FA_WRITE | FA_CREATE_NEW | (recordlen?FA_READ:0));
     if (res == FR_EXIST && x00ext != NULL) {
@@ -658,7 +658,7 @@ void fat_open_write(path_t *path, cbmdirent_t *dent, uint8_t type, buffer_t *buf
   uint8_t *ext;
 
   if (append) {
-    partition[path->part].fatfs.curr_dir = path->fat;
+    partition[path->part].fatfs.curr_dir = path->dir.fat;
     res = f_open(&partition[path->part].fatfs, &buf->pvt.fat.fh, dent->pvt.fat.realname, FA_WRITE | FA_OPEN_EXISTING);
     if (check_extension(dent->pvt.fat.realname, &ext) == EXT_IS_X00)
       /* It's a [PSUR]00 file */
@@ -709,7 +709,7 @@ void fat_open_rel(path_t *path, cbmdirent_t *dent, buffer_t *buf, uint8_t length
     bytesread = 1;
     entrybuf[0] = length;
   } else {
-    partition[path->part].fatfs.curr_dir = path->fat;
+    partition[path->part].fatfs.curr_dir = path->dir.fat;
     res = f_open(&partition[path->part].fatfs, &buf->pvt.fat.fh, dent->pvt.fat.realname, FA_WRITE | FA_READ | FA_OPEN_EXISTING);
     if (res == FR_OK) {
       if (check_extension(dent->pvt.fat.realname, &ext) == EXT_IS_X00) {
@@ -750,7 +750,7 @@ void fat_open_rel(path_t *path, cbmdirent_t *dent, buffer_t *buf, uint8_t length
 uint8_t fat_opendir(dh_t *dh, path_t *path) {
   FRESULT res;
 
-  res = l_opendir(&partition[path->part].fatfs, path->fat, &dh->dir.fat);
+  res = l_opendir(&partition[path->part].fatfs, path->dir.fat, &dh->dir.fat);
   dh->part = path->part;
   if (res != FR_OK) {
     parse_error(res,1);
@@ -929,7 +929,7 @@ uint8_t fat_delete(path_t *path, cbmdirent_t *dent) {
     name = dent->name;
     pet2asc(name);
   }
-  partition[path->part].fatfs.curr_dir = path->fat;
+  partition[path->part].fatfs.curr_dir = path->dir.fat;
   res = f_unlink(&partition[path->part].fatfs, name);
 
   update_leds();
@@ -948,16 +948,16 @@ uint8_t fat_delete(path_t *path, cbmdirent_t *dent) {
  * @path: path object for the location of dirname
  * @dent: Name of the directory/image to be changed into
  *
- * This function changes the current FAT directory to dirname.
+ * This function changes the directory of the path object to dirname.
  * If dirname specifies a file with a known extension (e.g. M2I or D64), the
- * current directory will be changed to the directory of the file and
+ * current(!) directory will be changed to the directory of the file and
  * it will be mounted as an image file. Returns 0 if successful,
  * 1 otherwise.
  */
 uint8_t fat_chdir(path_t *path, cbmdirent_t *dent) {
   FRESULT res;
 
-  partition[path->part].fatfs.curr_dir = path->fat;
+  partition[path->part].fatfs.curr_dir = path->dir.fat;
 
   /* Left arrow moves one directory up */
   if (dent->name[0] == '_' && dent->name[1] == 0) {
@@ -975,18 +975,15 @@ uint8_t fat_chdir(path_t *path, cbmdirent_t *dent) {
 
     dent->pvt.fat.cluster = finfo.clust;
     dent->typeflags = TYPE_DIR;
+  } else if (dent->name[0] == 0) {
+    /* Empty string moves to the root dir */
+    path->dir.fat = 0;
+    return 0;
   }
 
   if ((dent->typeflags & TYPE_MASK) == TYPE_DIR) {
     /* It's a directory, change to its cluster */
-    partition[path->part].current_dir = dent->pvt.fat.cluster;
-
-    if (display_found) {
-      /* Get directory name for display */
-      path->fat = dent->pvt.fat.cluster;
-      fat_getlabel(path, command_buffer);
-      display_current_directory(path->part,ustrlen(command_buffer),command_buffer);
-    }
+    path->dir.fat = dent->pvt.fat.cluster;
   } else {
     /* Changing into a file, could be a mount request */
     if (check_imageext(dent->name) != IMG_UNKNOWN) {
@@ -1016,12 +1013,6 @@ uint8_t fat_chdir(path_t *path, cbmdirent_t *dent) {
         partition[path->part].fop = &d64ops;
       }
 
-      partition[path->part].current_dir = partition[path->part].fatfs.curr_dir;
-
-      if (display_found) {
-        asc2pet(dent->name);
-        display_current_directory(path->part,ustrlen(dirname),dirname);
-      }
       return 0;
     }
   }
@@ -1032,7 +1023,7 @@ uint8_t fat_chdir(path_t *path, cbmdirent_t *dent) {
 void fat_mkdir(path_t *path, uint8_t *dirname) {
   FRESULT res;
 
-  partition[path->part].fatfs.curr_dir = path->fat;
+  partition[path->part].fatfs.curr_dir = path->dir.fat;
   pet2asc(dirname);
   res = f_mkdir(&partition[path->part].fatfs, dirname);
   parse_error(res,0);
@@ -1100,7 +1091,8 @@ uint8_t fat_getlabel(path_t *path, uint8_t *label) {
   finfo.lfn = entrybuf;
   memset(label, ' ', CBM_NAME_LENGTH);
 
-  if((res = l_opendir(&partition[path->part].fatfs,path->fat,&dh)) != FR_OK)
+  res = l_opendir(&partition[path->part].fatfs, path->dir.fat, &dh);
+  if (res != FR_OK)
     goto gl_error;
 
   while ((res = f_readdir(&dh, &finfo)) == FR_OK) {
@@ -1114,7 +1106,7 @@ uint8_t fat_getlabel(path_t *path, uint8_t *label) {
       while ((res = f_readdir(&dh, &finfo)) == FR_OK) {
         if(finfo.fname[0] == '\0')
           break;
-        if(finfo.clust == path->fat) {
+        if (finfo.clust == path->dir.fat) {
           if(!*name)
             name = finfo.fname;
           else
@@ -1209,7 +1201,7 @@ void fat_rename(path_t *path, cbmdirent_t *dent, uint8_t *newname) {
   FRESULT res;
   UINT byteswritten;
 
-  partition[path->part].fatfs.curr_dir = path->fat;
+  partition[path->part].fatfs.curr_dir = path->dir.fat;
   if (dent->pvt.fat.realname[0]) {
     switch (check_extension(dent->pvt.fat.realname, &ext)) {
     case EXT_IS_X00:
@@ -1287,7 +1279,7 @@ void fatops_init(uint8_t preserve_path) {
     res=f_mount((realdrive * 16) + part, &partition[max_part].fatfs);
 
     if (!preserve_path)
-      partition[max_part].current_dir = 0;
+      partition[max_part].current_dir.fat = 0;
 
     if (res == FR_OK)
       max_part++;
@@ -1358,8 +1350,8 @@ uint8_t image_unmount(uint8_t part) {
     /* Send current path to display */
     path_t path;
 
-    path.part = part;
-    path.fat  = partition[part].current_dir;
+    path.part    = part;
+    path.dir.fat = partition[part].current_dir.fat;
     fat_getlabel(&path, entrybuf);
     display_current_directory(part,ustrlen(entrybuf),entrybuf);
   }

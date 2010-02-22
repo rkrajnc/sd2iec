@@ -77,16 +77,26 @@ typedef struct date {
 }  __attribute__((packed)) date_t;
 
 /**
+ * struct dir_t - struct of directory references for various ops
+ * @fat: cluster number of the directory start for FAT
+ */
+typedef struct {
+  uint32_t fat;
+} dir_t;
+
+/**
  * struct path_t - struct to reference a directory
  * @part: partition number (0-based)
- * @fat : cluster number of the directory start
+ * @dir : directory reference
  *
- * This is just a wrapper around the FAT cluster number
- * until there is anything else that support subdirectories.
+ * This structure is passed around to various functions as
+ * a reference to a specific partition and directory.
+ * File operation type is implicitly given by partitions[part].fop
+ * until multi-type references on a single partition are implemented.
  */
 typedef struct {
   uint8_t  part;
-  uint32_t fat;
+  dir_t    dir;
 } path_t;
 
 /**
@@ -240,7 +250,7 @@ struct param_s {
  */
 typedef struct partition_s {
   FATFS                  fatfs;
-  uint32_t               current_dir;
+  dir_t                  current_dir;
   const struct fileops_s *fop;
   FIL                    imagehandle;
   uint8_t                imagetype;

@@ -565,13 +565,13 @@ static void load_directory(uint8_t secondary) {
         set_error(ERROR_DRIVE_NOT_READY);
         return;
       }
-      path.fat  = partition[path.part].current_dir;
+      path.dir = partition[path.part].current_dir;
       if (opendir(&buf->pvt.dir.dh, &path))
         return;
     }
   } else {
     path.part = current_part;
-    path.fat=partition[path.part].current_dir;  // if you do not do this, get_label will fail below.
+    path.dir  = partition[path.part].current_dir;  // if you do not do this, get_label will fail below.
     if (opendir(&buf->pvt.dir.dh, &path))
       return;
   }
@@ -926,7 +926,7 @@ void file_open(uint8_t secondary) {
           return;
 
         /* Force fatops to create a new name based on the (long) CBM- */
-        /* name instead of creating one with the old SFN and no LFN. gi */
+        /* name instead of creating one with the old SFN and no LFN.  */
         if (dent.opstype == OPSTYPE_FAT)
           dent.pvt.fat.realname[0] = 0;
       } else {

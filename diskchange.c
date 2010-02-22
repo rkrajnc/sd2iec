@@ -145,7 +145,7 @@ static uint8_t mount_line(void) {
   /* Start in the partition+directory of the swap list */
   current_part = swappath.part;
   display_current_part(current_part);
-  partition[current_part].current_dir = swappath.fat;
+  partition[current_part].current_dir = swappath.dir;
 
   if (parse_path(command_buffer, &path, &str, 0)) {
     current_error = olderror;
@@ -157,6 +157,7 @@ static uint8_t mount_line(void) {
 
   if (!first_match(&path, str, FLAG_HIDDEN, &dent)) {
     chdir(&path, &dent);
+    partition[current_part].current_dir = path.dir;
   }
 
   if (current_error != 0 && current_error != ERROR_DOSVERSION) {
@@ -183,7 +184,7 @@ void set_changelist(path_t *path, uint8_t *filename) {
     return;
 
   /* Open a new swaplist */
-  partition[path->part].fatfs.curr_dir = path->fat;
+  partition[path->part].fatfs.curr_dir = path->dir.fat;
   res = f_open(&partition[path->part].fatfs, &swaplist, filename, FA_READ | FA_OPEN_EXISTING);
   if (res != FR_OK) {
     parse_error(res,1);
@@ -207,7 +208,7 @@ void change_disk(void) {
     /* change_disk is called from the IEC idle loop, so entrybuf is free */
     reset_key(0xff); // <- lazy
     ustrcpy_P(entrybuf, autoswap_name);
-    path.fat  = partition[current_part].current_dir;
+    path.dir  = partition[current_part].current_dir;
     path.part = current_part;
     set_changelist(&path, entrybuf);
     if (swaplist.fs == NULL) {

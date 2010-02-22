@@ -270,7 +270,7 @@ uint8_t parse_path(uint8_t *in, path_t *path, uint8_t **name, uint8_t parse_alwa
     }
 
     path->part = part;
-    path->fat  = partition[part].current_dir;
+    path->dir  = partition[part].current_dir;
 
     if (*in != '/') {
       *name = ustrchr(in, ':');
@@ -287,7 +287,8 @@ uint8_t parse_path(uint8_t *in, path_t *path, uint8_t **name, uint8_t parse_alwa
         switch (*in) {
         case '/':
           /* Double slash -> root */
-          path->fat = 0;
+          dent.name[0] = 0;
+          chdir(path, &dent);
           break;
 
         case 0:
@@ -321,8 +322,7 @@ uint8_t parse_path(uint8_t *in, path_t *path, uint8_t **name, uint8_t parse_alwa
           }
 
           /* Match found, move path */
-          /* This will break for image files with TYPE_DIR entries */
-          path->fat = dent.pvt.fat.cluster;
+          chdir(path, &dent);
           *end = saved;
           in = end;
           break;
@@ -343,7 +343,7 @@ uint8_t parse_path(uint8_t *in, path_t *path, uint8_t **name, uint8_t parse_alwa
   } else {
     /* No :, use current dir/path */
     path->part = current_part;
-    path->fat  = partition[current_part].current_dir;
+    path->dir  = partition[current_part].current_dir;
   }
 
   *name = in;

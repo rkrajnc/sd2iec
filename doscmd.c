@@ -201,26 +201,21 @@ static void parse_chdir(void) {
       if (first_match(&path, name, FLAG_HIDDEN, &dent))
         return;
 
-      /* Move into it if it's a directory, use chdir if it's a file. */
-      if ((dent.typeflags & TYPE_MASK) != TYPE_DIR) {
-        if (chdir(&path, &dent))
-          return;
-      } else {
-        partition[path.part].current_dir = dent.pvt.fat.cluster;
-        display_current_directory(path.part, ustrlen(dent.name), dent.name);
-      }
+      if (chdir(&path, &dent))
+        return;
     }
   } else {
-    if (ustrchr(command_buffer, '/')) {
-      partition[path.part].current_dir = path.fat;
-      if (display_found) {
-        fat_getlabel(&path, dent.name);
-        display_current_directory(path.part, ustrlen(dent.name), dent.name);
-      }
-    } else {
+    if (!ustrchr(command_buffer, '/')) {
       set_error(ERROR_FILE_NOT_FOUND_39);
       return;
     }
+  }
+
+  partition[path.part].current_dir = path.dir;
+
+  if (display_found) {
+    disk_label(&path, dent.name);
+    display_current_directory(path.part, ustrlen(dent.name), dent.name);
   }
 
   if (globalflags & AUTOSWAP_ACTIVE)
@@ -248,7 +243,7 @@ static void parse_rmdir(void) {
     set_error(ERROR_SYNTAX_NONAME);
   } else {
     path.part = part;
-    path.fat  = partition[part].current_dir;
+    path.dir  = partition[part].current_dir;
     ustrcpy(dent.name, str+1);
     res = file_delete(&path, &dent);
     if (res != 255)
@@ -733,7 +728,7 @@ static void parse_getpartition(void) {
   ptr++;
 
   *(ptr++) = path.part+1;
-  path.fat=0;
+  path.dir.fat = 0;
   if (disk_label(&path,ptr))
     return;
   ptr += 16;
@@ -1062,7 +1057,7 @@ static void parse_rename(void) {
     return;
 
   /* Rename can't move files across directories */
-  if (oldpath.fat != newpath.fat) {
+  if (memcmp(&oldpath.dir, &newpath.dir, sizeof(newpath.dir))) {
     set_error(ERROR_FILE_NOT_FOUND);
     return;
   }

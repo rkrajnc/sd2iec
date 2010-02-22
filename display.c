@@ -79,7 +79,7 @@ static void menu_chdir(void) {
   display_menu_add(displaybuffer);
 
   path.part = current_part;
-  path.fat  = partition[current_part].current_dir;
+  path.dir  = partition[current_part].current_dir;
 
   if (opendir(&dh, &path)) {
     menustate = MENU_NONE;
@@ -175,24 +175,29 @@ void display_service(void) {
     /* New directory selected */
     uint8_t sel = i2c_read_register(DISPLAY_I2C_ADDR, DISPLAY_MENU_GETSELECTION);
     path_t path;
+    cbmdirent_t dent;
 
     menustate = MENU_NONE;
     if (sel == 0)
       /* Cancel */
       return;
 
-    /* Can't use displaybuffer here because it's used by display_send_prefixed, used by fat_chdir */
+    /* Read directory name into displaybuffer */
     if (sel == 1) {
       /* Previous directory */
-      entrybuf[0] = '_';
-      entrybuf[1] = 0;
+      displaybuffer[0] = '_';
+      displaybuffer[1] = 0;
     } else {
-      i2c_read_registers(DISPLAY_I2C_ADDR, DISPLAY_MENU_GETENTRY, sizeof(entrybuf), entrybuf);
+      i2c_read_registers(DISPLAY_I2C_ADDR, DISPLAY_MENU_GETENTRY, sizeof(displaybuffer), displaybuffer);
     }
 
     path.part = current_part;
-    path.fat  = partition[current_part].current_dir;
-    chdir(&path, entrybuf);
+    path.dir  = partition[current_part].current_dir;
+    if (first_match(&path, displaybuffer, FLAG_HIDDEN, &dent))
+      return;
+
+    chdir(&path, &dent);
+    partition[current_part].current_dir = path.dir;
   }
 }
 
