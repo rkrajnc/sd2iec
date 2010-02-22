@@ -213,7 +213,7 @@ static void parse_chdir(void) {
     if (ustrchr(command_buffer, '/')) {
       partition[path.part].current_dir = path.fat;
       if (display_found) {
-        fat_getdirname(&path, dent.name);
+        fat_getlabel(&path, dent.name);
         display_current_directory(path.part, ustrlen(dent.name), dent.name);
       }
     } else {

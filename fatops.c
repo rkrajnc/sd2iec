@@ -982,7 +982,7 @@ uint8_t fat_chdir(path_t *path, uint8_t *dirname) {
     if (display_found) {
       /* Get directory name for display */
       path->fat = finfo.clust;
-      fat_getdirname(path, command_buffer);
+      fat_getlabel(path, command_buffer);
       display_current_directory(path->part,ustrlen(command_buffer),command_buffer);
     }
   } else {
@@ -1076,30 +1076,31 @@ uint8_t fat_getvolumename(uint8_t part, uint8_t *label) {
 }
 
 /**
- * fat_getdirname - Get directory name
- * @part : partition to request
- * @label: pointer to the buffer for the name (16 characters+zero terminator)
+ * fat_getlabel - Get the directory label
+ * @path : path object of the directory
+ * @label: pointer to the buffer for the label (16 characters)
  *
- * This function determines the name of the current directory
- * and stores it zero-terminated in label. The empty string
- * is used for the root directory.
+ * This function reads the FAT volume label (if in root directory) or FAT
+ * directory name (if not) and stored it space-padded
+ * in the first 16 bytes of label.
  * Returns 0 if successfull, != 0 if an error occured.
  */
-uint8_t fat_getdirname(path_t *path, uint8_t *label) {
+uint8_t fat_getlabel(path_t *path, uint8_t *label) {
   DIR dh;
   FILINFO finfo;
   FRESULT res;
+  uint8_t *name = entrybuf;
 
-  finfo.lfn = label;
-  memset(label, 0, CBM_NAME_LENGTH+1);
+  finfo.lfn = entrybuf;
+  memset(label, ' ', CBM_NAME_LENGTH);
 
   if((res = l_opendir(&partition[path->part].fatfs,path->fat,&dh)) != FR_OK)
-    goto gdn_error;
+    goto gl_error;
 
   while ((res = f_readdir(&dh, &finfo)) == FR_OK) {
     if(finfo.fname[0] == '\0' || finfo.fname[0] != '.') {
-      label[0] = 0;
-      return res;
+      res = fat_getvolumename(path->part, name);
+      break;
     }
     if(finfo.fname[0] == '.' && finfo.fname[1] == '.' && finfo.fname[2] == 0) {
       if((res = l_opendir(&partition[path->part].fatfs,finfo.clust,&dh)) != FR_OK) // open .. dir.
@@ -1108,10 +1109,10 @@ uint8_t fat_getdirname(path_t *path, uint8_t *label) {
         if(finfo.fname[0] == '\0')
           break;
         if(finfo.clust == path->fat) {
-          if(!*label)
-            ustrcpy(label, finfo.fname);
+          if(!*name)
+            name = finfo.fname;
           else
-            asc2pet(label);
+            asc2pet(name);
           break;
         }
       }
@@ -1119,45 +1120,19 @@ uint8_t fat_getdirname(path_t *path, uint8_t *label) {
     }
   }
 
+  if (*name)
+    memcpy(label, name, ustrlen(name));
+
   if (res == FR_OK)
     return 0;
 
-gdn_error:
+gl_error:
   parse_error(res,0);
   return 1;
 }
 
 /**
- * fat_getlabel - Get the directory label
- * @path : path object of the directory
- * @label: pointer to the buffer for the label (16 characters)
- *
- * This function reads the FAT volume label (if in root directory) or FAT
- * directory name (if not) and stores it space-padded
- * in the first 16 bytes of label. Returns 0 if successfull, != 0 if
- * an error occured.
- */
-uint8_t fat_getlabel(path_t *path, uint8_t *label) {
-  uint8_t res;
-
-  res = fat_getdirname(path, entrybuf);
-  if (res)
-    return res;
-
-  if (entrybuf[0] == 0) {
-    /* Root directory, return volume label instead */
-    res = fat_getvolumename(path->part, entrybuf);
-    if (res)
-      return res;
-  }
-
-  memset(label, ' ', CBM_NAME_LENGTH);
-  memcpy(label, entrybuf, ustrlen(entrybuf));
-  return 0;
-}
-
-/**
- * fat_getid - Create a disk id
+ * fat_getid - "Read" a disk id
  * @part: partition number
  * @id  : pointer to the buffer for the id (5 characters)
  *
@@ -1379,7 +1354,7 @@ uint8_t image_unmount(uint8_t part) {
 
     path.part = part;
     path.fat  = partition[part].current_dir;
-    fat_getdirname(&path, entrybuf);
+    fat_getlabel(&path, entrybuf);
     display_current_directory(part,ustrlen(entrybuf),entrybuf);
   }
 
