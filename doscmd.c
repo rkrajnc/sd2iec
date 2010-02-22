@@ -1116,6 +1116,7 @@ static void parse_scratch(void) {
 
   filename = ustr1tok(command_buffer+1,',',&tmp);
 
+  DIRTY_LED_ON();
   count = 0;
   /* Loop over all file names */
   while (filename != NULL) {
