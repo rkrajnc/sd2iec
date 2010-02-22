@@ -192,8 +192,9 @@ static void parse_chdir(void) {
   if (ustrlen(name) != 0) {
     /* Path component after the : */
     if (name[0] == '_') {
-      /* Going up a level - let chdir handle it. */
-      if (chdir(&path,name))
+      /* Going up a level */
+      ustrcpy(dent.name, name);
+      if (chdir(&path,&dent))
         return;
     } else {
       /* A directory name - try to match it */
@@ -202,7 +203,7 @@ static void parse_chdir(void) {
 
       /* Move into it if it's a directory, use chdir if it's a file. */
       if ((dent.typeflags & TYPE_MASK) != TYPE_DIR) {
-        if (chdir(&path, dent.name))
+        if (chdir(&path, &dent))
           return;
       } else {
         partition[path.part].current_dir = dent.pvt.fat.cluster;

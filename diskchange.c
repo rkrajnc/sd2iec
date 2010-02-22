@@ -153,7 +153,11 @@ static uint8_t mount_line(void) {
   }
 
   /* Mount the disk image */
-  fat_chdir(&path, str);
+  cbmdirent_t dent;
+
+  if (!first_match(&path, str, FLAG_HIDDEN, &dent)) {
+    chdir(&path, &dent);
+  }
 
   if (current_error != 0 && current_error != ERROR_DOSVERSION) {
     current_error = olderror;

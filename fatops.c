@@ -945,8 +945,8 @@ uint8_t fat_delete(path_t *path, cbmdirent_t *dent) {
 
 /**
  * fat_chdir - change directory in FAT and/or mount image
- * @path   : path object for the location of dirname
- * @dirname: Name of the directory/image to be changed into
+ * @path: path object for the location of dirname
+ * @dent: Name of the directory/image to be changed into
  *
  * This function changes the current FAT directory to dirname.
  * If dirname specifies a file with a known extension (e.g. M2I or D64), the
@@ -954,55 +954,61 @@ uint8_t fat_delete(path_t *path, cbmdirent_t *dent) {
  * it will be mounted as an image file. Returns 0 if successful,
  * 1 otherwise.
  */
-uint8_t fat_chdir(path_t *path, uint8_t *dirname) {
+uint8_t fat_chdir(path_t *path, cbmdirent_t *dent) {
   FRESULT res;
-  FILINFO finfo;
 
   partition[path->part].fatfs.curr_dir = path->fat;
 
   /* Left arrow moves one directory up */
-  if (dirname[0] == '_' && dirname[1] == 0) {
-    command_buffer[0] = '.';
-    command_buffer[1] = '.';
-    command_buffer[2] = 0;
-    dirname = command_buffer;
+  if (dent->name[0] == '_' && dent->name[1] == 0) {
+    FILINFO finfo;
+
+    entrybuf[0] = '.';
+    entrybuf[1] = '.';
+    entrybuf[2] = 0;
+
+    res = f_stat(&partition[path->part].fatfs, entrybuf, &finfo);
+    if (res != FR_OK) {
+      parse_error(res,1);
+      return 1;
+    }
+
+    dent->pvt.fat.cluster = finfo.clust;
+    dent->typeflags = TYPE_DIR;
   }
 
-  pet2asc(dirname);
-  res = f_stat(&partition[path->part].fatfs, dirname, &finfo);
-  if (res != FR_OK) {
-    parse_error(res,1);
-    return 1;
-  }
-
-  if (finfo.fattrib & AM_DIR) {
+  if ((dent->typeflags & TYPE_MASK) == TYPE_DIR) {
     /* It's a directory, change to its cluster */
-    partition[path->part].current_dir= finfo.clust;
+    partition[path->part].current_dir = dent->pvt.fat.cluster;
 
     if (display_found) {
       /* Get directory name for display */
-      path->fat = finfo.clust;
+      path->fat = dent->pvt.fat.cluster;
       fat_getlabel(path, command_buffer);
       display_current_directory(path->part,ustrlen(command_buffer),command_buffer);
     }
   } else {
     /* Changing into a file, could be a mount request */
-    if (check_imageext(dirname) != IMG_UNKNOWN) {
+    if (check_imageext(dent->name) != IMG_UNKNOWN) {
       /* D64/M2I mount request */
       free_multiple_buffers(FMB_USER_CLEAN);
       /* Open image file */
-      res = f_open(&partition[path->part].fatfs, &partition[path->part].imagehandle, dirname, FA_OPEN_EXISTING|FA_READ|FA_WRITE);
+      res = f_open(&partition[path->part].fatfs,
+                   &partition[path->part].imagehandle,
+                   dent->name, FA_OPEN_EXISTING|FA_READ|FA_WRITE);
 
       /* Try to open read-only if medium or file is read-only */
       if (res == FR_DENIED || res == FR_WRITE_PROTECTED)
-        res = f_open(&partition[path->part].fatfs, &partition[path->part].imagehandle, dirname, FA_OPEN_EXISTING|FA_READ);
+        res = f_open(&partition[path->part].fatfs,
+                     &partition[path->part].imagehandle,
+                     dent->name, FA_OPEN_EXISTING|FA_READ);
 
       if (res != FR_OK) {
         parse_error(res,1);
         return 1;
       }
 
-      if (check_imageext(dirname) == IMG_IS_M2I)
+      if (check_imageext(dent->name) == IMG_IS_M2I)
         partition[path->part].fop = &m2iops;
       else {
         if (d64_mount(path->part))
@@ -1013,7 +1019,7 @@ uint8_t fat_chdir(path_t *path, uint8_t *dirname) {
       partition[path->part].current_dir = partition[path->part].fatfs.curr_dir;
 
       if (display_found) {
-        asc2pet(dirname);
+        asc2pet(dent->name);
         display_current_directory(path->part,ustrlen(dirname),dirname);
       }
       return 0;
@@ -1369,16 +1375,16 @@ uint8_t image_unmount(uint8_t part) {
 
 /**
  * image_chdir - generic chdir for image files
- * @path   : path object of the location of dirname
- * @dirname: directory to be changed into
+ * @path: path object of the location of dirname
+ * @dent: directory to be changed into
  *
- * This function will ignore any dirnames except _ (left arrow)
+ * This function will ignore any names except _ (left arrow)
  * and unmount the image if that is found. It can be used as
  * chdir/mkdir for all image types that don't support subdirectories
  * themselves. Returns 0 if successful, 1 otherwise.
  */
-uint8_t image_chdir(path_t *path, uint8_t *dirname) {
-  if (dirname[0] == '_' && dirname[1] == 0) {
+uint8_t image_chdir(path_t *path, cbmdirent_t *dent) {
+  if (dent->name[0] == '_' && dent->name[1] == 0) {
     /* Unmount request */
     return image_unmount(path->part);
   }

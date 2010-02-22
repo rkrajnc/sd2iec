@@ -36,7 +36,7 @@
 void     fatops_init(uint8_t preserve_dir);
 void     parse_error(FRESULT res, uint8_t readflag);
 uint8_t  fat_delete(path_t *path, cbmdirent_t *dent);
-uint8_t  fat_chdir(path_t *path, uint8_t *dirname);
+uint8_t  fat_chdir(path_t *path, cbmdirent_t *dent);
 void     fat_mkdir(path_t *path, uint8_t *dirname);
 void     fat_open_read(path_t *path, cbmdirent_t *filename, buffer_t *buf);
 void     fat_open_write(path_t *path, cbmdirent_t *filename, uint8_t type, buffer_t *buf, uint8_t append);
@@ -54,7 +54,7 @@ extern uint8_t file_extension_mode;
 
 /* Generic helpers */
 uint8_t image_unmount(uint8_t part);
-uint8_t image_chdir(path_t *path, uint8_t *dirname);
+uint8_t image_chdir(path_t *path, cbmdirent_t *dent);
 void    image_mkdir(path_t *path, uint8_t *dirname);
 uint8_t image_read(uint8_t part, DWORD offset, void *buffer, uint16_t bytes);
 uint8_t image_write(uint8_t part, DWORD offset, void *buffer, uint16_t bytes, uint8_t flush);
