@@ -37,13 +37,13 @@ extern uint8_t max_part;
 uint8_t parse_partition(uint8_t **buf);
 
 /* Performs CBM DOS pattern matching */
-uint8_t match_name(uint8_t *matchstr, struct cbmdirent *dent, uint8_t ignorecase);
+uint8_t match_name(uint8_t *matchstr, cbmdirent_t *dent, uint8_t ignorecase);
 
 /* Returns the next matching dirent */
-int8_t next_match(dh_t *dh, uint8_t *matchstr, date_t *start, date_t *end, uint8_t type, struct cbmdirent *dent);
+int8_t next_match(dh_t *dh, uint8_t *matchstr, date_t *start, date_t *end, uint8_t type, cbmdirent_t *dent);
 
 /* Returns the first matching dirent */
-int8_t first_match(path_t *path, uint8_t *matchstr, uint8_t type, struct cbmdirent *dent);
+int8_t first_match(path_t *path, uint8_t *matchstr, uint8_t type, cbmdirent_t *dent);
 
 /* Parses CMD-style directory specifications */
 uint8_t parse_path(uint8_t *in, path_t *path, uint8_t **name, uint8_t parse_always);

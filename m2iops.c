@@ -209,7 +209,7 @@ static uint16_t find_empty_entry(uint8_t part) {
  * either in read or append mode according to appendflag by calling
  * the appropiate fat_* functions.
  */
-static void open_existing(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t *buf, uint8_t appendflag) {
+static void open_existing(path_t *path, cbmdirent_t *dent, uint8_t type, buffer_t *buf, uint8_t appendflag) {
   uint16_t offset;
 
   offset = find_entry(path->part, dent->name);
@@ -241,7 +241,7 @@ static uint8_t m2i_opendir(dh_t *dh, path_t *path) {
   return 0;
 }
 
-static int8_t m2i_readdir(dh_t *dh, struct cbmdirent *dent) {
+static int8_t m2i_readdir(dh_t *dh, cbmdirent_t *dent) {
   uint8_t i;
 
   while (1) {
@@ -259,7 +259,7 @@ static int8_t m2i_readdir(dh_t *dh, struct cbmdirent *dent) {
     if (parsetype())
       continue;
 
-    memset(dent, 0, sizeof(struct cbmdirent));
+    memset(dent, 0, sizeof(cbmdirent_t));
 
     dent->typeflags = entrybuf[0];
 
@@ -313,12 +313,12 @@ static uint8_t m2i_getlabel(path_t *path, uint8_t *label) {
   return image_read(path->part, 0, label, 16);
 }
 
-static void m2i_open_read(path_t *path, struct cbmdirent *dent, buffer_t *buf) {
+static void m2i_open_read(path_t *path, cbmdirent_t *dent, buffer_t *buf) {
   /* The type isn't checked anyway */
   open_existing(path, dent, TYPE_RAW, buf, 0);
 }
 
-static void m2i_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t *buf, uint8_t append) {
+static void m2i_open_write(path_t *path, cbmdirent_t *dent, uint8_t type, buffer_t *buf, uint8_t append) {
   uint16_t offset;
   uint8_t *str;
   uint8_t *nameptr;
@@ -430,11 +430,11 @@ static void m2i_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, b
   }
 }
 
-static void m2i_open_rel(path_t *path, struct cbmdirent *dent, buffer_t *buf, uint8_t length, uint8_t mode) {
+static void m2i_open_rel(path_t *path, cbmdirent_t *dent, buffer_t *buf, uint8_t length, uint8_t mode) {
   set_error(ERROR_SYNTAX_UNABLE);
 }
 
-static uint8_t m2i_delete(path_t *path, struct cbmdirent *dent) {
+static uint8_t m2i_delete(path_t *path, cbmdirent_t *dent) {
   uint16_t offset;
 
   offset = find_entry(path->part, dent->name);
@@ -455,7 +455,7 @@ static uint8_t m2i_delete(path_t *path, struct cbmdirent *dent) {
     return 1;
 }
 
-static void m2i_rename(path_t *path, struct cbmdirent *dent, uint8_t *newname) {
+static void m2i_rename(path_t *path, cbmdirent_t *dent, uint8_t *newname) {
   uint16_t offset;
   uint8_t *ptr;
 

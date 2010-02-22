@@ -90,7 +90,7 @@ typedef struct {
 } path_t;
 
 /**
- * struct cbmdirent - directory entry for CBM names
+ * struct cbmdirent_t - directory entry for CBM names
  * @blocksize : Size in blocks of 254 bytes
  * @remainder : (filesize MOD 254) or 0xff if unknown
  * @typeflags : OR of file type and flags
@@ -112,7 +112,7 @@ typedef struct {
  * It is recommended to set it to 1982-08-31 00:00:00 if unknown because
  * this is currently the value used by FatFs for new files.
  */
-struct cbmdirent {
+typedef struct xxxcbmdirent {
   uint16_t blocksize;
   uint8_t  remainder;
   uint8_t  typeflags;
@@ -120,7 +120,7 @@ struct cbmdirent {
   uint8_t  name[CBM_NAME_LENGTH+1];
   uint8_t  realname[8+3+1+1];
   date_t   date;
-};
+} cbmdirent_t;
 
 /**
  * struct d64dh - D64 directory handle

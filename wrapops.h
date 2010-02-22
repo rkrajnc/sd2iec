@@ -60,10 +60,10 @@
  * and no field may be set to NULL.
  */
 typedef struct fileops_s {
-  void     (*open_read)(path_t *path, struct cbmdirent *name, buffer_t *buf);
-  void     (*open_write)(path_t *path, struct cbmdirent *name, uint8_t type, buffer_t *buf, uint8_t append);
-  void     (*open_rel)(path_t *path, struct cbmdirent *name, buffer_t *buf, uint8_t recordlen, uint8_t mode);
-  uint8_t  (*file_delete)(path_t *path, struct cbmdirent *name);
+  void     (*open_read)(path_t *path, cbmdirent_t *name, buffer_t *buf);
+  void     (*open_write)(path_t *path, cbmdirent_t *name, uint8_t type, buffer_t *buf, uint8_t append);
+  void     (*open_rel)(path_t *path, cbmdirent_t *name, buffer_t *buf, uint8_t recordlen, uint8_t mode);
+  uint8_t  (*file_delete)(path_t *path, cbmdirent_t *name);
   uint8_t  (*disk_label)(path_t *path, uint8_t *label);
   uint8_t  (*disk_id)(uint8_t part, uint8_t *id);
   uint16_t (*disk_free)(uint8_t part);
@@ -71,10 +71,10 @@ typedef struct fileops_s {
   void     (*write_sector)(buffer_t *buf, uint8_t part, uint8_t track, uint8_t sector);
   void     (*format)(uint8_t drv, uint8_t *name, uint8_t *id);
   uint8_t  (*opendir)(dh_t *dh, path_t *path);
-  int8_t   (*readdir)(dh_t *dh, struct cbmdirent *dent);
+  int8_t   (*readdir)(dh_t *dh, cbmdirent_t *dent);
   void     (*mkdir)(path_t *path, uint8_t *dirname);
   uint8_t  (*chdir)(path_t *path, uint8_t *dirname);
-  void     (*rename)(path_t *path, struct cbmdirent *oldname, uint8_t *newname);
+  void     (*rename)(path_t *path, cbmdirent_t *oldname, uint8_t *newname);
 } fileops_t;
 
 /* Helper-Define to avoid lots of typedefs */

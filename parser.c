@@ -100,7 +100,7 @@ uint8_t parse_partition(uint8_t **buf) {
  * This function tests if matchstr matches name in dent.
  * Returns 1 for a match, 0 otherwise.
  */
-uint8_t match_name(uint8_t *matchstr, struct cbmdirent *dent, uint8_t ignorecase) {
+uint8_t match_name(uint8_t *matchstr, cbmdirent_t *dent, uint8_t ignorecase) {
   uint8_t *filename = dent->name;
   uint8_t *starpos;
   uint8_t m,f;
@@ -174,7 +174,7 @@ uint8_t match_name(uint8_t *matchstr, struct cbmdirent *dent, uint8_t ignorecase
  * -1 if no match could be found, 1 if an error occured or 0 if a match was
  * found.
  */
-int8_t next_match(dh_t *dh, uint8_t *matchstr, date_t *start, date_t *end, uint8_t type, struct cbmdirent *dent) {
+int8_t next_match(dh_t *dh, uint8_t *matchstr, date_t *start, date_t *end, uint8_t type, cbmdirent_t *dent) {
   int8_t res;
 
   while (1) {
@@ -231,7 +231,7 @@ int8_t next_match(dh_t *dh, uint8_t *matchstr, date_t *start, date_t *end, uint8
  * convenience wrapper around opendir+next_match, it is not required to call
  * it before using next_match.
  */
-int8_t first_match(path_t *path, uint8_t *matchstr, uint8_t type, struct cbmdirent *dent) {
+int8_t first_match(path_t *path, uint8_t *matchstr, uint8_t type, cbmdirent_t *dent) {
   int8_t res;
 
   if (opendir(&matchdh, path))
@@ -256,7 +256,7 @@ int8_t first_match(path_t *path, uint8_t *matchstr, uint8_t type, struct cbmdire
  * error occured.
  */
 uint8_t parse_path(uint8_t *in, path_t *path, uint8_t **name, uint8_t parse_always) {
-  struct cbmdirent dent;
+  cbmdirent_t dent;
   uint8_t *end;
   uint8_t saved;
   uint8_t part;

@@ -536,7 +536,7 @@ static uint8_t fat_file_close(buffer_t *buf) {
  * This functions opens a file in the FAT filesystem for reading and sets up
  * buf to access it.
  */
-void fat_open_read(path_t *path, struct cbmdirent *dent, buffer_t *buf) {
+void fat_open_read(path_t *path, cbmdirent_t *dent, buffer_t *buf) {
   FRESULT res;
   uint8_t *name,*ext;
 
@@ -583,7 +583,7 @@ void fat_open_read(path_t *path, struct cbmdirent *dent, buffer_t *buf) {
  * buf to access it. type is ignored here because FAT has no equivalent of
  * file types.
  */
-FRESULT create_file(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t *buf, uint8_t recordlen) {
+FRESULT create_file(path_t *path, cbmdirent_t *dent, uint8_t type, buffer_t *buf, uint8_t recordlen) {
   FRESULT res;
   uint8_t *name, *x00ext;
 
@@ -652,7 +652,7 @@ FRESULT create_file(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t
  * buf to access it. type is ignored here because FAT has no equivalent of
  * file types.
  */
-void fat_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t *buf, uint8_t append) {
+void fat_open_write(path_t *path, cbmdirent_t *dent, uint8_t type, buffer_t *buf, uint8_t append) {
   FRESULT res;
   uint8_t *ext;
 
@@ -698,7 +698,7 @@ void fat_open_write(path_t *path, struct cbmdirent *dent, uint8_t type, buffer_t
  * If the mode parameter is 0, create a new file. If it is != 0,
  * open an existing file.
  */
-void fat_open_rel(path_t *path, struct cbmdirent *dent, buffer_t *buf, uint8_t length, uint8_t mode) {
+void fat_open_rel(path_t *path, cbmdirent_t *dent, buffer_t *buf, uint8_t length, uint8_t mode) {
   FRESULT res;
   uint8_t *ext;
   UINT bytesread;
@@ -767,7 +767,7 @@ uint8_t fat_opendir(dh_t *dh, path_t *path) {
  * Returns 1 if an error occured, -1 if there are no more
  * directory entries and 0 if successful.
  */
-int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
+int8_t fat_readdir(dh_t *dh, cbmdirent_t *dent) {
   FRESULT res;
   FILINFO finfo;
   uint8_t *ptr;
@@ -916,7 +916,7 @@ int8_t fat_readdir(dh_t *dh, struct cbmdirent *dent) {
  * This function deletes the file filename in path and returns
  * 0 if not found, 1 if deleted or 255 if an error occured.
  */
-uint8_t fat_delete(path_t *path, struct cbmdirent *dent) {
+uint8_t fat_delete(path_t *path, cbmdirent_t *dent) {
   FRESULT res;
   uint8_t *name;
 
@@ -1221,7 +1221,7 @@ void fat_sectordummy(buffer_t *buf, uint8_t part, uint8_t track, uint8_t sector)
  * This function renames the file in dent in the directory referenced by
  * path to newname.
  */
-void fat_rename(path_t *path, struct cbmdirent *dent, uint8_t *newname) {
+void fat_rename(path_t *path, cbmdirent_t *dent, uint8_t *newname) {
   uint8_t *ext;
   FRESULT res;
   UINT byteswritten;

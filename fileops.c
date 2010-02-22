@@ -116,7 +116,7 @@ const PROGMEM uint8_t filetypes[] = {
  * This function creates a directory entry for dent in the selected format
  * in the given buffer.
  */
-static void createentry(struct cbmdirent *dent, buffer_t *buf, dirformat_t format) {
+static void createentry(cbmdirent_t *dent, buffer_t *buf, dirformat_t format) {
   uint8_t i;
   uint8_t *data = buf->data;
 
@@ -245,7 +245,7 @@ static uint8_t dir_footer(buffer_t *buf) {
 
 /* Callback for the partition directory */
 static uint8_t pdir_refill(buffer_t* buf) {
-  struct cbmdirent dent;
+  cbmdirent_t dent;
 
   buf->position = 0;
   /* read volume name */
@@ -280,7 +280,7 @@ static uint8_t pdir_refill(buffer_t* buf) {
  * instead. Used as a callback during directory generation.
  */
 static uint8_t dir_refill(buffer_t *buf) {
-  struct cbmdirent dent;
+  cbmdirent_t dent;
 
   uart_putc('+');
 
@@ -352,7 +352,7 @@ static uint8_t rawdir_dummy_refill(buffer_t *buf) {
  * Used as a callback during directory generation.
  */
 static uint8_t rawdir_refill(buffer_t *buf) {
-  struct cbmdirent dent;
+  cbmdirent_t dent;
 
   memset(buf->data, 0, 32);
 
@@ -842,7 +842,7 @@ void file_open(uint8_t secondary) {
   /* Parse path+partition numbers */
   uint8_t *fname;
   int8_t res;
-  struct cbmdirent dent;
+  cbmdirent_t dent;
   path_t path;
 
   /* Parse path and file name */
@@ -917,7 +917,7 @@ void file_open(uint8_t secondary) {
         }
 
         /* Copy dent because file_delete may change it */
-        struct cbmdirent dentcopy = dent;
+        cbmdirent_t dentcopy = dent;
 
         /* Rewrite existing file: Delete the old one */
         if (file_delete(&path, &dentcopy) == 255)

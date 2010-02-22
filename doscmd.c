@@ -184,7 +184,7 @@ static void parse_mkdir(void) {
 static void parse_chdir(void) {
   path_t  path;
   uint8_t *name;
-  struct cbmdirent dent;
+  cbmdirent_t dent;
 
   if (parse_path(command_buffer+2, &path, &name, 1))
     return;
@@ -232,7 +232,7 @@ static void parse_rmdir(void) {
   uint8_t res;
   uint8_t part;
   path_t  path;
-  struct cbmdirent dent;
+  cbmdirent_t dent;
 
   /* No deletion across subdirectories */
   if (ustrchr(command_buffer, '/')) {
@@ -373,7 +373,7 @@ static void parse_copy(void) {
   uint8_t savedtype;
   int8_t res;
   buffer_t *srcbuf,*dstbuf;
-  struct cbmdirent dent;
+  cbmdirent_t dent;
 
   clean_cmdbuffer();
 
@@ -1040,7 +1040,7 @@ static void parse_position(void) {
 static void parse_rename(void) {
   path_t oldpath,newpath;
   uint8_t *oldname,*newname;
-  struct cbmdirent dent;
+  cbmdirent_t dent;
   int8_t res;
 
   clean_cmdbuffer();
@@ -1106,7 +1106,7 @@ static void parse_rename(void) {
 /*  S - Scratch  */
 /* ------------- */
 static void parse_scratch(void) {
-  struct cbmdirent dent;
+  cbmdirent_t dent;
   int8_t  res;
   uint8_t count,cnt;
   uint8_t *filename,*tmp,*name;

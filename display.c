@@ -64,7 +64,7 @@ void display_send_prefixed(uint8_t cmd, uint8_t prefixbyte, uint8_t len, uint8_t
 }
 
 static void menu_chdir(void) {
-  struct cbmdirent dent;
+  cbmdirent_t dent;
   dh_t    dh;
   path_t  path;
   int8_t  res;
