@@ -89,6 +89,21 @@ typedef struct {
   uint32_t fat;
 } path_t;
 
+/**
+ * struct d64dh - D64 directory handle
+ * @track : track of the current directory sector
+ * @sector: sector of the current directory sector
+ * @entry : number of the current directory entry in its sector
+ *
+ * This structure addresses an entry in a D64 directory by its track,
+ * sector and entry (8 entries per sector).
+ */
+struct d64dh {
+  uint8_t track;
+  uint8_t sector;
+  uint8_t entry;
+};
+
 /* Ops type selector for cbmdirent_t */
 typedef enum {
   OPSTYPE_UNDEFINED = 0,
@@ -108,6 +123,7 @@ typedef enum {
  * @pvt       : fileops-specific private data
  * @pvt.fat.cluster : Start cluster of the entry
  * @pvt.fat.realname: Actual 8.3 name of the file (preferred if present)
+ * @pvt.dxx.dh      : Dxx directory handle for the dir entry of this file
  * @pvt.m2i.offset  : Offset in the M2I file
  *
  * This structure holds a CBM filename, its type and its size. The typeflags
@@ -135,27 +151,14 @@ typedef struct {
       uint32_t cluster;
       uint8_t  realname[8+3+1+1];
     } fat;
-    // Nothing for d64 yet
+    struct {
+      struct d64dh dh;
+    } dxx;
     struct {
       uint16_t offset;
     } m2i;
   } pvt;
 } cbmdirent_t;
-
-/**
- * struct d64dh - D64 directory handle
- * @track : track of the current directory sector
- * @sector: sector of the current directory sector
- * @entry : number of the current directory entry in its sector
- *
- * This structure addresses an entry in a D64 directory by its track,
- * sector and entry (8 entries per sector).
- */
-struct d64dh {
-  uint8_t track;
-  uint8_t sector;
-  uint8_t entry;
-};
 
 /**
  * struct d64fh - D64 file handle

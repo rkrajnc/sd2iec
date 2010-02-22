@@ -240,6 +240,22 @@ static uint8_t checked_read(uint8_t part, uint8_t track, uint8_t sector, uint8_t
 }
 
 /**
+ * read_entry - read a single directory entry
+ * @part: partition number
+ * @dh  : pointer to d64dh pointing to the entry
+ * @buf : pointer to the buffer where the data should be stored
+ *
+ * This function reads a single directory entry specified by dh
+ * into the buffer buf which needs to be at least 32 bytes big.
+ * Assumes that it is never called with an invalid track/sector.
+ * Returns the same as image_read (0 success, 1 partial read, 2 failed)
+ */
+static uint8_t read_entry(uint8_t part, struct d64dh *dh, uint8_t *buf) {
+  return image_read(part, sector_offset(part, dh->track, dh->sector) +
+                          dh->entry * 32, buf, 32);
+}
+
+/**
  * strnsubst - substitute one character with another in a buffer
  * @buffer : pointer to the buffer
  * @len    : length of buffer
@@ -652,8 +668,7 @@ static int8_t nextdirentry(dh_t *dh) {
     return 1;
   }
 
-  if (image_read(dh->part, sector_offset(dh->part, dh->dir.d64.track, dh->dir.d64.sector)+
-                 dh->dir.d64.entry*32, entrybuf, 32))
+  if (read_entry(dh->part, &dh->dir.d64, entrybuf))
     return 1;
 
   dh->dir.d64.entry++;
@@ -899,6 +914,7 @@ static int8_t d64_readdir(dh_t *dh, cbmdirent_t *dent) {
       break;
   } while (1);
 
+  dent->opstype = OPSTYPE_DXX;
   memset(dent, 0, sizeof(cbmdirent_t));
 
   dent->typeflags = entrybuf[DIR_OFS_FILE_TYPE] ^ FLAG_SPLAT;
@@ -907,6 +923,8 @@ static int8_t d64_readdir(dh_t *dh, cbmdirent_t *dent) {
     /* Change invalid types (includes DIR for now) to DEL */
     dent->typeflags &= (uint8_t)~TYPE_MASK;
 
+  dent->pvt.dxx.dh = dh->dir.d64;
+  dent->pvt.dxx.dh.entry -= 1; /* undo increment in nextdirentry */
   dent->blocksize = entrybuf[DIR_OFS_SIZE_LOW] + 256*entrybuf[DIR_OFS_SIZE_HI];
   dent->remainder = 0xff;
   memcpy(dent->name, entrybuf+DIR_OFS_FILE_NAME, CBM_NAME_LENGTH);
@@ -969,8 +987,9 @@ static uint16_t d64_freeblocks(uint8_t part) {
 }
 
 static void d64_open_read(path_t *path, cbmdirent_t *dent, buffer_t *buf) {
-  /* WARNING: Ugly hack used here. The directory entry is still in  */
-  /*          entrybuf because of match_entry in fatops.c/file_open */
+  if (read_entry(path->part, &dent->pvt.dxx.dh, entrybuf))
+    return;
+
   buf->data[0] = entrybuf[DIR_OFS_TRACK];
   buf->data[1] = entrybuf[DIR_OFS_SECTOR];
 
@@ -1006,10 +1025,8 @@ static void d64_open_write(path_t *path, cbmdirent_t *dent, uint8_t type, buffer
       return;
 
     /* Modify the buffer for writing */
-    buf->pvt.d64.dh.track  = matchdh.dir.d64.track;
-    buf->pvt.d64.dh.sector = matchdh.dir.d64.sector;
-    buf->pvt.d64.dh.entry  = matchdh.dir.d64.entry-1;
-    buf->pvt.d64.blocks    = entrybuf[DIR_OFS_SIZE_LOW] + 256*entrybuf[DIR_OFS_SIZE_HI]-1;
+    buf->pvt.d64.dh     = dent->pvt.dxx.dh;
+    buf->pvt.d64.blocks = entrybuf[DIR_OFS_SIZE_LOW] + 256*entrybuf[DIR_OFS_SIZE_HI]-1;
     buf->read       = 0;
     buf->position   = buf->lastused+1;
     if (buf->position == 0)
@@ -1122,9 +1139,11 @@ static void d64_open_rel(path_t *path, cbmdirent_t *dent, buffer_t *buf, uint8_t
 }
 
 static uint8_t d64_delete(path_t *path, cbmdirent_t *dent) {
-  /* At this point entrybuf will contain the directory entry and    */
-  /* matchdh will almost point to it (entry incremented in readdir) */
   uint8_t linkbuf[2];
+
+  /* Read the directory entry of the file */
+  if (read_entry(path->part, &dent->pvt.dxx.dh, entrybuf))
+    return 255;
 
   /* Free the sector chain in the BAM */
   linkbuf[0] = entrybuf[DIR_OFS_TRACK];
@@ -1138,8 +1157,9 @@ static uint8_t d64_delete(path_t *path, cbmdirent_t *dent) {
 
   /* Clear directory entry */
   entrybuf[DIR_OFS_FILE_TYPE] = 0;
-  if (image_write(path->part, sector_offset(path->part,matchdh.dir.d64.track,matchdh.dir.d64.sector)
-                 +32*(matchdh.dir.d64.entry-1), entrybuf, 32, 1))
+  if (image_write(path->part, sector_offset(path->part, dent->pvt.dxx.dh.track, dent->pvt.dxx.dh.sector)
+                  + dent->pvt.dxx.dh.entry * 32, entrybuf, 32, 1))
+
     return 255;
 
   /* Write new BAM */
@@ -1164,16 +1184,17 @@ static void d64_write_sector(buffer_t *buf, uint8_t part, uint8_t track, uint8_t
 static void d64_rename(path_t *path, cbmdirent_t *dent, uint8_t *newname) {
   uint8_t *ptr;
 
-  /* We're assuming that the caller has looked up the old name just   */
-  /* before calling us  so entrybuf holds the correct directory entry */
-  /* and matchdh has the track/sector/offset we need.                 */
+  /* Read the directory entry of the file */
+  if (read_entry(path->part, &dent->pvt.dxx.dh, entrybuf))
+    return;
+
   memset(entrybuf+DIR_OFS_FILE_NAME, 0xa0, CBM_NAME_LENGTH);
   ptr = entrybuf+DIR_OFS_FILE_NAME;
   while (*newname) *ptr++ = *newname++;
 
   image_write(path->part,
-              sector_offset(path->part,matchdh.dir.d64.track,matchdh.dir.d64.sector)+
-              (matchdh.dir.d64.entry-1)*32, entrybuf, 32, 1);
+              sector_offset(path->part, dent->pvt.dxx.dh.track, dent->pvt.dxx.dh.sector)+
+              dent->pvt.dxx.dh.entry*32, entrybuf, 32, 1);
 }
 
 static void d64_format(uint8_t part, uint8_t *name, uint8_t *id) {
