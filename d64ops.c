@@ -938,26 +938,25 @@ static int8_t d64_readdir(dh_t *dh, cbmdirent_t *dent) {
   return 0;
 }
 
-static uint8_t d64_getlabel(path_t *path, uint8_t *label) {
+/* Reads and converts a string from the dir header sector (BAM for D41/D71) to the buffer */
+/* Used by d64_getlabel and d64_getid */
+static uint8_t read_string_from_dirheader(path_t *path, uint8_t *buffer, param_t what, uint8_t size) {
   if (image_read(path->part,
                  sector_offset(path->part, get_param(path->part, DIR_TRACK),0)
-                 + get_param(path->part, LABEL_OFFSET),
-                 label, 16))
+                 + get_param(path->part, what),
+                 buffer, 16))
     return 1;
 
-  strnsubst(label, 16, 0xa0, 0x20);
+  strnsubst(buffer, size, 0xa0, 0x20);
   return 0;
 }
 
-static uint8_t d64_getid(uint8_t part, uint8_t *id) {
-  if (image_read(part,
-                 sector_offset(part, get_param(part, DIR_TRACK),0)
-                 + get_param(part, ID_OFFSET),
-                 id, 5))
-    return 1;
+static uint8_t d64_getlabel(path_t *path, uint8_t *label) {
+  return read_string_from_dirheader(path, label, LABEL_OFFSET, 16);
+}
 
-  strnsubst(id, 5, 0xa0, 0x20);
-  return 0;
+static uint8_t d64_getid(path_t *path, uint8_t *id) {
+  return read_string_from_dirheader(path, id, ID_OFFSET, 5);
 }
 
 static uint16_t d64_freeblocks(uint8_t part) {

@@ -42,7 +42,7 @@ void     fat_open_read(path_t *path, cbmdirent_t *filename, buffer_t *buf);
 void     fat_open_write(path_t *path, cbmdirent_t *filename, uint8_t type, buffer_t *buf, uint8_t append);
 uint8_t  fat_getvolumename(uint8_t part, uint8_t *label);
 uint8_t  fat_getlabel(path_t *path, uint8_t *label);
-uint8_t  fat_getid(uint8_t part, uint8_t *id);
+uint8_t  fat_getid(path_t *path, uint8_t *id);
 uint16_t fat_freeblocks(uint8_t part);
 uint8_t  fat_opendir(dh_t *dh, path_t *dir);
 int8_t   fat_readdir(dh_t *dh, cbmdirent_t *dent);

@@ -594,7 +594,7 @@ scandone:
     if (disk_label(&path, buf->data + BAM_OFFSET_NAME - 2))
       return;
 
-    if (disk_id(path.part, buf->data + BAM_OFFSET_ID - 2))
+    if (disk_id(&path, buf->data + BAM_OFFSET_ID - 2))
       return;
 
     /* change padding of label and id to 0xa0 */
@@ -623,7 +623,7 @@ scandone:
       return;
 
     /* read id */
-    if (disk_id(path.part,buf->data+HEADER_OFFSET_ID))
+    if (disk_id(&path,buf->data+HEADER_OFFSET_ID))
       return;
 
     /* Let the refill callback handle everything else */

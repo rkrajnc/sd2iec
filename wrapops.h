@@ -65,7 +65,7 @@ typedef struct fileops_s {
   void     (*open_rel)(path_t *path, cbmdirent_t *name, buffer_t *buf, uint8_t recordlen, uint8_t mode);
   uint8_t  (*file_delete)(path_t *path, cbmdirent_t *name);
   uint8_t  (*disk_label)(path_t *path, uint8_t *label);
-  uint8_t  (*disk_id)(uint8_t part, uint8_t *id);
+  uint8_t  (*disk_id)(path_t *path, uint8_t *id);
   uint16_t (*disk_free)(uint8_t part);
   void     (*read_sector)(buffer_t *buf, uint8_t part, uint8_t track, uint8_t sector);
   void     (*write_sector)(buffer_t *buf, uint8_t part, uint8_t track, uint8_t sector);
@@ -86,7 +86,7 @@ typedef struct fileops_s {
 #define open_rel(path,name,buf,len,mode) ((pgmcall(partition[(path)->part].fop->open_rel))(path,name,buf,len,mode))
 #define file_delete(path,name) ((pgmcall(partition[(path)->part].fop->file_delete))(path,name))
 #define disk_label(path,label) ((pgmcall(partition[(path)->part].fop->disk_label))(path,label))
-#define disk_id(drv,id) ((pgmcall(partition[drv].fop->disk_id))(drv,id))
+#define disk_id(path,id) ((pgmcall(partition[(path)->part].fop->disk_id))(path,id))
 #define disk_free(drv) ((pgmcall(partition[drv].fop->disk_free))(drv))
 #define read_sector(buf,drv,t,s) ((pgmcall(partition[(drv)].fop->read_sector))(buf,drv,t,s))
 #define write_sector(buf,drv,t,s) ((pgmcall(partition[(drv)].fop->write_sector))(buf,drv,t,s))

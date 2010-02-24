@@ -1133,15 +1133,15 @@ gl_error:
 
 /**
  * fat_getid - "Read" a disk id
- * @part: partition number
+ * @path: path object
  * @id  : pointer to the buffer for the id (5 characters)
  *
  * This function creates a disk ID from the FAT type (12/16/32)
  * and the usual " 2A" of a 1541 in the first 5 bytes of id.
  * Always returns 0 for success.
  */
-uint8_t fat_getid(uint8_t part, uint8_t *id) {
-  switch (partition[part].fatfs.fs_type) {
+uint8_t fat_getid(path_t *path, uint8_t *id) {
+  switch (partition[path->part].fatfs.fs_type) {
   case FS_FAT12:
     *id++ = '1';
     *id++ = '2';
