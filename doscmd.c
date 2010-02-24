@@ -211,12 +211,7 @@ static void parse_chdir(void) {
     }
   }
 
-  partition[path.part].current_dir = path.dir;
-
-  if (display_found) {
-    disk_label(&path, dent.name);
-    display_current_directory(path.part, ustrlen(dent.name), dent.name);
-  }
+  update_current_dir(&path);
 
   if (globalflags & AUTOSWAP_ACTIVE)
     set_changelist(NULL, NULLSTRING);

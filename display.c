@@ -183,21 +183,22 @@ void display_service(void) {
       return;
 
     /* Read directory name into displaybuffer */
-    if (sel == 1) {
-      /* Previous directory */
-      displaybuffer[0] = '_';
-      displaybuffer[1] = 0;
-    } else {
-      i2c_read_registers(DISPLAY_I2C_ADDR, DISPLAY_MENU_GETENTRY, sizeof(displaybuffer), displaybuffer);
-    }
-
     path.part = current_part;
     path.dir  = partition[current_part].current_dir;
-    if (first_match(&path, displaybuffer, FLAG_HIDDEN, &dent))
-      return;
+
+    if (sel == 1) {
+      /* Previous directory */
+      dent.name[0] = '_';
+      dent.name[1] = 0;
+    } else {
+      i2c_read_registers(DISPLAY_I2C_ADDR, DISPLAY_MENU_GETENTRY, sizeof(displaybuffer), displaybuffer);
+
+      if (first_match(&path, displaybuffer, FLAG_HIDDEN, &dent))
+        return;
+    }
 
     chdir(&path, &dent);
-    partition[current_part].current_dir = path.dir;
+    update_current_dir(&path);
   }
 }
 

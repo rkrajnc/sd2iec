@@ -29,6 +29,7 @@
 #include <string.h>
 #include "config.h"
 #include "dirent.h"
+#include "display.h"
 #include "errormsg.h"
 #include "fatops.h"
 #include "flags.h"
@@ -39,6 +40,22 @@ partition_t partition[CONFIG_MAX_PARTITIONS];
 uint8_t current_part;
 uint8_t max_part;
 
+/* Updates current_dir in the partition array and sends */
+/* the new dir to the display.                          */
+void update_current_dir(path_t *path){
+  partition[path->part].current_dir = path->dir;
+
+  if (display_found && path->part == current_part) {
+    uint8_t dirname[CBM_NAME_LENGTH+1];
+    uint8_t *ptr = dirname + CBM_NAME_LENGTH;
+
+    disk_label(path, dirname);
+    *ptr-- = 0;
+
+    while (*ptr == ' ') *ptr-- = 0;
+    display_current_directory(path->part, ustrlen(dirname), dirname);
+  }
+}
 
 /**
  * check_invalid_name - check for invalid characters in a file name

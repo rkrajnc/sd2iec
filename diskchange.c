@@ -157,7 +157,7 @@ static uint8_t mount_line(void) {
 
   if (!first_match(&path, str, FLAG_HIDDEN, &dent)) {
     chdir(&path, &dent);
-    partition[current_part].current_dir = path.dir;
+    update_current_dir(&path);
   }
 
   if (current_error != 0 && current_error != ERROR_DOSVERSION) {
