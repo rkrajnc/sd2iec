@@ -785,7 +785,9 @@ int8_t fat_readdir(dh_t *dh, cbmdirent_t *dent) {
         parse_error(res,1);
       return 1;
     }
-  } while (finfo.fname[0] && (finfo.fattrib & AM_VOL));
+  } while ((finfo.fname[0] && (finfo.fattrib & AM_VOL)) ||
+           (finfo.fname[0] == '.' && finfo.fname[1] == 0) ||
+           (finfo.fname[0] == '.' && finfo.fname[1] == '.' && finfo.fname[2] == 0));
 
   memset(dent, 0, sizeof(cbmdirent_t));
 

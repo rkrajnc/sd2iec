@@ -223,7 +223,8 @@ static void parse_rmdir(void) {
   uint8_t res;
   uint8_t part;
   path_t  path;
-  cbmdirent_t dent;
+  cbmdirent_t dent,chkdent;
+  dh_t dh;
 
   /* No deletion across subdirectories */
   if (ustrchr(command_buffer, '/')) {
@@ -239,7 +240,25 @@ static void parse_rmdir(void) {
   } else {
     path.part = part;
     path.dir  = partition[part].current_dir;
-    ustrcpy(dent.name, str+1);
+
+    if (first_match(&path, str+1, TYPE_DIR, &dent) != 0)
+      return;
+
+    /* Check if there is anything in that directory */
+    if (chdir(&path, &dent))
+      return;
+
+    if (opendir(&dh, &path))
+      return;
+
+    if (readdir(&dh, &chkdent) != -1) {
+      if (current_error == 0)
+        set_error(ERROR_FILE_EXISTS);
+      return;
+    }
+
+    path.dir = partition[part].current_dir;
+
     res = file_delete(&path, &dent);
     if (res != 255)
       set_error_ts(ERROR_SCRATCHED,res,0);
