@@ -57,10 +57,26 @@
 #define D71_BAM2_BYTES_PER_TRACK 3
 #define D71_BAM_COUNTER2OFFSET   0xdd
 
+#define DNP_BAM_TRACK                     1
+#define DNP_BAM_SECTOR                    2
+#define DNP_BAM_BYTES_PER_TRACK          32
+#define DNP_DIRHEADER_DIR_TRACK           0
+#define DNP_DIRHEADER_DIR_SECTOR          1
+#define DNP_DIRHEADER_ROOTHDR_TRACK      32
+#define DNP_DIRHEADER_ROOTHDR_SECTOR     33
+#define DNP_DIRHEADER_PARENTHDR_TRACK    34
+#define DNP_DIRHEADER_PARENTHDR_SECTOR   35
+#define DNP_DIRHEADER_PARENTENTRY_TRACK  36
+#define DNP_DIRHEADER_PARENTENTRY_SECTOR 37
+#define DNP_DIRHEADER_PARENTENTRY_OFFSET 38
+#define DNP_LABEL_OFFSET                  4
+#define DNP_LABEL_AREA_SIZE             (28-4+1)
+#define DNP_ID_OFFSET                    22
+
 /* No errorinfo support for D81 */
 #define MAX_SECTORS_PER_TRACK 21
 
-#define D64_TYPE_MASK 3
+#define D64_TYPE_MASK 0x7f
 #define D64_TYPE_NONE 0
 #define D64_TYPE_D41  1
 #define D64_TYPE_D71  2
@@ -80,6 +96,12 @@ struct {
 buffer_t *bam_buffer;
 
 /* ------------------------------------------------------------------------- */
+/*  Forward declarations                                                     */
+/* ------------------------------------------------------------------------- */
+
+static uint8_t d64_opendir(dh_t *dh, path_t *path);
+
+/* ------------------------------------------------------------------------- */
 /*  Utility functions                                                        */
 /* ------------------------------------------------------------------------- */
 
@@ -93,6 +115,10 @@ static const PROGMEM struct param_s d71param = {
 
 static const PROGMEM struct param_s d81param = {
   40, 3, 80, 0x04, 0x16, 1, 1
+};
+
+static const PROGMEM struct param_s dnpparam = {
+  1, 1, 0, DNP_LABEL_OFFSET, DNP_ID_OFFSET, 1, 1
 };
 
 /**
@@ -139,6 +165,9 @@ static uint16_t sector_lba(uint8_t part, uint8_t track, const uint8_t sector) {
 
   case D64_TYPE_D81:
     return track*40 + sector;
+
+  case D64_TYPE_DNP:
+    return track*256 + sector;
   }
 }
 
@@ -162,7 +191,7 @@ static uint32_t sector_offset(uint8_t part, uint8_t track, const uint8_t sector)
  * This function returns the number of sectors on the given track
  * of a 1541/71/81 disk. Invalid track numbers will return invalid results.
  */
-static uint8_t sectors_per_track(uint8_t part, uint8_t track) {
+static uint16_t sectors_per_track(uint8_t part, uint8_t track) {
   switch (partition[part].imagetype & D64_TYPE_MASK) {
   case D64_TYPE_D41:
   case D64_TYPE_D71:
@@ -179,6 +208,9 @@ static uint8_t sectors_per_track(uint8_t part, uint8_t track) {
 
   case D64_TYPE_D81:
     return 40;
+
+  case D64_TYPE_DNP:
+    return 256;
   }
 }
 
@@ -316,63 +348,62 @@ static uint8_t move_bam_window(uint8_t part, uint8_t track, bamdata_t type, uint
   uint8_t t,s, pos;
 
   switch(partition[part].imagetype & D64_TYPE_MASK) {
-    case D64_TYPE_D41:
-    default:
-      t   = D41_BAM_TRACK;
-      s   = D41_BAM_SECTOR;
-      pos = D41_BAM_BYTES_PER_TRACK * track + (type == BAM_BITFIELD ? 1:0);
-      break;
+  case D64_TYPE_D41:
+  default:
+    t   = D41_BAM_TRACK;
+    s   = D41_BAM_SECTOR;
+    pos = D41_BAM_BYTES_PER_TRACK * track + (type == BAM_BITFIELD ? 1:0);
+    break;
 
-    case D64_TYPE_D71:
-      if (track > 35 && type == BAM_BITFIELD) {
-        t   = D71_BAM2_TRACK;
-        s   = D71_BAM2_SECTOR;
-        pos = (track - 36) * D71_BAM2_BYTES_PER_TRACK;
+  case D64_TYPE_D71:
+    if (track > 35 && type == BAM_BITFIELD) {
+      t   = D71_BAM2_TRACK;
+      s   = D71_BAM2_SECTOR;
+      pos = (track - 36) * D71_BAM2_BYTES_PER_TRACK;
+    } else {
+      t = D41_BAM_TRACK;
+      s = D41_BAM_SECTOR;
+      if (track > 35) {
+        pos = (track - 36) + D71_BAM_COUNTER2OFFSET;
       } else {
-        t = D41_BAM_TRACK;
-        s = D41_BAM_SECTOR;
-        if (track > 35) {
-          pos = (track - 36) + D71_BAM_COUNTER2OFFSET;
-        } else {
-          pos = D41_BAM_BYTES_PER_TRACK * track + (type == BAM_BITFIELD ? 1:0);
-        }
+        pos = D41_BAM_BYTES_PER_TRACK * track + (type == BAM_BITFIELD ? 1:0);
       }
-      break;
-
-    case D64_TYPE_D81:
-      t   = D81_BAM_TRACK;
-      s   = (track < 41 ? D81_BAM_SECTOR1 : D81_BAM_SECTOR2);
-      if (track > 40)
-        track -= 40;
-      pos = D81_BAM_OFFSET + track * D81_BAM_BYTES_PER_TRACK + (type == BAM_BITFIELD ? 1:0);
-      break;
-/*
-    case D64_TYPE_DNP:
-      t   = DNP_BAM_TRACK;
-      s   = DNP_BAM_SECTOR + 1 + (track >> 3);
-      pos = (track & 0x07) * 32;
-      break;
-*/
     }
+    break;
 
-    if (bam_buffer->pvt.bam.part != part
-        || bam_buffer->pvt.bam.track != t
-        || bam_buffer->pvt.bam.sector != s) {
-      /* Need to read the BAM sector */
-      if((res = bam_buffer->cleanup(bam_buffer)))
-        return res;
+  case D64_TYPE_D81:
+    t   = D81_BAM_TRACK;
+    s   = (track < 41 ? D81_BAM_SECTOR1 : D81_BAM_SECTOR2);
+    if (track > 40)
+      track -= 40;
+    pos = D81_BAM_OFFSET + track * D81_BAM_BYTES_PER_TRACK + (type == BAM_BITFIELD ? 1:0);
+    break;
 
-      res = image_read(part, sector_offset(part, t, s), bam_buffer->data, 256);
-      if(res)
-        return res;
+  case D64_TYPE_DNP:
+    t   = DNP_BAM_TRACK;
+    s   = DNP_BAM_SECTOR + (track >> 3);
+    pos = (track & 0x07) * 32;
+    break;
+  }
 
-      bam_buffer->pvt.bam.part   = part;
-      bam_buffer->pvt.bam.track  = t;
-      bam_buffer->pvt.bam.sector = s;
-    }
+  if (bam_buffer->pvt.bam.part != part
+      || bam_buffer->pvt.bam.track != t
+      || bam_buffer->pvt.bam.sector != s) {
+    /* Need to read the BAM sector */
+    if((res = bam_buffer->cleanup(bam_buffer)))
+      return res;
 
-    *ptr = bam_buffer->data + pos;
-    return 0;
+    res = image_read(part, sector_offset(part, t, s), bam_buffer->data, 256);
+    if(res)
+      return res;
+
+    bam_buffer->pvt.bam.part   = part;
+    bam_buffer->pvt.bam.track  = t;
+    bam_buffer->pvt.bam.sector = s;
+  }
+
+  *ptr = bam_buffer->data + pos;
+  return 0;
 }
 
 /**
@@ -392,7 +423,10 @@ static int8_t is_free(uint8_t part, uint8_t track, uint8_t sector) {
   if(res)
     return -1;
 
-  return (ptr[sector>>3] & (1<<(sector&7))) != 0;
+  if (partition[part].imagetype == D64_TYPE_DNP)
+    return (ptr[sector>>3] & (0x80>>(sector&7))) != 0;
+  else
+    return (ptr[sector>>3] & (1<<(sector&7))) != 0;
 }
 
 /**
@@ -403,28 +437,27 @@ static int8_t is_free(uint8_t part, uint8_t track, uint8_t sector) {
  * This function returns the number of free sectors on the given track
  * of partition part.
  */
-static uint8_t sectors_free(uint8_t part, uint8_t track) {
+static uint16_t sectors_free(uint8_t part, uint8_t track) {
   uint8_t *trackmap = NULL;
-  //uint8_t i, b;
-  //uint8_t blocks = 0;
 
   if (track < 1 || track > get_param(part, LAST_TRACK))
     return 0;
 
   switch (partition[part].imagetype & D64_TYPE_MASK) {
-/*
+
   case D64_TYPE_DNP:
     if(move_bam_window(part,track,BAM_FREECOUNT,&trackmap))
       return 0;
-    for(i=0;i < BAM_BITFIELD_BYTES_PER_TRACK;i++) {
+
+    uint16_t blocks = 0;
+    for (uint8_t i=0;i < DNP_BAM_BYTES_PER_TRACK;i++) {
       // From http://everything2.com/title/counting%25201%2520bits
-      b = (trackmap[i] & 0x55) + (trackmap[i]>>1 & 0x55);
+      uint8_t b = (trackmap[i] & 0x55) + (trackmap[i]>>1 & 0x55);
       b = (b & 0x33) + (b >> 2 & 0x33);
       b = (b & 0x0f) + (b >> 4 & 0x0f);
       blocks += b;
     }
     return blocks;
-*/
 
   case D64_TYPE_D71:
   case D64_TYPE_D81:
@@ -458,11 +491,21 @@ static uint8_t allocate_sector(uint8_t part, uint8_t track, uint8_t sector) {
     if(move_bam_window(part,track,BAM_BITFIELD,&trackmap))
       return 1;
 
-    trackmap[sector>>3] &= (uint8_t)~(1<<(sector&7));
     bam_buffer->mustflush = 1;
+
+    if (partition[part].imagetype == D64_TYPE_DNP) {
+      /* For some reason DNP has its bitfield reversed */
+      trackmap[sector>>3] &= (uint8_t)~(0x80>>(sector&7));
+
+      /* DNP has no counter in its BAM */
+      return 0;
+    }
+
+    trackmap[sector>>3] &= (uint8_t)~(1<<(sector&7));
 
     if(move_bam_window(part,track,BAM_FREECOUNT,&trackmap))
       return 1;
+
     if (trackmap[0] > 0) {
       trackmap[0]--;
       bam_buffer->mustflush = 1;
@@ -493,8 +536,17 @@ static uint8_t free_sector(uint8_t part, uint8_t track, uint8_t sector) {
     if(move_bam_window(part,track,BAM_BITFIELD,&trackmap))
       return 1;
 
-    trackmap[sector>>3] |= 1<<(sector&7);
     bam_buffer->mustflush = 1;
+
+    if (partition[part].imagetype == D64_TYPE_DNP) {
+      /* For some reason DNP has its bitfield reversed */
+      trackmap[sector>>3] |= 0x80>>(sector&7);
+
+      /* DNP has no counter in its BAM */
+      return 0;
+    }
+
+    trackmap[sector>>3] |= 1<<(sector&7);
 
     if(move_bam_window(part,track,BAM_FREECOUNT,&trackmap))
       return 1;
@@ -525,27 +577,48 @@ static uint8_t free_sector(uint8_t part, uint8_t track, uint8_t sector) {
 static uint8_t get_first_sector(uint8_t part, uint8_t *track, uint8_t *sector) {
   int8_t distance = 1;
 
-  /* Look for a track with free sectors close to the directory */
-  while (distance < get_param(part, LAST_TRACK)) {
-    if (sectors_free(part, get_param(part, DIR_TRACK)-distance))
-      break;
+  /* DNP uses a simple "first free" allocation scheme, starting at track 2.  */
+  /* It is not known if this is the same algorithm as used in the original   */
+  /* CMD drives, but track 1 seems to be semi-reserved for directory sectors.*/
+  if (partition[part].imagetype == D64_TYPE_DNP) {
+    *track = 2;
+    while (sectors_free(part, *track) == 0) {
+      (*track)++;
 
-    /* Invert sign */
-    distance = -distance;
+      if (*track == get_param(part, LAST_TRACK) ||
+          *track == 0) {
+        /* Wrap to track 1 */
+        *track = 1;
+      }
 
-    /* Increase distance every second try */
-    if (distance > 0)
-      distance++;
-  }
+      if (*track == 2)
+        /* If we're at track 2 again there are no free sectors anywhere */
+        return 1;
+    }
+  } else {
+    /* Look for a track with free sectors close to the directory */
+    while (distance < get_param(part, LAST_TRACK)) {
+      if (sectors_free(part, get_param(part, DIR_TRACK)-distance))
+        break;
 
-  if (distance == get_param(part, LAST_TRACK)) {
-    if (current_error == ERROR_OK)
-      set_error(ERROR_DISK_FULL);
-    return 1;
+      /* Invert sign */
+      distance = -distance;
+
+      /* Increase distance every second try */
+      if (distance > 0)
+        distance++;
+    }
+
+    if (distance == get_param(part, LAST_TRACK)) {
+      if (current_error == ERROR_OK)
+        set_error(ERROR_DISK_FULL);
+      return 1;
+    }
+
+    *track = get_param(part, DIR_TRACK)-distance;
   }
 
   /* Search for the first free sector on this track */
-  *track = get_param(part, DIR_TRACK)-distance;
   for (*sector = 0;*sector < sectors_per_track(part, *track); *sector += 1)
     if (is_free(part, *track, *sector) > 0)
       return 0;
@@ -569,6 +642,43 @@ static uint8_t get_first_sector(uint8_t part, uint8_t *track, uint8_t *sector) {
  * Returns 0 if successful or 1 if any error occured.
  */
 static uint8_t get_next_sector(uint8_t part, uint8_t *track, uint8_t *sector) {
+  if (partition[part].imagetype == D64_TYPE_DNP) {
+    uint8_t newtrack = *track;
+
+    /* Find a track with free sectors */
+    while (sectors_free(part, newtrack) == 0) {
+      newtrack++;
+
+      if (newtrack == get_param(part, LAST_TRACK) ||
+          newtrack == 0) {
+        /* Wrap to track 1 */
+        newtrack = 1;
+      }
+
+      if (newtrack == *track)
+        /* Returned to the start track -> no free sectors anywhere */
+        return 1;
+    }
+
+    uint8_t newsector;
+
+    if (newtrack == *track) {
+      /* Same track: start at the previous sector */
+      newsector = *sector;
+    } else {
+      /* New track: start at sector 0 */
+      newsector = 0;
+    }
+
+    while (!is_free(part, newtrack, newsector))
+      newsector++; // will automatically wrap from 255->0
+
+    *track = newtrack;
+    *sector = newsector;
+
+    return 0;
+  }
+
   uint8_t interleave,tries;
 
   if (*track == get_param(part, DIR_TRACK)) {
@@ -672,6 +782,97 @@ static int8_t nextdirentry(dh_t *dh) {
     return 1;
 
   dh->dir.d64.entry++;
+
+  return 0;
+}
+
+/**
+ * find_empty_entry - find an empty directory entry
+ * @path: path of the directory
+ * @dh: directory handle
+ *
+ * This funtion finds an empty entry in the directory, creating
+ * a new directory sector if required.
+ * Returns 0 if successful or 1 if not.
+ */
+static uint8_t find_empty_entry(path_t *path, dh_t *dh) {
+  int8_t res;
+
+  d64_opendir(dh, path);
+  do {
+    res = nextdirentry(dh);
+    if (res > 0)
+      return 1;
+  } while (res == 0 && entrybuf[DIR_OFS_FILE_TYPE] != 0);
+
+  /* Allocate a new directory sector if no empty entries were found */
+  if (res < 0) {
+    uint8_t t,s;
+
+    t = dh->dir.d64.track;
+    s = dh->dir.d64.sector;
+
+    if (get_next_sector(path->part, &dh->dir.d64.track, &dh->dir.d64.sector))
+      return 1;
+
+    /* Link the old sector to the new */
+    entrybuf[0] = dh->dir.d64.track;
+    entrybuf[1] = dh->dir.d64.sector;
+    if (image_write(path->part, sector_offset(path->part,t,s), entrybuf, 2, 0))
+      return 1;
+
+    if (allocate_sector(path->part, dh->dir.d64.track, dh->dir.d64.sector))
+      return 1;
+
+    /* DNP only: Increment the block count in the parent directory */
+    if (partition[path->part].imagetype == D64_TYPE_DNP) {
+      if (image_read(path->part,
+                     DNP_DIRHEADER_PARENTENTRY_TRACK + sector_offset(path->part,
+                                                                     path->dir.dxx.track,
+                                                                     path->dir.dxx.sector),
+                     entrybuf, 3))
+        return 1;
+
+      if (entrybuf[0] != 0) {
+        /* Read block count of entry in parent directory */
+        if (image_read(path->part,
+                       sector_offset(path->part, entrybuf[0], entrybuf[1]) + entrybuf[2] + DIR_OFS_SIZE_LOW - 2,
+                       entrybuf + 3, 2))
+          return 1;
+
+        uint16_t *blocks = (uint16_t *)(entrybuf + 3);
+        (*blocks)++;
+
+        /* Write new block count */
+        if (image_write(path->part,
+                        sector_offset(path->part, entrybuf[0], entrybuf[1]) + entrybuf[2] + DIR_OFS_SIZE_LOW - 2,
+                        entrybuf + 3, 2, 1))
+          return 1;
+      }
+    }
+
+    /* Clear the new directory sector */
+    memset(entrybuf, 0, 32);
+    entrybuf[1] = 0xff;
+    for (uint8_t i=0;i<256/32;i++) {
+      if (image_write(path->part,
+                      sector_offset(path->part,
+                                    dh->dir.d64.track,
+                                    dh->dir.d64.sector)+32*i,
+                      entrybuf, 32, 0))
+        return 1;
+
+      entrybuf[1] = 0;
+    }
+
+    /* Mark full sector as used */
+    entrybuf[1] = 0xff;
+    dh->dir.d64.entry = 0;
+
+  } else {
+    /* nextdirentry has already incremented this variable, undo it */
+    dh->dir.d64.entry--;
+  }
 
   return 0;
 }
@@ -828,8 +1029,9 @@ static uint8_t d64_write_cleanup(buffer_t *buf) {
 /*  fileops-API                                                              */
 /* ------------------------------------------------------------------------- */
 
-uint8_t d64_mount(uint8_t part) {
+uint8_t d64_mount(path_t *path) {
   uint8_t imagetype;
+  uint8_t part = path->part;
   uint32_t fsize = partition[part].imagehandle.fsize;
 
   switch (fsize) {
@@ -867,11 +1069,14 @@ uint8_t d64_mount(uint8_t part) {
     */
 
   default:
-    set_error(ERROR_IMAGE_INVALID);
-    return 1;
+    if ((fsize % (256*256L)) != 0) {
+      set_error(ERROR_IMAGE_INVALID);
+      return 1;
+    }
+    imagetype = D64_TYPE_DNP;
+    memcpy_P(&partition[part].d64data, &dnpparam, sizeof(struct param_s));
+    partition[part].d64data.last_track = fsize / (256*256L);
   }
-
-  partition[part].imagetype = imagetype;
 
   /* Allocate a BAM buffer if required */
   if (bam_buffer == NULL) {
@@ -885,6 +1090,10 @@ uint8_t d64_mount(uint8_t part) {
     stick_buffer(bam_buffer);
   }
 
+  partition[part].imagetype = imagetype;
+  path->dir.dxx.track  = get_param(part, DIR_TRACK);
+  path->dir.dxx.sector = get_param(part, DIR_START_SECTOR);
+
   bam_buffer->pvt.bam.refcount++;
 
   if (imagetype & D64_HAS_ERRORINFO)
@@ -896,9 +1105,21 @@ uint8_t d64_mount(uint8_t part) {
 
 static uint8_t d64_opendir(dh_t *dh, path_t *path) {
   dh->part = path->part;
-  dh->dir.d64.track  = get_param(path->part, DIR_TRACK);
-  dh->dir.d64.sector = get_param(path->part, DIR_START_SECTOR);
+  dh->dir.d64.track  = path->dir.dxx.track;
+  dh->dir.d64.sector = path->dir.dxx.sector;
   dh->dir.d64.entry  = 0;
+
+  if (partition[path->part].imagetype == D64_TYPE_DNP) {
+    /* Read the real first directory sector from the header sector */
+    uint8_t tmp[2];
+    if (image_read(path->part,
+                   sector_offset(path->part, dh->dir.d64.track, dh->dir.d64.sector),
+                   tmp, 2))
+      return 1;
+
+    dh->dir.d64.track  = tmp[0];
+    dh->dir.d64.sector = tmp[1];
+  }
   return 0;
 }
 
@@ -914,13 +1135,14 @@ static int8_t d64_readdir(dh_t *dh, cbmdirent_t *dent) {
       break;
   } while (1);
 
-  dent->opstype = OPSTYPE_DXX;
   memset(dent, 0, sizeof(cbmdirent_t));
 
+  dent->opstype = OPSTYPE_DXX;
   dent->typeflags = entrybuf[DIR_OFS_FILE_TYPE] ^ FLAG_SPLAT;
 
-  if ((dent->typeflags & TYPE_MASK) >= TYPE_DIR)
-    /* Change invalid types (includes DIR for now) to DEL */
+  if ((dent->typeflags & TYPE_MASK) > TYPE_DIR)
+    /* Change invalid types to DEL */
+    /* FIXME: Should exclude DIR on non-DNP */
     dent->typeflags &= (uint8_t)~TYPE_MASK;
 
   dent->pvt.dxx.dh = dh->dir.d64;
@@ -941,10 +1163,17 @@ static int8_t d64_readdir(dh_t *dh, cbmdirent_t *dent) {
 /* Reads and converts a string from the dir header sector (BAM for D41/D71) to the buffer */
 /* Used by d64_getlabel and d64_getid */
 static uint8_t read_string_from_dirheader(path_t *path, uint8_t *buffer, param_t what, uint8_t size) {
+  uint8_t sector;
+
+  if (partition[path->part].imagetype == D64_TYPE_DNP)
+    sector = path->dir.dxx.sector;
+  else
+    sector = 0;
+
   if (image_read(path->part,
-                 sector_offset(path->part, get_param(path->part, DIR_TRACK),0)
+                 sector_offset(path->part, path->dir.dxx.track, sector)
                  + get_param(path->part, what),
-                 buffer, 16))
+                 buffer, size))
     return 1;
 
   strnsubst(buffer, size, 0xa0, 0x20);
@@ -963,9 +1192,18 @@ static uint16_t d64_freeblocks(uint8_t part) {
   uint16_t blocks = 0;
   uint8_t i;
 
-  for (i=1;i<=get_param(part, LAST_TRACK);i++) {
+  for (i = 1; i != 0 && i <= get_param(part, LAST_TRACK); i++) {
     /* Skip directory track */
     switch (partition[part].imagetype & D64_TYPE_MASK) {
+    case D64_TYPE_D81:
+      if (i == D81_BAM_TRACK)
+        continue;
+      break;
+
+    case D64_TYPE_DNP:
+      // DNP doesn't exclude anything
+      break;
+
     case D64_TYPE_D41:
     case D64_TYPE_D71:
     default:
@@ -973,10 +1211,6 @@ static uint16_t d64_freeblocks(uint8_t part) {
         continue; // continue the for loop
       break;      // break out of the switch
 
-    case D64_TYPE_D81:
-      if (i == D81_BAM_TRACK)
-        continue;
-      break;
     }
 
     blocks += sectors_free(part,i);
@@ -986,6 +1220,7 @@ static uint16_t d64_freeblocks(uint8_t part) {
 }
 
 static void d64_open_read(path_t *path, cbmdirent_t *dent, buffer_t *buf) {
+  /* Read the directory entry of the file */
   if (read_entry(path->part, &dent->pvt.dxx.dh, entrybuf))
     return;
 
@@ -1004,8 +1239,6 @@ static void d64_open_read(path_t *path, cbmdirent_t *dent, buffer_t *buf) {
 
 static void d64_open_write(path_t *path, cbmdirent_t *dent, uint8_t type, buffer_t *buf, uint8_t append) {
   dh_t dh;
-  int8_t res;
-  uint8_t t,s;
   uint8_t *ptr;
 
   /* Check for read-only image file */
@@ -1044,53 +1277,8 @@ static void d64_open_write(path_t *path, cbmdirent_t *dent, uint8_t type, buffer
   /* Non-append case */
 
   /* Search for an empty directotry entry */
-  d64_opendir(&dh, path);
-  do {
-    res = nextdirentry(&dh);
-    if (res > 0)
-      return;
-  } while (res == 0 && entrybuf[DIR_OFS_FILE_TYPE] != 0);
-
-  /* Allocate a new directory sector if no empty entries were found */
-  if (res < 0) {
-    t = dh.dir.d64.track;
-    s = dh.dir.d64.sector;
-
-    if (get_next_sector(path->part, &dh.dir.d64.track, &dh.dir.d64.sector))
-      return;
-
-    /* Link the old sector to the new */
-    entrybuf[0] = dh.dir.d64.track;
-    entrybuf[1] = dh.dir.d64.sector;
-    if (image_write(path->part, sector_offset(path->part,t,s), entrybuf, 2, 0))
-      return;
-
-    if (allocate_sector(path->part, dh.dir.d64.track, dh.dir.d64.sector))
-      return;
-
-    /* Clear the new directory sector */
-    memset(entrybuf, 0, 32);
-    entrybuf[1] = 0xff;
-    for (uint8_t i=0;i<256/32;i++) {
-      if (image_write(path->part,
-                      sector_offset(path->part,
-                                    dh.dir.d64.track,
-                                    dh.dir.d64.sector)+32*i,
-                      entrybuf, 32, 0))
-        return;
-
-      entrybuf[1] = 0;
-    }
-
-    /* Mark full sector as used */
-    entrybuf[1] = 0xff;
-    dh.dir.d64.entry = 0;
-  } else {
-    /* Fix gcc 4.2 "uninitialized" warning */
-    s = t = 0;
-    /* nextdirentry has already incremented this variable, undo it */
-    dh.dir.d64.entry--;
-  }
+  if (find_empty_entry(path, &dh))
+    return;
 
   /* Create directory entry in entrybuf */
   uint8_t *name = dent->name;
@@ -1101,6 +1289,8 @@ static void d64_open_write(path_t *path, cbmdirent_t *dent, uint8_t type, buffer
   entrybuf[DIR_OFS_FILE_TYPE] = type;
 
   /* Find a free sector and allocate it */
+  uint8_t t,s;
+
   if (get_first_sector(path->part,&t,&s))
     return;
 
@@ -1158,7 +1348,6 @@ static uint8_t d64_delete(path_t *path, cbmdirent_t *dent) {
   entrybuf[DIR_OFS_FILE_TYPE] = 0;
   if (image_write(path->part, sector_offset(path->part, dent->pvt.dxx.dh.track, dent->pvt.dxx.dh.sector)
                   + dent->pvt.dxx.dh.entry * 32, entrybuf, 32, 1))
-
     return 255;
 
   /* Write new BAM */
@@ -1285,11 +1474,185 @@ static void d64_format(uint8_t part, uint8_t *name, uint8_t *id) {
  * address > 0.
  */
 void d64_raw_directory(path_t *path, buffer_t *buf) {
-  /* Let's pile one hack on the other and use d64_open_read */
-  entrybuf[DIR_OFS_TRACK]  = get_param(path->part, DIR_TRACK);
-  entrybuf[DIR_OFS_SECTOR] = 0;
+  /* Copy&Waste from d64_open_read */
+  buf->data[0] = path->dir.dxx.track;
+  buf->data[1] = path->dir.dxx.sector;
 
-  d64_open_read(path, NULL, buf);
+  buf->pvt.d64.part = path->part;
+
+  buf->read    = 1;
+  buf->refill  = d64_read;
+  buf->seek    = d64_seek;
+  stick_buffer(buf);
+
+  buf->refill(buf);
+}
+
+/**
+ * d64_chdir - chdir for Dxx files
+ * @path   : path object of the location of dirname
+ * @dirname: directory to be changed into
+ *
+ * Changes the directory in the path object for DNP files,
+ * returns an error for everything else.
+ * Returns 0 if successful, 1 otherwise.
+ */
+static uint8_t d64_chdir(path_t *path, cbmdirent_t *dirname) {
+  if (partition[path->part].imagetype != D64_TYPE_DNP)
+    return image_chdir(path,dirname);
+
+  if (dirname->name[0] == 0) {
+    /* Empty string: root directory */
+    path->dir.dxx.track  = 1;
+    path->dir.dxx.sector = 1;
+    return 0;
+  }
+
+  if (dirname->name[0] == '_' && dirname->name[1] == 0) {
+    /* Move up a directory, unmount if at the root */
+    uint8_t parent[2];
+
+    if (image_read(path->part,
+                   sector_offset(path->part, path->dir.dxx.track, path->dir.dxx.sector) + DNP_DIRHEADER_PARENTHDR_TRACK,
+                   parent, 2))
+      return 1;
+
+    if (parent[0] == 0)
+      /* Already at the root directory */
+      return image_unmount(path->part);
+
+    path->dir.dxx.track  = parent[0];
+    path->dir.dxx.sector = parent[1];
+    return 0;
+  }
+
+  if (read_entry(path->part, &dirname->pvt.dxx.dh, entrybuf))
+    return 1;
+
+  path->dir.dxx.track  = entrybuf[DIR_OFS_TRACK];
+  path->dir.dxx.sector = entrybuf[DIR_OFS_SECTOR];
+
+  return 0;
+}
+
+/**
+ * d64_mkdir - mkdir for Dxx files
+ * @path   : path object of the location of dirname
+ * @dirname: directory to be created
+ *
+ * Creates a subdirectory for DNP files, returns an error
+ * for everything else.
+ */
+static void d64_mkdir(path_t *path, uint8_t *dirname) {
+  dh_t dh;
+  buffer_t *buf;
+  uint8_t h_track,h_sector,d_track,d_sector;
+  uint8_t *ptr, *name;
+
+  if (partition[path->part].imagetype != D64_TYPE_DNP) {
+    set_error(ERROR_SYNTAX_UNABLE);
+    return;
+  }
+
+  buf = alloc_buffer();
+  if (buf == NULL)
+    return;
+
+  /* Find an empty direcory entry */
+  if (find_empty_entry(path, &dh))
+    return;
+
+  /* Find a free track/sector for the dir header */
+  h_track  = path->dir.dxx.track;
+  h_sector = path->dir.dxx.sector;
+
+  if (get_next_sector(path->part, &h_track, &h_sector)) {
+    set_error(ERROR_DISK_FULL);
+    return;
+  }
+
+  /* Allocate it now so the next call to get_next doesn't return it again */
+  if (allocate_sector(path->part, h_track, h_sector))
+    return;
+
+  /* Find a free track/sector for the first directory sector */
+  d_track  = h_track;
+  d_sector = h_sector;
+
+  if (get_next_sector(path->part, &d_track, &d_sector)) {
+    set_error(ERROR_DISK_FULL);
+    free_sector(path->part, h_track, h_sector);
+    return;
+  }
+
+  if (allocate_sector(path->part, d_track, d_sector))
+    return;
+
+  /* Build a directory header */
+  memset(buf->data, 0, 256);
+  memset(buf->data + DNP_LABEL_OFFSET, 0xa0, DNP_LABEL_AREA_SIZE);
+
+  /* Unfortunately this generates much smaller code on AVR */
+  ptr = buf->data;
+  *ptr++ = d_track;
+  *ptr++ = d_sector;
+  *ptr++ = 'H';
+
+  /* Note: The CMD FD manual says these bytes point to the root header, */
+  /*       but all observed DNP files actually store the t/s of the     */
+  /*       sector itself here.                                          */
+  ptr = buf->data + DNP_DIRHEADER_ROOTHDR_TRACK;
+  *ptr++ = h_track;
+  *ptr++ = h_sector;
+
+  *ptr++ = path->dir.dxx.track;
+  *ptr++ = path->dir.dxx.sector;
+
+  *ptr++ = dh.dir.d64.track;
+  *ptr++ = dh.dir.d64.sector;
+  *ptr++ = dh.dir.d64.entry * 32 + 2;
+
+  /* Fill name and ID */
+  ptr = buf->data + DNP_LABEL_OFFSET;
+  name = dirname;
+  while (*name) *ptr++ = *name++;
+
+  ptr = buf->data + DNP_ID_OFFSET;
+  *ptr++ = dirname[0];
+  *ptr++ = dirname[1];
+   ptr++;
+  *ptr++ = '1';
+  *ptr++ = 'H';
+
+  /* Write directory header sector */
+  if (image_write(path->part,
+                  sector_offset(path->part, h_track, h_sector),
+                  buf->data, 256, 0))
+    return;
+
+  /* Create empty directory sector */
+  memset(buf->data, 0, 256);
+  buf->data[1] = 0xff;
+  if (image_write(path->part,
+                  sector_offset(path->part, d_track, d_sector),
+                  buf->data, 256, 0))
+    return;
+
+  /* Create the directory entry */
+  /* FIXME: Isn't similiar code duplicated in open_write and rename? */
+  memset(entrybuf+2, 0, sizeof(entrybuf)-2);
+  memset(entrybuf+DIR_OFS_FILE_NAME, 0xa0, CBM_NAME_LENGTH);
+
+  ptr = entrybuf + DIR_OFS_FILE_NAME;
+  while (*dirname) *ptr++ = *dirname++;
+
+  entrybuf[DIR_OFS_FILE_TYPE] = TYPE_DIR | FLAG_SPLAT;
+  entrybuf[DIR_OFS_TRACK]     = h_track;
+  entrybuf[DIR_OFS_SECTOR]    = h_sector;
+  entrybuf[DIR_OFS_SIZE_LOW]  = 2;
+
+  image_write(path->part, sector_offset(path->part, dh.dir.d64.track, dh.dir.d64.sector)
+                          + dh.dir.d64.entry * 32 + 2, entrybuf+2, 30, 1);
 }
 
 const PROGMEM fileops_t d64ops = {
@@ -1305,7 +1668,7 @@ const PROGMEM fileops_t d64ops = {
   d64_format,
   d64_opendir,
   d64_readdir,
-  image_mkdir,
-  image_chdir,
+  d64_mkdir,
+  d64_chdir,
   d64_rename
 };

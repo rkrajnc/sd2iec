@@ -194,6 +194,7 @@ imgtype_t check_imageext(uint8_t *name) {
 
   if (f == 'D')
     if ((s == '6' && t == '4') ||
+        (s == 'N' && t == 'P') ||
         ((s == '4' || s == '7' || s == '8') &&
          (t == '1')))
       return IMG_IS_DISK;
@@ -303,7 +304,7 @@ static uint8_t fat_file_read(buffer_t *buf) {
 
   uart_putc('#');
 
-  buf->fptr      = buf->pvt.fat.fh.fptr - buf->pvt.fat.headersize;
+  buf->fptr = buf->pvt.fat.fh.fptr - buf->pvt.fat.headersize;
 
   res = f_read(&buf->pvt.fat.fh, buf->data+2, (buf->recordlen ? buf->recordlen : 254), &bytesread);
   if (res != FR_OK) {
@@ -1010,7 +1011,7 @@ uint8_t fat_chdir(path_t *path, cbmdirent_t *dent) {
       if (check_imageext(dent->name) == IMG_IS_M2I)
         partition[path->part].fop = &m2iops;
       else {
-        if (d64_mount(path->part))
+        if (d64_mount(path))
           return 1;
         partition[path->part].fop = &d64ops;
       }
@@ -1374,7 +1375,7 @@ uint8_t image_unmount(uint8_t part) {
  *
  * This function will ignore any names except _ (left arrow)
  * and unmount the image if that is found. It can be used as
- * chdir/mkdir for all image types that don't support subdirectories
+ * chdir for all image types that don't support subdirectories
  * themselves. Returns 0 if successful, 1 otherwise.
  */
 uint8_t image_chdir(path_t *path, cbmdirent_t *dent) {
@@ -1393,6 +1394,7 @@ uint8_t image_chdir(path_t *path, cbmdirent_t *dent) {
  * This function does nothing.
  */
 void image_mkdir(path_t *path, uint8_t *dirname) {
+  set_error(ERROR_SYNTAX_UNABLE);
   return;
 }
 

@@ -41,7 +41,7 @@ extern const fileops_t d64ops;
 
 extern buffer_t *bam_buffer;
 
-uint8_t d64_mount(uint8_t part);
+uint8_t d64_mount(path_t *path);
 
 void d64_raw_directory(path_t *path, buffer_t *buf);
 

@@ -27,7 +27,7 @@ fastloader.
 [1] Homepage: http://pontoppidan.info/lars/index.php?proj=mmc2iec
 
 Please note: Whenever this file talks about "D64 images" the text applies to
-all Dxx image types, i.e. D64/D71/D81 unless specifically noted.
+all Dxx image types, i.e. D64/D71/D81/DNP unless specifically noted.
 
 Supported commands:
 ===================
@@ -276,7 +276,7 @@ Supported commands:
              value is 1.
 
              For compatibility with existing programs that write D64 files,
-             PRG files that have D64, D41, D71, D81 or M2I as an extension
+             PRG files that have D64, D41, D71, D81, DNP or M2I as an extension
              will always be written without an x00 header and without
              any additional PRG file extension.
 
@@ -544,12 +544,23 @@ x00 files are recognized by checking both the extension of the file
 
 Disk Images:
 ============
-Disk images are recognized by their file extension (.D64, .D41, .D71, .D81)
-and their file size (must be one of 174848, 175531, 349696, 351062, 819200).
-If the image has an error info block appended it will be used to simulate
-read errors. Writing to a sector with an error will always work, but
-it will not clear the indicated error. D81 images with error info blocks
-are not supported.
+Disk images are recognized by their file extension (.D64, .D41, .D71, .D81,
+.DNP) and their file size (must be one of 174848, 175531, 349696, 351062,
+819200 or a multiple of 65536 for DNP). If the image has an error info block
+appended it will be used to simulate read errors. Writing to a sector with
+an error will always work, but it will not clear the indicated error.
+D81 images with error info blocks are not supported.
+
+Warning: There is at least one program out there (DirMaster v2.1/Style by
+THE WIZ) which generates broken DNP files. The usual symptom is that
+moving from a subdirectory that was created with this program back to
+its parent directory using CD:_ (left arrow) sets the current directory
+not to the parent directory, but to an incorrect sector instead. A
+workaround for this problem in sd2iec would require an unreasonable
+amount of system resources, so it is recommended to avoid creating
+subdirectories with this version of DirMaster. It is possible to fix
+this problem using a hex editor, but the exact process is beyond the scope
+of this document.
 
 M2I files:
 ==========

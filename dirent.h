@@ -79,9 +79,14 @@ typedef struct date {
 /**
  * struct dir_t - struct of directory references for various ops
  * @fat: cluster number of the directory start for FAT
+ * @dxx: track/sector of the first directory sector for Dxx
  */
 typedef struct {
   uint32_t fat;
+  struct {
+    uint8_t track;
+    uint8_t sector;
+  } dxx;
 } dir_t;
 
 /**

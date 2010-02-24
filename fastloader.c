@@ -338,6 +338,14 @@ void load_dreamload(void) {
     goto error;
   }
 
+  /* Find the start sector of the current directory */
+  dh_t dh;
+  path_t curpath;
+
+  curpath.part = current_part;
+  curpath.dir  = partition[current_part].current_dir;
+  opendir(&dh, &curpath);
+
   for (;;) {
 
     while (fl_track == 0xff) {
@@ -367,9 +375,8 @@ void load_dreamload(void) {
         // slow down 18/1 loading, so diskswap has a higher chance
         tick_t targettime = ticks + MS_TO_TICKS(1000);
         while (time_before(ticks,targettime)) ;
-        read_sector(buf, current_part,
-                    partition[current_part].d64data.dir_track,
-                    partition[current_part].d64data.dir_start_sector);
+
+        read_sector(buf, current_part, dh.dir.d64.track, dh.dir.d64.sector);
         dreamload_send_block(buf->data);
       }
       else {
@@ -464,6 +471,12 @@ static uint8_t uload3_transferchain(uint8_t track, uint8_t sector, uint8_t savin
 void load_uload3(void) {
   int16_t cmd,tmp;
   uint8_t t,s;
+  dh_t dh;
+  path_t curpath;
+
+  curpath.part = current_part;
+  curpath.dir  = partition[current_part].current_dir;
+  opendir(&dh, &curpath);
 
   while (1) {
     /* read command */
@@ -494,8 +507,7 @@ void load_uload3(void) {
 
     case '$':
       /* read directory */
-      uload3_transferchain(partition[current_part].d64data.dir_track,
-                           partition[current_part].d64data.dir_start_sector, 0);
+      uload3_transferchain(dh.dir.d64.track, dh.dir.d64.sector, 0);
       break;
 
     default:
