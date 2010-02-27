@@ -78,7 +78,7 @@ uint8_t globalflags;
 #endif
 
 uint8_t command_buffer[CONFIG_COMMAND_BUFFER_SIZE+2];
-uint8_t command_length;
+uint8_t command_length,original_length;
 
 date_t date_match_start;
 date_t date_match_end;
@@ -991,6 +991,7 @@ static void parse_new(void) {
 static void parse_position(void) {
   buffer_t *buf;
 
+  command_length = original_length;
   clean_cmdbuffer();
 
   if(command_length < 2 || (buf = find_buffer(command_buffer[1] & 0x0f)) == NULL) {
@@ -1005,26 +1006,30 @@ static void parse_position(void) {
 
   if (buf->recordlen) {
     /* REL file */
-    uint8_t hi, lo, pos;
-    hi  = 0;
-    lo  = 1;
+    uint16_t record;
+    uint8_t  pos;
+    record = 1;
     pos = 1;
 
     if (command_length > 1)
-      lo = command_buffer[2];
+      record = command_buffer[2];
     if (command_length > 2)
-      hi = command_buffer[3];
+      record |= command_buffer[3] << 8;
     if (command_length > 3)
       pos = command_buffer[4];
 
-    if (pos >= buf->recordlen) {
+    if (pos > buf->recordlen) {
       set_error(ERROR_RECORD_OVERFLOW);
       return;
     }
 
-    lo--;
-    pos--;
-    buf->seek(buf, (hi * 256UL + lo) * (uint32_t)buf->recordlen * pos, pos);
+    if (record)
+      record--;
+
+    if (pos)
+      pos--;
+
+    buf->seek(buf, record * (uint32_t)buf->recordlen, pos);
   } else {
     /* Non-REL seek uses a straight little-endian offset */
     union {
@@ -1609,6 +1614,7 @@ void parse_doscommand(void) {
 #endif
 
   /* Remove one CR at end of command */
+  original_length = command_length;
   if (command_length > 0 && command_buffer[command_length-1] == 0x0d)
     command_length--;
 
