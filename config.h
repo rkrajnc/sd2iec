@@ -333,6 +333,7 @@
 #  define SOFTI2C_DDR           DDRC
 #  define SOFTI2C_BIT_SCL       PC6
 #  define SOFTI2C_BIT_SDA       PC5
+#  define SOFTI2C_BIT_INTRQ     PC7
 #  define SOFTI2C_DELAY         6
 
 
@@ -381,6 +382,13 @@
 #  define BUTTON_MASK           (_BV(PG3)|_BV(PG4))
 #  define BUTTON_NEXT           _BV(PG4)
 #  define BUTTON_PREV           _BV(PG3)
+#  define SOFTI2C_PORT          PORTD
+#  define SOFTI2C_PIN           PIND
+#  define SOFTI2C_DDR           DDRD
+#  define SOFTI2C_BIT_SCL       PD0
+#  define SOFTI2C_BIT_SDA       PD1
+#  define SOFTI2C_BIT_INTRQ     PD2
+#  define SOFTI2C_DELAY         6
 
 /* Use diskmux code to optionally turn off second IDE drive */
 #  define NEED_DISKMUX
