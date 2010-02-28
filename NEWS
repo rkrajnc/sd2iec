@@ -1,11 +1,21 @@
-2009-xx-xx - release x.x.x
-        - Remove XC command
+2009-02-28 - release 0.9.0
+        - Bugfix: REL offset calculation for records 256,512,...
+        - Bugfix: Non-REL P command parameters now match README
+        - Bugfix: Reading after EOI behaves correctly now
+        - Red LED only active while unwritten data in memory
+        - Remove XC,XJ commands
         - New fastloader: ULoad Model 3
         - New fastloader: G.I. Joe (said to be commonly ripped)
         - New fastloader: Epyx FastLoad cartridge
         - Support reading raw directory ($ with secondary > 0)
         - "display disk images as directories"-mode
         - DNP support
+        - remote display support
+        - build system doesn't require gawk anymore
+
+2009-12-16 - release 0.8.3
+        - Bugfix: Really prevent random corruption on FAT32 media
+        - Bugfix: Free buffer after copying files
 
 2009-09-27 - release 0.8.2
         - Bugfix: Prevent random storage corruption on FAT32 media
