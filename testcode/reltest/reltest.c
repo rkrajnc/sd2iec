@@ -22,6 +22,10 @@
 #include <string.h>
 #include <errno.h>
 
+/* Add a workaround for a 1541 rom bug that occasionally writes data */
+/* into the wrong sector if the record spans more than one sector.   */
+/* #define SEEK_TWICE */
+
 /* Static for now */
 #define RECORD_LENGTH 47
 #define TESTFILE_NAME "reltest"
@@ -95,7 +99,7 @@ char expect_error(char *message, unsigned char error) {
 /* Send a seek command */
 void rel_seek(unsigned int record, unsigned int offset) {
   buffer[0] = 'p';
-  buffer[1] = 3;
+  buffer[1] = 96+3;
   buffer[2] = record & 0xff;
   buffer[3] = (record >> 8) & 0xff;
   buffer[4] = offset;
@@ -104,6 +108,14 @@ void rel_seek(unsigned int record, unsigned int offset) {
   if (size != 5) {
     printf("Error seeking: Wrote %d byte, oserror %d\n",size,_oserror);
   }
+
+#ifdef SEEK_TWICE
+  /* Once more, with feeling (1541 bug workaround) */
+  size = cbm_write(15, buffer, 5);
+  if (size != 5) {
+    printf("Error seeking: Wrote %d byte, oserror %d\n",size,_oserror);
+  }
+#endif
 }
 
 /* Calculate the expected length of a record */
