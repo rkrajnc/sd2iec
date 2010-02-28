@@ -1,4 +1,4 @@
-2009-02-28 - release 0.9.0
+2010-02-28 - release 0.9.0
         - Bugfix: REL offset calculation for records 256,512,...
         - Bugfix: Non-REL P command parameters now match README
         - Bugfix: Reading after EOI behaves correctly now
