@@ -269,6 +269,16 @@ void run_tests(unsigned char record_length) {
 
   message_ok();
 
+  /* Write a single byte */
+  rel_seek(TEST_RECORDS/2, 1);
+  printf("Writing one byte...");
+  buffer[0] = 0xff;
+  cbm_write(1, buffer, 1);
+  if (expect_error("write", 50))
+    return;
+
+  message_ok();
+
   /* Return to the first record */
   printf("Seeking to start of file...");
   rel_seek(1,1);
@@ -374,7 +384,7 @@ int main(void) {
 
   /* Delete test file */
   strcpy(buffer, "s:" TESTFILE_NAME);
-  cbm_write(1,buffer,strlen(buffer));
+  cbm_write(15,buffer,strlen(buffer));
 
   strcpy(buffer, TESTFILE_NAME ",l,_");
 
