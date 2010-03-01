@@ -419,13 +419,19 @@ static uint8_t fat_file_write(buffer_t *buf) {
     // we need to fill bytes.
     // position to old end of file.
     res = f_lseek(&buf->pvt.fat.fh, buf->pvt.fat.headersize + fptr);
+    buf->mustflush = 0;
     buf->fptr = fptr;
     buf->data[2] = (buf->recordlen?255:0);
     memset(buf->data + 3,0,253);
     while(res == FR_OK && i) {
-      buf->lastused  = (buf->recordlen?buf->recordlen:i>254?254:(uint8_t)i);
-      i-=buf->lastused;
-      buf->lastused++;
+      if (buf->recordlen)
+        buf->lastused = buf->recordlen;
+      else
+        buf->lastused = (i>254 ? 254 : (uint8_t) i);
+
+      i -= buf->lastused;
+      buf->position = buf->lastused + 2;
+
       if(write_data(buf))
         return 1;
     }
@@ -437,7 +443,7 @@ static uint8_t fat_file_write(buffer_t *buf) {
       free_buffer(buf);
       return 1;
     }
-    buf->fptr      = buf->pvt.fat.fh.fptr - buf->pvt.fat.headersize;
+    buf->fptr = buf->pvt.fat.fh.fptr - buf->pvt.fat.headersize;
   }
 
   return 0;
