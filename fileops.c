@@ -927,7 +927,7 @@ void file_open(uint8_t secondary) {
 
         /* Force fatops to create a new name based on the (long) CBM- */
         /* name instead of creating one with the old SFN and no LFN.  */
-        if (dent.opstype == OPSTYPE_FAT)
+        if (dent.opstype == OPSTYPE_FAT || dent.opstype == OPSTYPE_FAT_X00)
           dent.pvt.fat.realname[0] = 0;
       } else {
         /* Write existing file without replacement: Raise error */

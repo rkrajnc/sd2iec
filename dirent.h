@@ -123,6 +123,8 @@ struct d64dh {
 typedef enum {
   OPSTYPE_UNDEFINED = 0,
   OPSTYPE_FAT,
+  OPSTYPE_FAT_X00,  /* X00 files can never be disk images */
+                    /* and should match case-sensitive    */
   OPSTYPE_M2I,
   OPSTYPE_DXX
 } opstype_t;

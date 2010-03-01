@@ -209,7 +209,7 @@ int8_t next_match(dh_t *dh, uint8_t *matchstr, date_t *start, date_t *end, uint8
 
       /* Skip if the name doesn't match */
       if (matchstr) {
-        if (dent->opstype == OPSTYPE_FAT && dent->pvt.fat.realname[0] == 0) {
+        if (dent->opstype == OPSTYPE_FAT) {
           /* FAT: Ignore case */
           if (!match_name(matchstr, dent, 1))
             continue;

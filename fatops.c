@@ -597,6 +597,7 @@ FRESULT create_file(path_t *path, cbmdirent_t *dent, uint8_t type, buffer_t *buf
 
   x00ext = NULL;
 
+  /* FIXME: Add a comment why the "true" part of this if is required */
   if (dent->pvt.fat.realname[0])
     name = dent->pvt.fat.realname;
   else {
@@ -856,6 +857,7 @@ int8_t fat_readdir(dh_t *dh, cbmdirent_t *dent) {
           *ptr = 0;
 
       finfo.fsize -= P00_HEADER_SIZE;
+      dent->opstype = OPSTYPE_FAT_X00;
 
     } else if (ext == EXT_IS_TYPE && (globalflags & EXTENSION_HIDING)) {
       /* Type extension */
@@ -995,26 +997,26 @@ uint8_t fat_chdir(path_t *path, cbmdirent_t *dent) {
     path->dir.fat = dent->pvt.fat.cluster;
   } else {
     /* Changing into a file, could be a mount request */
-    if (check_imageext(dent->name) != IMG_UNKNOWN) {
+    if (check_imageext(dent->pvt.fat.realname) != IMG_UNKNOWN) {
       /* D64/M2I mount request */
       free_multiple_buffers(FMB_USER_CLEAN);
       /* Open image file */
       res = f_open(&partition[path->part].fatfs,
                    &partition[path->part].imagehandle,
-                   dent->name, FA_OPEN_EXISTING|FA_READ|FA_WRITE);
+                   dent->pvt.fat.realname, FA_OPEN_EXISTING|FA_READ|FA_WRITE);
 
       /* Try to open read-only if medium or file is read-only */
       if (res == FR_DENIED || res == FR_WRITE_PROTECTED)
         res = f_open(&partition[path->part].fatfs,
                      &partition[path->part].imagehandle,
-                     dent->name, FA_OPEN_EXISTING|FA_READ);
+                     dent->pvt.fat.realname, FA_OPEN_EXISTING|FA_READ);
 
       if (res != FR_OK) {
         parse_error(res,1);
         return 1;
       }
 
-      if (check_imageext(dent->name) == IMG_IS_M2I)
+      if (check_imageext(dent->pvt.fat.realname) == IMG_IS_M2I)
         partition[path->part].fop = &m2iops;
       else {
         if (d64_mount(path))
