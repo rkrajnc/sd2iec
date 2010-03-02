@@ -1476,7 +1476,10 @@ static void d64_format(uint8_t part, uint8_t *name, uint8_t *id) {
 void d64_raw_directory(path_t *path, buffer_t *buf) {
   /* Copy&Waste from d64_open_read */
   buf->data[0] = path->dir.dxx.track;
-  buf->data[1] = path->dir.dxx.sector;
+  if (partition[path->part].imagetype == D64_TYPE_DNP)
+    buf->data[1] = path->dir.dxx.sector;
+  else
+    buf->data[1] = 0;
 
   buf->pvt.d64.part = path->part;
 
