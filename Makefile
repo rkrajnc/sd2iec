@@ -246,7 +246,7 @@ CRCGEN = crcgen-new
 #    -adhlns...: create assembler listing
 CFLAGS = -g$(DEBUG)
 CFLAGS += $(CDEFS) $(CINCS)
-CFLAGS += -O$(OPT)
+CFLAGS += -O$(OPT) -fno-strict-aliasing
 CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 CFLAGS += -Wall -Wstrict-prototypes -Werror
 #CFLAGS += -Wa,-adhlns=$(OBJDIR)/$(<:.c=.lst)
