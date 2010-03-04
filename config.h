@@ -50,6 +50,9 @@
 
 #include "autoconf.h"
 
+/* Include avrcompat.h to get the PA0..PD7 macros on 1284P */
+#include "avrcompat.h"
+
 #if CONFIG_HARDWARE_VARIANT==1
 /* Configure for your own hardware                     */
 /* Example values are for the "Shadowolf 1.x" variant. */
@@ -70,7 +73,7 @@
 /* Set up the card detect pin to generate an interrupt on every change */
 #  if defined __AVR_ATmega32__
 #    define SD_CHANGE_SETUP()  do { MCUCR |= _BV(ISC00); GICR |= _BV(INT0); } while(0)
-#  elif defined __AVR_ATmega644__ || defined __AVR_ATmega644P__
+#  elif defined __AVR_ATmega644__ || defined __AVR_ATmega644P__ || defined __AVR_ATmega1284P__
 #    define SD_CHANGE_SETUP()  do { EICRA |= _BV(ISC00); EIMSK |= _BV(INT0); } while(0)
 #  else
 #    error Unknown chip!
@@ -241,7 +244,7 @@
 #  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
 #  if defined __AVR_ATmega32__
 #    define SD_CHANGE_SETUP()   do { MCUCR |= _BV(ISC00); GICR |= _BV(INT0); } while(0)
-#  elif defined __AVR_ATmega644__ || defined __AVR_ATmega644P__
+#  elif defined __AVR_ATmega644__ || defined __AVR_ATmega644P__ || defined __AVR_ATmega1284P__
 #    define SD_CHANGE_SETUP()   do { EICRA |= _BV(ISC00); EIMSK |= _BV(INT0); } while(0)
 #  else
 #    error Unknown chip!
@@ -289,7 +292,7 @@
 #  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
 #  if defined __AVR_ATmega32__
 #    define SD_CHANGE_SETUP()   do { MCUCR |= _BV(ISC00); GICR |= _BV(INT0); } while(0)
-#  elif defined __AVR_ATmega644__ || defined __AVR_ATmega644P__
+#  elif defined __AVR_ATmega644__ || defined __AVR_ATmega644P__ || defined __AVR_ATmega1284P__
 #    define SD_CHANGE_SETUP()   do { EICRA |= _BV(ISC00); EIMSK |= _BV(INT0); } while(0)
 #  else
 #    error Unknown chip!
@@ -401,7 +404,7 @@
 #  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
 #  if defined __AVR_ATmega32__
 #    define SD_CHANGE_SETUP()   do { MCUCR |= _BV(ISC00); GICR |= _BV(INT0); } while(0)
-#  elif defined __AVR_ATmega644__ || defined __AVR_ATmega644P__
+#  elif defined __AVR_ATmega644__ || defined __AVR_ATmega644P__ || defined __AVR_ATmega1284P__
 #    define SD_CHANGE_SETUP()   do { EICRA |= _BV(ISC00); EIMSK |= _BV(INT0); } while(0)
 #  else
 #    error Unknown chip!
@@ -474,7 +477,7 @@
 #  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
 #  if defined __AVR_ATmega32__
 #    define SD_CHANGE_SETUP()   do { MCUCR |= _BV(ISC00); GICR |= _BV(INT0); } while(0)
-#  elif defined __AVR_ATmega644__ || defined __AVR_ATmega644P__
+#  elif defined __AVR_ATmega644__ || defined __AVR_ATmega644P__ || define __AVR_ATmega1284P__
 #    define SD_CHANGE_SETUP()   do { EICRA |= _BV(ISC00); EIMSK |= _BV(INT0); } while(0)
 #  else
 #    error Unknown chip!
