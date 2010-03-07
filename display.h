@@ -52,7 +52,7 @@ void display_service(void);
 
 // Note: All partitions are 0-based internal partiton numbers!
 enum display_commands {
-  DISPLAY_INIT,              // PETSCII version string
+  DISPLAY_INIT = 0,          // PETSCII version string
   DISPLAY_ADDRESS,           // uint8_t device address
   DISPLAY_FILENAME_READ,     // uint8_t part, PETSCII file name
   DISPLAY_FILENAME_WRITE,    // uint8_t part, PETSCII file name
@@ -60,7 +60,7 @@ enum display_commands {
   DISPLAY_ERRORCHANNEL,      // PETSCII error channel message
   DISPLAY_CURRENT_DIR,       // uint8_t part, PETSCII directory name
   DISPLAY_CURRENT_PART,      // uint8_t part
-  DISPLAY_MENU_RESET,        // -
+  DISPLAY_MENU_RESET = 0x40, // -
   DISPLAY_MENU_ADD,          // zero-terminated PETSCII string
   DISPLAY_MENU_SHOW,         // uint8_t startentry
   DISPLAY_MENU_GETSELECTION, // returns the number of the selected menu entry
