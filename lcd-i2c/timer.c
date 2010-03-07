@@ -1,5 +1,5 @@
 /* sd2iec - SD/MMC to Commodore serial bus interface/controller
-   Copyright (C) 2007-2009  Ingo Korb <ingo@akana.de>
+   Copyright (C) 2007-2010  Ingo Korb <ingo@akana.de>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
