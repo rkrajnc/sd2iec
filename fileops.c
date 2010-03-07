@@ -955,6 +955,7 @@ void file_open(uint8_t secondary) {
   buf->secondary = secondary;
 
   if(filetype == TYPE_REL) {
+    display_filename_write(path.part,CBM_NAME_LENGTH,dent.name);
     open_rel(&path, &dent, buf, recordlen, (mode == OPEN_MODIFY));
     return;
   }
