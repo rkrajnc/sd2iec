@@ -1,7 +1,8 @@
-2010-xx-xx - release 0.9.1
+2010-03-07 - release 0.9.1
         - Bugfix: Filling unused REL records used wrong offsets
         - Bugfix: Unbreak case-insensitive matching of FAT file names
         - Bugfix: Fix raw directory mode for D64/D71/D81
+        - Bugfix: Tell the display about REL files too
         - add preliminary support for the ATmega1284P
 
 2010-02-28 - release 0.9.0
