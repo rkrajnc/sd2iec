@@ -457,6 +457,8 @@ Note: Using sd2iec without an external crystal or similiar precise
       clock source is not a supported configuration.
       If you try that anyway, be prepared to suffer from random
       data corruption. You have been warned.
+      Some fastloader implementations will actively refuse to work
+      if you use an unsuitable clock source.
 
   Turbodisk
   ---------

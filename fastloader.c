@@ -26,6 +26,7 @@
 
 */
 
+#include <avr/boot.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
@@ -74,10 +75,21 @@ void load_turbodisk(void) {
   uint8_t i,len,firstsector;
   buffer_t *buf;
 
+#if defined __AVR_ATmega644__   || \
+    defined __AVR_ATmega644P__  || \
+    defined __AVR_ATmega1284P__ || \
+    defined __AVR_ATmega1281__
+  /* Lock out clock sources that aren't stable enough for this protocol */
+  uint8_t tmp = boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS) & 0x0f;
+  if (tmp == 2) {
+    set_error(ERROR_CLOCK_UNSTABLE);
+    return;
+  }
+#endif
+
   set_clock(0);
 
   /* Copy filename to beginning of buffer */
-  // FIXME: Das ist daemlich. fat_open um Zeiger auf Dateinamen erweitern?
   len = command_buffer[9];
   for (i=0;i<len;i++)
     command_buffer[i] = command_buffer[10+i];
@@ -85,7 +97,7 @@ void load_turbodisk(void) {
   command_buffer[len] = 0;
   command_length = len;
 
-  // FIXME: Rueckgabewert mit Status, evtl. direkt fat_open_read nehmen
+  /* Open the file */
   file_open(0);
   buf = find_buffer(0);
   if (!buf) {
