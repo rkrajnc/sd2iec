@@ -215,8 +215,9 @@ Supported commands:
   return 31,SYNTAX ERROR,00,00.
 
   Both commands expect a fourth character that specifies the time format
-  to be used, T-W expects that the new time follows that character in exactly
-  the format returned by T-R with the same format char.
+  to be used, T-W expects that the new time follows that character in EXACTLY
+  the format returned by T-R with the same format char. Do NOT add a space
+  between the "T-W" and the time string.
 
   The possible formats are:
    - "A"SCII: "SUN. 01/20/08 01:23:45 PM"+CHR$(13)
