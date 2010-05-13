@@ -477,7 +477,7 @@
 #  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
 #  if defined __AVR_ATmega32__
 #    define SD_CHANGE_SETUP()   do { MCUCR |= _BV(ISC00); GICR |= _BV(INT0); } while(0)
-#  elif defined __AVR_ATmega644__ || defined __AVR_ATmega644P__ || define __AVR_ATmega1284P__
+#  elif defined __AVR_ATmega644__ || defined __AVR_ATmega644P__ || defined __AVR_ATmega1284P__
 #    define SD_CHANGE_SETUP()   do { EICRA |= _BV(ISC00); EIMSK |= _BV(INT0); } while(0)
 #  else
 #    error Unknown chip!
