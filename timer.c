@@ -35,6 +35,9 @@
 #include "rtc.h"
 #include "timer.h"
 
+#define DEBOUNCE_TICKS 4
+#define SLEEP_TICKS    2*HZ
+
 volatile tick_t ticks;
 // Logical buttons
 volatile uint8_t active_keys;
@@ -46,7 +49,7 @@ tick_t  lastbuttonchange;
 /* Called by the timer interrupt when the button state has changed */
 static void buttons_changed(void) {
   /* Check if the previous state was stable for two ticks */
-  if (time_after(ticks, lastbuttonchange+2)) {
+  if (time_after(ticks, lastbuttonchange + DEBOUNCE_TICKS)) {
     if (active_keys & IGNORE_KEYS) {
       active_keys &= ~IGNORE_KEYS;
     } else if (!(buttonstate & (BUTTON_PREV|BUTTON_NEXT))) {
@@ -94,10 +97,10 @@ ISR(TIMER1_COMPA_vect) {
 #endif
 
   /* Sleep button triggers when held down for 2sec */
-  if (time_after(ticks, lastbuttonchange+2)) {
+  if (time_after(ticks, lastbuttonchange + DEBOUNCE_TICKS)) {
     if (!(buttonstate & BUTTON_NEXT) &&
         (buttonstate & BUTTON_PREV) &&
-        time_after(ticks, lastbuttonchange+2*HZ) &&
+        time_after(ticks, lastbuttonchange + SLEEP_TICKS) &&
         !key_pressed(KEY_SLEEP)) {
       /* Set ignore flag so the release doesn't trigger KEY_NEXT */
       active_keys |= KEY_SLEEP | IGNORE_KEYS;
