@@ -1,3 +1,8 @@
+2010-06-21 - release 0.9.2
+        - Bugfix: Rename was broken on FAT
+        - Turbodisk is now disabled when running on internal RC clock
+        - button debounce timeout increased
+
 2010-03-07 - release 0.9.1
         - Bugfix: Filling unused REL records used wrong offsets
         - Bugfix: Unbreak case-insensitive matching of FAT file names
