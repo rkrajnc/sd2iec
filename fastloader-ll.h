@@ -45,4 +45,7 @@ void uload3_send_byte(uint8_t byte);
 
 uint8_t epyxcart_send_byte(uint8_t byte);
 
+uint8_t geos_get_byte(void);
+void geos_send_byte(uint8_t byte);
+
 #endif

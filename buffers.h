@@ -32,8 +32,9 @@
 #define BUFFER_SEC_SYSTEM 100
 
 /* Special-purpose buffer numbers */
-#define BUFFER_SYS_BAM    (BUFFER_SEC_SYSTEM+1)
-#define BUFFER_SEC_CHAIN  (BUFFER_SEC_SYSTEM-1)
+#define BUFFER_SYS_BAM     (BUFFER_SEC_SYSTEM+1)
+#define BUFFER_SYS_GEOSKEY (BUFFER_SEC_SYSTEM+2)
+#define BUFFER_SEC_CHAIN   (BUFFER_SEC_SYSTEM-1)
 
 /* Flags for free_multiple_buffers */
 #define FMB_CLEAN          (1<<0)

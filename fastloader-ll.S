@@ -572,7 +572,7 @@ tdbitloop2:
         ret
 #endif
 
-#if defined(CONFIG_LOADER_DREAMLOAD) || defined(CONFIG_LOADER_FC3) || defined(CONFIG_LOADER_ULOAD3)
+#if defined(CONFIG_LOADER_DREAMLOAD) || defined(CONFIG_LOADER_FC3) || defined(CONFIG_LOADER_ULOAD3) || defined(CONFIG_LOADER_GEOS)
         ;;
         ;; Set bit 0 of r0 on CLOCK and bit 1 on DATA
         ;; A bit value of one means pull down
@@ -1013,6 +1013,140 @@ epyxcart_send_byte:
 
 epyxcart_atnabort:
         ldi     r24, 1
+        ret
+
+#endif
+
+#ifdef CONFIG_LOADER_GEOS
+        ;;
+        ;; read a byte using the GEOS protocol
+        ;;
+        .global geos_get_byte
+geos_get_byte:
+        clr     r24
+
+        ;; wait until clock is low
+1:      sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK ; 1/2
+        rjmp    1b
+
+        ;; delay
+        delay_cycles 15*8 - 2
+
+        ;; get bits 4 and 5
+        in      r19, _SFR_IO_ADDR(IEC_PIN) ; 1
+        bst     r19, IEC_PIN_CLOCK         ; 1
+        bld     r24, 4-1                   ; 1 - r24 = ....4...
+        bst     r19, IEC_PIN_DATA          ; 1
+        bld     r24, 5-1                   ; 1 - r24 = ...54...
+
+        ;; delay
+        delay_cycles 14*8 - 5
+
+        ;; get bits 6 and 7
+        in      r19, _SFR_IO_ADDR(IEC_PIN) ; 1
+        bst     r19, IEC_PIN_CLOCK         ; 1
+        bld     r24, 6-1                   ; 1 - r24 = ..654...
+        bst     r19, IEC_PIN_DATA          ; 1
+        bld     r24, 7-1                   ; 1 - r24 = .7654...
+
+        ;; delay
+        delay_cycles 14*8 - 5 - 4
+
+        ;; get bits 3 and 1
+        rcall   get_bits_from_clk_data ; 4+8 - r24 = .76543.1
+        lsl     r24                    ; 1     r24 = 76543.1.
+
+        ;; delay
+        delay_cycles 16*8 - 9 - 4
+
+        ;; get bits 2 and 0
+        rcall   get_bits_from_clk_data ; 4+8 - r24 = 76543210
+
+        ;; post-process received value and return
+        delay_cycles 11*8
+        com     r24                    ; negate all bits
+        clr     r25                    ; clear high byte of return value
+        ret
+
+
+        ;;
+        ;; send a byte using the GEOS protocol
+        ;; called with byte in r24, no return value
+        ;;
+        .global geos_send_byte
+geos_send_byte:
+        ;; CLOCK/DATA high
+        cbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_CLOCK
+        cbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA
+        rcall   delay1us
+
+        sbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_SRQ
+
+        ;; wait until CLOCK is low
+1:      sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
+        rjmp    1b
+
+        cbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_SRQ
+
+        ;; wait until CLOCK is high
+1:      sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
+        rjmp    1b
+
+        ;; preserve non-IEC lines on IEC_OUT port
+        in      r19, _SFR_IO_ADDR(IEC_OUT) ; 1
+        andi    r19, ~(IEC_OBIT_DATA|IEC_OBIT_CLOCK|IEC_OBIT_ATN|IEC_OBIT_SRQ) ; 1
+        mov     r0, r19             ; 1
+
+        ;; send bit 3+1 to bus
+        bst     r24, 3              ; 1 - read bit 3
+        bld     r19, IEC_OPIN_CLOCK ; 1 - store in clock bit
+        bst     r24, 1              ; 1 - read bit 1
+        bld     r19, IEC_OPIN_DATA  ; 1 - store in data bit
+        out     _SFR_IO_ADDR(IEC_OUT), r19 ; 1 - send to bus
+
+        ;; prepare bits 2+0
+        mov     r19, r0             ; 1
+        bst     r24, 2              ; 1 - read bit 2
+        bld     r19, IEC_OPIN_CLOCK ; 1 - store in clock bit
+        bst     r24, 0              ; 1 - read bit 0
+        bld     r19, IEC_OPIN_DATA  ; 1 - store in data bit
+
+        ;; delay
+        delay_cycles 20*8 - 14
+
+        ;; send to bus
+        out     _SFR_IO_ADDR(IEC_OUT), r19 ; 1
+
+        ;; prepare bits 4+5
+        com     r24                 ; 1
+        mov     r19, r0             ; 1
+        bst     r24, 4              ; 1 - read bit 4
+        bld     r19, IEC_OPIN_CLOCK ; 1 - store in clock bit
+        bst     r24, 5              ; 1 - read bit 5
+        bld     r19, IEC_OPIN_DATA  ; 1 - store in data bit
+
+        ;; delay
+        delay_cycles 12*8 - 7
+
+        ;; send to bus
+        out     _SFR_IO_ADDR(IEC_OUT), r19 ; 1
+
+        ;; prepare bits 6+7
+        mov     r19, r0             ; 1
+        bst     r24, 6              ; 1 - read bit 6
+        bld     r19, IEC_OPIN_CLOCK ; 1 - store in clock bit
+        bst     r24, 7              ; 1 - read bit 7
+        bld     r19, IEC_OPIN_DATA  ; 1 - store in data bit
+
+        ;; delay
+        delay_cycles 12*8 - 6
+
+        ;; send to bus
+        out     _SFR_IO_ADDR(IEC_OUT), r19 ; 1
+
+        ;; final delay
+        delay_cycles 16*8
+
         ret
 
 #endif

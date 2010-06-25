@@ -528,6 +528,17 @@ Note: Using sd2iec without an external crystal or similiar precise
   ONLY the fast loader from this cartridge is supported, no
   disk editor/copier/whatever functions.
 
+  GEOS
+  ----
+  GEOS 2.0 can be booted from D64 images made from original disks
+  as well as disks created using geoMakeBoot (make sure to configure
+  the system for a 1541 before using geoMakeBoot). GEOS 1.3 may or
+  may not work - it boots, but wasn't tested in-depth. Wheels will
+  not work, as will D71/D81 images.
+
+  Using the buttons for changing the current disk image is supported,
+  but do make sure that you only access D64 disk images.
+
 JiffyDOS:
 =========
 The JiffyDOS protocol has very relaxed timing constraints compared to

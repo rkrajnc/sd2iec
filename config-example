@@ -84,6 +84,9 @@ CONFIG_LOADER_GIJOE=y
 # Enable Epyx Fast Load cartridge fast loader
 CONFIG_LOADER_EPYXCART=y
 
+# Enable GEOS fast loaders
+CONFIG_LOADER_GEOS=y
+
 # Select which hardware to compile for
 # Valid values:
 #   1 - custom configuration in config.h

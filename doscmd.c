@@ -831,6 +831,20 @@ static void handle_memexec(void) {
     load_epyxcart();
   }
 #endif
+#ifdef CONFIG_LOADER_GEOS
+  /* GEOS stage 1 */
+  if (detected_loader == FL_GEOS_S1 && address == 0x0457) {
+    load_geos_s1();
+  }
+
+  if ((address == 0x03e2 ||
+       address == 0x03dc) &&
+      (detected_loader == FL_GEOS_S23 ||
+       datacrc == 0xffff)) {
+    /* GEOS stage 2/3 1541 */
+    load_geos();
+  }
+#endif
 
   datacrc = 0xffff;
   detected_loader = FL_NONE;
@@ -934,6 +948,48 @@ static void handle_memwrite(void) {
 #ifdef CONFIG_LOADER_EPYXCART
   if (datacrc == 0x5a01) {
     detected_loader = FL_EPYXCART;
+  }
+#endif
+
+#ifdef CONFIG_LOADER_GEOS
+  if (datacrc == 0xb979) {
+    /* Stage 1 encryption key starts in this block - prepare to copy it */
+    buffer_t *buf = alloc_system_buffer();
+
+    if (buf == NULL)
+      return;
+
+    stick_buffer(buf);
+    buf->secondary = BUFFER_SYS_GEOSKEY;
+    buf->position = 22;
+    memcpy(buf->data, command_buffer + 16, 22);
+
+    detected_loader = FL_GEOS_S1_KEY;
+  }
+
+  if (detected_loader == FL_GEOS_S1_KEY) {
+    /* Copy encryption key */
+    buffer_t *buf = find_buffer(BUFFER_SYS_GEOSKEY);
+
+    if (buf->position < 22 + 7*32) {
+      /* Middle blocks - copy completely */
+      memcpy(buf->data + buf->position, command_buffer + 6, 32);
+      buf->position += 32;
+    } else {
+      /* Last interesting block, also the last block of the loader */
+      memcpy(buf->data + buf->position, command_buffer + 6, 8);
+      detected_loader = FL_GEOS_S1;
+    }
+  }
+
+  if (datacrc == 0x4d79) { // Note: CSDB-crack is f1e8
+    /* Stage 2 GEOS 1541 */
+    detected_loader = FL_GEOS_S23;
+  }
+
+  if (datacrc == 0xb272) {
+    /* Stage 3 GEOS 1541, also used by Configure */
+    detected_loader = FL_GEOS_S23;
   }
 #endif
 

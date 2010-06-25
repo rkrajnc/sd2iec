@@ -37,6 +37,9 @@
 #define FL_ULOAD3        7
 #define FL_GI_JOE        8
 #define FL_EPYXCART      9
+#define FL_GEOS_S1      10
+#define FL_GEOS_S1_KEY  11
+#define FL_GEOS_S23     12
 
 #ifndef __ASSEMBLER__
 
@@ -51,6 +54,8 @@ void load_dreamload(void);
 void load_uload3(void);
 void load_gijoe(void);
 void load_epyxcart(void);
+void load_geos(void);
+void load_geos_s1(void);
 
 #endif
 #endif

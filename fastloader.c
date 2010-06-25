@@ -823,3 +823,291 @@ void load_epyxcart(void) {
   free_buffer(buf);
 }
 #endif
+
+
+/*
+ *
+ *  GEOS
+ *
+ */
+#ifdef CONFIG_LOADER_GEOS
+
+/* Receive a data block from the computer */
+static void geos_receive_block(uint8_t *data) {
+  uint8_t exitflag = 0;
+  uint16_t length;
+
+  /* Receive data length */
+  while (!IEC_CLOCK && IEC_ATN)
+    if (check_keys()) {
+      /* User-requested exit */
+      exitflag = 1;
+      break;
+    }
+
+  /* Exit if ATN is low */
+  if (!IEC_ATN || exitflag) {
+    *data++ = 0;
+    *data   = 0;
+    return;
+  }
+
+  ATOMIC_BLOCK(ATOMIC_FORCEON) {
+    set_data(1);
+    length = geos_get_byte();
+    set_data(0);
+  }
+
+  if (length == 0)
+    length = 256;
+
+  data += length-1;
+
+  ATOMIC_BLOCK(ATOMIC_FORCEON) {
+    while (!IEC_CLOCK);
+    set_data(1);
+    while (length--)
+      *data-- = geos_get_byte();
+  }
+  set_data(0);
+}
+
+/* Send a single byte to the computer after waiting for CLOCK high */
+static void geos_transmit_byte_wait(uint8_t byte) {
+   ATOMIC_BLOCK(ATOMIC_FORCEON) {
+    /* Wait until clock is high */
+    while (!IEC_CLOCK) ;
+    set_data(1);
+
+    /* Send byte */
+    geos_send_byte(byte);
+    set_clock(1);
+    set_data(0);
+  }
+
+  _delay_us(15); // guessed
+}
+
+/* Send data block to computer */
+static void geos_transmit_buffer_s3(uint8_t *data, uint16_t len) {
+  ATOMIC_BLOCK(ATOMIC_FORCEON) {
+    /* Wait until clock is high */
+    while (!IEC_CLOCK) ;
+    set_data(1);
+
+    /* Send data block */
+    uint16_t i = len;
+    data += len - 1;
+
+    while (i--) {
+      geos_send_byte(*data--);
+    }
+
+    set_clock(1);
+    set_data(0);
+
+    _delay_us(15); // guessed
+  }
+}
+
+static void geos_transmit_buffer_s2(uint8_t *data, uint16_t len) {
+  /* Send length byte */
+  geos_transmit_byte_wait(len);
+
+  /* the rest is the same as in stage 3 */
+  geos_transmit_buffer_s3(data, len);
+}
+
+/* Send job status to computer */
+static void geos_transmit_status(void) {
+  ATOMIC_BLOCK(ATOMIC_FORCEON) {
+    /* Send a single 1 byte as length indicator */
+    geos_transmit_byte_wait(1);
+
+    /* Send (faked) job result code */
+    if (current_error == 0)
+      geos_transmit_byte_wait(1);
+    else
+      geos_transmit_byte_wait(2); // random non-ok job status
+  }
+}
+
+/* GEOS READ operation */
+static void geos_read_sector(uint8_t track, uint8_t sector, buffer_t *buf) {
+  uart_putc('R');
+  uart_puthex(track);
+  uart_putc('/');
+  uart_puthex(sector);
+  uart_putcrlf();
+
+  read_sector(buf, current_part, track, sector);
+}
+
+/* GEOS WRITE operation */
+static void geos_write_sector(uint8_t track, uint8_t sector, buffer_t *buf) {
+  uart_putc('W');
+  uart_puthex(track);
+  uart_putc('/');
+  uart_puthex(sector);
+  uart_putcrlf();
+
+  /* Provide "unwritten data present" feedback */
+  mark_buffer_dirty(buf);
+
+  /* Receive data */
+  geos_receive_block(buf->data);
+
+  /* Write to image */
+  write_sector(buf, current_part, track, sector);
+
+  /* Reset "unwritten data" feedback */
+  mark_buffer_clean(buf);
+}
+
+/* GEOS stage 2/3 loader */
+void load_geos(void) {
+  buffer_t *cmdbuf = alloc_system_buffer();
+  buffer_t *databuf = alloc_system_buffer();
+  uint8_t *cmddata;
+  uint16_t cmd;
+
+  if (!cmdbuf || !databuf)
+    return;
+
+  cmddata = cmdbuf->data;
+
+  /* Initial handshake */
+  uart_flush();
+  _delay_ms(1);
+  set_data(0);
+  while (IEC_CLOCK) ;
+
+  while (1) {
+    /* Receive command block */
+    update_leds();
+    geos_receive_block(cmddata);
+    set_busy_led(1);
+
+    cmd = cmddata[0] | (cmddata[1] << 8);
+
+    switch (cmd) {
+    case 0x0320: // 1541 stage 3 transmit
+      geos_transmit_buffer_s3(databuf->data, 256);
+      geos_transmit_status();
+      break;
+
+    case 0x031f: // 1541 stage 2 status - only seen in GEOS 1.3
+    case 0x0325: // 1541 stage 3 status
+      geos_transmit_status();
+      break;
+
+    case 0x0000: // internal QUIT
+    case 0x0412: // 1541 stage 2 quit
+    case 0x0420: // 1541 stage 3 quit
+      while (!IEC_CLOCK) ;
+      set_data(1);
+      return;
+
+    case 0x0432: // 1541 stage 2 transmit
+      if (current_error != 0) {
+        geos_transmit_status();
+      } else {
+        geos_transmit_buffer_s2(databuf->data, 256); // FIXME: Need to reduce after copy protection check
+      }
+      break;
+
+    case 0x0439: // 1541 stage 3 set address
+      // Note: identical in stage 2, address 0428, probably unused
+      device_address = cmddata[2] & 0x1f;
+      display_address(device_address);
+      break;
+
+    case 0x0504: // 1541 stage 2 initialize - only seen in GEOS 1.3
+    case 0x04dc: // 1541 stage 3 initialize
+      /* Doesn't do anything that needs to be reimplemented */
+      break;
+
+    case 0x057c: // 1541 stage 2/3 write
+      geos_write_sector(cmddata[2], cmddata[3], databuf);
+      break;
+
+    case 0x058e: // 1541 stage 2/3 read
+      geos_read_sector(cmddata[2], cmddata[3], databuf);
+      break;
+
+    default:
+      uart_puts_P(PSTR("unknown: "));
+      uart_trace(cmddata, 0, 4);
+      return;
+    }
+  }
+}
+
+/* Stage 1 only - send a sector chain to the computer */
+static void geos_send_chain(uint8_t track, uint8_t sector,
+                            buffer_t *buf, uint8_t *key) {
+  uint8_t bytes;
+  uint8_t *keyptr,*dataptr;
+
+  do {
+    /* Read sector - no error recovery on computer side */
+    read_sector(buf, current_part, track, sector);
+
+    /* Decrypt contents if we have a key */
+    if (key != NULL) {
+      keyptr = key;
+      dataptr = buf->data + 2;
+      bytes = 254;
+      while (bytes--)
+        *dataptr++ ^= *keyptr++;
+    }
+
+    /* Read link pointer */
+    track = buf->data[0];
+    sector = buf->data[1];
+
+    if (track == 0) {
+      bytes = sector - 1;
+    } else {
+      bytes = 254;
+    }
+
+    /* Send length */
+    geos_transmit_byte_wait(bytes);
+
+    /* Send buffer contents */
+    geos_transmit_buffer_s3(buf->data + 2, bytes);
+  } while (track != 0);
+
+  geos_transmit_byte_wait(0);
+}
+
+/* GEOS stage 1 loader */
+void load_geos_s1(void) {
+  buffer_t *encrbuf = find_buffer(BUFFER_SYS_GEOSKEY);
+  buffer_t *databuf = alloc_buffer();
+
+  if (!encrbuf || !databuf)
+    return;
+
+  /* Initial handshake */
+  uart_flush();
+  _delay_ms(1);
+  set_data(0);
+  while (IEC_CLOCK) ;
+
+  /* Transfer unencrypted sector chain 19:13 */
+  geos_send_chain(19, 13, databuf, NULL);
+
+  /* Transfer encrypted sector chain 20:15 */
+  geos_send_chain(20, 15, databuf, encrbuf->data);
+
+  /* Transfer encrypted sector chain 20:17 */
+  geos_send_chain(20, 17, databuf, encrbuf->data);
+
+  /* Done! */
+  free_buffer(encrbuf);
+  set_data(1);
+}
+
+#endif
