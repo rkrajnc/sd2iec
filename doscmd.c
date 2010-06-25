@@ -952,21 +952,6 @@ static void handle_memwrite(void) {
 #endif
 
 #ifdef CONFIG_LOADER_GEOS
-  if (datacrc == 0xb979) {
-    /* Stage 1 encryption key starts in this block - prepare to copy it */
-    buffer_t *buf = alloc_system_buffer();
-
-    if (buf == NULL)
-      return;
-
-    stick_buffer(buf);
-    buf->secondary = BUFFER_SYS_GEOSKEY;
-    buf->position = 22;
-    memcpy(buf->data, command_buffer + 16, 22);
-
-    detected_loader = FL_GEOS_S1_KEY;
-  }
-
   if (detected_loader == FL_GEOS_S1_KEY) {
     /* Copy encryption key */
     buffer_t *buf = find_buffer(BUFFER_SYS_GEOSKEY);
@@ -980,6 +965,21 @@ static void handle_memwrite(void) {
       memcpy(buf->data + buf->position, command_buffer + 6, 8);
       detected_loader = FL_GEOS_S1;
     }
+  }
+
+  if (datacrc == 0xb979) {
+    /* Stage 1 encryption key starts in this block - prepare to copy it */
+    buffer_t *buf = alloc_system_buffer();
+
+    if (buf == NULL)
+      return;
+
+    stick_buffer(buf);
+    buf->secondary = BUFFER_SYS_GEOSKEY;
+    buf->position = 22;
+    memcpy(buf->data, command_buffer + 16, 22);
+
+    detected_loader = FL_GEOS_S1_KEY;
   }
 
   if (datacrc == 0x4d79) { // Note: CSDB-crack is f1e8
