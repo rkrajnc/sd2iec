@@ -790,7 +790,6 @@ static void handle_memexec(void) {
     uart_puthex(datacrc & 0xff);
     uart_putcrlf();
   }
-  datacrc = 0xffff;
 
   address = command_buffer[3] + (command_buffer[4]<<8);
 #ifdef CONFIG_LOADER_TURBODISK
@@ -833,6 +832,7 @@ static void handle_memexec(void) {
   }
 #endif
 
+  datacrc = 0xffff;
   detected_loader = FL_NONE;
 }
 
@@ -891,13 +891,12 @@ static void handle_memwrite(void) {
   /* Turbodisk sends the filename in the last M-W, check the previous CRC */
   if (datacrc == 0x9c9f) {
     detected_loader = FL_TURBODISK;
-  } else
+  }
 #endif
-    if (detected_loader != FL_GI_JOE)
-      detected_loader = FL_NONE;
 
   for (i=0;i<command_buffer[5];i++) {
     datacrc = _crc16_update(datacrc, command_buffer[i+6]);
+
 #ifdef CONFIG_LOADER_GIJOE
     /* Identical code, but lots of different upload variations */
     if (datacrc == 0x38a2 && command_buffer[i+6] == 0x60)
