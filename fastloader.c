@@ -1072,11 +1072,8 @@ static void geos_send_chain(uint8_t track, uint8_t sector,
       bytes = 254;
     }
 
-    /* Send length */
-    geos_transmit_byte_wait(bytes);
-
     /* Send buffer contents */
-    geos_transmit_buffer_s3(buf->data + 2, bytes);
+    geos_transmit_buffer_s2(buf->data + 2, bytes);
   } while (track != 0);
 
   geos_transmit_byte_wait(0);
