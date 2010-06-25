@@ -34,17 +34,19 @@
 #include <string.h>
 #include "config.h"
 #include "buffers.h"
+#include "diskchange.h"
+#include "display.h"
 #include "doscmd.h"
 #include "errormsg.h"
-#include "fileops.h"
-#include "parser.h"
-#include "wrapops.h"
-#include "iec-ll.h"
 #include "fastloader-ll.h"
-#include "fastloader.h"
+#include "fileops.h"
+#include "iec-ll.h"
+#include "iec.h"
 #include "led.h"
+#include "parser.h"
 #include "timer.h"
-#include "diskchange.h"
+#include "wrapops.h"
+#include "fastloader.h"
 
 uint8_t detected_loader;
 
@@ -70,6 +72,12 @@ static uint8_t check_keys(void) {
   return 0;
 }
 
+
+/*
+ *
+ *  Turbodisk
+ *
+ */
 #ifdef CONFIG_LOADER_TURBODISK
 void load_turbodisk(void) {
   uint8_t i,len,firstsector;
@@ -157,6 +165,12 @@ void load_turbodisk(void) {
 }
 #endif
 
+
+/*
+ *
+ *  Final Cartridge 3 / EXOS
+ *
+ */
 #ifdef CONFIG_LOADER_FC3
 void load_fc3(uint8_t freezed) {
   buffer_t *buf;
@@ -286,6 +300,12 @@ void save_fc3(void) {
 }
 #endif
 
+
+/*
+ *
+ *  Dreamload
+ *
+ */
 #ifdef CONFIG_LOADER_DREAMLOAD
 #ifndef set_clock_irq
 #  error "Sorry, DreamLoad is only supported on platforms with a CLK interrupt"
@@ -409,6 +429,12 @@ error:
 }
 #endif
 
+
+/*
+ *
+ * ULoad Model 3
+ *
+ */
 #ifdef CONFIG_LOADER_ULOAD3
 static uint8_t uload3_transferchain(uint8_t track, uint8_t sector, uint8_t saving) {
   buffer_t *buf;
@@ -531,6 +557,12 @@ void load_uload3(void) {
 }
 #endif
 
+
+/*
+ *
+ *  GIJoe/EPYX common code
+ *
+ */
 #if defined(CONFIG_LOADER_GIJOE) || defined(CONFIG_LOADER_EPYXCART)
 /* Returns the byte read or <0 if the user aborts */
 /* Aborting on ATN is not reliable for at least one version */
@@ -562,6 +594,12 @@ static int16_t gijoe_read_byte(void) {
 }
 #endif
 
+
+/*
+ *
+ * GI Joe
+ *
+ */
 #ifdef CONFIG_LOADER_GIJOE
 static void gijoe_send_byte(uint8_t value) {
   uint8_t i;
@@ -679,6 +717,12 @@ void load_gijoe(void) {
 }
 #endif
 
+
+/*
+ *
+ * Epyx Fast Load Cartridge
+ *
+ */
 #ifdef CONFIG_LOADER_EPYXCART
 void load_epyxcart(void) {
   uint8_t checksum = 0;
