@@ -833,8 +833,12 @@ static void handle_memexec(void) {
 #endif
 #ifdef CONFIG_LOADER_GEOS
   /* GEOS stage 1 */
-  if (detected_loader == FL_GEOS_S1 && address == 0x0457) {
-    load_geos_s1();
+  if (detected_loader == FL_GEOS_S1) {
+    if (address == 0x0457) {
+      load_geos64_s1();
+    } else if (address == 0x0470) {
+      load_geos128_s1();
+    }
   }
 
   if ((address == 0x03e2 ||
@@ -956,19 +960,21 @@ static void handle_memwrite(void) {
     /* Copy encryption key */
     buffer_t *buf = find_buffer(BUFFER_SYS_GEOSKEY);
 
-    if (buf->position < 22 + 7*32) {
+    if (buf->position < 256-32) {
       /* Middle blocks - copy completely */
       memcpy(buf->data + buf->position, command_buffer + 6, 32);
       buf->position += 32;
     } else {
       /* Last interesting block, also the last block of the loader */
-      memcpy(buf->data + buf->position, command_buffer + 6, 8);
+      memcpy(buf->data + buf->position, command_buffer + 6, 254-buf->position);
+
+      /* Same ID for both, the address can be used to distinguish them */
       detected_loader = FL_GEOS_S1;
     }
   }
 
-  if (datacrc == 0xb979) {
-    /* Stage 1 encryption key starts in this block - prepare to copy it */
+  if (datacrc == 0xb979 || datacrc == 0x2469) {
+    /* GEOS stage 1 encryption key starts in this block */
     buffer_t *buf = alloc_system_buffer();
 
     if (buf == NULL)
@@ -976,21 +982,34 @@ static void handle_memwrite(void) {
 
     stick_buffer(buf);
     buf->secondary = BUFFER_SYS_GEOSKEY;
-    buf->position = 22;
-    memcpy(buf->data, command_buffer + 16, 22);
+    if (datacrc == 0xb979) {
+      /* GEOS 64 1.3/2.0 */
+      buf->position = 32-10;
+      memcpy(buf->data, command_buffer + 6 + 10, 32-10);
+    } else { // datacrc == 0x2469
+      /* GEOS 128 2.0 */
+      buf->position = 32-15;
+      memcpy(buf->data, command_buffer + 6 + 15, 32-15);
+    }
 
     detected_loader = FL_GEOS_S1_KEY;
   }
 
   if (datacrc == 0x4d79) { // Note: CSDB-crack is f1e8
-    /* Stage 2 GEOS 1541 */
+    /* Stage 2 GEOS 64 1541 */
+    detected_loader = FL_GEOS_S23;
+  }
+
+  if (datacrc == 0xb2bc) {
+    /* Stage 2 GEOS 128 1541, runs into copy protection at the end */
     detected_loader = FL_GEOS_S23;
   }
 
   if (datacrc == 0xb272) {
-    /* Stage 3 GEOS 1541, also used by Configure */
+    /* Stage 3 GEOS 64/128 1541, also used by Configure */
     detected_loader = FL_GEOS_S23;
   }
+
 #endif
 
   if (detected_loader == FL_NONE) {

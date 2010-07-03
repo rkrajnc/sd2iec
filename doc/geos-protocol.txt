@@ -3,7 +3,7 @@ GEOS fast loader protocol
 
 Documented by Ingo Korb
 
-GEOS 2.0 uses multiple (but similiar) drive codes during its boot process,
+GEOS 64 2.0 uses multiple (but similiar) drive codes during its boot process,
 all of them uploaded using M-W. The protocol is the same for every
 drive type (FIXME: check FD/HD), but the addresses sent differ between
 drives and also between stages. The first stage loader sends hard-coded
@@ -11,6 +11,10 @@ sector chains to the computer, stage 2 and 3 receive commands (actually
 jump addresses in drive memory) from the computer. Copy protection checks
 happen in both stage 1 and 2, but the check in stage 2 is completely
 transparent for a reimplementation that does not plan on failing it.
+
+GEOS 128 2.0 uses a stage 2 loader that is almost identical to the
+GEOS 64 stage 3 loader, handling it the same in emulation will work
+because the changes are only related to copy protection checks.
 
 GEOS 1.3 uses the same stage 1 and 2 code as GEOS 2.0, but does not
 upload a stage 3 version. It was not tested in-depth, some operation
@@ -270,14 +274,15 @@ Stage 1 is a fixed-function loader that sends three hard-coded sector
 chains to the computer, decrypting the second and third by XORing the
 data bytes with parts of its own code. The decryption key can be
 captured from the M-W commands used to upload stage 1, the key
-consists of 254 bytes starting at memory address 0x042a.
+consists of 254 bytes starting at memory address 0x042a for GEOS 64 or
+0x044f for GEOS 128.
 
 To decrypt a data buffer before sending it to the computer, XOR each
 byte of the data buffer with the corresponding byte of the key, i.e.:
     for (i=0;i<254;i++)
       buffer[i] = buffer[i] ^ key[i];
 
-The stage 1 loader does the following:
+The stage 1 loader in GEOS 64 does the following:
 - set data low
 - wait until clock is low
 - transfer the sector chain starting at track 19 sector 13
@@ -288,3 +293,7 @@ The stage 1 loader does the following:
   (including decryption)
 - set data high
 - return to the standard serial bus handler
+
+In GEOS 128 the operation is basically the same, but the sector chains
+are different. The unencrypted one is 19/12, followed by decrypted
+chains 20/15, 23/6 and 24/4.

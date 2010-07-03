@@ -1079,10 +1079,27 @@ static void geos_send_chain(uint8_t track, uint8_t sector,
   geos_transmit_byte_wait(0);
 }
 
-/* GEOS stage 1 loader */
-void load_geos_s1(void) {
+static const PROGMEM uint8_t geos64_chains[] = {
+  19, 13,
+  20, 15,
+  20, 17,
+  0
+};
+
+static const PROGMEM uint8_t geos128_chains[] = {
+  19, 12,
+  20, 15,
+  23, 6,
+  24, 4,
+  0
+};
+
+/* GEOS 64 stage 1 loader */
+static void load_geos_s1(const prog_uint8_t *chainptr) {
   buffer_t *encrbuf = find_buffer(BUFFER_SYS_GEOSKEY);
   buffer_t *databuf = alloc_buffer();
+  uint8_t *encdata = NULL;
+  uint8_t track, sector;
 
   if (!encrbuf || !databuf)
     return;
@@ -1093,18 +1110,33 @@ void load_geos_s1(void) {
   set_data(0);
   while (IEC_CLOCK) ;
 
-  /* Transfer unencrypted sector chain 19:13 */
-  geos_send_chain(19, 13, databuf, NULL);
+  /* Send sector chains */
+  while (1) {
+    track = pgm_read_byte(chainptr++);
 
-  /* Transfer encrypted sector chain 20:15 */
-  geos_send_chain(20, 15, databuf, encrbuf->data);
+    if (track == 0)
+      break;
 
-  /* Transfer encrypted sector chain 20:17 */
-  geos_send_chain(20, 17, databuf, encrbuf->data);
+    sector = pgm_read_byte(chainptr++);
+
+    /* Transfer sector chain */
+    geos_send_chain(track, sector, databuf, encdata);
+
+    /* Turn on decryption after the first chain */
+    encdata = encrbuf->data;
+  }
 
   /* Done! */
   free_buffer(encrbuf);
   set_data(1);
+}
+
+void load_geos64_s1(void) {
+  load_geos_s1(geos64_chains);
+}
+
+void load_geos128_s1(void) {
+  load_geos_s1(geos128_chains);
 }
 
 #endif

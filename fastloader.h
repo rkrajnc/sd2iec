@@ -55,7 +55,8 @@ void load_uload3(void);
 void load_gijoe(void);
 void load_epyxcart(void);
 void load_geos(void);
-void load_geos_s1(void);
+void load_geos64_s1(void);
+void load_geos128_s1(void);
 
 #endif
 #endif
