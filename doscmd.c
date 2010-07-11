@@ -843,7 +843,7 @@ static void handle_memexec(void) {
 
   if ((address == 0x03e2 ||
        address == 0x03dc) &&
-      (detected_loader == FL_GEOS_S23 ||
+      (detected_loader == FL_GEOS_S23_1MHZ ||
        datacrc == 0xffff)) {
     /* GEOS stage 2/3 1541 */
     load_geos();
@@ -997,17 +997,17 @@ static void handle_memwrite(void) {
 
   if (datacrc == 0x4d79) { // Note: CSDB-crack is f1e8
     /* Stage 2 GEOS 64 1541 */
-    detected_loader = FL_GEOS_S23;
+    detected_loader = FL_GEOS_S23_1MHZ;
   }
 
   if (datacrc == 0xb2bc) {
     /* Stage 2 GEOS 128 1541, runs into copy protection at the end */
-    detected_loader = FL_GEOS_S23;
+    detected_loader = FL_GEOS_S23_1MHZ;
   }
 
   if (datacrc == 0xb272) {
     /* Stage 3 GEOS 64/128 1541, also used by Configure */
-    detected_loader = FL_GEOS_S23;
+    detected_loader = FL_GEOS_S23_1MHZ;
   }
 
 #endif

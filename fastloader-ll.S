@@ -1019,10 +1019,9 @@ epyxcart_atnabort:
 
 #ifdef CONFIG_LOADER_GEOS
         ;;
-        ;; read a byte using the GEOS protocol
+        ;; read a byte using the GEOS protocol (common part)
         ;;
-        .global geos_get_byte
-geos_get_byte:
+geos_get_byte_common:
         clr     r24
 
         ;; wait until clock is low
@@ -1049,8 +1048,16 @@ geos_get_byte:
         bst     r19, IEC_PIN_DATA          ; 1
         bld     r24, 7-1                   ; 1 - r24 = .7654...
 
+        ret                                ; 4
+
+        ;;
+        ;; read a byte using the GEOS 1MHz (1541) protocol
+        ;;
+geos_get_byte_1mhz:
+        rcall   geos_get_byte_common   ; 3
+
         ;; delay
-        delay_cycles 14*8 - 5 - 4
+        delay_cycles 14*8 - 9 - 4
 
         ;; get bits 3 and 1
         rcall   get_bits_from_clk_data ; 4+8 - r24 = .76543.1
@@ -1060,14 +1067,51 @@ geos_get_byte:
         delay_cycles 16*8 - 9 - 4
 
         ;; get bits 2 and 0
-        rcall   get_bits_from_clk_data ; 4+8 - r24 = 76543210
+        rjmp    get_bits_from_clk_data ; 4+8 - r24 = 76543210
+
+
+        ;;
+        ;; read a byte using the GEOS 2MHz (1571/81) protocol
+        ;;
+geos_get_byte_2mhz:
+        rcall   geos_get_byte_common   ; 3
+
+        ;; delay
+        delay_cycles 19*4 - 9 - 4
+
+        ;; get bits 3 and 1
+        rcall   get_bits_from_clk_data ; 4+8 - r24 = .76543.1
+        lsl     r24                    ; 1     r24 = 76543.1.
+
+        ;; delay
+        delay_cycles 22*4 - 9 - 4
+
+        ;; get bits 2 and 0
+        rjmp   get_bits_from_clk_data ; 4+8 - r24 = 76543210
+
+
+        ;;
+        ;; read a byte using the GEOS protocol
+        ;;  uses detected_loader to select the variant
+        ;;
+        .global geos_get_byte
+geos_get_byte:
+        lds     r18, detected_loader
+        cpi     r18, FL_GEOS_S23_2MHZ
+        breq    1f
+
+        ;; 1MHz version
+        rcall   geos_get_byte_1mhz
+        rjmp    2f
+
+        ;; 2MHz version
+1:      rcall   geos_get_byte_2mhz
 
         ;; post-process received value and return
-        delay_cycles 11*8
+2:      delay_cycles 11*8
         com     r24                    ; negate all bits
         clr     r25                    ; clear high byte of return value
         ret
-
 
         ;;
         ;; send a byte using the GEOS protocol
@@ -1080,16 +1124,8 @@ geos_send_byte:
         cbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA
         rcall   delay1us
 
-        sbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_SRQ
-
         ;; wait until CLOCK is low
 1:      sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
-        rjmp    1b
-
-        cbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_SRQ
-
-        ;; wait until CLOCK is high
-1:      sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
         rjmp    1b
 
         ;; preserve non-IEC lines on IEC_OUT port
@@ -1097,12 +1133,26 @@ geos_send_byte:
         andi    r19, ~(IEC_OBIT_DATA|IEC_OBIT_CLOCK|IEC_OBIT_ATN|IEC_OBIT_SRQ) ; 1
         mov     r0, r19             ; 1
 
-        ;; send bit 3+1 to bus
+        ;; prepare bits 3+1
         bst     r24, 3              ; 1 - read bit 3
         bld     r19, IEC_OPIN_CLOCK ; 1 - store in clock bit
         bst     r24, 1              ; 1 - read bit 1
         bld     r19, IEC_OPIN_DATA  ; 1 - store in data bit
-        out     _SFR_IO_ADDR(IEC_OUT), r19 ; 1 - send to bus
+
+        ;; check speeder version
+        lds     r20, detected_loader  ; 2
+        cpi     r20, FL_GEOS_S23_2MHZ ; 1
+        breq    1f                    ; 1/2
+
+        ;; delay (1MHz speeder)
+        delay_cycles 18*8 - 14
+        rjmp    2f                    ; 2
+
+        ;; delay (1MHz speeder)
+1:      delay_cycles 9*8 - 13
+
+        ;; send to bus
+2:      out     _SFR_IO_ADDR(IEC_OUT), r19 ; 1 - send to bus
 
         ;; prepare bits 2+0
         mov     r19, r0             ; 1
@@ -1112,7 +1162,7 @@ geos_send_byte:
         bld     r19, IEC_OPIN_DATA  ; 1 - store in data bit
 
         ;; delay
-        delay_cycles 20*8 - 14
+        delay_cycles 10*8 - 6
 
         ;; send to bus
         out     _SFR_IO_ADDR(IEC_OUT), r19 ; 1
@@ -1126,7 +1176,7 @@ geos_send_byte:
         bld     r19, IEC_OPIN_DATA  ; 1 - store in data bit
 
         ;; delay
-        delay_cycles 12*8 - 7
+        delay_cycles 11*8 - 7
 
         ;; send to bus
         out     _SFR_IO_ADDR(IEC_OUT), r19 ; 1
@@ -1145,7 +1195,7 @@ geos_send_byte:
         out     _SFR_IO_ADDR(IEC_OUT), r19 ; 1
 
         ;; final delay
-        delay_cycles 16*8
+        delay_cycles 20*8
 
         ret
 
