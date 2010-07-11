@@ -832,6 +832,19 @@ void load_epyxcart(void) {
  */
 #ifdef CONFIG_LOADER_GEOS
 
+/* Receive a fixed-length data block */
+static void geos_receive_datablock(uint8_t *data, uint16_t length) {
+  data += length-1;
+
+  ATOMIC_BLOCK(ATOMIC_FORCEON) {
+    while (!IEC_CLOCK);
+    set_data(1);
+    while (length--)
+      *data-- = geos_get_byte();
+  }
+  set_data(0);
+}
+
 /* Receive a data block from the computer */
 static void geos_receive_block(uint8_t *data) {
   uint8_t exitflag = 0;
@@ -861,20 +874,12 @@ static void geos_receive_block(uint8_t *data) {
   if (length == 0)
     length = 256;
 
-  data += length-1;
-
-  ATOMIC_BLOCK(ATOMIC_FORCEON) {
-    while (!IEC_CLOCK);
-    set_data(1);
-    while (length--)
-      *data-- = geos_get_byte();
-  }
-  set_data(0);
+  geos_receive_datablock(data, length);
 }
 
 /* Send a single byte to the computer after waiting for CLOCK high */
 static void geos_transmit_byte_wait(uint8_t byte) {
-   ATOMIC_BLOCK(ATOMIC_FORCEON) {
+  ATOMIC_BLOCK(ATOMIC_FORCEON) {
     /* Wait until clock is high */
     while (!IEC_CLOCK) ;
     set_data(1);
@@ -885,7 +890,7 @@ static void geos_transmit_byte_wait(uint8_t byte) {
     set_data(0);
   }
 
-  _delay_us(15); // guessed
+  _delay_us(25); // educated guess
 }
 
 /* Send data block to computer */
@@ -928,7 +933,10 @@ static void geos_transmit_status(void) {
     if (current_error == 0)
       geos_transmit_byte_wait(1);
     else
-      geos_transmit_byte_wait(2); // random non-ok job status
+      if (current_error == ERROR_WRITE_PROTECT)
+        geos_transmit_byte_wait(8);
+      else
+        geos_transmit_byte_wait(2); // random non-ok job status
   }
 }
 
@@ -944,7 +952,7 @@ static void geos_read_sector(uint8_t track, uint8_t sector, buffer_t *buf) {
 }
 
 /* GEOS WRITE operation */
-static void geos_write_sector(uint8_t track, uint8_t sector, buffer_t *buf) {
+static void geos_write_sector_41(uint8_t track, uint8_t sector, buffer_t *buf) {
   uart_putc('W');
   uart_puthex(track);
   uart_putc('/');
@@ -963,6 +971,31 @@ static void geos_write_sector(uint8_t track, uint8_t sector, buffer_t *buf) {
   /* Reset "unwritten data" feedback */
   mark_buffer_clean(buf);
 }
+
+/* GEOS WRITE_71 operation */
+static void geos_write_sector_71(uint8_t track, uint8_t sector, buffer_t *buf) {
+  uart_putc('W');
+  uart_puthex(track);
+  uart_putc('/');
+  uart_puthex(sector);
+  uart_putcrlf();
+
+  /* Provide "unwritten data present" feedback */
+  mark_buffer_dirty(buf);
+
+  /* Receive data */
+  geos_receive_datablock(buf->data, 256);
+
+  /* Write to image */
+  write_sector(buf, current_part, track, sector);
+
+  /* Send status */
+  geos_transmit_status();
+
+  /* Reset "unwritten data" feedback */
+  mark_buffer_clean(buf);
+}
+
 
 /* GEOS stage 2/3 loader */
 void load_geos(void) {
@@ -996,7 +1029,7 @@ void load_geos(void) {
       geos_transmit_status();
       break;
 
-    case 0x031f: // 1541 stage 2 status - only seen in GEOS 1.3
+    case 0x031f: // 1571; 1541 stage 2 status (only seen in GEOS 1.3)
     case 0x0325: // 1541 stage 3 status
       geos_transmit_status();
       break;
@@ -1004,6 +1037,7 @@ void load_geos(void) {
     case 0x0000: // internal QUIT
     case 0x0412: // 1541 stage 2 quit
     case 0x0420: // 1541 stage 3 quit
+    case 0x0475: // 1571 stage 3 quit
       while (!IEC_CLOCK) ;
       set_data(1);
       return;
@@ -1017,26 +1051,38 @@ void load_geos(void) {
       break;
 
     case 0x0439: // 1541 stage 3 set address
+    case 0x04a5: // 1571 stage 3 set address
       // Note: identical in stage 2, address 0428, probably unused
       device_address = cmddata[2] & 0x1f;
       display_address(device_address);
       break;
 
+    case 0x057e: // 1571 initialize
     case 0x0504: // 1541 stage 2 initialize - only seen in GEOS 1.3
     case 0x04dc: // 1541 stage 3 initialize
       /* Doesn't do anything that needs to be reimplemented */
       break;
 
     case 0x057c: // 1541 stage 2/3 write
-      geos_write_sector(cmddata[2], cmddata[3], databuf);
+      geos_write_sector_41(cmddata[2], cmddata[3], databuf);
       break;
 
     case 0x058e: // 1541 stage 2/3 read
       geos_read_sector(cmddata[2], cmddata[3], databuf);
       break;
 
+    case 0x04af: // 1571 read_and_send
+      geos_read_sector(cmddata[2], cmddata[3], databuf);
+      geos_transmit_buffer_s3(databuf->data, 256);
+      geos_transmit_status();
+      break;
+
+    case 0x05fe: // 1571 write
+      geos_write_sector_71(cmddata[2], cmddata[3], databuf);
+      break;
+
     default:
-      uart_puts_P(PSTR("unknown: "));
+      uart_puts_P(PSTR("unknown:\r\n"));
       uart_trace(cmddata, 0, 4);
       return;
     }
