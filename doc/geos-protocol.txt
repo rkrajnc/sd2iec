@@ -25,6 +25,14 @@ buffer for data and a second buffer of at least 4 bytes (no larger
 transfers have been observed yet, but the protocol could support
 up to 256 bytes containing arbitrary 6502 code) for receiving commands.
 
+During boot GEOS will try to auto-detect the drive type by reading
+large parts of the rom using M-R. The specifics of this rom check have
+not been analyzed yet, but GEOS will assume a 1541 for the boot drive
+and no drive for any other when it sees semi-random data (as in the
+implementation of M-R in sd2iec). Selecting a drive in Configure will
+also result in a rom check, but it seems to accept the choice anyway
+if nonsensical data is returned.
+
 This file is roughly ordered from lowest to highest protocol level.
 
 
@@ -32,8 +40,10 @@ Low-Level byte reception
 ------------------------
 Both data and clock should be set to high already from previous
 operations. Using the high->low transition of clock as a timing
-reference, receive bits as shown in the following table:
+reference, receive bits as shown in the following tables. The timing
+differs for 1MHz (1541) and 2MHz (1571/1581) drives.
 
+1MHz:
    Time  Clock Data
    ----------------
     0us  1->0  (1)  (timing reference)
@@ -41,6 +51,15 @@ reference, receive bits as shown in the following table:
    29us   !b6  !b7
    43us   !b3  !b1
    59us   !b2  !b0
+
+2MHz:
+   Time  Clock Data
+   ----------------
+    0us  1->0  (1)  (timing reference)
+   15us   !b4  !b5
+   29us   !b6  !b7
+   39.5us !b3  !b1
+   50.5us !b2  !b0
 
 During a block reception, the time from the completion of one byte and
 the beginning of the next is 9+11us (before+after). Without a bit of
@@ -53,21 +72,36 @@ To transmit a data byte, do this:
 - release both clock and data
 (- add a small delay so the bus can charge to high level)
 - wait until clock is low
-- wait until clock is high
-- use the following table for bit timings, using the low->high transition of
-  the clock line as timing reference:
+- use the following tables for bit timings, using the low->high transition of
+  the clock line as timing reference - there are two variations for
+  1MHz (1541) and 2MHz (1571/1581) drives:
 
+1MHz:
    Time  Clock Data
    ----------------
-    0us  0->1  (1)  (timing reference)
-  <10us   !b3  !b1  (C64-side delay from clock high to first read: 15 cycles)
+    0us  1->0  (1)  (timing reference)
+   18us   !b3  !b1
+   28us   !b2  !b0
+   39us    b4   b5
+   51us    b6   b7
+   70us    -    -   (hold time so the C64 has time to read b6/b7)
+
+2MHz:
+   Time  Clock Data
+   ----------------
+    0us  1->0  (1)  (timing reference)
+    9us   !b3  !b1
    20us   !b2  !b0
    32us    b4   b5
    44us    b6   b7
    60us    -    -   (hold time so the C64 has time to read b6/b7)
 
-Note: This description is slightly different from the implementation
-in the 1541 drive code, but should be more reliable.
+
+Note: This description assumes that the reimplementation can
+synchronize to the falling edge of the clock line with much less
+jitter than a 1541 can. The original code also tests for the rising edge
+of the 10us pulse on the clock line in order to reduce the timing
+jitter from seven to five clock cycles.
 
 
 Receiving a block
@@ -154,11 +188,27 @@ first parameter (see main loop entry below) is the track, the second
 parameter is the sector number.
 
 
-Writing a sector (WRITE)
-------------------------
-The WRITE operation receives a block into the data buffer and writes
+Reading and transmitting a sector (READ_AND_SEND)
+-------------------------------------------------
+This operation is only found in the 1571 (FIXME: 1581 too?) drive
+code. It reads the track/sector sent as parameter (as READ) and
+immediately transmits it to the computer, followed by a STATUS
+operation (same as TRANSMIT_3).
+
+
+Writing a sector (WRITE_41)
+---------------------------
+The WRITE_41 operation receives a block into the data buffer and writes
 it to the track/sector specified by the first/second parameter (see
 main loop entry below).
+
+
+Writing a sector (WRITE_71)
+---------------------------
+The 1571 code uses a slightly different WRITE operation. (FIXME: 81?)
+It still uses the first/second parameter as track/sector, but always
+receives exactly 256 bytes (without length byte prefix). After
+receiving the data, the STATUS operation is called
 
 
 Exiting the fastloader (QUIT)
@@ -216,18 +266,23 @@ drive variations until now. (FIXME: Unique between all variations?)
 
 Addr   Function
 ----  ----------
-031f  STATUS      (1541 stage 2 - only used in GEOS 1.3)
-0320  TRANSMIT_3  (1541 stage 3)
-0325  STATUS      (1541 stage 3)
-0412  QUIT        (1541 stage 2)
-0420  QUIT        (1541 stage 3)
-0428  SET_ADDRESS (1541 stage 2 - guessed from code, not seen in action yet)
-0432  TRANSMIT_2  (1541 stage 2)
-0439  SET_ADDRESS (1541 stage 3)
-04dc  INITIALIZE  (1541 stage 3)
-0504  INITIALIZE  (1541 stage 2 - only used in GEOS 1.3)
-057c  WRITE       (1541 stage 2 and 3)
-058e  READ        (1541 stage 2 and 3)
+031f  STATUS        (1541 stage 2 - only used in GEOS 1.3; 1571)
+0320  TRANSMIT_3    (1541 stage 3)
+0325  STATUS        (1541 stage 3)
+0412  QUIT          (1541 stage 2)
+0420  QUIT          (1541 stage 3)
+0428  SET_ADDRESS   (1541 stage 2 - guessed from code, not seen in action yet)
+0432  TRANSMIT_2    (1541 stage 2)
+0439  SET_ADDRESS   (1541 stage 3)
+0475  QUIT          (1571)
+04a5  SET_ADDRESS   (1571)
+04af  READ_AND_SEND (1571)
+04dc  INITIALIZE    (1541 stage 3)
+0504  INITIALIZE    (1541 stage 2 - only used in GEOS 1.3)
+057c  WRITE_41      (1541 stage 2 and 3)
+057e  INITIALIZE    (1571)
+058e  READ          (1541 stage 2 and 3)
+05fe  WRITE_71      (1571)
 
 
 Stage 1 sector chain transfer

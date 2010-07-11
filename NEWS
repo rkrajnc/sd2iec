@@ -1,5 +1,5 @@
 2010-xx-xx - release 0.10.0
-        - GEOS support (d64 images only)
+        - GEOS support (d64/d71 images only)
 
 2010-06-21 - release 0.9.2
         - Bugfix: Rename was broken on FAT
