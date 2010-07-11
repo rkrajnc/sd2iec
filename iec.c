@@ -288,21 +288,21 @@ static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
   } while (!(iec_pin() & IEC_BIT_DATA));
 
   for (i=0;i<8;i++) {
-    if (!(iec_pin() & IEC_BIT_DATA)) {
+    if (!(iec_pin() & IEC_BIT_DATA)) { // E95C
       iec_data.bus_state = BUS_CLEANUP;
       return -1;
     }
 
     set_data(data & 1<<i);
     _delay_us(70);    // Implicid delay, fudged
-    set_clock(1);
+    set_clock(1);     // E976
     if (globalflags & VC20MODE)
       _delay_us(34);  // Calculated delay
     else
-      _delay_us(69);  // Calculated delay
+      _delay_us(75);  // Calculated delay
 
-    set_clock(0);
-    set_data(1);
+    set_clock(0);     // FEFB
+    set_data(1);      // FEFE
     _delay_us(5);     // Settle time
   }
 
