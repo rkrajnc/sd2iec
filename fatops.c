@@ -776,7 +776,7 @@ uint8_t fat_opendir(dh_t *dh, path_t *path) {
 int8_t fat_readdir(dh_t *dh, cbmdirent_t *dent) {
   FRESULT res;
   FILINFO finfo;
-  uint8_t *ptr;
+  uint8_t *ptr,*nameptr;
   uint8_t typechar;
 
   finfo.lfn = entrybuf;
@@ -804,26 +804,27 @@ int8_t fat_readdir(dh_t *dh, cbmdirent_t *dent) {
   /* Copy name */
   ustrcpy(dent->pvt.fat.realname, finfo.fname);
 
-  if (!finfo.lfn[0] || ustrlen(finfo.lfn) > CBM_NAME_LENGTH) {
-    ustrcpy(dent->name, finfo.fname);
+  if (!finfo.lfn[0] || ustrlen(finfo.lfn) > CBM_NAME_LENGTH+4) {
+    nameptr = finfo.fname;
 
-    ptr = dent->name;
+    ptr = nameptr;
     while (*ptr) {
       if (*ptr == '~') *ptr = 0xff;
       ptr++;
     }
   } else {
     /* Convert only LFNs to PETSCII, 8.3 are always upper-case */
-    ustrcpy(dent->name, finfo.lfn);
-    asc2pet(dent->name);
+    nameptr = finfo.lfn;
+    asc2pet(nameptr);
   }
 
   /* File type */
   if (finfo.fattrib & AM_DIR) {
     dent->typeflags = TYPE_DIR;
     /* Hide directories starting with . */
-    if (dent->name[0] == '.')
+    if (*nameptr == '.')
       dent->typeflags |= FLAG_HIDDEN;
+
   } else {
     /* Search for the file extension */
     exttype_t ext = check_extension(finfo.fname, &ptr);
@@ -843,8 +844,7 @@ int8_t fat_readdir(dh_t *dh, cbmdirent_t *dent) {
       if (ustrcmp_P(entrybuf, p00marker))
         goto notp00;
 
-      /* Copy the internal name */
-      memset(dent->name, 0, sizeof(dent->name));
+      /* Copy the internal name - dent->name is still zeroed */
       ustrcpy(dent->name, entrybuf+P00_CBMNAME_OFFSET);
 
       /* Some programs pad the name with 0xa0 instead of 0 */
@@ -859,8 +859,8 @@ int8_t fat_readdir(dh_t *dh, cbmdirent_t *dent) {
     } else if (ext == EXT_IS_TYPE && (globalflags & EXTENSION_HIDING)) {
       /* Type extension */
       typechar = *ptr;
-      uint8_t i = ustrlen(dent->name)-4;
-      memset(dent->name+i, 0, sizeof(dent->name)-i);
+      uint8_t i = ustrlen(nameptr)-4;
+      nameptr[i] = 0;
 
     } else { /* ext == EXT_UNKNOWN or EXT_IS_TYPE but hiding disabled */
       /* Unknown extension: PRG */
@@ -885,6 +885,15 @@ int8_t fat_readdir(dh_t *dh, cbmdirent_t *dent) {
     case 'R':
       dent->typeflags = TYPE_REL;
       break;
+    }
+  }
+
+  /* Copy file name into dirent if it fits */
+  if (dent->opstype != OPSTYPE_FAT_X00) {
+    if (ustrlen(nameptr) > CBM_NAME_LENGTH) {
+      ustrcpy(dent->name, finfo.fname);
+    } else {
+      ustrcpy(dent->name, nameptr);
     }
   }
 
