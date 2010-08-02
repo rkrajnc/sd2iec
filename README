@@ -693,6 +693,25 @@ work with more than one device on the bus.
 While sleep mode is active, the red LED will be on and the green LED
 will be off.
 
+Card detection test:
+====================
+Because some SD slots seem to suffer from bad/unreliable card detect
+switches a test mode for this has been implemented on the units that
+have SD card support. If you hold down the PREV button during powerup,
+the red (dirty) LED will reflect the card detect status - if the LED
+is on the card detect switch is closed. Please note that this does not
+indicate successful communication with the card but merely that the
+mechanical switch in the SD card slot is closed.
+
+On units with two sd2iec-controlled LEDs, the green (busy) LED will
+indicate the state of the write protect switch - if the LED is lit,
+the write protection is on. Due to the way the write protect notch
+works on SD cards, the indication is only valid when the card is fully
+inserted into the slot.
+
+To exit from the diagnostic mode, power-cycle the device or push the
+NEXT button once.
+
 Other important notes:
 ======================
 - When you hold down the disk change (forward) button during power

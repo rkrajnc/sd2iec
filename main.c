@@ -168,6 +168,19 @@ int main(void) {
 
   set_busy_led(0);
 
+#ifdef HAVE_SD
+  /* card switch diagnostic aid - hold down PREV button to use */
+  if (!(BUTTON_PIN & BUTTON_PREV)) {
+    while (BUTTON_PIN & BUTTON_NEXT) {
+      set_dirty_led(SDCARD_DETECT);
+# ifdef BUSY_LED_ON
+      set_busy_led(SDCARD_WP);
+# endif
+    }
+    reset_key(0xff);
+  }
+#endif
+
   iec_mainloop();
 
   while (1);
