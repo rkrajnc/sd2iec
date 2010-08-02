@@ -1,3 +1,8 @@
+2010-08-02 - release 0.9.3
+        - Bugfix: Extension hiding works again with names >12 characters
+        - Bugfix: Increase data hold time during standard TALK
+        - Testing aid: card detect-to-LED function
+
 2010-06-21 - release 0.9.2
         - Bugfix: Rename was broken on FAT
         - Turbodisk is now disabled when running on internal RC clock
