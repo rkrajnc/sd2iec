@@ -1097,8 +1097,8 @@ geos_get_byte_2mhz:
         .global geos_get_byte
 geos_get_byte:
         lds     r18, detected_loader
-        cpi     r18, FL_GEOS_S23_2MHZ
-        breq    1f
+        cpi     r18, FL_GEOS_S23_1541
+        brne    1f
 
         ;; 1MHz version
         rcall   geos_get_byte_1mhz
@@ -1141,8 +1141,8 @@ geos_send_byte:
 
         ;; check speeder version
         lds     r20, detected_loader  ; 2
-        cpi     r20, FL_GEOS_S23_2MHZ ; 1
-        breq    1f                    ; 1/2
+        cpi     r20, FL_GEOS_S23_1541 ; 1
+        brne    1f                    ; 1/2
 
         ;; delay (1MHz speeder)
         delay_cycles 18*8 - 14

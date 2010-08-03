@@ -39,8 +39,9 @@
 #define FL_EPYXCART       9
 #define FL_GEOS_S1       10
 #define FL_GEOS_S1_KEY   11
-#define FL_GEOS_S23_1MHZ 12
-#define FL_GEOS_S23_2MHZ 13
+#define FL_GEOS_S23_1541 12
+#define FL_GEOS_S23_1571 13
+#define FL_GEOS_S23_1581 14
 
 #ifndef __ASSEMBLER__
 

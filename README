@@ -530,20 +530,22 @@ Note: Using sd2iec without an external crystal or similiar precise
 
   GEOS
   ----
-  GEOS 2.0 can be booted from D64/D71 images made from original disks
-  as well as disks created using geoMakeBoot (make sure to configure
-  the system for a 1541 or 1571 before using geoMakeBoot). GEOS
+  GEOS 2.0 can be booted from D64 images made from original disks
+  as well as D41/71/81 images created using geoMakeBoot (make sure to
+  Configure the system for a 1541/1571/1581 before using geoMakeBoot). GEOS
   detects sd2iec as a 1541 drive and won't recognize it as drive B
   until it is explicitly enabled in Configure because its drive detection
   reads large parts of the rom which are not emulated yet. Selecting
-  1571 as the drive type in Configure does work, although no testing
-  with D71 disk images has been done yet.
+  1571/1571 as the drive type in Configure does work, but only limited
+  testing with D71/D81 disk images has been done yet.
 
   GEOS 1.3 may or may not work - it boots, but wasn't tested in-depth.
   Wheels will not work, as will D81 images.
 
   Using the buttons for changing the current disk image is supported,
-  but do make sure that you only access D64/D71 disk images.
+  but do make sure that you only access disk images that the drive
+  type that is selected in GEOS would support (i.e. D64 for a 1541,
+  D64/D71 for a 1571 and D81 for a 1581).
 
 JiffyDOS:
 =========

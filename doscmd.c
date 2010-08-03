@@ -834,6 +834,8 @@ static void handle_memexec(void) {
 #ifdef CONFIG_LOADER_GEOS
   /* GEOS stage 1 */
   if (detected_loader == FL_GEOS_S1) {
+    /* The assembler module checks for 1541/other using this value */
+    detected_loader = FL_GEOS_S23_1541;
     if (address == 0x0457) {
       load_geos64_s1();
     } else if (address == 0x0470) {
@@ -843,17 +845,26 @@ static void handle_memexec(void) {
 
   if ((address == 0x03e2 ||
        address == 0x03dc) &&
-      (detected_loader == FL_GEOS_S23_1MHZ ||
+      (detected_loader == FL_GEOS_S23_1541 ||
        datacrc == 0xffff)) {
     /* GEOS stage 2/3 1541 */
+    detected_loader = FL_GEOS_S23_1541;
     load_geos();
   }
 
   if (address == 0x03ff &&
-      (detected_loader == FL_GEOS_S23_2MHZ ||
+      (detected_loader == FL_GEOS_S23_1571 ||
        datacrc == 0xffff)) {
     /* GEOS stage 3 1571 */
-    detected_loader = FL_GEOS_S23_2MHZ;
+    detected_loader = FL_GEOS_S23_1571;
+    load_geos();
+  }
+
+  if (address == 0x040f &&
+      (detected_loader == FL_GEOS_S23_1581 ||
+       datacrc == 0xffff)) {
+    /* GEOS 1581 */
+    detected_loader = FL_GEOS_S23_1581;
     load_geos();
   }
 #endif
@@ -1005,22 +1016,27 @@ static void handle_memwrite(void) {
 
   if (datacrc == 0x4d79) { // Note: Antitrack/Cosmos crack is f1e8
     /* Stage 2 GEOS 64 1541 */
-    detected_loader = FL_GEOS_S23_1MHZ;
+    detected_loader = FL_GEOS_S23_1541;
   }
 
   if (datacrc == 0xb2bc) {
     /* Stage 2 GEOS 128 1541, runs into copy protection at the end */
-    detected_loader = FL_GEOS_S23_1MHZ;
+    detected_loader = FL_GEOS_S23_1541;
   }
 
   if (datacrc == 0xb272) {
     /* Stage 3 GEOS 64/128 1541 (b272), from Configure */
-    detected_loader = FL_GEOS_S23_1MHZ;
+    detected_loader = FL_GEOS_S23_1541;
   }
 
   if (datacrc == 0xdaed) {
     /* Stage 3 GEOS 64/128 1571 (daed), from Configure */
-    detected_loader = FL_GEOS_S23_2MHZ;
+    detected_loader = FL_GEOS_S23_1571;
+  }
+
+  if (datacrc == 0x94ac) {
+    /* GEOS 64/128 1581, from Configure */
+    detected_loader = FL_GEOS_S23_1581;
   }
 
 #endif

@@ -1030,13 +1030,26 @@ void load_geos(void) {
       break;
 
     case 0x031f: // 1571; 1541 stage 2 status (only seen in GEOS 1.3)
+                 // 1581 transmit
+      if (detected_loader == FL_GEOS_S23_1581) {
+        if (cmddata[2] & 0x80) {
+          geos_transmit_buffer_s3(databuf->data, 2);
+        } else {
+          geos_transmit_buffer_s3(databuf->data, 256);
+        }
+      }
+      geos_transmit_status();
+      break;
+
     case 0x0325: // 1541 stage 3 status
+    case 0x032b: // 1581 status
       geos_transmit_status();
       break;
 
     case 0x0000: // internal QUIT
     case 0x0412: // 1541 stage 2 quit
     case 0x0420: // 1541 stage 3 quit
+    case 0x0457: // 1581 quit
     case 0x0475: // 1571 stage 3 quit
       while (!IEC_CLOCK) ;
       set_data(1);
@@ -1057,9 +1070,11 @@ void load_geos(void) {
       display_address(device_address);
       break;
 
-    case 0x057e: // 1571 initialize
-    case 0x0504: // 1541 stage 2 initialize - only seen in GEOS 1.3
+    case 0x049b: // 1581 initialize
+    case 0x04b9: // 1581 flush
     case 0x04dc: // 1541 stage 3 initialize
+    case 0x0504: // 1541 stage 2 initialize - only seen in GEOS 1.3
+    case 0x057e: // 1571 initialize
       /* Doesn't do anything that needs to be reimplemented */
       break;
 
@@ -1068,6 +1083,7 @@ void load_geos(void) {
       break;
 
     case 0x058e: // 1541 stage 2/3 read
+    case 0x04cc: // 1581 read
       geos_read_sector(cmddata[2], cmddata[3], databuf);
       break;
 
@@ -1077,6 +1093,7 @@ void load_geos(void) {
       geos_transmit_status();
       break;
 
+    case 0x047c: // 1581 write
     case 0x05fe: // 1571 write
       geos_write_sector_71(cmddata[2], cmddata[3], databuf);
       break;
