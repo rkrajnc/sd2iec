@@ -29,6 +29,11 @@ fastloader.
 Please note: Whenever this file talks about "D64 images" the text applies to
 all Dxx image types, i.e. D64/D71/D81/DNP unless specifically noted.
 
+If you are the author of a program that needs to detect sd2iec for
+some reason, DO NOT use M-R for this purpose. Use the UI command
+instead and check the message you get for "sd2iec" and "uiec" instead.
+
+
 Supported commands:
 ===================
 - General notes:
@@ -353,6 +358,11 @@ Supported commands:
   - XS:name  Set up a swap list - see "Changing Disk Images" below.
     XS       Disable swap list
 
+  - XR:name  Set the file used for file-based M-R emulation.
+    XR       Disable file-based M-R emulation.
+             See "M-R, M-W, M-E" below. This setting can be
+             permanently saved in the EEPROM using XW.
+
   - XW       Store configuration to EEPROM
              This commands stores the current configuration in the EEPROM.
              It will automatically be read when the AVR is reset, so
@@ -382,11 +392,41 @@ Supported commands:
              to the short name of the hardware sd2iec was compiled for).
 
 - M-R, M-W, M-E
-  Memory reading returns random data of the requested length. Memory writing
-  knows about the address used for changing the device address on a 1541 and
-  will change the address of sd2iec to the requested value. It will also
-  check if the transmitted data corresponds to any of the known software
-  fastloaders so the correct emulation code can be used when M-E is called.
+  When no file is set up using XR, M-R will check a small internal
+  table of common drive-detection addresses and return data that
+  forces most of the supported fast loaders into a compatible mode
+  (e.g. 1541 mode for Dreamload and ULoad Model 3, disabled fastloader
+  for Action Replay 6). If the address is not recognized, more-or-less
+  random data will be returned.
+
+  Unfortunately GEOS reads rather large parts of the drive rom using
+  M-R to detect the drive, which cannot be reasonably added into the
+  internal table. To enable the GEOS drive detection to work properly
+  with sd2iec and to allow switching between 1541/71/81 modes,
+  file-based M-R emulation has been implemented. If a file has been
+  set up as M-R data source using the XR command, its contents will be
+  returned for M-R commands that try to read an address in the range
+  of $8000-$ffff. The rom file should be a copy of the rom contents of
+  a 1541/71/81 drive (any headers will be skipped automatically), its
+  name must be 16 characters or less. When an M-R command is received,
+  the file will be searched in three locations on the storage medium:
+    1) in the current directory of the current partition
+    2) in the root directory of the current partition
+    3) in the root directory of the first partition
+
+  The internal emulation table will be used if the file wasn't found
+  in any of those locations or an error occured while reading
+  it. Please be aware that the rom file is ONLY used for M-R
+  commands. Except for some very specific situations where drive
+  detection fails (e.g. GEOS) it will probably decrease compatibility
+  of sd2iec because most of the implemented fast loaders will only
+  recognize the 1541 variation of the loader.
+
+  Memory writing knows about the address used for changing the device
+  address on a 1541 and will change the address of sd2iec to the
+  requested value. It will also check if the transmitted data
+  corresponds to any of the known software fastloaders so the correct
+  emulation code can be used when M-E is called.
 
 - E-R, E-W
   Both commands work like M-R and M-W, but instead of reading/writing RAM
@@ -484,8 +524,9 @@ Note: Using sd2iec without an external crystal or similiar precise
   Action Replay 6
   ---------------
   The AR6 reads a byte from the drive rom to check which fastloader it should
-  use. sd2iec returns a value that should force the cartridge to use
-  the standard kernal loader instead of its (still unsupported) fastloader.
+  use. When file-based M-R emulation is disabled sd2iec returns a value that
+  should force the cartridge to use the standard kernal loader instead of its
+  many (unsupported) fastloaders.
 
   Dreamload
   ---------
@@ -532,15 +573,16 @@ Note: Using sd2iec without an external crystal or similiar precise
   ----
   GEOS 2.0 can be booted from D64 images made from original disks
   as well as D41/71/81 images created using geoMakeBoot (make sure to
-  Configure the system for a 1541/1571/1581 before using geoMakeBoot). GEOS
-  detects sd2iec as a 1541 drive and won't recognize it as drive B
-  until it is explicitly enabled in Configure because its drive detection
-  reads large parts of the rom which are not emulated yet. Selecting
-  1571/1571 as the drive type in Configure does work, but only limited
-  testing with D71/D81 disk images has been done yet.
+  Configure the system for a 1541/1571/1581 before using geoMakeBoot).
+  When file-based M-R emulation is disabled, GEOS may detect sd2iec as
+  a 1541 or 1581, depending on the version of Configure used. This may
+  cause the system to fail to boot, e.g. if sd2iec is detected as a 1581
+  while booting from a D64 disk image. It is recommended to set up file-
+  based M-R emulation when using GEOS to avoid these problems.
 
   GEOS 1.3 may or may not work - it boots, but wasn't tested in-depth.
-  Wheels will not work, as will D81 images.
+  Wheels will not work; Gateway seems to work but was not tested
+  beyond booting it from a D64 image.
 
   Using the buttons for changing the current disk image is supported,
   but do make sure that you only access disk images that the drive

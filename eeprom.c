@@ -26,15 +26,17 @@
 
 #include <avr/eeprom.h>
 #include <avr/io.h>
+#include <string.h>
 #include "config.h"
 #include "diskio.h"
 #include "fatops.h"
 #include "flags.h"
 #include "iec.h"
 #include "timer.h"
+#include "ustring.h"
 #include "eeprom.h"
 
-#include "uart.h"
+uint8_t rom_filename[ROM_NAME_LENGTH+1];
 
 /**
  * struct storedconfig - in-eeprom data structure
@@ -49,6 +51,7 @@
  * @drvflags0  : 16 bits of drv mappings, organized as 4 nybbles.
  * @drvflags1  : 16 bits of drv mappings, organized as 4 nybbles.
  * @imagedirs  : Disk images-as-directory mode
+ * @romname    : M-R rom emulation file name (zero-padded, but not terminated)
  *
  * This is the data structure for the contents of the EEPROM.
  *
@@ -67,6 +70,7 @@ static EEMEM struct {
   uint16_t drvconfig0;
   uint16_t drvconfig1;
   uint8_t  imagedirs;
+  uint8_t  romname[ROM_NAME_LENGTH];
 } storedconfig;
 
 /**
@@ -85,6 +89,7 @@ void read_configuration(void) {
   globalflags         |= FAT32_FREEBLOCKS;     /* Calculate the number of free blocks on FAT32 */
   file_extension_mode  = 1;                    /* Store x00 extensions except for PRG */
   set_drive_config(get_default_driveconfig()); /* Set the default drive configuration */
+  memset(rom_filename, 0, sizeof(rom_filename));
 
   /* Use the NEXT button to skip reading the EEPROM configuration */
   if (!(BUTTON_PIN & BUTTON_NEXT)) {
@@ -134,6 +139,9 @@ void read_configuration(void) {
   if (size > 13)
     image_as_dir = eeprom_read_byte(&storedconfig.imagedirs);
 
+  if (size > 29)
+    eeprom_read_block(rom_filename, &storedconfig.romname, ROM_NAME_LENGTH);
+
   /* Paranoia: Set EEPROM address register to the dummy entry */
   EEAR = 0;
 }
@@ -160,6 +168,8 @@ void write_configuration(void) {
   eeprom_write_word(&storedconfig.drvconfig1, drive_config >> 16);
 #endif
   eeprom_write_byte(&storedconfig.imagedirs, image_as_dir);
+  memset(rom_filename+ustrlen(rom_filename), 0, sizeof(rom_filename)-ustrlen(rom_filename));
+  eeprom_write_block(rom_filename, &storedconfig.romname, ROM_NAME_LENGTH);
 
   /* Calculate checksum over EEPROM contents */
   checksum = 0;

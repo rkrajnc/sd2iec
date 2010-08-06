@@ -33,9 +33,11 @@
 #include "buffers.h"
 #include "diskio.h"
 #include "display.h"
+#include "eeprom.h"
 #include "fatops.h"
 #include "flags.h"
 #include "led.h"
+#include "ustring.h"
 #include "utils.h"
 #include "errormsg.h"
 
@@ -207,7 +209,11 @@ void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
       *msg++ = 'I';
       msg = appendnumber(msg, image_as_dir);
 
-      msg--;
+      *msg++ = ':';
+      *msg++ = 'R';
+      ustrcpy(msg, rom_filename);
+      msg += ustrlen(rom_filename);
+
       break;
     case 1: // Drive Config
       *msg++ = 'D';

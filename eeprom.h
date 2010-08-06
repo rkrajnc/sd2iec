@@ -27,6 +27,10 @@
 #ifndef EEPROM_H
 #define EEPROM_H
 
+#define ROM_NAME_LENGTH 16
+
+extern uint8_t rom_filename[ROM_NAME_LENGTH+1];
+
 void read_configuration(void);
 void write_configuration(void);
 

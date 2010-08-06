@@ -41,6 +41,7 @@
 #include "errormsg.h"
 #include "fastloader.h"
 #include "fatops.h"
+#include "ff.h"
 #include "flags.h"
 #include "iec.h"
 #include "m2iops.h"
@@ -56,6 +57,8 @@
 #define CURSOR_RIGHT 0x1d
 
 static void (*restart_call)(void) = 0;
+
+static FIL romfile;
 
 typedef struct magic_value_s {
   uint16_t address;
@@ -875,6 +878,7 @@ static void handle_memexec(void) {
 
 /* --- M-R --- */
 static void handle_memread(void) {
+  FRESULT res;
   uint16_t address, check;
   magic_value_t *p;
 
@@ -883,15 +887,65 @@ static void handle_memread(void) {
 
   address = command_buffer[3] + (command_buffer[4]<<8);
 
-  /* Check some special addresses used for drive detection. */
-  p = (magic_value_t*) c1541_magics;
-  while ( (check = pgm_read_word(&p->address)) ) {
-    if (check == address) {
-      error_buffer[0] = pgm_read_byte(p->val);
-      error_buffer[1] = pgm_read_byte(p->val + 1);
-      break;
+  if (address >= 0x8000 && rom_filename[0] != 0) {
+    /* Try to use the rom file as data source - look in the current dir first */
+    partition[current_part].fatfs.curr_dir = partition[current_part].current_dir.fat;
+    res = f_open(&partition[current_part].fatfs, &romfile, rom_filename, FA_READ | FA_OPEN_EXISTING);
+
+    if (res != FR_OK) {
+      /* Not successful, try root dir */
+      partition[current_part].fatfs.curr_dir = 0;
+      res = f_open(&partition[current_part].fatfs, &romfile, rom_filename, FA_READ | FA_OPEN_EXISTING);
+
+      if (res != FR_OK) {
+        /* Not successful, try root of drive 0 */
+        partition[0].fatfs.curr_dir = 0;
+        res = f_open(&partition[0].fatfs, &romfile, rom_filename, FA_READ | FA_OPEN_EXISTING);
+
+        if (res != FR_OK)
+          /* No file available - use internal table */
+          goto use_internal;
+      }
     }
-    p++;
+
+    /* One of the f_open calls was successful */
+    address -= 0x8000;
+    if (romfile.fsize < 32*1024U)
+      /* Allow 16K 1541 roms */
+      address &= 0x3fff;
+
+    if ((romfile.fsize & 0x3fff) != 0)
+      /* Skip header bytes */
+      address += romfile.fsize & 0x3fff;
+
+    res = f_lseek(&romfile, address);
+    if (res != FR_OK)
+      goto use_internal;
+
+    /* Clamp maximum read length to buffer size */
+    uint8_t bytes = command_buffer[5];
+    if (bytes > sizeof(error_buffer))
+      bytes = sizeof(error_buffer);
+
+    UINT bytesread;
+    res = f_read(&romfile, error_buffer, bytes, &bytesread);
+    if (res != FR_OK || bytesread != bytes)
+      goto use_internal;
+
+    /* Note: f_close isn't neccessary in FatFs for read-only files */
+
+  } else {
+  use_internal:
+    /* Check some special addresses used for drive detection. */
+    p = (magic_value_t*) c1541_magics;
+    while ( (check = pgm_read_word(&p->address)) ) {
+      if (check == address) {
+        error_buffer[0] = pgm_read_byte(p->val);
+        error_buffer[1] = pgm_read_byte(p->val + 1);
+        break;
+      }
+      p++;
+    }
   }
 
   /* possibly the host wants to read more bytes than error_buffer size */
@@ -1650,6 +1704,20 @@ static void parse_xcommand(void) {
     /* Write configuration */
     write_configuration();
     set_error_ts(ERROR_STATUS,device_address,0);
+    break;
+
+  case 'R':
+    /* Set Rom-file */
+    if (command_buffer[2] == ':') {
+      if (command_length > ROM_NAME_LENGTH+3) {
+        set_error(ERROR_SYNTAX_TOOLONG);
+      } else {
+        ustrcpy(rom_filename, command_buffer+3);
+      }
+    } else {
+      /* Clear rom name */
+      rom_filename[0] = 0;
+    }
     break;
 
   case 'S':
