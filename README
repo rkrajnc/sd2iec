@@ -652,7 +652,7 @@ to the disk change pin.
 
 If your circuit doesn't have a disk change pin/button you might be able to
 add it yourself:
-- For the original MMC2IEC and the NKC MMC2IEC:
+- For the original MMC2IEC:
   Connect a button from PA4 to ground. PA4 is pin 36 on the DIL version
   of the controller or pin 33 on the surface-mount version.
 - For Shadowolf's MMC2IEC 1.x PCBs:
@@ -709,7 +709,7 @@ ignored until you send XS, killing the nice "it just works" feeling).
 FIXME: Integrate the following into the preceding
 
 The second disk change button is on
-- PA5 for LarsP/NKC
+- PA5 for LarsP
 - PC3 for Shadowolf's MMC2IEC 1.x
 - PC2 for Shadowolf's sd2iec 1.x ("Reserve" on the header)
 - PG4 for uIEC

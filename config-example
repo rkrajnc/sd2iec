@@ -94,7 +94,8 @@ CONFIG_LOADER_GEOS=y
 #   3 - original MMC2IEC
 #   4 - uIEC
 #   5 - Shadowolf sd2iec PCBs version 1.x
-#   6 - NKC-modified MMC2IEC
+#   6 - unused, was NKC-modified MMC2IEC
+#   7 - uIEC/SD
 CONFIG_HARDWARE_VARIANT=1
 CONFIG_HARDWARE_NAME=sd2iec-example
 

@@ -469,53 +469,7 @@
 #  endif
 
 
-#elif CONFIG_HARDWARE_VARIANT == 6
-/* Hardware configuration: NKC MMC2IEC */
-#  define HW_NAME "SD2IEC"
-#  define HAVE_SD
-#  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
-#  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
-#  if defined __AVR_ATmega32__
-#    define SD_CHANGE_SETUP()   do { MCUCR |= _BV(ISC00); GICR |= _BV(INT0); } while(0)
-#  elif defined __AVR_ATmega644__ || defined __AVR_ATmega644P__ || defined __AVR_ATmega1284P__
-#    define SD_CHANGE_SETUP()   do { EICRA |= _BV(ISC00); EIMSK |= _BV(INT0); } while(0)
-#  else
-#    error Unknown chip!
-#  endif
-#  define SD_CHANGE_VECT        INT0_vect
-#  define SDCARD_WP             (PIND & _BV(PD6))
-#  define SDCARD_WP_SETUP()     do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
-#  define SD_CHANGE_ICR         MCUCR
-#  define SD_SUPPLY_VOLTAGE     (1L<<21)
-#  define DEVICE_SELECT         (8+!(PINA & _BV(PA2))+2*!(PINA & _BV(PA3)))
-#  define DEVICE_SELECT_SETUP() do {        \
-             DDRA  &= ~(_BV(PA2)|_BV(PA3)); \
-             PORTA |=   _BV(PA2)|_BV(PA3);  \
-          } while (0)
-#  define BUSY_LED_SETDDR()     DDRA  |= _BV(PA0)
-#  define BUSY_LED_ON()         PORTA &= ~_BV(PA0)
-#  define BUSY_LED_OFF()        PORTA |= _BV(PA0)
-#  define DIRTY_LED_SETDDR()    DDRA  |= _BV(PA1)
-#  define DIRTY_LED_ON()        PORTA &= ~_BV(PA1)
-#  define DIRTY_LED_OFF()       PORTA |= _BV(PA1)
-#  define DIRTY_LED_PORT        PORTA
-#  define DIRTY_LED_BIT()       _BV(PA1)
-#  define IEC_PIN               PINB
-#  define IEC_DDR               DDRB
-#  define IEC_PORT              PORTB
-#  define IEC_PIN_ATN           PB0
-#  define IEC_PIN_DATA          PB1
-#  define IEC_PIN_CLOCK         PB2
-#  define IEC_PIN_SRQ           PB3
-#  define IEC_ATN_INT_VECT      PCINT1_vect
-#  define IEC_ATN_INT_SETUP()   do { PCICR |= _BV(PCIE1); PCIFR |= _BV(PCIF1); } while (0)
-#  define IEC_PCMSK             PCMSK1
-#  define BUTTON_PIN            PINA
-#  define BUTTON_PORT           PORTA
-#  define BUTTON_DDR            DDRA
-#  define BUTTON_MASK           (_BV(PA4)|_BV(PA5))
-#  define BUTTON_NEXT           _BV(PA4)
-#  define BUTTON_PREV           _BV(PA5)
+/* Hardware configuration 6 was old NKC MMC2IEC */
 
 
 #elif CONFIG_HARDWARE_VARIANT == 7
