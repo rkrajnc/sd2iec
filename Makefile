@@ -259,7 +259,7 @@ CFLAGS += -ffunction-sections -fdata-sections
 # these are needed for GCC 4.3.2, which is more aggressive at inlining
 # gcc-4.2 knows one of those, but it tends to increase code size
 ifeq ($(shell $(CC) --version|$(AWK) -f gcctest.awk),YES)
-CFLAGS += --param inline-call-cost=3
+#CFLAGS += --param inline-call-cost=3
 CFLAGS += -fno-inline-small-functions
 CFLAGS += -fno-move-loop-invariants
 CFLAGS += -fno-split-wide-types
