@@ -73,8 +73,8 @@ To transmit a data byte, do this:
 (- add a small delay so the bus can charge to high level)
 - wait until clock is low
 - use the following tables for bit timings, using the low->high transition of
-  the clock line as timing reference - there are two variations for
-  1MHz (1541) and 2MHz (1571/1581) drives:
+  the clock line as timing reference - there are three variations for
+  1MHz (1541), 2MHz (1571/1581 in Configure 2.0 or 2.1) drives:
 
 1MHz:
    Time  Clock Data
@@ -86,7 +86,7 @@ To transmit a data byte, do this:
    51us    b6   b7
    70us    -    -   (hold time so the C64 has time to read b6/b7)
 
-2MHz:
+2MHz for 1571 (always) and 1581 (Configure 2.0):
    Time  Clock Data
    ----------------
     0us  1->0  (1)  (timing reference)
@@ -96,12 +96,22 @@ To transmit a data byte, do this:
    44us    b6   b7
    60us    -    -   (hold time so the C64 has time to read b6/b7)
 
+2MHz for 1581 (Configure 2.1):
+   Time  Clock Data
+   ----------------
+    0us  1->0  (1)  (timing reference)
+    7us    b0   b1
+   14us    b2   b3
+   24us    b4   b5
+   33us    b6   b7
+   45us    -    -   (hold time so the C64 has time to read b6/b7)
+
 
 Note: This description assumes that the reimplementation can
 synchronize to the falling edge of the clock line with much less
-jitter than a 1541 can. The original code also tests for the rising edge
-of the 10us pulse on the clock line in order to reduce the timing
-jitter from seven to five clock cycles.
+jitter than a 1541 can. The original 1MHz code also tests for the
+rising edge of the 10us pulse on the clock line in order to reduce the
+timing jitter from seven to five clock cycles.
 
 
 Receiving a block

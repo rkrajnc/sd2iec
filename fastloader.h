@@ -48,6 +48,7 @@
 extern uint8_t detected_loader;
 extern volatile uint8_t fl_track;
 extern volatile uint8_t fl_sector;
+extern void (*geos_send_byte)(uint8_t byte);
 
 void load_turbodisk(void);
 void load_fc3(uint8_t freezed);

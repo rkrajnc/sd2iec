@@ -40,6 +40,7 @@
 #include "eeprom.h"
 #include "errormsg.h"
 #include "fastloader.h"
+#include "fastloader-ll.h"
 #include "fatops.h"
 #include "ff.h"
 #include "flags.h"
@@ -839,6 +840,7 @@ static void handle_memexec(void) {
   if (detected_loader == FL_GEOS_S1) {
     /* The assembler module checks for 1541/other using this value */
     detected_loader = FL_GEOS_S23_1541;
+    geos_send_byte = geos_send_byte_20;
     if (address == 0x0457) {
       load_geos64_s1();
     } else if (address == 0x0470) {
@@ -852,6 +854,7 @@ static void handle_memexec(void) {
        datacrc == 0xffff)) {
     /* GEOS stage 2/3 1541 */
     detected_loader = FL_GEOS_S23_1541;
+    geos_send_byte = geos_send_byte_20;
     load_geos();
   }
 
@@ -860,16 +863,19 @@ static void handle_memexec(void) {
        datacrc == 0xffff)) {
     /* GEOS stage 3 1571 */
     detected_loader = FL_GEOS_S23_1571;
+    geos_send_byte = geos_send_byte_20;
     load_geos();
   }
 
   if (address == 0x040f &&
       (detected_loader == FL_GEOS_S23_1581 ||
        datacrc == 0xffff)) {
-    /* GEOS 1581 */
+    /* GEOS 1581 Config 2.0 */
     detected_loader = FL_GEOS_S23_1581;
+    // Note: geos_send_byte already set in CRC detection
     load_geos();
   }
+
 #endif
 
   datacrc = 0xffff;
@@ -1089,8 +1095,15 @@ static void handle_memwrite(void) {
   }
 
   if (datacrc == 0x94ac) {
-    /* GEOS 64/128 1581, from Configure */
+    /* GEOS 64/128 1581, from Configure 2.0 */
     detected_loader = FL_GEOS_S23_1581;
+    geos_send_byte = geos_send_byte_20;
+  }
+
+  if (datacrc == 0xc947) { // Note: Next-to-last CRC because of junk bytes
+    /* GEOS 64/128 1581, from Configure 2.1 */
+    detected_loader = FL_GEOS_S23_1581;
+    geos_send_byte = geos_send_byte_1581_21;
   }
 
 #endif

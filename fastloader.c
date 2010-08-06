@@ -832,6 +832,9 @@ void load_epyxcart(void) {
  */
 #ifdef CONFIG_LOADER_GEOS
 
+/* Function pointer to the current byte transmit function */
+void (*geos_send_byte)(uint8_t byte);
+
 /* Receive a fixed-length data block */
 static void geos_receive_datablock(uint8_t *data, uint16_t length) {
   data += length-1;
@@ -1020,6 +1023,8 @@ void load_geos(void) {
     update_leds();
     geos_receive_block(cmddata);
     set_busy_led(1);
+
+    //uart_trace(cmddata, 0, 4);
 
     cmd = cmddata[0] | (cmddata[1] << 8);
 

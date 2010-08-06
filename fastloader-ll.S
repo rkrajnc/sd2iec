@@ -1113,12 +1113,13 @@ geos_get_byte:
         clr     r25                    ; clear high byte of return value
         ret
 
+
+
         ;;
-        ;; send a byte using the GEOS protocol
-        ;; called with byte in r24, no return value
+        ;; common part of all geos_send_byte implementations
+        ;;  returns 7 cycles after clock low
         ;;
-        .global geos_send_byte
-geos_send_byte:
+geos_send_byte_common:
         ;; CLOCK/DATA high
         cbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_CLOCK
         cbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA
@@ -1132,6 +1133,15 @@ geos_send_byte:
         in      r19, _SFR_IO_ADDR(IEC_OUT) ; 1
         andi    r19, ~(IEC_OBIT_DATA|IEC_OBIT_CLOCK|IEC_OBIT_ATN|IEC_OBIT_SRQ) ; 1
         mov     r0, r19             ; 1
+        ret                         ; 4
+
+        ;;
+        ;; send a byte using the GEOS protocol
+        ;; called with byte in r24, no return value
+        ;;
+        .global geos_send_byte_20
+geos_send_byte_20:
+        rcall   geos_send_byte_common ; 7
 
         ;; prepare bits 3+1
         bst     r24, 3              ; 1 - read bit 3
@@ -1145,11 +1155,11 @@ geos_send_byte:
         brne    1f                    ; 1/2
 
         ;; delay (1MHz speeder)
-        delay_cycles 18*8 - 14
+        delay_cycles 18*8 - 18
         rjmp    2f                    ; 2
 
-        ;; delay (1MHz speeder)
-1:      delay_cycles 9*8 - 13
+        ;; delay (2MHz speeder)
+1:      delay_cycles 9*8 - 17
 
         ;; send to bus
 2:      out     _SFR_IO_ADDR(IEC_OUT), r19 ; 1 - send to bus
@@ -1168,7 +1178,7 @@ geos_send_byte:
         out     _SFR_IO_ADDR(IEC_OUT), r19 ; 1
 
         ;; prepare bits 4+5
-        com     r24                 ; 1
+        com     r24                 ; 1 - remaining bits are sent with high=1
         mov     r19, r0             ; 1
         bst     r24, 4              ; 1 - read bit 4
         bld     r19, IEC_OPIN_CLOCK ; 1 - store in clock bit
@@ -1196,6 +1206,46 @@ geos_send_byte:
 
         ;; final delay
         delay_cycles 20*8
+
+        ret
+
+
+        ;;
+        ;; send a byte using the 2MHz 1581 Configure 2.1 GEOS protocol
+        ;; called with byte in r24, no return value
+        ;;
+        .global geos_send_byte_1581_21
+geos_send_byte_1581_21:
+        com     r24                   ; invert so the bits are sent with high=1
+        rcall   geos_send_byte_common ; 7
+        mov     r0, r24               ; 1 - move data to target register
+
+        ;; delay
+        delay_cycles 7*8 - 18
+
+        ;; send bits 0+1
+        rcall   send_bits_to_clk_data ; 10+6
+
+        ;; delay
+        delay_cycles 7*8 - 16
+
+        ;; send bits 2+3
+        rcall   send_bits_to_clk_data ; 10+6
+
+        ;; delay
+        delay_cycles 10*8 - 16
+
+        ;; send bits 4+5
+        rcall   send_bits_to_clk_data ; 10+6
+
+        ;; delay
+        delay_cycles 9*8 - 16
+
+        ;; send bits 6+7
+        rcall   send_bits_to_clk_data ; 10+6
+
+        ;; final delay
+        delay_cycles 12*8
 
         ret
 
