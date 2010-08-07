@@ -1094,7 +1094,7 @@ static void handle_memwrite(void) {
     detected_loader = FL_GEOS_S23_1571;
   }
 
-  if (datacrc == 0x94ac) {
+  if (datacrc == 0x3f8d) { // Note: Next-to-last CRC because of junk bytes
     /* GEOS 64/128 1581, from Configure 2.0 */
     detected_loader = FL_GEOS_S23_1581;
     geos_send_byte = geos_send_byte_20;
