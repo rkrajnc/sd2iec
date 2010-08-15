@@ -94,7 +94,7 @@ To transmit a data byte, do this:
    20us   !b2  !b0
    32us    b4   b5
    44us    b6   b7
-   60us    -    -   (hold time so the C64 has time to read b6/b7)
+   66us    -    -   (hold time so the C64 has time to read b6/b7)
 
 2MHz for 1581 (Configure 2.1):
    Time  Clock Data

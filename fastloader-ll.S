@@ -1205,7 +1205,7 @@ geos_send_byte_20:
         out     _SFR_IO_ADDR(IEC_OUT), r19 ; 1
 
         ;; final delay
-        delay_cycles 20*8
+        delay_cycles 22*8
 
         ret
 
