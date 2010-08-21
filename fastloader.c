@@ -96,6 +96,7 @@ void load_turbodisk(void) {
 #endif
 
   set_clock(0);
+  uart_flush();
 
   /* Copy filename to beginning of buffer */
   len = command_buffer[9];
