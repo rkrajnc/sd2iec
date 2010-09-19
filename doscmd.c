@@ -875,7 +875,15 @@ static void handle_memexec(void) {
     // Note: geos_send_byte already set in CRC detection
     load_geos();
   }
-
+#endif
+#ifdef CONFIG_LOADER_WHEELS
+  /* Wheels stage 1 - FIXME: Move to GEOS section? */
+  if (detected_loader == FL_WHEELS_S1_64 && address == 0x0400) {
+    load_wheels_s1(PSTR("SYSTEM1"));
+  }
+  if (detected_loader == FL_WHEELS_S1_128 && address == 0x0400) {
+    load_wheels_s1(PSTR("128SYSTEM1"));
+  }
 #endif
 
   datacrc = 0xffff;
@@ -1106,6 +1114,16 @@ static void handle_memwrite(void) {
     geos_send_byte = geos_send_byte_1581_21;
   }
 
+#endif
+
+#ifdef CONFIG_LOADER_WHEELS
+  if (datacrc == 0xf140) { // Stage 1 C64
+    detected_loader = FL_WHEELS_S1_64;
+  }
+
+  if (datacrc == 0x737e) { // Stage 1 C128 (different file name)
+    detected_loader = FL_WHEELS_S1_128;
+  }
 #endif
 
   if (detected_loader == FL_NONE) {

@@ -1251,4 +1251,52 @@ geos_send_byte_1581_21:
 
 #endif
 
+#ifdef CONFIG_LOADER_WHEELS
+        ;;
+        ;; send a byte using the Wheels protocol
+        ;; called with byte in r24, no return value
+        ;;
+        .global wheels_send_byte
+wheels_send_byte:
+        rcall   geos_send_byte_common ; 7
+
+        rcall   wheels_nibble       ; 3 - send lower nibble
+        swap    r24                 ; 1 - swap nibbles
+
+        delay_cycles (14-9)*8 + 15 - 14
+        rcall   wheels_nibble       ; 3 - send upper nibble
+
+        ;; final delay
+        delay_cycles 22*8
+        ret
+
+wheels_nibble:
+        ;; prepare bits 3+1 (7+5)
+        mov     r19, r0             ; 1
+        bst     r24, 3              ; 1 - read bit 3
+        bld     r19, IEC_OPIN_CLOCK ; 1 - store in clock bit
+        bst     r24, 1              ; 1 - read bit 1
+        bld     r19, IEC_OPIN_DATA  ; 1 - store in data bit
+
+        ;; delay
+        delay_cycles 9*8 - 15
+
+        ;; send to bus
+        out     _SFR_IO_ADDR(IEC_OUT), r19 ; 1 - send to bus
+
+        ;; prepare bits 2+0 (6+4)
+        mov     r19, r0             ; 1
+        bst     r24, 2              ; 1 - read bit 2
+        bld     r19, IEC_OPIN_CLOCK ; 1 - store in clock bit
+        bst     r24, 0              ; 1 - read bit 0
+        bld     r19, IEC_OPIN_DATA  ; 1 - store in data bit
+
+        ;; delay
+        delay_cycles 14*8 - 6
+
+        ;; send to bus
+        out     _SFR_IO_ADDR(IEC_OUT), r19 ; 1 - send to bus
+        ret                                ; 4
+#endif
+
         .end

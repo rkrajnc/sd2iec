@@ -45,6 +45,7 @@
 #include "led.h"
 #include "parser.h"
 #include "timer.h"
+#include "ustring.h"
 #include "wrapops.h"
 #include "fastloader.h"
 
@@ -1206,6 +1207,59 @@ void load_geos64_s1(void) {
 
 void load_geos128_s1(void) {
   load_geos_s1(geos128_chains);
+}
+
+#endif
+
+/*
+ *
+ *  Wheels
+ *
+ */
+// FIXME: Move into CONFIG_LOADER_GEOS?
+#ifdef CONFIG_LOADER_WHEELS
+
+void load_wheels_s1(const char *filename) {
+  buffer_t *buf;
+
+  uart_flush();
+  _delay_ms(2);
+  while (IEC_CLOCK) ;
+  set_data(0);
+
+  /* copy file name to command buffer */
+  ustrcpy_P(command_buffer, filename);
+  command_length = ustrlen(command_buffer);
+
+  /* open file */
+  file_open(0);
+  buf = find_buffer(0);
+  if (!buf)
+    goto wheels_exit;
+
+  geos_send_byte = wheels_send_byte;
+
+  while (1) {
+    /* Transmit current sector */
+    geos_transmit_buffer_s3(buf->data, 256);
+
+    while (IEC_CLOCK) ;
+
+    /* Check for last sector */
+    if (buf->sendeoi)
+      break;
+
+    /* Advance to next sector */
+    if (buf->refill(buf)) {
+      /* Error, abort - original loader doesn't handle this */
+      break;
+    }
+  }
+
+ wheels_exit:
+  while (!IEC_CLOCK) ;
+  set_data(1);
+  set_clock(1);
 }
 
 #endif

@@ -49,4 +49,6 @@ uint8_t geos_get_byte(void);
 void geos_send_byte_20(uint8_t byte);
 void geos_send_byte_1581_21(uint8_t byte);
 
+void wheels_send_byte(uint8_t byte);
+
 #endif
