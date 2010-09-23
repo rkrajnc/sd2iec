@@ -838,7 +838,9 @@ void load_epyxcart(void) {
 void (*geos_send_byte)(uint8_t byte);
 
 /* Receive a fixed-length data block */
-static void geos_receive_datablock(uint8_t *data, uint16_t length) {
+static void geos_receive_datablock(void *data_, uint16_t length) {
+  uint8_t *data = (uint8_t*)data_;
+
   data += length-1;
 
   ATOMIC_BLOCK(ATOMIC_FORCEON) {
@@ -851,7 +853,7 @@ static void geos_receive_datablock(uint8_t *data, uint16_t length) {
 }
 
 /* Receive a data block from the computer */
-static void geos_receive_block(uint8_t *data) {
+static void geos_receive_lenblock(uint8_t *data) {
   uint8_t exitflag = 0;
   uint16_t length;
 
@@ -968,7 +970,7 @@ static void geos_write_sector_41(uint8_t track, uint8_t sector, buffer_t *buf) {
   mark_buffer_dirty(buf);
 
   /* Receive data */
-  geos_receive_block(buf->data);
+  geos_receive_lenblock(buf->data);
 
   /* Write to image */
   write_sector(buf, current_part, track, sector);
@@ -1023,7 +1025,7 @@ void load_geos(void) {
   while (1) {
     /* Receive command block */
     update_leds();
-    geos_receive_block(cmddata);
+    geos_receive_lenblock(cmddata);
     set_busy_led(1);
 
     //uart_trace(cmddata, 0, 4);
@@ -1066,7 +1068,7 @@ void load_geos(void) {
       if (current_error != 0) {
         geos_transmit_status();
       } else {
-        geos_transmit_buffer_s2(databuf->data, 256); // FIXME: Need to reduce after copy protection check
+        geos_transmit_buffer_s2(databuf->data, 256);
       }
       break;
 
@@ -1219,6 +1221,92 @@ void load_geos128_s1(void) {
 // FIXME: Move into CONFIG_LOADER_GEOS?
 #ifdef CONFIG_LOADER_WHEELS
 
+/* Receive a fixed-length data block */
+static void wheels_receive_datablock(void *data_, uint16_t length) {
+  uint8_t *data = (uint8_t*)data_;
+
+  data += length-1;
+
+  ATOMIC_BLOCK(ATOMIC_FORCEON) {
+    while (!IEC_CLOCK) ;
+    set_data(1);
+    while (length--)
+      *data-- = wheels_get_byte();
+  }
+  set_data(0);
+}
+
+/* Send a fixed-length data block */
+static void wheels_transmit_datablock(void *data_, uint16_t length) {
+  uint8_t *data = (uint8_t*)data_;
+
+  geos_transmit_buffer_s3(data, length);
+
+  while (IEC_CLOCK) ;
+}
+
+/* Wheels STATUS operation (030f) */
+static void wheels_transmit_status(void) {
+  ATOMIC_BLOCK(ATOMIC_FORCEON) {
+    /* Send (faked) job result code */
+    if (current_error == 0)
+      geos_transmit_byte_wait(1);
+    else
+      if (current_error == ERROR_WRITE_PROTECT)
+        geos_transmit_byte_wait(8);
+      else
+        geos_transmit_byte_wait(2); // random non-ok job status
+
+    while (IEC_CLOCK) ;
+  }
+}
+
+/* Wheels CHECK_CHANGE operation (031b) */
+static void wheels_check_diskchange(void) {
+  ATOMIC_BLOCK(ATOMIC_FORCEON) {
+    geos_transmit_byte_wait(3); // Always claim that the disk was changed
+    while (IEC_CLOCK) ;
+  }
+}
+
+/* Wheels WRITE operation (0306) */
+static void wheels_write_sector(uint8_t track, uint8_t sector, buffer_t *buf) {
+  uart_putc('W');
+  uart_puthex(track);
+  uart_putc('/');
+  uart_puthex(sector);
+  uart_putcrlf();
+
+  /* Provide "unwritten data present" feedback */
+  mark_buffer_dirty(buf);
+
+  /* Receive data */
+  wheels_receive_datablock(buf->data, 256);
+
+  /* Write to image */
+  write_sector(buf, current_part, track, sector);
+
+  /* Send status */
+  wheels_transmit_status();
+
+  /* Reset "unwritten data" feedback */
+  mark_buffer_clean(buf);
+}
+
+/* Wheels READ operation (0309) */
+static void wheels_read_sector(uint8_t track, uint8_t sector, buffer_t *buf, uint16_t bytes) {
+  uart_putc('R');
+  uart_puthex(track);
+  uart_putc('/');
+  uart_puthex(sector);
+  uart_putcrlf();
+
+  read_sector(buf, current_part, track, sector);
+  wheels_transmit_datablock(buf->data, bytes);
+  wheels_transmit_status();
+}
+
+/* Wheels stage 1 loader */
 void load_wheels_s1(const char *filename) {
   buffer_t *buf;
 
@@ -1241,9 +1329,7 @@ void load_wheels_s1(const char *filename) {
 
   while (1) {
     /* Transmit current sector */
-    geos_transmit_buffer_s3(buf->data, 256);
-
-    while (IEC_CLOCK) ;
+    wheels_transmit_datablock(buf->data, 256);
 
     /* Check for last sector */
     if (buf->sendeoi)
@@ -1260,6 +1346,88 @@ void load_wheels_s1(const char *filename) {
   while (!IEC_CLOCK) ;
   set_data(1);
   set_clock(1);
+}
+
+/* Wheels stage 2 loader */
+void load_wheels_s2(void) {
+  struct {
+    uint16_t address;
+    uint8_t  track;
+    uint8_t  sector;
+  } cmdbuffer;
+  buffer_t *databuf = alloc_system_buffer();
+
+  if (!databuf)
+    return;
+
+  /* Initial handshake */
+  uart_flush();
+  _delay_ms(1);
+  while (IEC_CLOCK) ;
+  set_data(0);
+  set_clock(1);
+
+  while (1) {
+    /* Receive command block - redundant clock line check for check_keys */
+    while (!IEC_CLOCK && IEC_ATN) {
+      if (check_keys()) {
+        /* User-requested exit */
+        return;
+      }
+    }
+
+    wheels_receive_datablock(&cmdbuffer, 4);
+    set_busy_led(1);
+
+    uart_trace(&cmdbuffer, 0, 4);
+
+    switch (cmdbuffer.address) {
+    case 0x0303: // QUIT
+      while (!IEC_CLOCK) ;
+      set_data(1);
+      return;
+
+    case 0x0306: // WRITE
+      wheels_write_sector(cmdbuffer.track, cmdbuffer.sector, databuf);
+      break;
+
+    case 0x0309: // READ
+      wheels_read_sector(cmdbuffer.track, cmdbuffer.sector, databuf, 256);
+      break;
+
+    case 0x030c: // READLINK
+      wheels_read_sector(cmdbuffer.track, cmdbuffer.sector, databuf, 2);
+      break;
+
+    case 0x030f: // STATUS
+      wheels_transmit_status();
+      break;
+
+    case 0x0312: // unknown, just returns
+    case 0x0315: // unknown, just returns
+    case 0x0318: // unknown, just returns
+      break;
+
+    case 0x031b: // CHECK_CHANGE
+      wheels_check_diskchange();
+      break;
+
+    default:
+      uart_puts_P(PSTR("unknown:\r\n"));
+      uart_trace(&cmdbuffer, 0, 4);
+      return;
+    }
+
+    update_leds();
+
+    /* wait until clock is low */
+    while (IEC_CLOCK && IEC_ATN) {
+      if (check_keys()) {
+        /* User-requested exit */
+        return;
+      }
+    }
+  }
 }
 
 #endif

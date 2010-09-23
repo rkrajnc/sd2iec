@@ -884,6 +884,14 @@ static void handle_memexec(void) {
   if (detected_loader == FL_WHEELS_S1_128 && address == 0x0400) {
     load_wheels_s1(PSTR("128SYSTEM1"));
   }
+
+  // FIXME: Add previous_loader variable
+  if (address == 0x0300 &&
+      (detected_loader == FL_WHEELS_S2 ||
+       datacrc == 0xffff)) {
+    geos_send_byte = wheels_send_byte;
+    load_wheels_s2();
+  }
 #endif
 
   datacrc = 0xffff;
@@ -1123,6 +1131,10 @@ static void handle_memwrite(void) {
 
   if (datacrc == 0x737e) { // Stage 1 C128 (different file name)
     detected_loader = FL_WHEELS_S1_128;
+  }
+
+  if (datacrc == 0x755a || datacrc == 0x2920) { // Stage 2 1541 (one byte difference)
+    detected_loader = FL_WHEELS_S2;
   }
 #endif
 

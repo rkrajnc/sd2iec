@@ -1297,6 +1297,51 @@ wheels_nibble:
         ;; send to bus
         out     _SFR_IO_ADDR(IEC_OUT), r19 ; 1 - send to bus
         ret                                ; 4
+
+
+        ;;
+        ;; read a byte using the Wheels protocol
+        ;;
+        .global wheels_get_byte
+wheels_get_byte:
+        clr     r24
+
+        ;; wait until clock is low
+1:      sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK ; 1/2
+        rjmp    1b
+
+        ;; delay
+        delay_cycles 16 * 8 - 5
+
+        ;; read bits 7/5
+        rcall   get_bits_from_clk_data ; 4+8 r24 = _____7_5
+        lsl     r24                    ; 1   r24 = ____7_5_
+
+        delay_cycles 10 * 8 - 13
+
+        ;; read bits 6/4
+        rcall   get_bits_from_clk_data ; 4+8 r24 = ____7654
+        swap    r24                    ; 1   r24 = 7654____
+        lsr     r24                    ; 1   r24 = _7654___
+
+        delay_cycles 15 * 8 - 14
+
+        ;; read bits 3/1
+        rcall   get_bits_from_clk_data ; 4+8 r24 = _76543_1
+        lsl     r24                    ; 1   r24 = 76543_1_
+
+        delay_cycles 13 * 8 - 13
+
+        ;; read bits 2/0
+        rcall   get_bits_from_clk_data ; 4+8 r24 = 76543210
+
+        delay_cycles 20*8
+
+        clr     r25             ; clear upper byte of return value
+        com     r24             ; invert data byte
+
+        ret
+
 #endif
 
         .end

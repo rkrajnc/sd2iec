@@ -44,6 +44,7 @@
 #define FL_GEOS_S23_1581 14
 #define FL_WHEELS_S1_64  15
 #define FL_WHEELS_S1_128 16
+#define FL_WHEELS_S2     17
 
 #ifndef __ASSEMBLER__
 
@@ -63,6 +64,7 @@ void load_geos(void);
 void load_geos64_s1(void);
 void load_geos128_s1(void);
 void load_wheels_s1(const char *filename);
+void load_wheels_s2(void);
 
 #endif
 #endif

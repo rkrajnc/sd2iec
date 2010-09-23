@@ -1,0 +1,173 @@
+Wheels fast loader protocol
+===========================
+
+Documented by Ingo Korb
+
+Low-Level byte transmission
+---------------------------
+Both data and clock should be set to high already from previous
+operations. Using the high->low transition of clock as a timing
+reference, send bits as shown in the following table.
+
+   Time  Clock Data
+   ----------------
+    0us  1->0  (1)  (timing reference)
+    9us   !b3  !b1
+   23us   !b2  !b0
+   37us   !b7  !b5
+   51us   !b6  !b4
+   73us    -    -   (hold time so the C64 has time to read b6/b4)
+
+
+Low-Level byte reception
+------------------------
+Both data and clock should be set to high already from previous
+operations. Using the high->low transition of clock as a timing
+reference, receive bits as shown in the following table.
+
+   Time  Clock Data
+   ----------------
+    0us  1->0  (1)  (timing reference)
+   16us   !b7  !b5
+   26us   !b6  !b4
+   41us   !b3  !b1
+   54us   !b2  !b0
+
+
+Receiving a block
+-----------------
+Data is transferred from the C64 to the drive in blocks of variable
+size from 1-256 bytes. A block transfer of k bytes happens as follows:
+
+- wait until clock is high
+- set data high
+(- delay 15us?)
+- receive k bytes, starting at the end of the buffer
+- set data low
+
+Unlike GEOS, the block length is always determined on the drive
+side. The only sizes used are 4 bytes for commands and 256 bytes when
+receiving a sector to write.
+
+Transmitting a block
+--------------------
+When transferring data to the C64 the block size is variable from 1 to
+256 bytes and is not explicitly sent to the computer. A block transfer
+of k bytes happens as follows:
+
+- wait until clock is high
+- set data and clock high
+- transmit all k data bytes, starting with the last byte
+- delay 20us
+- set data low
+- wait until clock is low
+
+
+Stage 1 loader (FIXME: Only 1541 checked yet)
+--------------
+The stage 1 loader is a fixed-filename loader that searches for a
+predetermined file and transmits it to the computer. The file name is
+"SYSTEM1" for the C64 version and "128SYSTEM1" for the C128. In the
+1541 loader it is located at $5d9 in drive memory, the number of
+characters compared is at $597. The name in drive memory is terminated
+with a $a0 character that is included in the comparision.
+
+The stage 1 loader does the following:
+- wait until clock is low
+- set data low
+- attempt to open the target file (SYSTEM1 or 128SYSTEM1)
+  - return to the dos main loop if the file wasn't found
+- transfer each sector of the file:
+  - wait until clock is high
+  - set clock/data high
+  - transmit the sector contents starting at the end
+  - set data low
+  - wait until clock is low
+  - advance to the next sector in the chain
+  - exit after the last sector of the file was transferred
+- wait until clock is low
+- set clock/data high
+- return to the dos main loop
+
+
+Stage 2 functions
+=================
+
+Exiting the fastloader (QUIT - 0303)
+------------------------------------
+This function exits the fast loader and returns to the standard dos
+main loop. Wheels may restart the loader with M-E without re-uploading
+the drive code.
+
+- wait until clock is high
+- set clock/data high
+- return to the dos main loop
+
+Writing a sector (WRITE - 0306)
+-------------------------------
+This function receives a sector (256 bytes) and writes them to the
+track/sector already received in the function call. After writing it
+jumps to the STATUS function.
+
+Reading a sector (READ - 0309)
+------------------------------
+This function reads the track/sector that was received together with
+the function address and transmits it to the computer. Regardless of
+the success of the read operation, the full 256 bytes of data are
+always transmitted as a block transfer. After transmitting the sector
+data the loader jumps to the STATUS function.
+
+Reading a sector link pointer (READLINK - 030c)
+-----------------------------------------------
+This function works exactly as READ, but transmits only the first two
+bytes of the sector instead of its full contents.
+
+Transmitting the job result (STATUS - 030f)
+-------------------------------------------
+This function uses the block transfer operation to transmit a single
+byte to the C64. This byte is the job result code from the buffer that
+is used for disk operations.
+
+Checking for disk change (CHECK_CHANGE - 031b)
+----------------------------------------------
+This function transmits a single byte to the computer using the block
+transfer operation. The byte is either $00 if the disk was not changed
+or $03 if it was. On a 1541 the flag value is obtained from address
+$1c which will be set on a disk change, but is not reset at all while
+the loader is running. If this function returns a "disk changed"
+state, Wheels will exit the loader and send the Initialize dos
+command. A simple implementation that always returns $03 works fine.
+
+
+Stage 2 loader
+--------------
+The stage 2 loader uses a remote function call system similiar to the
+GEOS 2.0 stage 2/3 loaders. It starts with a simple handshake:
+
+- wait until clock is low
+- set data low
+
+After that it starts its main loop:
+
+- wait until clock is high
+- turn on drive LED
+- receive 4 bytes (in transmission order: sector, track, highbyte, lowbyte)
+- jump to the address received
+- wait until clock is low
+- turn off drive LED
+- restart loader main loop
+
+Unlike the GEOS loaders Wheels calls every function using a jump table
+located at $0303-$031d. FIXME:It is assumed (but not verified) that
+the same jump table is used for every drive type.
+
+0303: QUIT
+0306: WRITE
+0309: READ
+030c: READLINK
+030f: STATUS
+0312: unknown (nop/nop/rts)
+0315: unknown (nop/nop/rts)
+0318: unknown (nop/nop/rts)
+031b: CHECK_CHANGE
+
