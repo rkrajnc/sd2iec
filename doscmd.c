@@ -885,8 +885,7 @@ static void handle_memexec(void) {
 
   /* Wheels stage 2 */
   if (detected_loader == FL_WHEELS_S2 && address == 0x0300) {
-    geos_send_byte = wheels_send_byte_1mhz;
-    geos_get_byte  = wheels_get_byte_1mhz;
+    // Note: geos_send_byte/geos_get_byte already set in CRC detection
     load_wheels_s2();
   }
 #endif
@@ -1134,6 +1133,15 @@ static void handle_memwrite(void) {
   }
 
   if (datacrc == 0x755a || datacrc == 0x2920) { // Stage 2 1541 (one byte difference)
+    geos_send_byte = wheels_send_byte_1mhz;
+    geos_get_byte  = wheels_get_byte_1mhz;
+    detected_loader = FL_WHEELS_S2;
+  }
+
+  if (datacrc == 0x18e9 || datacrc == 0xe445) {
+    /* Stage 2 1571/1581 */
+    geos_send_byte = geos_send_byte_1581_21;
+    geos_get_byte  = geos_get_byte_2mhz;
     detected_loader = FL_WHEELS_S2;
   }
 #endif

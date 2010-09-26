@@ -7,8 +7,11 @@ Low-Level byte transmission
 ---------------------------
 Both data and clock should be set to high already from previous
 operations. Using the high->low transition of clock as a timing
-reference, send bits as shown in the following table.
+reference, send bits as shown in the following table. The timing
+and bit order differs for 1MHz (154) and 2MHz (everything else)
+drives.
 
+1MHz:
    Time  Clock Data
    ----------------
     0us  1->0  (1)  (timing reference)
@@ -18,13 +21,26 @@ reference, send bits as shown in the following table.
    51us   !b6  !b4
    73us    -    -   (hold time so the C64 has time to read b6/b4)
 
+2MHz:
+   Time  Clock Data
+   ----------------
+    0us  1->0  (1)  (timing reference)
+    7us    b0   b1
+   14us    b2   b3
+   24us    b4   b5
+   33us    b6   b7
+   45us    -    -   (hold time so the C64 has time to read b6/b7)
+
 
 Low-Level byte reception
 ------------------------
 Both data and clock should be set to high already from previous
 operations. Using the high->low transition of clock as a timing
-reference, receive bits as shown in the following table.
+reference, receive bits as shown in the following table. The timing
+and bit order differs for 1MHz (1541) and 2MHz (everything else)
+drives:
 
+1MHz:
    Time  Clock Data
    ----------------
     0us  1->0  (1)  (timing reference)
@@ -32,6 +48,15 @@ reference, receive bits as shown in the following table.
    26us   !b6  !b4
    41us   !b3  !b1
    54us   !b2  !b0
+
+2MHz:
+   Time  Clock Data
+   ----------------
+    0us  1->0  (1)  (timing reference)
+   15us   !b4  !b5
+   29us   !b6  !b7
+   39.5us !b3  !b1
+   50.5us !b2  !b0
 
 
 Receiving a block
