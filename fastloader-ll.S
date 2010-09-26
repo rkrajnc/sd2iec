@@ -1053,6 +1053,7 @@ geos_get_byte_common:
         ;;
         ;; read a byte using the GEOS 1MHz (1541) protocol
         ;;
+        .global geos_get_byte_1mhz
 geos_get_byte_1mhz:
         rcall   geos_get_byte_common   ; 3
 
@@ -1069,10 +1070,17 @@ geos_get_byte_1mhz:
         ;; get bits 2 and 0
         rjmp    get_bits_from_clk_data ; 4+8 - r24 = 76543210
 
+        ;; post-process received value and return
+        delay_cycles 11*8
+        com     r24             ; negate all bits
+        clr     r25             ; clear high byte of return value
+        ret
+
 
         ;;
         ;; read a byte using the GEOS 2MHz (1571/81) protocol
         ;;
+        .global geos_get_byte_2mhz
 geos_get_byte_2mhz:
         rcall   geos_get_byte_common   ; 3
 
@@ -1087,32 +1095,13 @@ geos_get_byte_2mhz:
         delay_cycles 22*4 - 9 - 4
 
         ;; get bits 2 and 0
-        rjmp   get_bits_from_clk_data ; 4+8 - r24 = 76543210
+        rcall   get_bits_from_clk_data ; 4+8 - r24 = 76543210
 
-
-        ;;
-        ;; read a byte using the GEOS protocol
-        ;;  uses detected_loader to select the variant
-        ;;
-        .global geos_get_byte
-geos_get_byte:
-        lds     r18, detected_loader
-        cpi     r18, FL_GEOS_S23_1541
-        brne    1f
-
-        ;; 1MHz version
-        rcall   geos_get_byte_1mhz
-        rjmp    2f
-
-        ;; 2MHz version
-1:      rcall   geos_get_byte_2mhz
-
-        ;; post-process received value and return
-2:      delay_cycles 11*8
-        com     r24                    ; negate all bits
-        clr     r25                    ; clear high byte of return value
+        ;;  post process received value and return
+        delay_cycles 11*8
+        com     r24             ; negate all bits
+        clr     r25             ; clear high byte of return value
         ret
-
 
 
         ;;
@@ -1256,8 +1245,8 @@ geos_send_byte_1581_21:
         ;; send a byte using the Wheels protocol
         ;; called with byte in r24, no return value
         ;;
-        .global wheels_send_byte
-wheels_send_byte:
+        .global wheels_send_byte_1mhz
+wheels_send_byte_1mhz:
         rcall   geos_send_byte_common ; 7
 
         rcall   wheels_nibble       ; 3 - send lower nibble
@@ -1302,8 +1291,8 @@ wheels_nibble:
         ;;
         ;; read a byte using the Wheels protocol
         ;;
-        .global wheels_get_byte
-wheels_get_byte:
+        .global wheels_get_byte_1mhz
+wheels_get_byte_1mhz:
         clr     r24
 
         ;; wait until clock is low

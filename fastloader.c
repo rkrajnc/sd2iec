@@ -836,6 +836,7 @@ void load_epyxcart(void) {
 
 /* Function pointer to the current byte transmit function */
 void (*geos_send_byte)(uint8_t byte);
+uint8_t (*geos_get_byte)(void);
 
 /* Receive a fixed-length data block */
 static void geos_receive_datablock(void *data_, uint16_t length) {
@@ -1221,21 +1222,6 @@ void load_geos128_s1(void) {
 // FIXME: Move into CONFIG_LOADER_GEOS?
 #ifdef CONFIG_LOADER_WHEELS
 
-/* Receive a fixed-length data block */
-static void wheels_receive_datablock(void *data_, uint16_t length) {
-  uint8_t *data = (uint8_t*)data_;
-
-  data += length-1;
-
-  ATOMIC_BLOCK(ATOMIC_FORCEON) {
-    while (!IEC_CLOCK) ;
-    set_data(1);
-    while (length--)
-      *data-- = wheels_get_byte();
-  }
-  set_data(0);
-}
-
 /* Send a fixed-length data block */
 static void wheels_transmit_datablock(void *data_, uint16_t length) {
   uint8_t *data = (uint8_t*)data_;
@@ -1281,7 +1267,7 @@ static void wheels_write_sector(uint8_t track, uint8_t sector, buffer_t *buf) {
   mark_buffer_dirty(buf);
 
   /* Receive data */
-  wheels_receive_datablock(buf->data, 256);
+  geos_receive_datablock(buf->data, 256);
 
   /* Write to image */
   write_sector(buf, current_part, track, sector);
@@ -1325,7 +1311,7 @@ void load_wheels_s1(const char *filename) {
   if (!buf)
     goto wheels_exit;
 
-  geos_send_byte = wheels_send_byte;
+  geos_send_byte = wheels_send_byte_1mhz;
 
   while (1) {
     /* Transmit current sector */
@@ -1376,7 +1362,7 @@ void load_wheels_s2(void) {
       }
     }
 
-    wheels_receive_datablock(&cmdbuffer, 4);
+    geos_receive_datablock(&cmdbuffer, 4);
     set_busy_led(1);
 
     uart_trace(&cmdbuffer, 0, 4);

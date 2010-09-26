@@ -856,18 +856,21 @@ static void handle_memexec(void) {
       (address == 0x03e2 || address == 0x03dc)) {
     /* GEOS stage 2/3 1541 */
     geos_send_byte = geos_send_byte_20;
+    geos_get_byte  = geos_get_byte_1mhz;
     load_geos();
   }
 
   if (detected_loader == FL_GEOS_S23_1571 && address == 0x03ff) {
     /* GEOS stage 3 1571 */
     geos_send_byte = geos_send_byte_20;
+    geos_get_byte  = geos_get_byte_2mhz;
     load_geos();
   }
 
   if (detected_loader == FL_GEOS_S23_1581 && address == 0x040f) {
     /* GEOS 1581 Config 2.0 */
     // Note: geos_send_byte already set in CRC detection
+    geos_get_byte = geos_get_byte_2mhz;
     load_geos();
   }
 #endif
@@ -882,7 +885,8 @@ static void handle_memexec(void) {
 
   /* Wheels stage 2 */
   if (detected_loader == FL_WHEELS_S2 && address == 0x0300) {
-    geos_send_byte = wheels_send_byte;
+    geos_send_byte = wheels_send_byte_1mhz;
+    geos_get_byte  = wheels_get_byte_1mhz;
     load_wheels_s2();
   }
 #endif
