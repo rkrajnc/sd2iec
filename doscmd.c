@@ -88,6 +88,7 @@ date_t date_match_start;
 date_t date_match_end;
 
 uint16_t datacrc = 0xffff;
+static uint8_t previous_loader;
 
 #ifdef CONFIG_STACK_TRACKING
 uint16_t minstack = RAMEND;
@@ -795,6 +796,9 @@ static void handle_memexec(void) {
     uart_putcrlf();
   }
 
+  if (detected_loader == FL_NONE)
+    detected_loader = previous_loader;
+
   address = command_buffer[3] + (command_buffer[4]<<8);
 #ifdef CONFIG_LOADER_TURBODISK
   if (detected_loader == FL_TURBODISK && address == 0x0303) {
@@ -848,30 +852,21 @@ static void handle_memexec(void) {
     }
   }
 
-  if ((address == 0x03e2 ||
-       address == 0x03dc) &&
-      (detected_loader == FL_GEOS_S23_1541 ||
-       datacrc == 0xffff)) {
+  if (detected_loader == FL_GEOS_S23_1541 &&
+      (address == 0x03e2 || address == 0x03dc)) {
     /* GEOS stage 2/3 1541 */
-    detected_loader = FL_GEOS_S23_1541;
     geos_send_byte = geos_send_byte_20;
     load_geos();
   }
 
-  if (address == 0x03ff &&
-      (detected_loader == FL_GEOS_S23_1571 ||
-       datacrc == 0xffff)) {
+  if (detected_loader == FL_GEOS_S23_1571 && address == 0x03ff) {
     /* GEOS stage 3 1571 */
-    detected_loader = FL_GEOS_S23_1571;
     geos_send_byte = geos_send_byte_20;
     load_geos();
   }
 
-  if (address == 0x040f &&
-      (detected_loader == FL_GEOS_S23_1581 ||
-       datacrc == 0xffff)) {
+  if (detected_loader == FL_GEOS_S23_1581 && address == 0x040f) {
     /* GEOS 1581 Config 2.0 */
-    detected_loader = FL_GEOS_S23_1581;
     // Note: geos_send_byte already set in CRC detection
     load_geos();
   }
@@ -885,16 +880,15 @@ static void handle_memexec(void) {
     load_wheels_s1(PSTR("128SYSTEM1"));
   }
 
-  // FIXME: Add previous_loader variable
-  if (address == 0x0300 &&
-      (detected_loader == FL_WHEELS_S2 ||
-       datacrc == 0xffff)) {
+  /* Wheels stage 2 */
+  if (detected_loader == FL_WHEELS_S2 && address == 0x0300) {
     geos_send_byte = wheels_send_byte;
     load_wheels_s2();
   }
 #endif
 
   datacrc = 0xffff;
+  previous_loader = detected_loader;
   detected_loader = FL_NONE;
 }
 
@@ -999,6 +993,8 @@ static void handle_memwrite(void) {
     /* Ignore attempts to increase the VIA timer frequency */
     return;
   }
+
+  previous_loader = FL_NONE;
 
 #ifdef CONFIG_LOADER_TURBODISK
   /* Turbodisk sends the filename in the last M-W, check the previous CRC */
