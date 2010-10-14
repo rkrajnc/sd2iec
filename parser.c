@@ -49,7 +49,7 @@ void update_current_dir(path_t *path){
     uint8_t dirname[CBM_NAME_LENGTH+1];
     uint8_t *ptr = dirname + CBM_NAME_LENGTH;
 
-    disk_label(path, dirname);
+    dir_label(path, dirname);
     *ptr-- = 0;
 
     while (*ptr == ' ') *ptr-- = 0;

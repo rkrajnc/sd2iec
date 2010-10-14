@@ -1090,7 +1090,7 @@ uint8_t fat_getvolumename(uint8_t part, uint8_t *label) {
 }
 
 /**
- * fat_getlabel - Get the directory label
+ * fat_getdirlabel - Get the directory label
  * @path : path object of the directory
  * @label: pointer to the buffer for the label (16 characters)
  *
@@ -1099,7 +1099,7 @@ uint8_t fat_getvolumename(uint8_t part, uint8_t *label) {
  * in the first 16 bytes of label.
  * Returns 0 if successfull, != 0 if an error occured.
  */
-uint8_t fat_getlabel(path_t *path, uint8_t *label) {
+uint8_t fat_getdirlabel(path_t *path, uint8_t *label) {
   DIR dh;
   FILINFO finfo;
   FRESULT res;
@@ -1368,7 +1368,7 @@ uint8_t image_unmount(uint8_t part) {
 
     path.part    = part;
     path.dir.fat = partition[part].current_dir.fat;
-    fat_getlabel(&path, entrybuf);
+    fat_getdirlabel(&path, entrybuf);
     display_current_directory(part,ustrlen(entrybuf),entrybuf);
   }
 
@@ -1495,7 +1495,7 @@ const PROGMEM fileops_t fatops = {  // These should be at bottom, to be consiste
   &fat_open_write,
   &fat_open_rel,
   &fat_delete,
-  &fat_getlabel,
+  &fat_getdirlabel,
   &fat_getid,
   &fat_freeblocks,
   &fat_sectordummy,

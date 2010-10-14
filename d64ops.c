@@ -1180,7 +1180,7 @@ static uint8_t read_string_from_dirheader(path_t *path, uint8_t *buffer, param_t
   return 0;
 }
 
-static uint8_t d64_getlabel(path_t *path, uint8_t *label) {
+static uint8_t d64_getdirlabel(path_t *path, uint8_t *label) {
   return read_string_from_dirheader(path, label, LABEL_OFFSET, 16);
 }
 
@@ -1663,7 +1663,7 @@ const PROGMEM fileops_t d64ops = {
   d64_open_write,
   d64_open_rel,
   d64_delete,
-  d64_getlabel,
+  d64_getdirlabel,
   d64_getid,
   d64_freeblocks,
   d64_read_sector,

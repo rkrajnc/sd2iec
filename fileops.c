@@ -591,7 +591,7 @@ scandone:
     memset(buf->data + BAM_OFFSET_NAME - 2, 0xa0, BAM_A0_AREA_SIZE);
 
     /* fill label and id */
-    if (disk_label(&path, buf->data + BAM_OFFSET_NAME - 2))
+    if (dir_label(&path, buf->data + BAM_OFFSET_NAME - 2))
       return;
 
     if (disk_id(&path, buf->data + BAM_OFFSET_ID - 2))
@@ -618,8 +618,8 @@ scandone:
     /* set partition number */
     buf->data[HEADER_OFFSET_DRIVE] = path.part+1;
 
-    /* read volume name */
-    if (disk_label(&path, buf->data+HEADER_OFFSET_NAME))
+    /* read directory name */
+    if (dir_label(&path, buf->data+HEADER_OFFSET_NAME))
       return;
 
     /* read id */

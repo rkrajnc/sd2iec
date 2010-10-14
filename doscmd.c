@@ -748,7 +748,7 @@ static void parse_getpartition(void) {
 
   *(ptr++) = path.part+1;
   path.dir.fat = 0;
-  if (disk_label(&path,ptr))
+  if (dir_label(&path,ptr))
     return;
   ptr += 16;
   *(ptr++) = partition[path.part].fatfs.fatbase>>16;
