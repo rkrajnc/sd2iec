@@ -250,7 +250,7 @@ static uint8_t pdir_refill(buffer_t* buf) {
   buf->position = 0;
   /* read volume name */
   while(buf->pvt.pdir.part < max_part) {
-    if (fat_getvolumename(buf->pvt.pdir.part, dent.name)) {
+    if (disk_label(buf->pvt.pdir.part, dent.name)) {
       free_buffer(buf);
       return 1;
     }

@@ -1054,7 +1054,7 @@ void fat_mkdir(path_t *path, uint8_t *dirname) {
  * This function reads the FAT volume label and stores it zero-terminated
  * in label. Returns 0 if successfull, != 0 if an error occured.
  */
-uint8_t fat_getvolumename(uint8_t part, uint8_t *label) {
+static uint8_t fat_getvolumename(uint8_t part, uint8_t *label) {
   DIR dh;
   FILINFO finfo;
   FRESULT res;
@@ -1495,6 +1495,7 @@ const PROGMEM fileops_t fatops = {  // These should be at bottom, to be consiste
   &fat_open_write,
   &fat_open_rel,
   &fat_delete,
+  &fat_getvolumename,
   &fat_getdirlabel,
   &fat_getid,
   &fat_freeblocks,

@@ -42,6 +42,7 @@
  * @open_write  : open a file for writing/appending
  * @open_rel    : open a relative file
  * @file_delete : delete a file
+ * @disk_label  : read disk label
  * @dir_label   : read dir label
  * @disk_id     : read disk id
  * @disk_free   : read free space of disk
@@ -64,6 +65,7 @@ typedef struct fileops_s {
   void     (*open_write)(path_t *path, cbmdirent_t *name, uint8_t type, buffer_t *buf, uint8_t append);
   void     (*open_rel)(path_t *path, cbmdirent_t *name, buffer_t *buf, uint8_t recordlen, uint8_t mode);
   uint8_t  (*file_delete)(path_t *path, cbmdirent_t *name);
+  uint8_t  (*disk_label)(uint8_t part, uint8_t *label);
   uint8_t  (*dir_label)(path_t *path, uint8_t *label);
   uint8_t  (*disk_id)(path_t *path, uint8_t *id);
   uint16_t (*disk_free)(uint8_t part);
@@ -85,6 +87,7 @@ typedef struct fileops_s {
 #define open_write(path,name,type,buf,app) ((pgmcall(partition[(path)->part].fop->open_write))(path,name,type,buf,app))
 #define open_rel(path,name,buf,len,mode) ((pgmcall(partition[(path)->part].fop->open_rel))(path,name,buf,len,mode))
 #define file_delete(path,name) ((pgmcall(partition[(path)->part].fop->file_delete))(path,name))
+#define disk_label(part,label) ((pgmcall(partition[part].fop->disk_label))(part,label))
 #define dir_label(path,label) ((pgmcall(partition[(path)->part].fop->dir_label))(path,label))
 #define disk_id(path,id) ((pgmcall(partition[(path)->part].fop->disk_id))(path,id))
 #define disk_free(drv) ((pgmcall(partition[drv].fop->disk_free))(drv))

@@ -268,8 +268,12 @@ static int8_t m2i_readdir(dh_t *dh, cbmdirent_t *dent) {
   }
 }
 
+static uint8_t m2i_getdisklabel(uint8_t part, uint8_t *label) {
+  return image_read(part, 0, label, 16);
+}
+
 static uint8_t m2i_getdirlabel(path_t *path, uint8_t *label) {
-  return image_read(path->part, 0, label, 16);
+  return m2i_getdisklabel(path->part, label);
 }
 
 static void m2i_open_read(path_t *path, cbmdirent_t *dent, buffer_t *buf) {
@@ -443,6 +447,7 @@ const PROGMEM fileops_t m2iops = {
   m2i_open_write,
   m2i_open_rel,
   m2i_delete,
+  m2i_getdisklabel,
   m2i_getdirlabel,
   fat_getid,
   fat_freeblocks,

@@ -718,7 +718,7 @@ static void parse_eeprom(void) {
 /* -------------------------- */
 static void parse_getpartition(void) {
   uint8_t *ptr;
-  path_t path;
+  uint8_t part;
 
   if (command_length < 3) /* FIXME: should this set an error? */
     return;
@@ -729,12 +729,12 @@ static void parse_getpartition(void) {
   }
 
   if (command_length == 3)
-    path.part = current_part+1;
+    part = current_part+1;
   else
-    path.part = command_buffer[3];
+    part = command_buffer[3];
 
   /* Valid partition number? */
-  if (path.part >= max_part) {
+  if (part >= max_part) {
     set_error(ERROR_PARTITION_ILLEGAL);
     return;
   }
@@ -746,17 +746,16 @@ static void parse_getpartition(void) {
   *(ptr++) = 1; /* Partition type: native */
   ptr++;
 
-  *(ptr++) = path.part+1;
-  path.dir.fat = 0;
-  if (dir_label(&path,ptr))
+  *(ptr++) = part+1;
+  if (disk_label(part,ptr))
     return;
   ptr += 16;
-  *(ptr++) = partition[path.part].fatfs.fatbase>>16;
-  *(ptr++) = partition[path.part].fatfs.fatbase>>8;
-  *(ptr++) = (partition[path.part].fatfs.fatbase & 0xff);
+  *(ptr++) = partition[part].fatfs.fatbase>>16;
+  *(ptr++) = partition[part].fatfs.fatbase>>8;
+  *(ptr++) = (partition[part].fatfs.fatbase & 0xff);
   ptr++;
 
-  uint32_t size = (partition[path.part].fatfs.max_clust - 1) * partition[path.part].fatfs.csize;
+  uint32_t size = (partition[part].fatfs.max_clust - 1) * partition[part].fatfs.csize;
   *(ptr++) = size>>16;
   *(ptr++) = size>>8;
   *(ptr++) = size;

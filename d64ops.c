@@ -1161,7 +1161,7 @@ static int8_t d64_readdir(dh_t *dh, cbmdirent_t *dent) {
 }
 
 /* Reads and converts a string from the dir header sector (BAM for D41/D71) to the buffer */
-/* Used by d64_getlabel and d64_getid */
+/* Used by d64_get(disk|dir)label and d64_getid */
 static uint8_t read_string_from_dirheader(path_t *path, uint8_t *buffer, param_t what, uint8_t size) {
   uint8_t sector;
 
@@ -1182,6 +1182,20 @@ static uint8_t read_string_from_dirheader(path_t *path, uint8_t *buffer, param_t
 
 static uint8_t d64_getdirlabel(path_t *path, uint8_t *label) {
   return read_string_from_dirheader(path, label, LABEL_OFFSET, 16);
+}
+
+static uint8_t d64_getdisklabel(uint8_t part, uint8_t *label) {
+  if (partition[part].imagetype == D64_TYPE_DNP) {
+    /* Read directly from root dir header */
+    return image_read(part, 256 + DNP_LABEL_OFFSET, label, 16);
+  } else {
+    /* Use getdirlabel instead */
+    path_t curpath;
+
+    curpath.part = part;
+    curpath.dir = partition[part].current_dir;
+    return d64_getdirlabel(&curpath, label);
+  }
 }
 
 static uint8_t d64_getid(path_t *path, uint8_t *id) {
@@ -1663,6 +1677,7 @@ const PROGMEM fileops_t d64ops = {
   d64_open_write,
   d64_open_rel,
   d64_delete,
+  d64_getdisklabel,
   d64_getdirlabel,
   d64_getid,
   d64_freeblocks,
