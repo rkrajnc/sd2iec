@@ -1068,7 +1068,7 @@ geos_get_byte_1mhz:
         delay_cycles 16*8 - 9 - 4
 
         ;; get bits 2 and 0
-        rjmp    get_bits_from_clk_data ; 4+8 - r24 = 76543210
+        rcall   get_bits_from_clk_data ; 4+8 - r24 = 76543210
 
         ;; post-process received value and return
         delay_cycles 11*8
