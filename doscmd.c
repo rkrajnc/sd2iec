@@ -1178,7 +1178,13 @@ static void handle_memwrite(void) {
       datacrc == 0x48f5 || /* FD native partition */
       datacrc == 0x1356 || /* FD emulation partition */
       datacrc == 0xe885 || /* HD native partition */
-      datacrc == 0x4eca) { /* HD emulation partition */
+      datacrc == 0x4eca || /* HD emulation partition */
+      datacrc == 0xdbf6 || /* 1571 C128 (parameter buffer preset differs) */
+      datacrc == 0xe4ab || /* 1581 C128 */
+      datacrc == 0x6de5 || /* FD native, C128 */
+      datacrc == 0x30ff || /* FD emulation, C128 */
+      datacrc == 0x46e7 || /* HD native, C128 */
+      datacrc == 0x2253) { /* HD emulation, C128 */
     /* Stage 2 */
     geos_send_byte = geos_send_byte_1581_21;
     geos_get_byte  = geos_get_byte_2mhz;
