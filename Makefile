@@ -254,7 +254,7 @@ CFLAGS += -I$(OBJDIR)
 CFLAGS += $(patsubst %,-I%,$(EXTRAINCDIRS))
 CFLAGS += $(CSTANDARD)
 CFLAGS += -ffunction-sections -fdata-sections
-#CFLAGS += -mcall-prologues
+CFLAGS += -mcall-prologues
 
 # these are needed for GCC 4.3.2, which is more aggressive at inlining
 # gcc-4.2 knows one of those, but it tends to increase code size
