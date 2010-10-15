@@ -1,3 +1,6 @@
+2010-10-16 - release 0.10.0pre3
+        - Bugfix: Wheels 128 loader detection fixed
+
 2010-10-15 - release 0.10.0pre2
         - Bugfix: G-P answer fixed
         - Bugfix: Strip 0x0d from file names when appropiate
