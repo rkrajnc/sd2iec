@@ -269,11 +269,12 @@ static int8_t m2i_readdir(dh_t *dh, cbmdirent_t *dent) {
 }
 
 static uint8_t m2i_getdisklabel(uint8_t part, uint8_t *label) {
+  label[16] = 0;
   return image_read(part, 0, label, 16);
 }
 
 static uint8_t m2i_getdirlabel(path_t *path, uint8_t *label) {
-  return m2i_getdisklabel(path->part, label);
+  return image_read(path->part, 0, label, 16);
 }
 
 static void m2i_open_read(path_t *path, cbmdirent_t *dent, buffer_t *buf) {

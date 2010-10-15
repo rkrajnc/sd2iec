@@ -1187,15 +1187,25 @@ static uint8_t d64_getdirlabel(path_t *path, uint8_t *label) {
 static uint8_t d64_getdisklabel(uint8_t part, uint8_t *label) {
   if (partition[part].imagetype == D64_TYPE_DNP) {
     /* Read directly from root dir header */
-    return image_read(part, 256 + DNP_LABEL_OFFSET, label, 16);
+    if (image_read(part, 256 + DNP_LABEL_OFFSET, label, 16))
+      return 1;
   } else {
     /* Use getdirlabel instead */
     path_t curpath;
 
     curpath.part = part;
     curpath.dir = partition[part].current_dir;
-    return d64_getdirlabel(&curpath, label);
+    if (d64_getdirlabel(&curpath, label))
+      return 1;
   }
+
+  /* Zero-terminate label */
+  uint8_t *ptr = label+16;
+  *ptr-- = 0;
+  while (ptr != label && *ptr == ' ')
+    *ptr-- = 0;
+
+  return 0;
 }
 
 static uint8_t d64_getid(path_t *path, uint8_t *id) {

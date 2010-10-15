@@ -747,8 +747,18 @@ static void parse_getpartition(void) {
   ptr++;
 
   *(ptr++) = part+1;
-  if (disk_label(part,ptr))
+
+  /* Read partition label */
+  memset(ptr, 0xa0, 16);
+  if (disk_label(part, entrybuf)) {
     return;
+  }
+
+  uint8_t *inptr  = entrybuf;
+  uint8_t *outptr = ptr;
+  while (*inptr)
+    *outptr++ = *inptr++;
+
   ptr += 16;
   *(ptr++) = partition[part].fatfs.fatbase>>16;
   *(ptr++) = partition[part].fatfs.fatbase>>8;

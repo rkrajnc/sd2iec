@@ -42,8 +42,8 @@
  * @open_write  : open a file for writing/appending
  * @open_rel    : open a relative file
  * @file_delete : delete a file
- * @disk_label  : read disk label
- * @dir_label   : read dir label
+ * @disk_label  : read disk label (up to 17 bytes, 0-terminated)
+ * @dir_label   : read dir label  (16 characters, space-padded, unterminated)
  * @disk_id     : read disk id
  * @disk_free   : read free space of disk
  * @read_sector : read a sector from the disk
