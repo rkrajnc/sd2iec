@@ -37,6 +37,15 @@
 #define DIR_OFS_SIZE_LOW        0x1e
 #define DIR_OFS_SIZE_HI         0x1f
 
+/* Disk image types - values must match G-P partition type byte */
+#define D64_TYPE_MASK 0x7f
+#define D64_TYPE_NONE 0
+#define D64_TYPE_DNP  1
+#define D64_TYPE_D41  2
+#define D64_TYPE_D71  3
+#define D64_TYPE_D81  4
+#define D64_HAS_ERRORINFO 128
+
 extern const fileops_t d64ops;
 
 extern buffer_t *bam_buffer;

@@ -76,15 +76,6 @@
 /* No errorinfo support for D81 */
 #define MAX_SECTORS_PER_TRACK 21
 
-#define D64_TYPE_MASK 0x7f
-#define D64_TYPE_NONE 0
-#define D64_TYPE_D41  1
-#define D64_TYPE_D71  2
-#define D64_TYPE_D81  3
-#define D64_TYPE_DNP  4
-
-#define D64_HAS_ERRORINFO 128
-
 typedef enum { BAM_BITFIELD, BAM_FREECOUNT } bamdata_t;
 
 struct {

@@ -33,6 +33,7 @@
 #include <string.h>
 #include <util/crc16.h>
 #include "config.h"
+#include "d64ops.h"
 #include "dirent.h"
 #include "diskchange.h"
 #include "diskio.h"
@@ -74,6 +75,14 @@ static const PROGMEM magic_value_t c1541_magics[] = {
   { 0xe5c6, { 0x34, 0xb1 } }, /* used by DreamLoad and ULoad Model 3 */
   { 0xfffe, { 0x00, 0x00 } }, /* Disable AR6 fastloader */
   { 0,      { 0, 0 } }        /* end mark */
+};
+
+/* System partition G-P answer */
+static const PROGMEM uint8_t system_partition_info[] = {
+  0xff,0xe2,0x00,0x53,0x59,0x53,0x54,0x45,
+  0x4d,0xa0,0xa0,0xa0,0xa0,0xa0,0xa0,0xa0,
+  0xa0,0xa0,0xa0,0x00,0x00,0x00,0x00,0x00,
+  0x00,0x00,0x00,0x00,0x00,0x00,0x0d
 };
 
 #ifndef __AVR__
@@ -728,25 +737,43 @@ static void parse_getpartition(void) {
     return;
   }
 
-  if (command_length == 3)
-    part = current_part+1;
+  if (command_length == 3 || command_buffer[3] == 0xff)
+    part = current_part + 1;
   else
     part = command_buffer[3];
 
-  /* Valid partition number? */
-  if (part >= max_part) {
-    set_error(ERROR_PARTITION_ILLEGAL);
+  buffers[CONFIG_BUFFER_COUNT].position = 0;
+  buffers[CONFIG_BUFFER_COUNT].lastused = 30;
+
+  memset(error_buffer,0,30);
+  error_buffer[30] = 13;
+  ptr = error_buffer;
+
+  if (part > max_part) {
+    /* Nonexisting partition - return empty answer */
+    ptr[30] = 13;
     return;
   }
 
-  buffers[CONFIG_BUFFER_COUNT].position = 0;
-  buffers[CONFIG_BUFFER_COUNT].lastused = 31;
-  ptr=buffers[CONFIG_BUFFER_COUNT].data;
-  memset(ptr,0,32);
-  *(ptr++) = 1; /* Partition type: native */
-  ptr++;
+  if (part == 0) {
+    /* System partition - return static info */
+    memcpy_P(ptr, system_partition_info, sizeof(system_partition_info));
+    return;
+  }
 
-  *(ptr++) = part+1;
+  part -= 1;
+
+  /* Create partition info */
+  if (partition[part].fop == &d64ops) {
+    /* Use type of mounted image as partition type */
+    *ptr++ = partition[part].imagetype & D64_TYPE_MASK;
+  } else {
+    /* Use native for anything else */
+    *ptr++ = 1;
+  }
+  *ptr++ = 0xe2; // 1.6MB disk - "reserved" for HD
+
+  *ptr++ = part+1;
 
   /* Read partition label */
   memset(ptr, 0xa0, 16);
@@ -760,16 +787,15 @@ static void parse_getpartition(void) {
     *outptr++ = *inptr++;
 
   ptr += 16;
-  *(ptr++) = partition[part].fatfs.fatbase>>16;
-  *(ptr++) = partition[part].fatfs.fatbase>>8;
-  *(ptr++) = (partition[part].fatfs.fatbase & 0xff);
-  ptr++;
+  *ptr++ = (partition[part].fatfs.fatbase >> 16) & 0xff;
+  *ptr++ = (partition[part].fatfs.fatbase >>  8) & 0xff;
+  *ptr++ = (partition[part].fatfs.fatbase      ) & 0xff;
+  ptr += 5; // reserved bytes
 
   uint32_t size = (partition[part].fatfs.max_clust - 1) * partition[part].fatfs.csize;
-  *(ptr++) = size>>16;
-  *(ptr++) = size>>8;
-  *(ptr++) = size;
-  *ptr = 13;
+  *ptr++ = (size >> 16) & 0xff;
+  *ptr++ = (size >>  8) & 0xff;
+  *ptr   = size & 0xff;
 }
 
 
