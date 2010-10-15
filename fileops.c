@@ -101,6 +101,9 @@ const PROGMEM uint8_t filetypes[] = {
   'D','I','R', // 6
   '?','?','?', // 7
   'N','A','T', // 8
+  '4','1',' ', // 9
+  '7','1',' ', // 10
+  '8','1',' ', // 11
 };
 
 /* ------------------------------------------------------------------------- */
@@ -248,14 +251,26 @@ static uint8_t pdir_refill(buffer_t* buf) {
   cbmdirent_t dent;
 
   buf->position = 0;
+
   /* read volume name */
   while(buf->pvt.pdir.part < max_part) {
     if (disk_label(buf->pvt.pdir.part, dent.name)) {
       free_buffer(buf);
       return 1;
     }
-    dent.blocksize=++buf->pvt.pdir.part;
-    dent.typeflags = TYPE_NAT;
+
+    dent.blocksize = buf->pvt.pdir.part+1;
+
+    if (partition[buf->pvt.pdir.part].fop == &d64ops) {
+      /* Use the correct partition type for Dxx images */
+      dent.typeflags = (partition[buf->pvt.pdir.part].imagetype & D64_TYPE_MASK)
+                       + TYPE_NAT - 1;
+    } else {
+      /* Anything else is "native" */
+      dent.typeflags = TYPE_NAT;
+    }
+
+    buf->pvt.pdir.part++;
 
     /* Parse the name pattern */
     if (buf->pvt.pdir.matchstr &&
