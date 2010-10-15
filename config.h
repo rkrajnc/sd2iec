@@ -692,4 +692,9 @@
 /* Hardcoded maximum - reducing this won't save any ram */
 #define MAX_DRIVES 8
 
+/* Sanity check */
+#ifndef CONFIG_LOADER_GEOS
+#  error "CONFIG_LOADER_GEOS must be enabled for Wheels support!"
+#endif
+
 #endif

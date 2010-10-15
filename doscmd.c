@@ -910,7 +910,7 @@ static void handle_memexec(void) {
   }
 #endif
 #ifdef CONFIG_LOADER_WHEELS
-  /* Wheels stage 1 - FIXME: Move to GEOS section? */
+  /* Wheels stage 1 */
   if (detected_loader == FL_WHEELS_S1_64 && address == 0x0400) {
     load_wheels_s1(PSTR("SYSTEM1"));
   }

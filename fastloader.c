@@ -1025,7 +1025,7 @@ void load_geos(void) {
 
   while (1) {
     /* Receive command block */
-    update_leds();
+    set_busy_led(0);
     geos_receive_lenblock(cmddata);
     set_busy_led(1);
 
@@ -1219,7 +1219,6 @@ void load_geos128_s1(void) {
  *  Wheels
  *
  */
-// FIXME: Move into CONFIG_LOADER_GEOS?
 #ifdef CONFIG_LOADER_WHEELS
 
 /* Send a fixed-length data block */
@@ -1367,6 +1366,10 @@ void load_wheels_s1(const char *filename) {
   while (!IEC_CLOCK) ;
   set_data(1);
   set_clock(1);
+  if (buf) {
+    buf->cleanup(buf);
+    free_buffer(buf);
+  }
 }
 
 /* Wheels stage 2 loader */
@@ -1399,8 +1402,7 @@ void load_wheels_s2(void) {
 
     geos_receive_datablock(&cmdbuffer, 4);
     set_busy_led(1);
-
-    uart_trace(&cmdbuffer, 0, 4);
+    //uart_trace(&cmdbuffer, 0, 4);
 
     switch (cmdbuffer.address) {
     case 0x0303: // QUIT
@@ -1446,7 +1448,7 @@ void load_wheels_s2(void) {
       return;
     }
 
-    update_leds();
+    set_busy_led(0);
 
     /* wait until clock is low */
     while (IEC_CLOCK && IEC_ATN) {
