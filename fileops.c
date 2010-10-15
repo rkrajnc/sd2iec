@@ -770,6 +770,14 @@ void file_open(uint8_t secondary) {
   /* Assume everything will go well unless proven otherwise */
   set_error(ERROR_OK);
 
+  /* Strip 0x0d characters from end of name (C2BD-C2CA) */
+  if (command_length > 1) {
+    if (command_buffer[command_length-1] == 0x0d)
+      command_length -= 1;
+    else if (command_buffer[command_length-2] == 0x0d)
+      command_length -= 2;
+  }
+
   /* Clear the remainder of the command buffer, simplifies parsing */
   memset(command_buffer+command_length, 0, sizeof(command_buffer)-command_length);
 
