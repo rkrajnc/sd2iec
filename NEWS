@@ -1,3 +1,8 @@
+2010-10-15 - release 0.10.0pre2
+        - Bugfix: G-P answer fixed
+        - Bugfix: Strip 0x0d from file names when appropiate
+        - Wheels support
+
 2010-08-06 - release 0.10.0pre1
         - GEOS 2.0 support (d64/d71/d81 images only)
         - File-based M-R emulation

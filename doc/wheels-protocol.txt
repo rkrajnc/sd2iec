@@ -88,8 +88,80 @@ of k bytes happens as follows:
 - wait until clock is low
 
 
-Stage 1 loader (FIXME: Only 1541 checked yet)
+Parallel block transfer (HD only)
+---------------------------------
+Note: This section is based on a disassembly of the drive code only
+and has not been verified in reality.
+
+Wheels can utilize the parallel port of the CMD HD for increased
+transfer speed. Before every block transfer the drive checks if a flag
+byte at $031e (inside the drive code) has bit 7 set - if it is set,
+parallel mode is used instead of the serial transfer described
+above. The flag is never set within the drive code, it is assumed that
+it'll be set when the code is uploaded (if at all). The flag is reset
+in the drive code in a single place - if the high byte of the RPC
+address is anything except $03, the code calls STATUS, sets clock/data
+high, clears the parallel flag and runs QUIT to exit.
+
+Parallel block reception
+------------------------
+The parallel block reception is called instead of the standard block
+reception subroutine and expects a byte count (1-256) as parameter.
+
+- wait until clock is high
+- set data and clock high
+- reception loop:
+  - wait until clock is low
+  - read parallel port
+  - set data low
+  - store received byte
+  - decrement count
+  - exit loop if count is now 0
+
+  - wait until clock is high
+  - read parallel port
+  - set data high
+  - store received byte
+  - decrement count
+  - exit loop if count is now 0
+- wait until clock is low (always, exit point in loop doesn't matter)
+- set data low (same)
+
+Parallel block transmission
+---------------------------
+The parallel block transmission is called instead of the standard
+block transmission subroutine and expects a byte count (1-256) as
+parameter.
+
+- set parallel port to output
+- wait until clock is high
+- set clock and data high
+- transmission loop:
+  - wait until clock is low
+  - read next data byte
+  - send byte to parallel port
+  - set data low
+  - wait until clock is high
+  - decrement count
+  - exit loop if count is now 0
+
+  - read next data byte
+  - send byte to parallel port
+  - set data high
+  - decrement count
+  - exit loop if count is now 0
+- set clock/data high
+- wait until clock is low
+- set data low
+- set parallel port to input
+
+
+
+Stage 1 loader
 --------------
+Note: This stage is only used for 1541/1571 drives, all others load
+the system file with standard KERNAL calls.
+
 The stage 1 loader is a fixed-filename loader that searches for a
 predetermined file and transmits it to the computer. The file name is
 "SYSTEM1" for the C64 version and "128SYSTEM1" for the C128. In the
@@ -153,6 +225,35 @@ This function uses the block transfer operation to transmit a single
 byte to the C64. This byte is the job result code from the buffer that
 is used for disk operations.
 
+Calculating the number of free blocks (NATIVE_FREE - 0312)
+----------------------------------------------------------
+This function calculates the number of free blocks in a CMD native
+partition. The first parameter byte is the sector number of the last
+BAM sector that should be read, the second parameter is the last
+byte in that sector that should be added into the result ($00 means
+every byte). Currently there has been no situation observed in which
+those two parameters had values that would limit the calculation to
+less than the entire partition.
+
+The function transmits two bytes to the C64 which are the number of
+free sectors in the current partition (must be CMD native, but isn't
+used for anything else anyway) in little-endian byte order. After
+transmitting this function calls the STATUS function.
+
+Reading the current partition and dir (GET_CURRENT_PART_DIR - 0315)
+-------------------------------------------------------------------
+This function transmits three bytes to the C64. The first two are the
+track and sector of the directory head sector of the current directory
+in the current partition, the third is the number of the current
+partition (1-based as usual).
+
+Setting the current partition and dir (SET_CURRENT_PART_DIR - 0318)
+-------------------------------------------------------------------
+This function changes the current directory and/or partition. It
+received three bytes from the C64. The third byte is the new current
+partition (0 indicates no change), the first two bytes are used as the
+current directory head track and sector in that partition.
+
 Checking for disk change (CHECK_CHANGE - 031b)
 ----------------------------------------------
 This function transmits a single byte to the computer using the block
@@ -183,16 +284,26 @@ After that it starts its main loop:
 - restart loader main loop
 
 Unlike the GEOS loaders Wheels calls every function using a jump table
-located at $0303-$031d. FIXME:It is assumed (but not verified) that
-the same jump table is used for every drive type.
+located at $0303-$031d, so the addresses transmitted are the same for
+every drive type.
 
 0303: QUIT
 0306: WRITE
 0309: READ
 030c: READLINK
 030f: STATUS
-0312: unknown (nop/nop/rts)
-0315: unknown (nop/nop/rts)
-0318: unknown (nop/nop/rts)
+0312: NATIVE_FREE
+0315: GET_CURRENT_PART_DIR
+0318: SET_CURRENT_PART_DIR
 031b: CHECK_CHANGE
 
+For CMD drives there are two variations of the loader - one is used
+for native partitions and implements NATIVE_FREE and
+GET_CURRENT_PART_DIR, the other is used for 1581 partitions and omits
+those two functions.
+
+The CMD FD is the only drive that implements all of these
+functions. For the HD, the CHECK_CHANGE function is always dummied out
+(nop/nop/rts), for standard Commodore drives the NATIVE_FREE,
+GET_CURRENT_PART_DIR and SET_CURRENT_PART_DIR functions are dummied
+out (nop/nop/rts).

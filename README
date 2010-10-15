@@ -581,13 +581,24 @@ Note: Using sd2iec without an external crystal or similiar precise
   based M-R emulation when using GEOS to avoid these problems.
 
   GEOS 1.3 may or may not work - it boots, but wasn't tested in-depth.
-  Wheels will not work; Gateway seems to work but was not tested
-  beyond booting it from a D64 image.
+  Gateway seems to work but was not tested beyond booting it from a D64
+  image.
 
   Using the buttons for changing the current disk image is supported,
   but do make sure that you only access disk images that the drive
   type that is selected in GEOS would support (i.e. D64 for a 1541,
   D64/D71 for a 1571 and D81 for a 1581).
+
+  Wheels
+  ------
+  Wheels can be booted from any disk image type it supports. The correct
+  rom emulation file (XR) MUST be set, especially for CMD HD emulation.
+
+  Do not use the disk change feature to change disk images when HD emulation
+  is in use - Wheels does not check for disk changes on that drive!
+  For other drive types the restrictions on disk image type of GEOS also
+  apply to Wheels.
+
 
 JiffyDOS:
 =========
