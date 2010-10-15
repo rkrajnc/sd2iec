@@ -1173,8 +1173,13 @@ static void handle_memwrite(void) {
     detected_loader = FL_WHEELS_S2;
   }
 
-  if (datacrc == 0x18e9 || datacrc == 0xe445) {
-    /* Stage 2 1571/1581 */
+  if (datacrc == 0x18e9 || /* 1571 */
+      datacrc == 0x9804 || /* 1581 */
+      datacrc == 0x48f5 || /* FD native partition */
+      datacrc == 0x1356 || /* FD emulation partition */
+      datacrc == 0xe885 || /* HD native partition */
+      datacrc == 0x4eca) { /* HD emulation partition */
+    /* Stage 2 */
     geos_send_byte = geos_send_byte_1581_21;
     geos_get_byte  = geos_get_byte_2mhz;
     detected_loader = FL_WHEELS_S2;

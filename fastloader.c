@@ -1292,6 +1292,41 @@ static void wheels_read_sector(uint8_t track, uint8_t sector, buffer_t *buf, uin
   wheels_transmit_status();
 }
 
+/* Wheels NATIVE_FREE operation (0312) */
+static void wheels_native_free(void) {
+  /* Cheat: Ignore the limits set by the C64 */
+  uint16_t freeblocks;
+
+  freeblocks = disk_free(current_part);
+  wheels_transmit_datablock(&freeblocks, 2);
+  wheels_transmit_status();
+}
+
+/* Wheels GET_CURRENT_PART_DIR (0315) */
+static void wheels_get_current_part_dir(void) {
+  uint8_t data[3];
+
+  data[0] = partition[current_part].current_dir.dxx.track;
+  data[1] = partition[current_part].current_dir.dxx.sector;
+  data[2] = current_part+1;
+  wheels_transmit_datablock(&data, 3);
+}
+
+/* Wheels SET_CURRENT_PART_DIR operation (0318) */
+static void wheels_set_current_part_dir(void) {
+  uint8_t data[3];
+
+  geos_receive_datablock(&data, 3);
+
+  if (data[2] != 0)
+    current_part = data[2]-1;
+
+  partition[current_part].current_dir.dxx.track  = data[0];
+  partition[current_part].current_dir.dxx.sector = data[1];
+}
+
+
+
 /* Wheels stage 1 loader */
 void load_wheels_s1(const char *filename) {
   buffer_t *buf;
@@ -1389,9 +1424,16 @@ void load_wheels_s2(void) {
       wheels_transmit_status();
       break;
 
-    case 0x0312: // unknown, just returns
-    case 0x0315: // unknown, just returns
-    case 0x0318: // unknown, just returns
+    case 0x0312: // NATIVE_FREE
+      wheels_native_free();
+      break;
+
+    case 0x0315: // GET_CURRENT_PART_DIR
+      wheels_get_current_part_dir();
+      break;
+
+    case 0x0318: // SET_CURRENT_PART_DIR
+      wheels_set_current_part_dir();
       break;
 
     case 0x031b: // CHECK_CHANGE
