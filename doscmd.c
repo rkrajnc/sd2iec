@@ -118,6 +118,91 @@ static PROGMEM uint8_t downames[] = "SUN.MON.TUESWED.THURFRI.SAT.";
 static PROGMEM uint8_t asciitime_skel[] = " xx/xx/xx xx:xx:xx xM\r";
 #endif
 
+#ifdef CONFIG_CAPTURE_LOADERS
+static uint8_t loader_buffer[CONFIG_CAPTURE_BUFFER_SIZE];
+static uint8_t *loader_ptr = loader_buffer;
+static uint8_t capture_count = 0;
+
+/* ------------------------------------------------------------------------- */
+/*  Capture helpers                                                          */
+/* ------------------------------------------------------------------------- */
+
+/* Convert byte to two-character hex string */
+static uint8_t *byte_to_hex(uint8_t num, uint8_t *str) {
+  uint8_t tmp;
+
+  tmp = (num & 0xf0) >> 4;
+  if (tmp < 10)
+    *str++ = '0' + tmp;
+  else
+    *str++ = 'a' + tmp - 10;
+
+  tmp = num & 0x0f;
+  if (tmp < 10)
+    *str++ = '0' + tmp;
+  else
+    *str++ = 'a' + tmp - 10;
+
+  return str;
+}
+
+/* Copy command to capture buffer */
+static void dump_command(void) {
+  if (loader_ptr - loader_buffer + command_length + 2+1 < CONFIG_CAPTURE_BUFFER_SIZE) {
+    *loader_ptr++ = 'C';
+    *loader_ptr++ = command_length;
+    memcpy(loader_ptr, command_buffer, command_length);
+    loader_ptr += command_length;
+  } else {
+    *loader_ptr = 'X';
+  }
+}
+
+/* Dump buffer state */
+static void dump_buffer_state(void) {
+  if (CONFIG_CAPTURE_BUFFER_SIZE - (loader_ptr - loader_buffer) > sizeof(buffer_t)*CONFIG_BUFFER_COUNT+2) {
+    *loader_ptr++ = 'B';
+    *loader_ptr++ = sizeof(buffer_t);
+    *loader_ptr++ = CONFIG_BUFFER_COUNT;
+    memcpy(loader_ptr, buffers, sizeof(buffer_t) * CONFIG_BUFFER_COUNT);
+    loader_ptr += sizeof(buffer_t) * CONFIG_BUFFER_COUNT;
+  }
+}
+
+/* Save capture buffer to disk */
+static void save_capbuffer(void) {
+  uint8_t *ptr;
+  FIL datafile;
+
+  /* Use CRC and counter as file name */
+  ptr = byte_to_hex(datacrc >> 8, entrybuf);
+  ptr = byte_to_hex(datacrc & 0xff, ptr);
+  *ptr++ = '-';
+  ptr = byte_to_hex(capture_count++, ptr);
+  *ptr++ = '.';
+  *ptr++ = 'd';
+  *ptr++ = 'm';
+  *ptr++ = 'p';
+  *ptr   = 0;
+
+  FRESULT res = f_open(&partition[0].fatfs, &datafile, entrybuf, FA_WRITE | FA_CREATE_ALWAYS);
+  if (res == FR_OK) {
+    UINT byteswritten;
+
+    /* Skip the error checks here */
+    f_write(&datafile, loader_buffer, loader_ptr - loader_buffer, &byteswritten);
+    f_close(&datafile);
+  }
+
+  /* Reset capture buffer */
+  loader_ptr = loader_buffer;
+
+  /* Notify the user */
+  set_error(ERROR_DRIVE_NOT_READY);
+}
+
+#endif
+
 /* ------------------------------------------------------------------------- */
 /*  Parsing helpers                                                          */
 /* ------------------------------------------------------------------------- */
@@ -834,6 +919,14 @@ static void handle_memexec(void) {
   if (detected_loader == FL_NONE)
     detected_loader = previous_loader;
 
+#ifdef CONFIG_CAPTURE_LOADERS
+  if (detected_loader == FL_NONE && datacrc != 0xffff) {
+    dump_command();
+    dump_buffer_state();
+    save_capbuffer();
+  }
+#endif
+
   address = command_buffer[3] + (command_buffer[4]<<8);
 #ifdef CONFIG_LOADER_TURBODISK
   if (detected_loader == FL_TURBODISK && address == 0x0303) {
@@ -1190,6 +1283,10 @@ static void handle_memwrite(void) {
     geos_get_byte  = geos_get_byte_2mhz;
     detected_loader = FL_WHEELS_S2;
   }
+#endif
+
+#ifdef CONFIG_CAPTURE_LOADERS
+  dump_command();
 #endif
 
   if (detected_loader == FL_NONE) {

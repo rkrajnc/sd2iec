@@ -166,3 +166,7 @@ CONFIG_REMOTE_DISPLAY=y
 # This buffer is used as temporary space when sending commands to
 # the display. Longer texts will be truncated.
 CONFIG_DISPLAY_BUFFER_SIZE=40
+
+# Capture unknown loaders to file
+#CONFIG_CAPTURE_LOADERS=y
+#CONFIG_CAPTURE_BUFFER_SIZE=3000
