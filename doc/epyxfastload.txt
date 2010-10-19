@@ -17,8 +17,11 @@ First stage protocol
 --------------------
 The first stage sets data high and clock low and waits until data is low.
 It then releases clock and reads 256 bytes using the same protocol as
-G.I.Joe (see that document). Only the first 238 bytes are actually required,
-XORing those 238 bytes together results in 0x50 in the version analyzed.
+G.I.Joe (see that document). There are at least two versions of the
+second stage, but they are protocol-compatible. Both don't need the
+full 256 bytes that are uploaded - only 237/238 bytes are actually
+used during execution. XORing the first 237 bytes together yields a
+result of 0x91 and 0x5b respectively.
 
 Second stage protocol
 ---------------------

@@ -750,13 +750,13 @@ void load_epyxcart(void) {
     if (b < 0)
       return;
 
-    if (i < 238)
+    if (i < 237)
       /* Stage 2 has some junk bytes at the end, ignore them */
       checksum ^= b;
   }
 
-  /* Check for known stage2 loader */
-  if (checksum != 0x50) {
+  /* Check for known stage2 loaders */
+  if (checksum != 0x91 && checksum != 0x5b) {
     return;
   }
 
