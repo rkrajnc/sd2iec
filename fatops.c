@@ -806,12 +806,6 @@ int8_t fat_readdir(dh_t *dh, cbmdirent_t *dent) {
 
   if (!finfo.lfn[0] || ustrlen(finfo.lfn) > CBM_NAME_LENGTH+4) {
     nameptr = finfo.fname;
-
-    ptr = nameptr;
-    while (*ptr) {
-      if (*ptr == '~') *ptr = 0xff;
-      ptr++;
-    }
   } else {
     /* Convert only LFNs to PETSCII, 8.3 are always upper-case */
     nameptr = finfo.lfn;
@@ -894,6 +888,12 @@ int8_t fat_readdir(dh_t *dh, cbmdirent_t *dent) {
       ustrcpy(dent->name, finfo.fname);
     } else {
       ustrcpy(dent->name, nameptr);
+    }
+
+    ptr = dent->name;
+    while (*ptr) {
+      if (*ptr == '~') *ptr = 0xff;
+      ptr++;
     }
   }
 
