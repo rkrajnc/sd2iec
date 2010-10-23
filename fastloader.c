@@ -849,8 +849,8 @@ static void geos_receive_datablock(void *data_, uint16_t length) {
     set_data(1);
     while (length--)
       *data-- = geos_get_byte();
+    set_data(0);
   }
-  set_data(0);
 }
 
 /* Receive a data block from the computer */
@@ -887,7 +887,7 @@ static void geos_receive_lenblock(uint8_t *data) {
 
 /* Send a single byte to the computer after waiting for CLOCK high */
 static void geos_transmit_byte_wait(uint8_t byte) {
-  ATOMIC_BLOCK(ATOMIC_FORCEON) {
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
     /* Wait until clock is high */
     while (!IEC_CLOCK) ;
     set_data(1);
