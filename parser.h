@@ -34,6 +34,11 @@ extern partition_t partition[CONFIG_MAX_PARTITIONS];
 extern uint8_t current_part;
 extern uint8_t max_part;
 
+/* Non-zero after any directory change */
+/* Used for disk (image) change detection in some fastloaders */
+/* Must be reset by its user */
+extern uint8_t dir_changed;
+
 /* Update current_dir in partition array */
 void update_current_dir(path_t *path);
 

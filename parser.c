@@ -39,11 +39,13 @@
 partition_t partition[CONFIG_MAX_PARTITIONS];
 uint8_t current_part;
 uint8_t max_part;
+uint8_t dir_changed;
 
 /* Updates current_dir in the partition array and sends */
 /* the new dir to the display.                          */
 void update_current_dir(path_t *path){
   partition[path->part].current_dir = path->dir;
+  dir_changed = 1;
 
   if (display_found && path->part == current_part) {
     uint8_t dirname[CBM_NAME_LENGTH+1];

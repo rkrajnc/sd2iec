@@ -1249,7 +1249,15 @@ static void wheels_transmit_status(void) {
 /* Wheels CHECK_CHANGE operation (031b) */
 static void wheels_check_diskchange(void) {
   ATOMIC_BLOCK(ATOMIC_FORCEON) {
-    geos_transmit_byte_wait(3); // Always claim that the disk was changed
+    if (dir_changed) {
+      /* Disk has changed */
+      geos_transmit_byte_wait(3);
+    } else {
+      /* Disk not changed */
+      geos_transmit_byte_wait(0);
+    }
+
+    dir_changed = 0;
     while (IEC_CLOCK) ;
   }
 }
