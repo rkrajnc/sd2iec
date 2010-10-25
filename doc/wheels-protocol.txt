@@ -3,15 +3,28 @@ Wheels fast loader protocol
 
 Documented by Ingo Korb
 
+Wheels 4.4 note
+---------------
+Although the analyzed pre-4.4 versions of wheels had a nice,
+consistent loader design with just two different byte
+transmission/reception variations and a fully compatible protocol
+between all drive types, Wheels 4.4 ditched that for some reason. The
+protocol is still similiar to the previous versions, but there are
+some important differences which depend on the drive type. The pre-4.4
+versions are used as the baseline in this document, changes in 4.4 are
+noted where appropiate.
+
 Low-Level byte transmission
 ---------------------------
 Both data and clock should be set to high already from previous
 operations. Using the high->low transition of clock as a timing
-reference, send bits as shown in the following table. The timing
-and bit order differs for 1MHz (154) and 2MHz (everything else)
-drives.
+reference, send bits as shown in the following table. For older
+versions of Wheels the timing and bit order only differs between 1MHz
+(154) and 2MHz (everything else) drives. Wheels 4.4 runs the 1571 in
+1MHz mode using the 1541 timing from previous Wheels versions and
+uses a slowed-down timing for the 1581 and CMD drives.
 
-1MHz:
+1541 (all versions) and 1571 (Wheels 4.4):
    Time  Clock Data
    ----------------
     0us  1->0  (1)  (timing reference)
@@ -21,7 +34,7 @@ drives.
    51us   !b6  !b4
    73us    -    -   (hold time so the C64 has time to read b6/b4)
 
-2MHz:
+2MHz (Wheels pre-4.4 - identical to GEOS 1581 with Configure 2.1):
    Time  Clock Data
    ----------------
     0us  1->0  (1)  (timing reference)
@@ -30,6 +43,16 @@ drives.
    24us    b4   b5
    33us    b6   b7
    45us    -    -   (hold time so the C64 has time to read b6/b7)
+
+1581/CMD (Wheels 4.4):
+   Time  Clock Data
+   ----------------
+    0us  1->0  (1)  (timing reference)
+    7us    b0   b1
+   15us    b2   b3
+   26us    b4   b5
+   37us    b6   b7
+   52us    -    -   (hold time so the C64 has time to read b6/b7)
 
 
 Low-Level byte reception
@@ -40,7 +63,7 @@ reference, receive bits as shown in the following table. The timing
 and bit order differs for 1MHz (1541) and 2MHz (everything else)
 drives:
 
-1MHz:
+1MHz (Wheels pre-4.4):
    Time  Clock Data
    ----------------
     0us  1->0  (1)  (timing reference)
@@ -49,7 +72,7 @@ drives:
    41us   !b3  !b1
    54us   !b2  !b0
 
-2MHz:
+2MHz (Wheels pre-4.4 - identical to GEOS 2MHz timing):
    Time  Clock Data
    ----------------
     0us  1->0  (1)  (timing reference)
@@ -57,6 +80,25 @@ drives:
    29us   !b6  !b7
    39.5us !b3  !b1
    50.5us !b2  !b0
+
+1541/1571 (Wheels 4.4):
+   Time  Clock Data
+   ----------------
+    0us  1->0  (1)  (timing reference)
+   17us   !b7  !b5
+   28us   !b6  !b4
+   45us   !b3  !b1
+   61us   !b2  !b0
+
+1581/CMD (Wheels 4.4):
+   Time  Clock Data
+   ----------------
+    0us  1->0  (1)  (timing reference)
+   15us   !b0  !b1
+   26us   !b2  !b3
+   37us   !b4  !b5
+   48us   !b6  !b7
+   73us   -    -    (recommended delay before returning)
 
 
 Receiving a block
@@ -68,6 +110,7 @@ size from 1-256 bytes. A block transfer of k bytes happens as follows:
 - set data high
 (- delay 15us?)
 - receive k bytes, starting at the end of the buffer
+- Wheels 4.4 only: Wait until clock is low
 - set data low
 
 Unlike GEOS, the block length is always determined on the drive
@@ -84,8 +127,13 @@ of k bytes happens as follows:
 - set data and clock high
 - transmit all k data bytes, starting with the last byte
 - delay 20us
-- set data low
-- wait until clock is low
+- Wheels pre-4.4 and 4.4 on 1541/1571:
+  - set data low, clock high
+  - wait until clock is low
+- Wheels 4.4 on 1581/CMD
+  - set data and clock high
+  - wait until clock is low
+  - set data low
 
 
 Parallel block transfer (HD only)
@@ -103,8 +151,17 @@ in the drive code in a single place - if the high byte of the RPC
 address is anything except $03, the code calls STATUS, sets clock/data
 high, clears the parallel flag and runs QUIT to exit.
 
-Parallel block reception
-------------------------
+NOTE: Wheels 4.4 does not use the serial port at all after starting
+the drive code with the parallel mode flag set. Instead of waiting for
+a certain state on the clock line it waits for the inverted state on
+bit 6 of port B (PB6) of the 8255 and instead of setting the data line low
+or high it sets bit 7 of port C (PC7) of the 8255 to high/low. It is
+currently assumed that those two pins are connected to the handshake
+lines of the parallel connector of the HD, but it is not known if this
+connection is inverted or not.
+
+Parallel block reception pre-4.4
+--------------------------------
 The parallel block reception is called instead of the standard block
 reception subroutine and expects a byte count (1-256) as parameter.
 
@@ -127,8 +184,21 @@ reception subroutine and expects a byte count (1-256) as parameter.
 - wait until clock is low (always, exit point in loop doesn't matter)
 - set data low (same)
 
-Parallel block transmission
----------------------------
+Parallel block reception 4.4
+----------------------------
+Again the parallel block reception is called instead of the standard
+block reception subroutine.
+
+- reception loop (one iteration per byte):
+  - wait until PB6 is 0
+  - read parallel port
+  - set PC7 to 1
+  - wait until PB6 is 1
+  - set PC7 to 0
+  - store received byte
+
+Parallel block transmission pre-4.4
+-----------------------------------
 The parallel block transmission is called instead of the standard
 block transmission subroutine and expects a byte count (1-256) as
 parameter.
@@ -155,7 +225,20 @@ parameter.
 - set data low
 - set parallel port to input
 
+Parallel block transmission 4.4
+-------------------------------
+Again the parallel block transmission is called instead of the
+standard block transmission subroutine.
 
+- set parallel port to output
+- reception loop (one iteration per byte):
+  - read next data byte
+  - wait until PB6 is 0
+  - send byte to parallel port
+  - set PC7 to 1
+  - wait until PB6 is 1
+  - set PC7 to 0
+- set parallel port to input
 
 Stage 1 loader
 --------------
@@ -189,6 +272,9 @@ The stage 1 loader does the following:
 
 Stage 2 functions
 =================
+Note: Addresses are for Wheels versions before 4.4. In 4.4 the jump
+table is moved to 0403 for the 1541/1571, to 0503 for the CMD FD/HD,
+but stays at 0303 for the 1581.
 
 Exiting the fastloader (QUIT - 0303)
 ------------------------------------
@@ -262,7 +348,13 @@ or $03 if it was. On a 1541 the flag value is obtained from address
 $1c which will be set on a disk change, but is not reset at all while
 the loader is running. If this function returns a "disk changed"
 state, Wheels will exit the loader and send the Initialize dos
-command. A simple implementation that always returns $03 works fine.
+command. A simple implementation that always returns $03 works fine
+for 1541/71/81 modes, but will fail if a CMD FD is emulated.
+
+In Wheels 4.4 an implementation that always returns $03 will fail for
+every drive type (except HD). For a 1571 Wheels 4.4 expects a return
+value of 0 for single-sided disks or $80 for double-sided disks (value
+taken from byte 4 of sector 18/0).
 
 
 Stage 2 loader
@@ -296,6 +388,9 @@ every drive type.
 0315: GET_CURRENT_PART_DIR
 0318: SET_CURRENT_PART_DIR
 031b: CHECK_CHANGE
+
+NOTE: Wheels 4.4 moves the jump table to 0403 on the 1541 and 1571 or
+0503 on the CMD FD/HD, but the functions and their order is the same.
 
 For CMD drives there are two variations of the loader - one is used
 for native partitions and implements NATIVE_FREE and

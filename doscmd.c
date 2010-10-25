@@ -1012,7 +1012,10 @@ static void handle_memexec(void) {
   }
 
   /* Wheels stage 2 */
-  if (detected_loader == FL_WHEELS_S2 && address == 0x0300) {
+  if ((detected_loader == FL_WHEELS_S2 && address == 0x0300) ||
+      (detected_loader == FL_WHEELS44_S2 && address == 0x0400) ||
+      (detected_loader == FL_WHEELS44_S2_1581 && address == 0x0300) ||
+      (detected_loader == FL_WHEELS44_S2_1581 && address == 0x0500)) {
     // Note: geos_send_byte/geos_get_byte already set in CRC detection
     load_wheels_s2();
   }
@@ -1282,6 +1285,24 @@ static void handle_memwrite(void) {
     geos_send_byte = geos_send_byte_1581_21;
     geos_get_byte  = geos_get_byte_2mhz;
     detected_loader = FL_WHEELS_S2;
+  }
+
+  if (datacrc == 0xc26a || /* Wheels 4.4 1541 */
+      datacrc == 0x550c) { /* Wheels 4.4 1571 */
+    /* Stage 2 */
+    geos_send_byte = wheels_send_byte_1mhz;
+    geos_get_byte  = wheels44_get_byte_1mhz;
+    detected_loader = FL_WHEELS44_S2;
+  }
+
+  if (datacrc == 0x825b || /* Wheels 4.4 1581 */
+      datacrc == 0x245b || /* Wheels 4.4 FD emulation */
+      datacrc == 0x7021 || /* Wheels 4.4 FD native */
+      datacrc == 0xd537 || /* Wheels 4.4 HD emulation */
+      datacrc == 0xf635) { /* Wheels 4.4 HD native */
+    geos_send_byte = wheels44_send_byte_2mhz;
+    geos_get_byte  = wheels44_get_byte_2mhz;
+    detected_loader = FL_WHEELS44_S2_1581;
   }
 #endif
 

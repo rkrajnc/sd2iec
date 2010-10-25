@@ -34,6 +34,7 @@
 #include <string.h>
 #include "config.h"
 #include "buffers.h"
+#include "d64ops.h"
 #include "diskchange.h"
 #include "display.h"
 #include "doscmd.h"
@@ -1221,13 +1222,89 @@ void load_geos128_s1(void) {
  */
 #ifdef CONFIG_LOADER_WHEELS
 
+/* Send data block to computer */
+static void wheels44_transmit_buffer(uint8_t *data, uint16_t len) {
+  ATOMIC_BLOCK(ATOMIC_FORCEON) {
+    /* Wait until clock is high */
+    while (!IEC_CLOCK) ;
+    set_data(1);
+
+    /* Send data block */
+    uint16_t i = len;
+    data += len - 1;
+
+    while (i--) {
+      geos_send_byte(*data--);
+    }
+
+    set_clock(1);
+    set_data(1);
+
+    _delay_us(5);
+    while (IEC_CLOCK) ;
+
+    set_data(0);
+    _delay_us(15); // guessed
+  }
+}
+
+/* Send a single byte to the computer after waiting for CLOCK high */
+static void wheels_transmit_byte_wait(uint8_t byte) {
+  if (detected_loader == FL_WHEELS44_S2_1581) {
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+      /* Wait until clock is high */
+      while (!IEC_CLOCK) ;
+      set_data(1);
+
+      /* Send byte */
+      geos_send_byte(byte);
+      set_clock(1);
+      set_data(1);
+
+      _delay_us(5);
+      while (IEC_CLOCK) ;
+      set_data(0);
+    }
+
+    _delay_us(15); // educated guess
+  } else {
+    geos_transmit_byte_wait(byte);
+    _delay_us(15); // educated guess
+    while (IEC_CLOCK) ;
+  }
+}
+
 /* Send a fixed-length data block */
 static void wheels_transmit_datablock(void *data_, uint16_t length) {
   uint8_t *data = (uint8_t*)data_;
 
-  geos_transmit_buffer_s3(data, length);
+  if (detected_loader == FL_WHEELS44_S2_1581) {
+    wheels44_transmit_buffer(data, length);
+  } else {
+    geos_transmit_buffer_s3(data, length);
 
-  while (IEC_CLOCK) ;
+    while (IEC_CLOCK) ;
+  }
+}
+
+/* Receive a fixed-length data block */
+static void wheels_receive_datablock(void *data_, uint16_t length) {
+  uint8_t *data = (uint8_t*)data_;
+
+  data += length-1;
+
+  ATOMIC_BLOCK(ATOMIC_FORCEON) {
+    while (!IEC_CLOCK) ;
+    set_data(1);
+    while (length--)
+      *data-- = geos_get_byte();
+
+    if (detected_loader == FL_WHEELS44_S2 ||
+        detected_loader == FL_WHEELS44_S2_1581)
+      while (IEC_CLOCK) ;
+
+    set_data(0);
+  }
 }
 
 /* Wheels STATUS operation (030f) */
@@ -1235,14 +1312,12 @@ static void wheels_transmit_status(void) {
   ATOMIC_BLOCK(ATOMIC_FORCEON) {
     /* Send (faked) job result code */
     if (current_error == 0)
-      geos_transmit_byte_wait(1);
+      wheels_transmit_byte_wait(1);
     else
       if (current_error == ERROR_WRITE_PROTECT)
-        geos_transmit_byte_wait(8);
+        wheels_transmit_byte_wait(8);
       else
-        geos_transmit_byte_wait(2); // random non-ok job status
-
-    while (IEC_CLOCK) ;
+        wheels_transmit_byte_wait(2); // random non-ok job status
   }
 }
 
@@ -1251,10 +1326,15 @@ static void wheels_check_diskchange(void) {
   ATOMIC_BLOCK(ATOMIC_FORCEON) {
     if (dir_changed) {
       /* Disk has changed */
-      geos_transmit_byte_wait(3);
+      wheels_transmit_byte_wait(3);
     } else {
       /* Disk not changed */
-      geos_transmit_byte_wait(0);
+      if (detected_loader == FL_WHEELS44_S2 &&
+          (partition[current_part].imagetype & D64_TYPE_MASK) == D64_TYPE_D71) {
+        wheels_transmit_byte_wait(0x80);
+      } else {
+        wheels_transmit_byte_wait(0);
+      }
     }
 
     dir_changed = 0;
@@ -1274,7 +1354,7 @@ static void wheels_write_sector(uint8_t track, uint8_t sector, buffer_t *buf) {
   mark_buffer_dirty(buf);
 
   /* Receive data */
-  geos_receive_datablock(buf->data, 256);
+  wheels_receive_datablock(buf->data, 256);
 
   /* Write to image */
   write_sector(buf, current_part, track, sector);
@@ -1323,7 +1403,7 @@ static void wheels_get_current_part_dir(void) {
 static void wheels_set_current_part_dir(void) {
   uint8_t data[3];
 
-  geos_receive_datablock(&data, 3);
+  wheels_receive_datablock(&data, 3);
 
   if (data[2] != 0)
     current_part = data[2]-1;
@@ -1332,7 +1412,7 @@ static void wheels_set_current_part_dir(void) {
   partition[current_part].current_dir.dxx.sector = data[1];
 }
 
-
+/* -------- */
 
 /* Wheels stage 1 loader */
 void load_wheels_s1(const char *filename) {
@@ -1408,45 +1488,45 @@ void load_wheels_s2(void) {
       }
     }
 
-    geos_receive_datablock(&cmdbuffer, 4);
+    wheels_receive_datablock(&cmdbuffer, 4);
     set_busy_led(1);
     //uart_trace(&cmdbuffer, 0, 4);
 
-    switch (cmdbuffer.address) {
-    case 0x0303: // QUIT
+    switch (cmdbuffer.address & 0xff) {
+    case 0x03: // QUIT
       while (!IEC_CLOCK) ;
       set_data(1);
       return;
 
-    case 0x0306: // WRITE
+    case 0x06: // WRITE
       wheels_write_sector(cmdbuffer.track, cmdbuffer.sector, databuf);
       break;
 
-    case 0x0309: // READ
+    case 0x09: // READ
       wheels_read_sector(cmdbuffer.track, cmdbuffer.sector, databuf, 256);
       break;
 
-    case 0x030c: // READLINK
+    case 0x0c: // READLINK
       wheels_read_sector(cmdbuffer.track, cmdbuffer.sector, databuf, 2);
       break;
 
-    case 0x030f: // STATUS
+    case 0x0f: // STATUS
       wheels_transmit_status();
       break;
 
-    case 0x0312: // NATIVE_FREE
+    case 0x12: // NATIVE_FREE
       wheels_native_free();
       break;
 
-    case 0x0315: // GET_CURRENT_PART_DIR
+    case 0x15: // GET_CURRENT_PART_DIR
       wheels_get_current_part_dir();
       break;
 
-    case 0x0318: // SET_CURRENT_PART_DIR
+    case 0x18: // SET_CURRENT_PART_DIR
       wheels_set_current_part_dir();
       break;
 
-    case 0x031b: // CHECK_CHANGE
+    case 0x1b: // CHECK_CHANGE
       wheels_check_diskchange();
       break;
 

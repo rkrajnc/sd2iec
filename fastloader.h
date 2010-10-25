@@ -27,24 +27,26 @@
 #ifndef FASTLOADER_H
 #define FASTLOADER_H
 
-#define FL_NONE           0
-#define FL_TURBODISK      1
-#define FL_FC3_LOAD       2
-#define FL_FC3_SAVE       3
-#define FL_DREAMLOAD      4
-#define FL_DREAMLOAD_OLD  5
-#define FL_FC3_FREEZED    6
-#define FL_ULOAD3         7
-#define FL_GI_JOE         8
-#define FL_EPYXCART       9
-#define FL_GEOS_S1       10
-#define FL_GEOS_S1_KEY   11
-#define FL_GEOS_S23_1541 12
-#define FL_GEOS_S23_1571 13
-#define FL_GEOS_S23_1581 14
-#define FL_WHEELS_S1_64  15
-#define FL_WHEELS_S1_128 16
-#define FL_WHEELS_S2     17
+#define FL_NONE              0
+#define FL_TURBODISK         1
+#define FL_FC3_LOAD          2
+#define FL_FC3_SAVE          3
+#define FL_DREAMLOAD         4
+#define FL_DREAMLOAD_OLD     5
+#define FL_FC3_FREEZED       6
+#define FL_ULOAD3            7
+#define FL_GI_JOE            8
+#define FL_EPYXCART          9
+#define FL_GEOS_S1          10
+#define FL_GEOS_S1_KEY      11
+#define FL_GEOS_S23_1541    12
+#define FL_GEOS_S23_1571    13
+#define FL_GEOS_S23_1581    14
+#define FL_WHEELS_S1_64     15
+#define FL_WHEELS_S1_128    16
+#define FL_WHEELS_S2        17
+#define FL_WHEELS44_S2      18
+#define FL_WHEELS44_S2_1581 19
 
 #ifndef __ASSEMBLER__
 

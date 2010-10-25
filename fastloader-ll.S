@@ -1331,6 +1331,146 @@ wheels_get_byte_1mhz:
 
         ret
 
+        ;;
+        ;; read a byte using the Wheels 4.4 1MHz protocol
+        ;;
+        .global wheels44_get_byte_1mhz
+wheels44_get_byte_1mhz:
+        clr     r24
+
+        ;; wait until clock is low
+1:      sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK ; 1/2
+        rjmp    1b
+
+        ;; delay
+        delay_cycles 17 * 8 - 5
+
+        ;; read bits 7/5
+        rcall   get_bits_from_clk_data ; 4+8 r24 = _____7_5
+        lsl     r24                    ; 1   r24 = ____7_5_
+
+        delay_cycles 11 * 8 - 13
+
+        ;; read bits 6/4
+        rcall   get_bits_from_clk_data ; 4+8 r24 = ____7654
+        swap    r24                    ; 1   r24 = 7654____
+        lsr     r24                    ; 1   r24 = _7654___
+
+        delay_cycles 17 * 8 - 14
+
+        ;; read bits 3/1
+        rcall   get_bits_from_clk_data ; 4+8 r24 = _76543_1
+        lsl     r24                    ; 1   r24 = 76543_1_
+
+        delay_cycles 16 * 8 - 13
+
+        ;; read bits 2/0
+        rcall   get_bits_from_clk_data ; 4+8 r24 = 76543210
+
+        delay_cycles 20*8
+
+        clr     r25             ; clear upper byte of return value
+        com     r24             ; invert data byte
+
+        ret
+
+        ;;
+        ;; read a byte using the Wheels 4.4 2MHz protocol
+        ;;
+        .global wheels44_get_byte_2mhz
+wheels44_get_byte_2mhz:
+        clr     r24
+
+        ;; wait until clock is low
+1:      sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK ; 1/2
+        rjmp    1b
+
+        ;; delay
+        delay_cycles 15*8 - 2
+
+        ;; get bits 0 and 1
+        in      r19, _SFR_IO_ADDR(IEC_PIN) ; 1
+        bst     r19, IEC_PIN_CLOCK         ; 1
+        bld     r24, 0                     ; 1 - r24 = .......0
+        bst     r19, IEC_PIN_DATA          ; 1
+        bld     r24, 1                     ; 1 - r24 = ......10
+
+        ;; delay
+        delay_cycles 11*8 - 5
+
+        ;; get bits 2 and 3
+        in      r19, _SFR_IO_ADDR(IEC_PIN) ; 1
+        bst     r19, IEC_PIN_CLOCK         ; 1
+        bld     r24, 2                     ; 1 - r24 = .....210
+        bst     r19, IEC_PIN_DATA          ; 1
+        bld     r24, 3                     ; 1 - r24 = ....3210
+
+        ;; delay
+        delay_cycles 11*8 - 5
+
+        ;; get bits 4 and 5
+        in      r19, _SFR_IO_ADDR(IEC_PIN) ; 1
+        bst     r19, IEC_PIN_CLOCK         ; 1
+        bld     r24, 4                     ; 1 - r24 = ...43210
+        bst     r19, IEC_PIN_DATA          ; 1
+        bld     r24, 5                     ; 1 - r24 = ..543210
+
+        ;; delay
+        delay_cycles 11*8 - 5
+
+        ;; get bits 6 and 7
+        in      r19, _SFR_IO_ADDR(IEC_PIN) ; 1
+        bst     r19, IEC_PIN_CLOCK         ; 1
+        bld     r24, 6                     ; 1 - r24 = .6543210
+        bst     r19, IEC_PIN_DATA          ; 1
+        bld     r24, 7                     ; 1 - r24 = 76543210
+
+        ;; post process received value and return
+        delay_cycles 25*8
+        com     r24                  ; negate all bits
+        clr     r25                  ; clear high byte of return value
+        ret
+
+
+        ;;
+        ;; send a byte using the Wheels 4.4 2MHz protocol
+        ;; called with byte in r24, no return value
+        ;;
+        .global wheels44_send_byte_2mhz
+wheels44_send_byte_2mhz:
+        com     r24                   ; invert so the bits are sent with high=1
+        rcall   geos_send_byte_common ; 7
+        mov     r0, r24               ; 1 - move data to target register
+
+        ;; delay
+        delay_cycles 7*8 - 18
+
+        ;; send bits 0+1
+        rcall   send_bits_to_clk_data ; 10+6
+
+        ;; delay
+        delay_cycles 8*8 - 16
+
+        ;; send bits 2+3
+        rcall   send_bits_to_clk_data ; 10+6
+
+        ;; delay
+        delay_cycles 11*8 - 16
+
+        ;; send bits 4+5
+        rcall   send_bits_to_clk_data ; 10+6
+
+        ;; delay
+        delay_cycles 11*8 - 16
+
+        ;; send bits 6+7
+        rcall   send_bits_to_clk_data ; 10+6
+
+        ;; final delay
+        delay_cycles 14*8
+
+        ret
+
 #endif
 
         .end
