@@ -1,3 +1,11 @@
+2010-10-26 - release 0.10.0pre4
+        - Bugfix: Wheels with SuperCPU timing issue corrected
+        - Bugfix: Rare problem with ~ in FAT file names fixed
+        - Added compile-time option to capture fastloader code
+        - Added Wheels 4.4 fast loaders
+        - Added another variation of the Epyx Fastload cart
+        - Added Nippon fast loader
+
 2010-10-16 - release 0.10.0pre3
         - Bugfix: Wheels 128 loader detection fixed
         - Added a second Epyx Fastload variation
