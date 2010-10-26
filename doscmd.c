@@ -1020,6 +1020,11 @@ static void handle_memexec(void) {
     load_wheels_s2();
   }
 #endif
+#ifdef CONFIG_LOADER_NIPPON
+  if (detected_loader == FL_NIPPON && address == 0x0300) {
+    load_nippon();
+  }
+#endif
 
   datacrc = 0xffff;
   previous_loader = detected_loader;
@@ -1303,6 +1308,12 @@ static void handle_memwrite(void) {
     geos_send_byte = wheels44_send_byte_2mhz;
     geos_get_byte  = wheels44_get_byte_2mhz;
     detected_loader = FL_WHEELS44_S2_1581;
+  }
+#endif
+
+#ifdef CONFIG_LOADER_NIPPON
+  if (datacrc == 0x43c1) {
+    detected_loader = FL_NIPPON;
   }
 #endif
 

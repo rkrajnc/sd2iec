@@ -1549,3 +1549,147 @@ void load_wheels_s2(void) {
 }
 
 #endif
+
+
+/*
+ *
+ * Nippon Loader
+ *
+ */
+#ifdef CONFIG_LOADER_NIPPON
+
+/* protocol sync: wait for Clock low, if ATN is also low, then return signal to resync */
+static uint8_t nippon_atn_clock_handshake(void) {
+  if (!IEC_ATN) {
+    set_clock(0);
+    while(IEC_ATN) ;
+    return 0;
+  }
+
+  while(IEC_CLOCK) ;
+  return 1;
+}
+
+
+/* reads a byte from IEC, if loader is out of sync return false */
+static uint8_t nippon_read_byte(uint8_t *b) {
+  uint8_t tmp = 0, i;
+
+  set_clock(1);
+  set_data(1);
+  for (i=8; i; i--) {
+    if (! nippon_atn_clock_handshake())
+      return 0;
+    tmp = (tmp >> 1) | (IEC_DATA ? 0 : 128);
+    while(!IEC_CLOCK) ;
+  }
+  set_clock(0);
+  set_data(1);
+
+  *b = tmp;
+  return 1;
+}
+
+/* sends a byte via IEC, if loader is out of sync return false */
+static uint8_t nippon_send_byte(uint8_t b) {
+  uint8_t i;
+
+  set_clock(1);
+  for (i=8; i; i--) {
+    if (! nippon_atn_clock_handshake())
+      return 0;
+    set_data(b & 1);
+    b = b >> 1;
+    while(!IEC_CLOCK) ;
+  }
+  set_clock(0);
+  set_data(1);
+  return 1;
+}
+
+/* nippon idle loop */
+void load_nippon(void) {
+  uint8_t t, s, i=0, j;
+  buffer_t *buf;
+
+  /* init */
+  uart_puts_P(PSTR("NIPPON"));
+  set_atn_irq(0);
+  buf = alloc_system_buffer();
+  if (!buf) {
+    uart_puts_P(PSTR("BUF ERR")); uart_putcrlf();
+    return;
+  }
+
+  /* loop until IEC master sends a track greater than $80 = exit code */
+  while (1) {
+
+    /* initial state */
+    /* timing is critical for ATN/CLK here, endless loop in $0bf0 at the cevi
+     * raise ATN CLK quick, before setting LEDs output to serial console
+     */
+    set_atn(1);
+    set_clock(1);
+    //set_data(1);
+    set_busy_led(0);
+    uart_putcrlf(); uart_putc('L');
+
+    /* wait for IEC master or human master to command us something */
+    while(IEC_ATN)
+      i = check_keys();
+    if(i)
+      continue; // reenter loop - reinit
+    set_busy_led(1);
+    set_clock(0);
+
+    /* fetch command, sector and track, on failure resync/reinit protocol
+     * if track > 128 exit loader
+     * if sector > 128 read sector, else write */
+    while(!IEC_ATN) ;
+    if (! nippon_read_byte(&t))
+      continue;
+    uart_putc('T');
+    uart_puthex(t);
+    if (t & 128)
+      break;
+
+    if (! nippon_read_byte(&s))
+      continue;
+    uart_putc('S');
+    uart_puthex(s & 0x7f);
+
+    if (s & 128) {
+      /* read sector */
+      s &= 0x7f;
+      uart_putc('R');
+      read_sector(buf, current_part, t, s);
+      i = 0;
+      do {
+        if (! nippon_send_byte(buf->data[i]))
+          break;
+        i++;
+      } while (i);
+    }
+    else {
+      /* write sector */
+      uart_putc('W');
+      i = 0;
+      do {
+        if (! (j = nippon_read_byte(&(buf->data[i]))))
+          break;
+        i++;
+      } while (i);
+      if (!j)
+        break;
+      write_sector(buf, current_part, t, s);
+    }
+  }
+
+  /* exit */
+  free_buffer(buf);
+  uart_puts_P(PSTR("NEXT")); uart_putcrlf();
+}
+#endif
+
+/* vim:tabstop=2:shiftwidth=2:expandtab
+ */
