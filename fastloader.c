@@ -1692,6 +1692,3 @@ void load_nippon(void) {
   uart_puts_P(PSTR("NEXT")); uart_putcrlf();
 }
 #endif
-
-/* vim:tabstop=2:shiftwidth=2:expandtab
- */
