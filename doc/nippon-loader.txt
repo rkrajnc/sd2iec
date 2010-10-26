@@ -1,7 +1,7 @@
-Nippon Loader (by abraXxl)
+Nippon Loader (by Joerg Jungermann)
 =============
-This document describe the reverse engineered portion of the loader used
-in the german adventure role playing game nippon.
+This document describes the reverse engineered portion of the loader used
+in the german adventure role playing game "Nippon".
 It is unknown if this loader is used in other releases.
 
 The loader is not fast, but the timing is relaxed.
@@ -13,9 +13,10 @@ State machine
 The code executed in the 15x1 implements the following state machine.
 ATN low and CLOCK are used to syncronise C64 and Floppy. The data is transmitted via DATA.
 
-The state machine is started by uploading multiple chunks of code in 16byte blocks to the drives
+The state machine is started by uploading multiple chunks of code in 16byte blocks to drives
 memory from $0300 to $041f. The last block uploaded begins at $0410 and has the checksum $43c1.
-Therefor it is used to identify the loader, if a succesive call using M-E executes code at $0300.
+Therefor it is used to identify the loader, if a successive call using M-E executes code at $0300.
+
        START
       +---------+
  +->--|idle loop|
@@ -39,6 +40,7 @@ Therefor it is used to identify the loader, if a succesive call using M-E execut
  |                                   V
  +--<--------------------<-----------+
 
+
 Idle loop
 ---------
 The idle loop set ATN,CLOCK and DATA high, and waits for ATN low to get track, sector and command.
@@ -49,11 +51,11 @@ Get track & sector
 In this state the drive code expects two bytes from the C64. Before any bit is received or sent over
 the IEC bus a special handshake is done to synchronize drive and computer.
 
-The first byte is the track information for the next action.
+The first byte identifies the track for the next action.
 If the track byte is larger than $80 (bit 7 is set) the drive code jumps to the 1541 reset vector.
-This is usually called if the game is left throug the in game menu.
+This is usually called, if the game is left throug the in game menu.
 
-The second byte fetched contains the command and the sector informations: Bit 7 determines if command
+The second byte fetched contains the command and the sector information: Bit 7 determines if command
 read or write. if bit 7 is set the command is read, otherwise write.
 The sector is the 2nd byte & $80.
 

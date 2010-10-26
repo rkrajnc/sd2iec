@@ -2,6 +2,8 @@
    Copyright (C) 2007-2010  Ingo Korb <ingo@akana.de>
    Final Cartridge III, DreamLoad fastloader support:
    Copyright (C) 2008  Thomas Giesel <skoe@directbox.com>
+   Nippon Loader support:
+   Copyright (C) 2010  Joerg Jungermann abra@borkum.net
 
    Inspiration and low-level SD/MMC access based on code from MMC2IEC
      by Lars Pontoppidan et al., see sdcard.c|h and config.h.
@@ -1635,10 +1637,9 @@ void load_nippon(void) {
     uart_putcrlf(); uart_putc('L');
 
     /* wait for IEC master or human master to command us something */
-    while(IEC_ATN)
-      i = check_keys();
-    if(i)
-      continue; // reenter loop - reinit
+    while(IEC_ATN && !(i = check_keys())) ;
+    if (i)
+      break; /* user requested exit */
     set_busy_led(1);
     set_clock(0);
 
@@ -1686,6 +1687,7 @@ void load_nippon(void) {
   }
 
   /* exit */
+
   free_buffer(buf);
   uart_puts_P(PSTR("NEXT")); uart_putcrlf();
 }
