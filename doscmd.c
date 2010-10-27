@@ -1025,6 +1025,11 @@ static void handle_memexec(void) {
     load_nippon();
   }
 #endif
+#ifdef CONFIG_LOADER_AR6
+  if (detected_loader == FL_AR6_1581 && address == 0x0500) {
+    load_ar6_1581();
+  }
+#endif
 
   datacrc = 0xffff;
   previous_loader = detected_loader;
@@ -1314,6 +1319,13 @@ static void handle_memwrite(void) {
 #ifdef CONFIG_LOADER_NIPPON
   if (datacrc == 0x43c1) {
     detected_loader = FL_NIPPON;
+  }
+#endif
+
+#ifdef CONFIG_LOADER_AR6
+  if (datacrc == 0x4870) {
+    /* Note: Very early CRC, half of the uploaded code is unused crap */
+    detected_loader = FL_AR6_1581;
   }
 #endif
 

@@ -1692,3 +1692,50 @@ void load_nippon(void) {
   uart_puts_P(PSTR("NEXT")); uart_putcrlf();
 }
 #endif
+
+#ifdef CONFIG_LOADER_AR6
+/*
+ *
+ * Action Replay 6 loaders/savers
+ *
+ */
+void load_ar6_1581(void) {
+  buffer_t *buf;
+  uint16_t i;
+
+  buf = find_buffer(0);
+  if (!buf) {
+    /* The file should've been open? */
+    return;
+  }
+
+  set_clock(0);
+  set_data(1);
+  _delay_ms(1);
+
+  while (1) {
+    /* Send number of bytes in sector */
+    ar6_1581_send_byte(buf->lastused-1);
+
+    /* Send bytes in sector */
+    for (i=2; i<=buf->lastused; i++)
+      ar6_1581_send_byte(buf->data[i]);
+
+    /* Check for end of file */
+    if (buf->sendeoi)
+      break;
+
+    /* Read next sector */
+    if (buf->refill(buf)) {
+      /* Error, end transmission */
+      break;
+    }
+  }
+
+  /* Send end marker */
+  ar6_1581_send_byte(0);
+  _delay_ms(1);
+  set_clock(1);
+  set_data(1);
+}
+#endif

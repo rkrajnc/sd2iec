@@ -1473,4 +1473,58 @@ wheels44_send_byte_2mhz:
 
 #endif
 
+#ifdef CONFIG_LOADER_AR6
+        ;;
+        ;; send a byte using the AR6-1581 protocol
+        ;; called with byte in r24, no return value
+        ;;
+        .global ar6_1581_send_byte
+ar6_1581_send_byte:
+        cli
+
+        ;; set up data byte for transmission
+        com     r24
+        mov     r0, r24
+
+        ;; clock high
+        cbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_CLOCK
+
+        ;; wait until data is high
+1:      sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_DATA
+        rjmp    1b
+
+        ;; delay
+        delay_cycles 5*8 - 10
+
+        ;; send bits 0+1
+        rcall   send_bits_to_clk_data ; 10+6
+
+        ;; delay
+        delay_cycles 8*8 - 16
+
+        ;; send bits 2+3
+        rcall   send_bits_to_clk_data ; 10+6
+
+        ;; delay
+        delay_cycles 8*8 - 16
+
+        ;; send bits 4+5
+        rcall   send_bits_to_clk_data ; 10+6
+
+        ;; delay
+        delay_cycles 8*8 - 16
+
+        ;; send bits 6+7
+        rcall   send_bits_to_clk_data ; 10+6
+
+        ;; delay
+        delay_cycles 8*8+4 - 6 - 2
+
+        ;; set clock low, data high
+        cbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA  ; 1
+        sbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_CLOCK ; 1
+
+        sei
+        ret
+#endif
         .end

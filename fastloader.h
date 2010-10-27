@@ -48,6 +48,7 @@
 #define FL_WHEELS44_S2      18
 #define FL_WHEELS44_S2_1581 19
 #define FL_NIPPON           20
+#define FL_AR6_1581         21
 
 #ifndef __ASSEMBLER__
 
@@ -70,6 +71,7 @@ void load_geos128_s1(void);
 void load_wheels_s1(const char *filename);
 void load_wheels_s2(void);
 void load_nippon(void);
+void load_ar6_1581(void);
 
 #endif
 #endif
