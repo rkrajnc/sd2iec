@@ -58,5 +58,6 @@ uint8_t wheels44_get_byte_2mhz(void);
 void wheels44_send_byte_2mhz(uint8_t byte);
 
 void ar6_1581_send_byte(uint8_t byte);
+uint8_t ar6_1581p_get_byte(void);
 
 #endif

@@ -1526,5 +1526,66 @@ ar6_1581_send_byte:
 
         sei
         ret
+
+        ;;
+        ;; receive a byte using the AR6-1581-PAL protocol
+        ;; returns byte in r24
+        ;;
+        .global ar6_1581p_get_byte
+ar6_1581p_get_byte:
+        cli
+
+        clr     r24
+
+        ;; clock high
+        cbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_CLOCK
+
+        ;; wait until data is low
+1:      sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_DATA
+        rjmp    1b
+
+        ;; wait until data is high
+1:      sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_DATA
+        rjmp    1b
+
+        ;; delay
+        delay_cycles 12*8 - 4
+
+        ;; receive bits 7+5
+        rcall   get_bits_from_clk_data ; 4+8 - r24 = .....7.5
+        lsl     r24                    ; 1   - r24 = ....7.5.
+
+        ;; delay
+        delay_cycles 10*8 - 9 - 4
+
+        ;; receive bits 6+4
+        rcall   get_bits_from_clk_data ; 4+8 - r24 = ....7654
+        swap    r24                    ; 1   - r24 = 7654....
+        lsr     r24                    ; 1   - r24 = .7654...
+
+        ;; delay
+        delay_cycles 16*8 - 10 - 4
+
+        ;; receive bits 3+1
+        rcall   get_bits_from_clk_data ; 4+8 - r24 = .76543.1
+        lsl     r24                    ; 1   - r24 = 76543.1.
+
+        ;; delay
+        delay_cycles 10*8 - 9 - 4
+
+        ;; receive bits 2+0
+        rcall   get_bits_from_clk_data ; 4+8 - r24 = 76543210
+
+        ;; delay
+        delay_cycles 5*8 - 8 - 1
+
+        ;; set clock low
+        sbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_CLOCK
+
+        ;; post-processing
+        sei
+        com     r24
+        clr     r25
+        ret
 #endif
         .end

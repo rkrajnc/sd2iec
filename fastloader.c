@@ -1699,6 +1699,8 @@ void load_nippon(void) {
  * Action Replay 6 loaders/savers
  *
  */
+
+/* 1581 loader */
 void load_ar6_1581(void) {
   buffer_t *buf;
   uint16_t i;
@@ -1738,4 +1740,46 @@ void load_ar6_1581(void) {
   set_clock(1);
   set_data(1);
 }
+
+/* 1581 saver */
+void save_ar6_1581(void) {
+  buffer_t *buf;
+  uint8_t i;
+
+  buf = find_buffer(1);
+
+  if (!buf) {
+    /* File isn't open */
+    return;
+  }
+
+  set_clock(0);
+  set_data(1);
+  _delay_ms(1);
+
+  do {
+    mark_buffer_dirty(buf);
+
+    /* Receive sector */
+    i = 0;
+    do {
+      buf->data[i] = ar6_1581p_get_byte();
+      i++;
+    } while (i != 0);
+
+    /* Set end */
+    if (buf->data[0] == 0) {
+      buf->position = buf->data[1];
+    } else
+      buf->position = 0;
+
+    /* Write data */
+    if (buf->refill(buf))
+      break;
+  } while (buf->data[0] != 0);
+
+  buf->cleanup(buf);
+  free_buffer(buf);
+}
+
 #endif

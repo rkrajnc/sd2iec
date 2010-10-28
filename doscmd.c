@@ -1026,8 +1026,12 @@ static void handle_memexec(void) {
   }
 #endif
 #ifdef CONFIG_LOADER_AR6
-  if (detected_loader == FL_AR6_1581 && address == 0x0500) {
+  if (detected_loader == FL_AR6_1581_LOAD && address == 0x0500) {
     load_ar6_1581();
+  }
+
+  if (detected_loader == FL_AR6_1581_SAVE && address == 0x05f4) {
+    save_ar6_1581();
   }
 #endif
 
@@ -1325,7 +1329,12 @@ static void handle_memwrite(void) {
 #ifdef CONFIG_LOADER_AR6
   if (datacrc == 0x4870) {
     /* Note: Very early CRC, half of the uploaded code is unused crap */
-    detected_loader = FL_AR6_1581;
+    detected_loader = FL_AR6_1581_LOAD;
+  }
+
+  if (datacrc == 0x2925) {
+    // FIXME: Use a pointer for the byte transfer to handle PAL/NTSC
+    detected_loader = FL_AR6_1581_SAVE;
   }
 #endif
 
