@@ -1,3 +1,9 @@
+2010-10-31 - release 0.10.0pre5
+        - Bugfix: Avoid duplicate file name when DEL/DIR matches
+        - Bugfix: Reduce chance of data corruption in Wheels
+        - Bugfix: Slightly relax IEC timing while waiting for command
+        - Added AR6 1581 fastloader+saver (PAL)
+
 2010-10-26 - release 0.10.0pre4
         - Bugfix: Wheels with SuperCPU timing issue corrected
         - Bugfix: Rare problem with ~ in FAT file names fixed
