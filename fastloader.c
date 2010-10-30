@@ -1171,14 +1171,21 @@ static const PROGMEM uint8_t geos128_chains[] = {
 };
 
 /* GEOS 64 stage 1 loader */
-static void load_geos_s1(const prog_uint8_t *chainptr) {
+void load_geos_s1(uint8_t version) {
   buffer_t *encrbuf = find_buffer(BUFFER_SYS_GEOSKEY);
   buffer_t *databuf = alloc_buffer();
   uint8_t *encdata = NULL;
   uint8_t track, sector;
+  const prog_uint8_t *chainptr;
 
   if (!encrbuf || !databuf)
     return;
+
+  if (version == 0) {
+    chainptr = geos64_chains;
+  } else {
+    chainptr = geos128_chains;
+  }
 
   /* Initial handshake */
   uart_flush();
@@ -1205,14 +1212,6 @@ static void load_geos_s1(const prog_uint8_t *chainptr) {
   /* Done! */
   free_buffer(encrbuf);
   set_data(1);
-}
-
-void load_geos64_s1(void) {
-  load_geos_s1(geos64_chains);
-}
-
-void load_geos128_s1(void) {
-  load_geos_s1(geos128_chains);
 }
 
 #endif

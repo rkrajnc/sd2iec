@@ -972,9 +972,9 @@ static void handle_memexec(void) {
   if (detected_loader == FL_GEOS_S1) {
     geos_send_byte = geos_send_byte_1mhz;
     if (address == 0x0457) {
-      load_geos64_s1();
+      load_geos_s1(0);
     } else if (address == 0x0470) {
-      load_geos128_s1();
+      load_geos_s1(1);
     }
   }
 
