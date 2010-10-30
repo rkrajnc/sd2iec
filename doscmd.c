@@ -970,9 +970,7 @@ static void handle_memexec(void) {
 #ifdef CONFIG_LOADER_GEOS
   /* GEOS stage 1 */
   if (detected_loader == FL_GEOS_S1) {
-    /* The assembler module checks for 1541/other using this value */
-    detected_loader = FL_GEOS_S23_1541;
-    geos_send_byte = geos_send_byte_20;
+    geos_send_byte = geos_send_byte_1mhz;
     if (address == 0x0457) {
       load_geos64_s1();
     } else if (address == 0x0470) {
@@ -983,14 +981,14 @@ static void handle_memexec(void) {
   if (detected_loader == FL_GEOS_S23_1541 &&
       (address == 0x03e2 || address == 0x03dc)) {
     /* GEOS stage 2/3 1541 */
-    geos_send_byte = geos_send_byte_20;
+    geos_send_byte = geos_send_byte_1mhz;
     geos_get_byte  = geos_get_byte_1mhz;
     load_geos();
   }
 
   if (detected_loader == FL_GEOS_S23_1571 && address == 0x03ff) {
     /* GEOS stage 3 1571 */
-    geos_send_byte = geos_send_byte_20;
+    geos_send_byte = geos_send_byte_2mhz;
     geos_get_byte  = geos_get_byte_2mhz;
     load_geos();
   }
@@ -1257,7 +1255,7 @@ static void handle_memwrite(void) {
   if (datacrc == 0x3f8d) { // Note: Next-to-last CRC because of junk bytes
     /* GEOS 64/128 1581, from Configure 2.0 */
     detected_loader = FL_GEOS_S23_1581;
-    geos_send_byte = geos_send_byte_20;
+    geos_send_byte = geos_send_byte_2mhz;
   }
 
   if (datacrc == 0xc947) { // Note: Next-to-last CRC because of junk bytes
