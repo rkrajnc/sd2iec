@@ -59,20 +59,20 @@ extern volatile uint8_t fl_sector;
 extern void (*geos_send_byte)(uint8_t byte);
 extern uint8_t (*geos_get_byte)(void);
 
-void load_turbodisk(void);
+void load_turbodisk(uint8_t);
 void load_fc3(uint8_t freezed);
-void save_fc3(void);
-void load_dreamload(void);
-void load_uload3(void);
-void load_gijoe(void);
-void load_epyxcart(void);
-void load_geos(void);
+void save_fc3(uint8_t);
+void load_dreamload(uint8_t);
+void load_uload3(uint8_t);
+void load_gijoe(uint8_t);
+void load_epyxcart(uint8_t);
+void load_geos(uint8_t);
 void load_geos_s1(uint8_t version);
 void load_wheels_s1(uint8_t version);
-void load_wheels_s2(void);
-void load_nippon(void);
-void load_ar6_1581(void);
-void save_ar6_1581(void);
+void load_wheels_s2(uint8_t);
+void load_nippon(uint8_t);
+void load_ar6_1581(uint8_t);
+void save_ar6_1581(uint8_t);
 
 #endif
 #endif

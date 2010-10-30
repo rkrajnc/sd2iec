@@ -931,7 +931,7 @@ static void handle_memexec(void) {
 #ifdef CONFIG_LOADER_TURBODISK
   if (detected_loader == FL_TURBODISK && address == 0x0303) {
     /* Looks like Turbodisk */
-    load_turbodisk();
+    load_turbodisk(0);
   }
 #endif
 #ifdef CONFIG_LOADER_FC3
@@ -941,7 +941,7 @@ static void handle_memexec(void) {
     load_fc3(0);
   }
   if (detected_loader == FL_FC3_SAVE && address == 0x059c) {
-    save_fc3();
+    save_fc3(0);
   }
   if (detected_loader == FL_FC3_FREEZED && address == 0x0403) {
     load_fc3(1);
@@ -949,22 +949,22 @@ static void handle_memexec(void) {
 #endif
 #ifdef CONFIG_LOADER_DREAMLOAD
   if (detected_loader == FL_DREAMLOAD && address == 0x0700) {
-    load_dreamload();
+    load_dreamload(0);
   }
 #endif
 #ifdef CONFIG_LOADER_ULOAD3
   if (detected_loader == FL_ULOAD3 && address == 0x0336) {
-    load_uload3();
+    load_uload3(0);
   }
 #endif
 #ifdef CONFIG_LOADER_GIJOE
   if (detected_loader == FL_GI_JOE && address == 0x0500) {
-    load_gijoe();
+    load_gijoe(0);
   }
 #endif
 #ifdef CONFIG_LOADER_EPYXCART
   if (detected_loader == FL_EPYXCART && address == 0x01a9) {
-    load_epyxcart();
+    load_epyxcart(0);
   }
 #endif
 #ifdef CONFIG_LOADER_GEOS
@@ -983,21 +983,21 @@ static void handle_memexec(void) {
     /* GEOS stage 2/3 1541 */
     geos_send_byte = geos_send_byte_1mhz;
     geos_get_byte  = geos_get_byte_1mhz;
-    load_geos();
+    load_geos(0);
   }
 
   if (detected_loader == FL_GEOS_S23_1571 && address == 0x03ff) {
     /* GEOS stage 3 1571 */
     geos_send_byte = geos_send_byte_2mhz;
     geos_get_byte  = geos_get_byte_2mhz;
-    load_geos();
+    load_geos(0);
   }
 
   if (detected_loader == FL_GEOS_S23_1581 && address == 0x040f) {
     /* GEOS 1581 Config 2.0 */
     // Note: geos_send_byte already set in CRC detection
     geos_get_byte = geos_get_byte_2mhz;
-    load_geos();
+    load_geos(0);
   }
 #endif
 #ifdef CONFIG_LOADER_WHEELS
@@ -1015,21 +1015,21 @@ static void handle_memexec(void) {
       (detected_loader == FL_WHEELS44_S2_1581 && address == 0x0300) ||
       (detected_loader == FL_WHEELS44_S2_1581 && address == 0x0500)) {
     // Note: geos_send_byte/geos_get_byte already set in CRC detection
-    load_wheels_s2();
+    load_wheels_s2(0);
   }
 #endif
 #ifdef CONFIG_LOADER_NIPPON
   if (detected_loader == FL_NIPPON && address == 0x0300) {
-    load_nippon();
+    load_nippon(0);
   }
 #endif
 #ifdef CONFIG_LOADER_AR6
   if (detected_loader == FL_AR6_1581_LOAD && address == 0x0500) {
-    load_ar6_1581();
+    load_ar6_1581(0);
   }
 
   if (detected_loader == FL_AR6_1581_SAVE && address == 0x05f4) {
-    save_ar6_1581();
+    save_ar6_1581(0);
   }
 #endif
 

@@ -52,6 +52,8 @@
 #include "wrapops.h"
 #include "fastloader.h"
 
+#define UNUSED_PARAMETER uint8_t __attribute__((unused)) unused__
+
 uint8_t detected_loader;
 
 /* track to load, used as a kind of jobcode */
@@ -83,7 +85,7 @@ static uint8_t check_keys(void) {
  *
  */
 #ifdef CONFIG_LOADER_TURBODISK
-void load_turbodisk(void) {
+void load_turbodisk(UNUSED_PARAMETER) {
   uint8_t i,len,firstsector;
   buffer_t *buf;
 
@@ -251,7 +253,7 @@ void load_fc3(uint8_t freezed) {
   free_buffer(buf);
 }
 
-void save_fc3(void) {
+void save_fc3(UNUSED_PARAMETER) {
   unsigned char n;
   unsigned char size;
   unsigned char eof = 0;
@@ -339,7 +341,7 @@ static void dreamload_send_block(const uint8_t* p) {
   }
 }
 
-void load_dreamload(void) {
+void load_dreamload(UNUSED_PARAMETER) {
   uint16_t n;
   uint8_t  type;
   buffer_t *buf;
@@ -511,7 +513,7 @@ static uint8_t uload3_transferchain(uint8_t track, uint8_t sector, uint8_t savin
   return 0;
 }
 
-void load_uload3(void) {
+void load_uload3(UNUSED_PARAMETER) {
   int16_t cmd,tmp;
   uint8_t t,s;
   dh_t dh;
@@ -626,7 +628,7 @@ static void gijoe_send_byte(uint8_t value) {
   }
 }
 
-void load_gijoe(void) {
+void load_gijoe(UNUSED_PARAMETER) {
   buffer_t *buf;
 
   set_data(1);
@@ -729,7 +731,7 @@ void load_gijoe(void) {
  *
  */
 #ifdef CONFIG_LOADER_EPYXCART
-void load_epyxcart(void) {
+void load_epyxcart(UNUSED_PARAMETER) {
   uint8_t checksum = 0;
   int16_t b,i;
 
@@ -1009,7 +1011,7 @@ static void geos_write_sector_71(uint8_t track, uint8_t sector, buffer_t *buf) {
 
 
 /* GEOS stage 2/3 loader */
-void load_geos(void) {
+void load_geos(UNUSED_PARAMETER) {
   buffer_t *cmdbuf = alloc_system_buffer();
   buffer_t *databuf = alloc_system_buffer();
   uint8_t *cmddata;
@@ -1438,8 +1440,6 @@ void load_wheels_s1(const uint8_t version) {
   if (!buf)
     goto wheels_exit;
 
-  geos_send_byte = wheels_send_byte_1mhz;
-
   while (1) {
     /* Transmit current sector */
     wheels_transmit_datablock(buf->data, 256);
@@ -1466,7 +1466,7 @@ void load_wheels_s1(const uint8_t version) {
 }
 
 /* Wheels stage 2 loader */
-void load_wheels_s2(void) {
+void load_wheels_s2(UNUSED_PARAMETER) {
   struct {
     uint16_t address;
     uint8_t  track;
@@ -1613,7 +1613,7 @@ static uint8_t nippon_send_byte(uint8_t b) {
 }
 
 /* nippon idle loop */
-void load_nippon(void) {
+void load_nippon(UNUSED_PARAMETER) {
   uint8_t t, s, i=0, j;
   buffer_t *buf;
 
@@ -1704,7 +1704,7 @@ void load_nippon(void) {
  */
 
 /* 1581 loader */
-void load_ar6_1581(void) {
+void load_ar6_1581(UNUSED_PARAMETER) {
   buffer_t *buf;
   uint16_t i;
 
@@ -1745,7 +1745,7 @@ void load_ar6_1581(void) {
 }
 
 /* 1581 saver */
-void save_ar6_1581(void) {
+void save_ar6_1581(UNUSED_PARAMETER) {
   buffer_t *buf;
   uint8_t i;
 
