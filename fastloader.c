@@ -1416,7 +1416,7 @@ static void wheels_set_current_part_dir(void) {
 /* -------- */
 
 /* Wheels stage 1 loader */
-void load_wheels_s1(const char *filename) {
+void load_wheels_s1(const uint8_t version) {
   buffer_t *buf;
 
   uart_flush();
@@ -1425,7 +1425,11 @@ void load_wheels_s1(const char *filename) {
   set_data(0);
 
   /* copy file name to command buffer */
-  ustrcpy_P(command_buffer, filename);
+  if (version == 0) {
+    ustrcpy_P(command_buffer, PSTR("SYSTEM1"));
+  } else {
+    ustrcpy_P(command_buffer, PSTR("128SYSTEM1"));
+  }
   command_length = ustrlen(command_buffer);
 
   /* open file */

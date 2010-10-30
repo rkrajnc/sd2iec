@@ -1003,10 +1003,10 @@ static void handle_memexec(void) {
 #ifdef CONFIG_LOADER_WHEELS
   /* Wheels stage 1 */
   if (detected_loader == FL_WHEELS_S1_64 && address == 0x0400) {
-    load_wheels_s1(PSTR("SYSTEM1"));
+    load_wheels_s1(0);
   }
   if (detected_loader == FL_WHEELS_S1_128 && address == 0x0400) {
-    load_wheels_s1(PSTR("128SYSTEM1"));
+    load_wheels_s1(1);
   }
 
   /* Wheels stage 2 */

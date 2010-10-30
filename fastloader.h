@@ -68,7 +68,7 @@ void load_gijoe(void);
 void load_epyxcart(void);
 void load_geos(void);
 void load_geos_s1(uint8_t version);
-void load_wheels_s1(const char *filename);
+void load_wheels_s1(uint8_t version);
 void load_wheels_s2(void);
 void load_nippon(void);
 void load_ar6_1581(void);
