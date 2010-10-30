@@ -62,6 +62,169 @@ static void (*restart_call)(void) = 0;
 
 static FIL romfile;
 
+/* ---- Fastloader tables ---- */
+
+enum {
+  RXTX_NONE,
+  RXTX_GEOS_1MHZ,
+  RXTX_GEOS_2MHZ,
+  RXTX_GEOS_1581_21,
+  RXTX_WHEELS_1MHZ,
+  RXTX_WHEELS_2MHZ,
+  RXTX_WHEELS44_1541,
+  RXTX_WHEELS44_1581,
+};
+
+typedef uint8_t (*fastloader_rx_t)(void);
+typedef void    (*fastloader_tx_t)(uint8_t byte);
+typedef void    (*fastloader_handler_t)(uint8_t param);
+
+struct fastloader_rxtx_s {
+  fastloader_rx_t rxfunc;
+  fastloader_tx_t txfunc;
+};
+
+static const PROGMEM struct fastloader_rxtx_s fl_rxtx_table[] = {
+#ifdef CONFIG_LOADER_GEOS
+  [RXTX_GEOS_1MHZ]     = { geos_get_byte_1mhz,     geos_send_byte_1mhz     },
+  [RXTX_GEOS_2MHZ]     = { geos_get_byte_2mhz,     geos_send_byte_2mhz     },
+  [RXTX_GEOS_1581_21]  = { geos_get_byte_2mhz,     geos_send_byte_1581_21  },
+# ifdef CONFIG_LOADER_WHEELS
+  [RXTX_WHEELS_1MHZ]   = { wheels_get_byte_1mhz,   wheels_send_byte_1mhz   },
+  [RXTX_WHEELS_2MHZ]   = { geos_get_byte_2mhz,     geos_send_byte_1581_21  },
+  [RXTX_WHEELS44_1541] = { wheels44_get_byte_1mhz, wheels_send_byte_1mhz   },
+  [RXTX_WHEELS44_1581] = { wheels44_get_byte_2mhz, wheels44_send_byte_2mhz },
+# endif
+#endif
+};
+
+struct fastloader_crc_s {
+  uint16_t crc;
+  uint8_t  loadertype;
+  uint8_t  rxtx;
+};
+
+static const PROGMEM struct fastloader_crc_s fl_crc_table[] = {
+#ifdef CONFIG_LOADER_TURBODISK
+  { 0x9c9f, FL_TURBODISK,        RXTX_NONE          },
+#endif
+#ifdef CONFIG_LOADER_FC3
+  { 0x6510, FL_FC3_LOAD,         RXTX_NONE          }, // Final Cartridge III
+  { 0x7e38, FL_FC3_LOAD,         RXTX_NONE          }, // EXOS v3
+  { 0x2c86, FL_FC3_SAVE,         RXTX_NONE          },
+  { 0x9930, FL_FC3_FREEZED,      RXTX_NONE          },
+#endif
+#ifdef CONFIG_LOADER_DREAMLOAD
+  { 0x2e69, FL_DREAMLOAD,        RXTX_NONE          },
+#endif
+#ifdef CONFIG_LOADER_ULOAD3
+  { 0xdd81, FL_ULOAD3,           RXTX_NONE          },
+#endif
+#ifdef CONFIG_LOADER_EPYXCART
+  { 0x5a01, FL_EPYXCART,         RXTX_NONE          },
+#endif
+#ifdef CONFIG_LOADER_GEOS
+  { 0x4d79, FL_GEOS_S23_1541,    RXTX_GEOS_1MHZ     }, // GEOS 64 1541 stage 2
+  { 0xb2bc, FL_GEOS_S23_1541,    RXTX_GEOS_1MHZ     }, // GEOS 128 1541 stage 2
+  { 0xb272, FL_GEOS_S23_1541,    RXTX_GEOS_1MHZ     }, // GEOS 64/128 1541 stage 3 (Configure)
+  { 0xdaed, FL_GEOS_S23_1571,    RXTX_GEOS_2MHZ     }, // GEOS 64/128 1571 stage 3 (Configure)
+  { 0x3f8d, FL_GEOS_S23_1581,    RXTX_GEOS_2MHZ     }, // GEOS 64/128 1581 Configure 2.0
+  { 0xc947, FL_GEOS_S23_1581,    RXTX_GEOS_1581_21  }, // GEOS 64/128 1581 Configure 2.1
+# ifdef CONFIG_LOADER_WHEELS
+  { 0xf140, FL_WHEELS_S1_64,     RXTX_WHEELS_1MHZ   }, // Wheels 64 stage 1
+  { 0x737e, FL_WHEELS_S1_128,    RXTX_WHEELS_1MHZ   }, // Wheels 128 stage 1
+  { 0x755a, FL_WHEELS_S2,        RXTX_WHEELS_1MHZ   }, // Wheels 64 1541 stage 2
+  { 0x2920, FL_WHEELS_S2,        RXTX_WHEELS_1MHZ   }, // Wheels 128 1541 stage 2
+  { 0x18e9, FL_WHEELS_S2,        RXTX_WHEELS_2MHZ   }, // Wheels 64 1571
+  { 0x9804, FL_WHEELS_S2,        RXTX_WHEELS_2MHZ   }, // Wheels 64 1581
+  { 0x48f5, FL_WHEELS_S2,        RXTX_WHEELS_2MHZ   }, // Wheels 64 FD native partition
+  { 0x1356, FL_WHEELS_S2,        RXTX_WHEELS_2MHZ   }, // Wheels 64 FD emulation partition
+  { 0xe885, FL_WHEELS_S2,        RXTX_WHEELS_2MHZ   }, // Wheels 64 HD native partition
+  { 0x4eca, FL_WHEELS_S2,        RXTX_WHEELS_2MHZ   }, // Wheels 64 HD emulation partition
+  { 0xdbf6, FL_WHEELS_S2,        RXTX_WHEELS_2MHZ   }, // Wheels 128 1571
+  { 0xe4ab, FL_WHEELS_S2,        RXTX_WHEELS_2MHZ   }, // Wheels 128 1581
+  { 0x6de5, FL_WHEELS_S2,        RXTX_WHEELS_2MHZ   }, // Wheels 128 FD native
+  { 0x30ff, FL_WHEELS_S2,        RXTX_WHEELS_2MHZ   }, // Wheels 128 FD emulation
+  { 0x46e7, FL_WHEELS_S2,        RXTX_WHEELS_2MHZ   }, // Wheels 128 HD native
+  { 0x2253, FL_WHEELS_S2,        RXTX_WHEELS_2MHZ   }, // Wheels 128 HD emulation
+  { 0xc26a, FL_WHEELS44_S2,      RXTX_WHEELS44_1541 }, // Wheels 64/128 4.4 1541
+  { 0x550c, FL_WHEELS44_S2,      RXTX_WHEELS44_1541 }, // Wheels 64/128 4.4 1571
+  { 0x825b, FL_WHEELS44_S2_1581, RXTX_WHEELS44_1581 }, // Wheels 64/128 4.4 1581
+  { 0x245b, FL_WHEELS44_S2_1581, RXTX_WHEELS44_1581 }, // Wheels 64/128 4.4 1581
+  { 0x7021, FL_WHEELS44_S2_1581, RXTX_WHEELS44_1581 }, // Wheels 64/128 4.4 1581
+  { 0xd537, FL_WHEELS44_S2_1581, RXTX_WHEELS44_1581 }, // Wheels 64/128 4.4 1581
+  { 0xf635, FL_WHEELS44_S2_1581, RXTX_WHEELS44_1581 }, // Wheels 64/128 4.4 1581
+# endif
+#endif
+#ifdef CONFIG_LOADER_NIPPON
+  { 0x43c1, FL_NIPPON,           RXTX_NONE          }, // Nippon
+#endif
+#ifdef CONFIG_LOADER_AR6
+  { 0x4870, FL_AR6_1581_LOAD,    RXTX_NONE          },
+  { 0x2925, FL_AR6_1581_SAVE,    RXTX_NONE          },
+#endif
+
+  { 0, FL_NONE, 0 }, // end marker
+};
+
+struct fastloader_handler_s {
+  uint16_t             address;
+  uint8_t              loadertype;
+  fastloader_handler_t handler;
+  uint8_t              parameter;
+};
+
+static const PROGMEM struct fastloader_handler_s fl_handler_table[] = {
+#ifdef CONFIG_LOADER_TURBODISK
+  { 0x0303, FL_TURBODISK,        load_turbodisk, 0 },
+#endif
+#ifdef CONFIG_LOADER_FC3
+  { 0x059a, FL_FC3_LOAD,         load_fc3,       0 }, // FC3
+  { 0x0400, FL_FC3_LOAD,         load_fc3,       0 }, // EXOS
+  { 0x059c, FL_FC3_SAVE,         save_fc3,       0 },
+  { 0x0403, FL_FC3_FREEZED,      load_fc3,       1 },
+#endif
+#ifdef CONFIG_LOADER_DREAMLOAD
+  { 0x0700, FL_DREAMLOAD,        load_dreamload, 0 },
+#endif
+#ifdef CONFIG_LOADER_ULOAD3
+  { 0x0336, FL_ULOAD3,           load_uload3,    0 },
+#endif
+#ifdef CONFIG_LOADER_GIJOE
+  { 0x0500, FL_GI_JOE,           load_gijoe,     0 },
+#endif
+#ifdef CONFIG_LOADER_EPYXCART
+  { 0x01a9, FL_EPYXCART,         load_epyxcart,  0 },
+#endif
+#ifdef CONFIG_LOADER_GEOS
+  { 0x0457, FL_GEOS_S1,          load_geos_s1,   0 },
+  { 0x0470, FL_GEOS_S1,          load_geos_s1,   1 },
+  { 0x03e2, FL_GEOS_S23_1541,    load_geos,      0 },
+  { 0x03dc, FL_GEOS_S23_1541,    load_geos,      0 },
+  { 0x03ff, FL_GEOS_S23_1571,    load_geos,      0 },
+  { 0x040f, FL_GEOS_S23_1581,    load_geos,      0 },
+# ifdef CONFIG_LOADER_WHEELS
+  { 0x0400, FL_WHEELS_S1_64,     load_wheels_s1, 0 },
+  { 0x0400, FL_WHEELS_S1_128,    load_wheels_s1, 1 },
+  { 0x0300, FL_WHEELS_S2,        load_wheels_s2, 0 },
+  { 0x0400, FL_WHEELS44_S2,      load_wheels_s2, 0 },
+  { 0x0300, FL_WHEELS44_S2_1581, load_wheels_s2, 0 },
+  { 0x0500, FL_WHEELS44_S2_1581, load_wheels_s2, 0 },
+# endif
+#endif
+#ifdef CONFIG_LOADER_NIPPON
+  { 0x0300, FL_NIPPON,           load_nippon,    0 },
+#endif
+#ifdef CONFIG_LOADER_AR6
+  { 0x0500, FL_AR6_1581_LOAD,    load_ar6_1581,  0 },
+  { 0x05f4, FL_AR6_1581_SAVE,    save_ar6_1581,  0 },
+#endif
+
+  { 0, FL_NONE, NULL, 0 }, // end marker
+};
+
+/* ---- Minimal drive rom emulation ---- */
+
 typedef struct magic_value_s {
   uint16_t address;
   uint8_t  val[2];
@@ -927,111 +1090,26 @@ static void handle_memexec(void) {
   }
 #endif
 
+  /* Try to find handler for loader */
+  const struct fastloader_handler_s *ptr = fl_handler_table;
+  uint8_t loader,parameter;
+  fastloader_handler_t handler;
+
   address = command_buffer[3] + (command_buffer[4]<<8);
-#ifdef CONFIG_LOADER_TURBODISK
-  if (detected_loader == FL_TURBODISK && address == 0x0303) {
-    /* Looks like Turbodisk */
-    load_turbodisk(0);
-  }
-#endif
-#ifdef CONFIG_LOADER_FC3
-  if (detected_loader == FL_FC3_LOAD &&
-      (address == 0x059a || address == 0x0400)) {
-    /* FC3 LOAD uses 0x059a, EXOS uses 0x0400 */
-    load_fc3(0);
-  }
-  if (detected_loader == FL_FC3_SAVE && address == 0x059c) {
-    save_fc3(0);
-  }
-  if (detected_loader == FL_FC3_FREEZED && address == 0x0403) {
-    load_fc3(1);
-  }
-#endif
-#ifdef CONFIG_LOADER_DREAMLOAD
-  if (detected_loader == FL_DREAMLOAD && address == 0x0700) {
-    load_dreamload(0);
-  }
-#endif
-#ifdef CONFIG_LOADER_ULOAD3
-  if (detected_loader == FL_ULOAD3 && address == 0x0336) {
-    load_uload3(0);
-  }
-#endif
-#ifdef CONFIG_LOADER_GIJOE
-  if (detected_loader == FL_GI_JOE && address == 0x0500) {
-    load_gijoe(0);
-  }
-#endif
-#ifdef CONFIG_LOADER_EPYXCART
-  if (detected_loader == FL_EPYXCART && address == 0x01a9) {
-    load_epyxcart(0);
-  }
-#endif
-#ifdef CONFIG_LOADER_GEOS
-  /* GEOS stage 1 */
-  if (detected_loader == FL_GEOS_S1) {
-    geos_send_byte = geos_send_byte_1mhz;
-    if (address == 0x0457) {
-      load_geos_s1(0);
-    } else if (address == 0x0470) {
-      load_geos_s1(1);
+  while ( (loader = pgm_read_byte(&ptr->loadertype)) != FL_NONE ) {
+    if (detected_loader == loader &&
+        address == pgm_read_word(&ptr->address)) {
+      /* Found it */
+      handler   = (fastloader_handler_t)pgm_read_word(&ptr->handler);
+      parameter = pgm_read_byte(&ptr->parameter);
+
+      /* Call */
+      handler(parameter);
+
+      break;
     }
+    ptr++;
   }
-
-  if (detected_loader == FL_GEOS_S23_1541 &&
-      (address == 0x03e2 || address == 0x03dc)) {
-    /* GEOS stage 2/3 1541 */
-    geos_send_byte = geos_send_byte_1mhz;
-    geos_get_byte  = geos_get_byte_1mhz;
-    load_geos(0);
-  }
-
-  if (detected_loader == FL_GEOS_S23_1571 && address == 0x03ff) {
-    /* GEOS stage 3 1571 */
-    geos_send_byte = geos_send_byte_2mhz;
-    geos_get_byte  = geos_get_byte_2mhz;
-    load_geos(0);
-  }
-
-  if (detected_loader == FL_GEOS_S23_1581 && address == 0x040f) {
-    /* GEOS 1581 Config 2.0 */
-    // Note: geos_send_byte already set in CRC detection
-    geos_get_byte = geos_get_byte_2mhz;
-    load_geos(0);
-  }
-#endif
-#ifdef CONFIG_LOADER_WHEELS
-  /* Wheels stage 1 */
-  if (detected_loader == FL_WHEELS_S1_64 && address == 0x0400) {
-    load_wheels_s1(0);
-  }
-  if (detected_loader == FL_WHEELS_S1_128 && address == 0x0400) {
-    load_wheels_s1(1);
-  }
-
-  /* Wheels stage 2 */
-  if ((detected_loader == FL_WHEELS_S2 && address == 0x0300) ||
-      (detected_loader == FL_WHEELS44_S2 && address == 0x0400) ||
-      (detected_loader == FL_WHEELS44_S2_1581 && address == 0x0300) ||
-      (detected_loader == FL_WHEELS44_S2_1581 && address == 0x0500)) {
-    // Note: geos_send_byte/geos_get_byte already set in CRC detection
-    load_wheels_s2(0);
-  }
-#endif
-#ifdef CONFIG_LOADER_NIPPON
-  if (detected_loader == FL_NIPPON && address == 0x0300) {
-    load_nippon(0);
-  }
-#endif
-#ifdef CONFIG_LOADER_AR6
-  if (detected_loader == FL_AR6_1581_LOAD && address == 0x0500) {
-    load_ar6_1581(0);
-  }
-
-  if (detected_loader == FL_AR6_1581_SAVE && address == 0x05f4) {
-    save_ar6_1581(0);
-  }
-#endif
 
   datacrc = 0xffff;
   previous_loader = detected_loader;
@@ -1142,13 +1220,6 @@ static void handle_memwrite(void) {
 
   previous_loader = FL_NONE;
 
-#ifdef CONFIG_LOADER_TURBODISK
-  /* Turbodisk sends the filename in the last M-W, check the previous CRC */
-  if (datacrc == 0x9c9f) {
-    detected_loader = FL_TURBODISK;
-  }
-#endif
-
   for (i=0;i<command_buffer[5];i++) {
     datacrc = _crc16_update(datacrc, command_buffer[i+6]);
 
@@ -1159,40 +1230,34 @@ static void handle_memwrite(void) {
 #endif
   }
 
-#ifdef CONFIG_LOADER_FC3
-  if (datacrc == 0x6510 || datacrc == 0x7e38) {
-    /* 0x6510 is a FC3 cart, 0x7e38 is a protocol-compatible EXOS v3 kernal */
-    detected_loader = FL_FC3_LOAD;
-  }
-  else if (datacrc == 0x2c86) {
-    detected_loader = FL_FC3_SAVE;
-  }
-  else if (datacrc == 0x9930) {
-    /* Feel free to change the CRC to 0x9e56 or 0xdf44 if you find a version */
-    /* that doesn't upload as much junk at the end as the one I analyzed.    */
-    detected_loader = FL_FC3_FREEZED;
-  }
-#endif
+  /* Figure out the fastloader based on the current CRC */
+  const struct fastloader_crc_s *crcptr = fl_crc_table;
+  uint8_t loader;
 
-#ifdef CONFIG_LOADER_DREAMLOAD
-  if (datacrc == 0x2e69) {
-    detected_loader = FL_DREAMLOAD;
-  }
-#endif
+  while ( (loader = pgm_read_byte(&crcptr->loadertype)) != FL_NONE ) {
+    if (datacrc == pgm_read_word(&crcptr->crc))
+      break;
 
-#ifdef CONFIG_LOADER_ULOAD3
-  if (datacrc == 0xdd81) {
-    detected_loader = FL_ULOAD3;
+    crcptr++;
   }
-#endif
 
-#ifdef CONFIG_LOADER_EPYXCART
-  if (datacrc == 0x5a01) {
-    detected_loader = FL_EPYXCART;
+  /* Set RX/TX function pointers */
+  if (loader != FL_NONE) {
+    uint8_t index;
+
+    detected_loader = loader;
+    index = pgm_read_word(&crcptr->rxtx);
+
+    if (index != 0) {
+      geos_get_byte  = (fastloader_rx_t)pgm_read_word(&(fl_rxtx_table[index].rxfunc));
+      geos_send_byte = (fastloader_tx_t)pgm_read_word(&(fl_rxtx_table[index].txfunc));
+    }
   }
-#endif
+
 
 #ifdef CONFIG_LOADER_GEOS
+  /* Capture decryption key */
+
   if (detected_loader == FL_GEOS_S1_KEY) {
     /* Copy encryption key */
     buffer_t *buf = find_buffer(BUFFER_SYS_GEOSKEY);
@@ -1207,6 +1272,7 @@ static void handle_memwrite(void) {
 
       /* Same ID for both, the address can be used to distinguish them */
       detected_loader = FL_GEOS_S1;
+      geos_send_byte = geos_send_byte_1mhz;
     }
   }
 
@@ -1232,108 +1298,6 @@ static void handle_memwrite(void) {
     detected_loader = FL_GEOS_S1_KEY;
   }
 
-  if (datacrc == 0x4d79) { // Note: Antitrack/Cosmos crack is f1e8
-    /* Stage 2 GEOS 64 1541 */
-    detected_loader = FL_GEOS_S23_1541;
-  }
-
-  if (datacrc == 0xb2bc) {
-    /* Stage 2 GEOS 128 1541, runs into copy protection at the end */
-    detected_loader = FL_GEOS_S23_1541;
-  }
-
-  if (datacrc == 0xb272) {
-    /* Stage 3 GEOS 64/128 1541 (b272), from Configure */
-    detected_loader = FL_GEOS_S23_1541;
-  }
-
-  if (datacrc == 0xdaed) {
-    /* Stage 3 GEOS 64/128 1571 (daed), from Configure */
-    detected_loader = FL_GEOS_S23_1571;
-  }
-
-  if (datacrc == 0x3f8d) { // Note: Next-to-last CRC because of junk bytes
-    /* GEOS 64/128 1581, from Configure 2.0 */
-    detected_loader = FL_GEOS_S23_1581;
-    geos_send_byte = geos_send_byte_2mhz;
-  }
-
-  if (datacrc == 0xc947) { // Note: Next-to-last CRC because of junk bytes
-    /* GEOS 64/128 1581, from Configure 2.1 */
-    detected_loader = FL_GEOS_S23_1581;
-    geos_send_byte = geos_send_byte_1581_21;
-  }
-
-#endif
-
-#ifdef CONFIG_LOADER_WHEELS
-  if (datacrc == 0xf140) { // Stage 1 C64
-    detected_loader = FL_WHEELS_S1_64;
-  }
-
-  if (datacrc == 0x737e) { // Stage 1 C128 (different file name)
-    detected_loader = FL_WHEELS_S1_128;
-  }
-
-  if (datacrc == 0x755a || datacrc == 0x2920) { // Stage 2 1541 (one byte difference)
-    geos_send_byte = wheels_send_byte_1mhz;
-    geos_get_byte  = wheels_get_byte_1mhz;
-    detected_loader = FL_WHEELS_S2;
-  }
-
-  if (datacrc == 0x18e9 || /* 1571 */
-      datacrc == 0x9804 || /* 1581 */
-      datacrc == 0x48f5 || /* FD native partition */
-      datacrc == 0x1356 || /* FD emulation partition */
-      datacrc == 0xe885 || /* HD native partition */
-      datacrc == 0x4eca || /* HD emulation partition */
-      datacrc == 0xdbf6 || /* 1571 C128 (parameter buffer preset differs) */
-      datacrc == 0xe4ab || /* 1581 C128 */
-      datacrc == 0x6de5 || /* FD native, C128 */
-      datacrc == 0x30ff || /* FD emulation, C128 */
-      datacrc == 0x46e7 || /* HD native, C128 */
-      datacrc == 0x2253) { /* HD emulation, C128 */
-    /* Stage 2 */
-    geos_send_byte = geos_send_byte_1581_21;
-    geos_get_byte  = geos_get_byte_2mhz;
-    detected_loader = FL_WHEELS_S2;
-  }
-
-  if (datacrc == 0xc26a || /* Wheels 4.4 1541 */
-      datacrc == 0x550c) { /* Wheels 4.4 1571 */
-    /* Stage 2 */
-    geos_send_byte = wheels_send_byte_1mhz;
-    geos_get_byte  = wheels44_get_byte_1mhz;
-    detected_loader = FL_WHEELS44_S2;
-  }
-
-  if (datacrc == 0x825b || /* Wheels 4.4 1581 */
-      datacrc == 0x245b || /* Wheels 4.4 FD emulation */
-      datacrc == 0x7021 || /* Wheels 4.4 FD native */
-      datacrc == 0xd537 || /* Wheels 4.4 HD emulation */
-      datacrc == 0xf635) { /* Wheels 4.4 HD native */
-    geos_send_byte = wheels44_send_byte_2mhz;
-    geos_get_byte  = wheels44_get_byte_2mhz;
-    detected_loader = FL_WHEELS44_S2_1581;
-  }
-#endif
-
-#ifdef CONFIG_LOADER_NIPPON
-  if (datacrc == 0x43c1) {
-    detected_loader = FL_NIPPON;
-  }
-#endif
-
-#ifdef CONFIG_LOADER_AR6
-  if (datacrc == 0x4870) {
-    /* Note: Very early CRC, half of the uploaded code is unused crap */
-    detected_loader = FL_AR6_1581_LOAD;
-  }
-
-  if (datacrc == 0x2925) {
-    // FIXME: Use a pointer for the byte transfer to handle PAL/NTSC
-    detected_loader = FL_AR6_1581_SAVE;
-  }
 #endif
 
 #ifdef CONFIG_CAPTURE_LOADERS
