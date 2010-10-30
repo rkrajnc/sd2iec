@@ -526,7 +526,12 @@ Note: Using sd2iec without an external crystal or similiar precise
   The AR6 reads a byte from the drive rom to check which fastloader it should
   use. When file-based M-R emulation is disabled sd2iec returns a value that
   should force the cartridge to use the standard kernal loader instead of its
-  many (unsupported) fastloaders.
+  many fastloaders/-savers. This means that accessind sd2iec with
+  file-based rom emulation enabled will fail because the cartridge
+  will enable fastloader that will probably not be recognized.
+
+  Currently the only recognized AR6 fastloader and fastsaver are the
+  ones for the 1581.
 
   Dreamload
   ---------
