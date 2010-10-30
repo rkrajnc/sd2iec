@@ -618,11 +618,11 @@ void iec_mainloop(void) {
       iec_data.iecflags &= (uint8_t)~(EOI_RECVD | JIFFY_ACTIVE | JIFFY_LOAD);
 
       /* Slight protocol violation:                        */
-      /*   Wait until clock is low or 100us have passed    */
+      /*   Wait until clock is low or 250us have passed    */
       /*   The C64 doesn't always pull down the clock line */
       /*   before ATN, this loop should keep us in sync.   */
 
-      start_timeout(TIMEOUT_US(100));
+      start_timeout(TIMEOUT_US(250));
       while (IEC_CLOCK && !has_timed_out())
         if (IEC_ATN)
           iec_data.bus_state = BUS_ATNPROCESS;
