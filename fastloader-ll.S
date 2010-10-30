@@ -1024,6 +1024,10 @@ epyxcart_atnabort:
 geos_get_byte_common:
         clr     r24
 
+        ;; wait until clock is high
+1:      sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
+        rjmp    1b
+
         ;; wait until clock is low
 1:      sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK ; 1/2
         rjmp    1b
@@ -1306,6 +1310,10 @@ wheels_nibble:
 wheels_get_byte_1mhz:
         clr     r24
 
+        ;; wait until clock is high
+1:      sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
+        rjmp    1b
+
         ;; wait until clock is low
 1:      sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK ; 1/2
         rjmp    1b
@@ -1349,6 +1357,10 @@ wheels_get_byte_1mhz:
 wheels44_get_byte_1mhz:
         clr     r24
 
+        ;; wait until clock is high
+1:      sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
+        rjmp    1b
+
         ;; wait until clock is low
 1:      sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK ; 1/2
         rjmp    1b
@@ -1391,6 +1403,10 @@ wheels44_get_byte_1mhz:
         .global wheels44_get_byte_2mhz
 wheels44_get_byte_2mhz:
         clr     r24
+
+        ;; wait until clock is high
+1:      sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
+        rjmp    1b
 
         ;; wait until clock is low
 1:      sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK ; 1/2
@@ -1436,8 +1452,10 @@ wheels44_get_byte_2mhz:
         bst     r19, IEC_PIN_DATA          ; 1
         bld     r24, 7                     ; 1 - r24 = 76543210
 
+        ;; safety delay
+        delay_cycles 12*8
+
         ;; post process received value and return
-        delay_cycles 25*8
         com     r24                  ; negate all bits
         clr     r25                  ; clear high byte of return value
         ret

@@ -98,7 +98,7 @@ drives:
    26us   !b2  !b3
    37us   !b4  !b5
    48us   !b6  !b7
-   73us   -    -    (recommended delay before returning)
+   60us   -    -    (recommended delay before returning)
 
 
 Receiving a block
