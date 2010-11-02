@@ -159,7 +159,7 @@ int main(void) {
 
 #ifdef CONFIG_REMOTE_DISPLAY
   ustrcpy_P(entrybuf,versionstr);
-  ustrcpy_P(entrybuf+strlen(versionstr),longverstr);
+  ustrcpy_P(entrybuf+ustrlen(entrybuf),longverstr);
   if (display_init(ustrlen(entrybuf), entrybuf)) {
     display_address(device_address);
     display_current_part(0);

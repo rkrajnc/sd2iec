@@ -81,9 +81,9 @@ uint8_t set_ok_message(buffer_t *buf);
 #define ERROR_CLOCK_UNSTABLE     99
 
 /// Version number string, will be added to message 73
-static const char PROGMEM versionstr[] = HW_NAME " V" VERSION;
+extern const char PROGMEM versionstr[];
 
 /// Long version string, used for message 9
-static const char PROGMEM longverstr[] = LONGVERSION;
+extern const char PROGMEM longverstr[];
 
 #endif
