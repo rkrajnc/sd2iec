@@ -3,7 +3,7 @@
    Final Cartridge III, DreamLoad fastloader support:
    Copyright (C) 2008  Thomas Giesel <skoe@directbox.com>
    Nippon Loader support:
-   Copyright (C) 2010  Joerg Jungermann abra@borkum.net
+   Copyright (C) 2010  Joerg Jungermann <abra@borkum.net>
 
    Inspiration and low-level SD/MMC access based on code from MMC2IEC
      by Lars Pontoppidan et al., see sdcard.c|h and config.h.
@@ -1565,14 +1565,14 @@ void load_wheels_s2(UNUSED_PARAMETER) {
 
 /* protocol sync: wait for Clock low, if ATN is also low, then return signal to resync */
 static uint8_t nippon_atn_clock_handshake(void) {
-  if (!IEC_ATN) {
+  if (IEC_ATN) {
+    while(IEC_CLOCK) ;
+    return 1;
+  } else {
     set_clock(0);
     while(IEC_ATN) ;
     return 0;
   }
-
-  while(IEC_CLOCK) ;
-  return 1;
 }
 
 
@@ -1580,36 +1580,41 @@ static uint8_t nippon_atn_clock_handshake(void) {
 static uint8_t nippon_read_byte(uint8_t *b) {
   uint8_t tmp = 0, i;
 
-  set_clock(1);
-  set_data(1);
-  for (i=8; i; i--) {
-    if (! nippon_atn_clock_handshake())
-      return 0;
-    tmp = (tmp >> 1) | (IEC_DATA ? 0 : 128);
-    while(!IEC_CLOCK) ;
+  ATOMIC_BLOCK(ATOMIC_FORCEON) {
+    set_clock(1);
+    set_data(1);
+    for (i=8; i; i--) {
+      if (! nippon_atn_clock_handshake())
+        return 0;
+      tmp = (tmp >> 1) | (IEC_DATA ? 0 : 128);
+      while(!IEC_CLOCK) ;
+    }
+    set_clock(0);
+    set_data(1);
+    *b = tmp;
+    return 1;
   }
-  set_clock(0);
-  set_data(1);
-
-  *b = tmp;
-  return 1;
+  return 1; // not reached
 }
 
 /* sends a byte via IEC, if loader is out of sync return false */
 static uint8_t nippon_send_byte(uint8_t b) {
   uint8_t i;
 
-  set_clock(1);
-  for (i=8; i; i--) {
-    if (! nippon_atn_clock_handshake())
-      return 0;
-    set_data(b & 1);
-    b = b >> 1;
-    while(!IEC_CLOCK) ;
+  ATOMIC_BLOCK(ATOMIC_FORCEON) {
+    set_clock(1);
+    for (i=8; i; i--) {
+      if (! nippon_atn_clock_handshake())
+        return 0;
+      set_data(b & 1);
+      b = b >> 1;
+      while(!IEC_CLOCK) ;
+    }
+    set_clock(0);
+    set_data(1);
+    return 1;
   }
-  set_clock(0);
-  set_data(1);
-  return 1;
+  return 1; // not reached
 }
 
 /* nippon idle loop */
@@ -1633,18 +1638,16 @@ void load_nippon(UNUSED_PARAMETER) {
     /* timing is critical for ATN/CLK here, endless loop in $0bf0 at the cevi
      * raise ATN CLK quick, before setting LEDs output to serial console
      */
-    set_atn(1);
-    set_clock(1);
-    //set_data(1);
+    IEC_OUT &= (uint8_t)~(IEC_OBIT_ATN|IEC_OBIT_DATA|IEC_OBIT_CLOCK);
     set_busy_led(0);
-    uart_putcrlf(); uart_putc('L');
+    uart_putcrlf(); uart_putc('L'); // idle loop entered
 
     /* wait for IEC master or human master to command us something */
     while(IEC_ATN && !(i = check_keys())) ;
     if (i)
       break; /* user requested exit */
-    set_busy_led(1);
     set_clock(0);
+    set_busy_led(1);
 
     /* fetch command, sector and track, on failure resync/reinit protocol
      * if track > 128 exit loader
