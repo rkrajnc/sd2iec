@@ -111,10 +111,6 @@ ifeq ($(CONFIG_UART_DEBUG),y)
   SRC += uart.c
 endif
 
-ifneq ($(CONFIG_JIFFY_ASM),y)
-  SRC += jiffy.c
-endif
-
 ifeq ($(CONFIG_REMOTE_DISPLAY),y)
   SRC += display.c
   NEED_I2C := y

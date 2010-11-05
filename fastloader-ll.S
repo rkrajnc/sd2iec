@@ -165,7 +165,6 @@ clk_irq_end:
 #endif // ifdef IEC_CLK_INT_VECT
 
 
-#if defined(CONFIG_JIFFY_ASM) || defined(CONFIG_LOADER_TURBODISK) || defined(CONFIG_LOADER_FC3) || defined(CONFIG_LOADER_EPYXCART)
         ;; ===================================================================
         ;;  Utility routines
         ;; ===================================================================
@@ -211,9 +210,7 @@ wait_atn_low:
         rjmp    wait_atn_low
         ret
 
-#endif // ifdef any fast loader
 
-#ifdef CONFIG_JIFFY_ASM
         ;; ====================================================================
         ;;  JiffyDOS
         ;; ====================================================================
@@ -437,7 +434,6 @@ js_finish:
         sei                     ; re-enable interrupts
         ret
 
-#endif  // CONFIG_JIFFY_ASM
 
 #ifdef CONFIG_LOADER_TURBODISK
         ;; ====================================================================
