@@ -1,3 +1,8 @@
+2010-11-07 - release 0.10.0
+        - Deprecation notice:
+          E-R and E-W commands will be removed in the next release
+        - Improved reliability of Nippon loader
+
 2010-10-31 - release 0.10.0pre5
         - Bugfix: Avoid duplicate file name when DEL/DIR matches
         - Bugfix: Reduce chance of data corruption in Wheels

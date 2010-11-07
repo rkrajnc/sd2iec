@@ -429,6 +429,8 @@ Supported commands:
   emulation code can be used when M-E is called.
 
 - E-R, E-W
+  NOTICE: These commands will be removed in the next release.
+
   Both commands work like M-R and M-W, but instead of reading/writing RAM
   they allow access to a user-area of the EEPROM. This area currently holds
   512 bytes and accesses beyond its end will result in a 32 SYNTAX ERROR.
