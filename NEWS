@@ -1,3 +1,6 @@
+2010-12-xx - release x.x.x
+        - Bugfix: Remove remains of previous commands while parsing B-*
+
 2010-11-07 - release 0.10.0
         - Deprecation notice:
           E-R and E-W commands will be removed in the next release

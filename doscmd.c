@@ -560,6 +560,8 @@ static void parse_block(void) {
   uint8_t  params[4];
   int8_t   pcount;
 
+  clean_cmdbuffer();
+
   str = ustrchr(command_buffer, '-');
   if (!str) {
     set_error(ERROR_SYNTAX_UNABLE);
