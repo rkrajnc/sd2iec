@@ -1759,7 +1759,8 @@ static void parse_user(void) {
       break;
 
     default:
-      set_error(ERROR_SYNTAX_UNKNOWN);
+      /* Soft-reset - just return the dos version */
+      set_error(ERROR_DOSVERSION);
       break;
     }
     break;
