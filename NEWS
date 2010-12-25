@@ -1,5 +1,7 @@
-2010-12-xx - release x.x.x
+2010-12-25 - release 0.10.1
         - Bugfix: Remove remains of previous commands while parsing B-*
+        - Bugfix: Fix response of UI command for unknown suffix chars
+        - small improvement of JiffyDOS transfer speeds
 
 2010-11-07 - release 0.10.0
         - Deprecation notice:
