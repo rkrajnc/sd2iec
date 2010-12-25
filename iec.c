@@ -353,8 +353,6 @@ static uint8_t iec_listen_handler(const uint8_t cmd) {
     if (iec_data.iecflags & JIFFY_ACTIVE) {
       uint8_t flags;
       set_atn_irq(1);
-      _delay_us(50); /* Slow down or we'll see garbage from the C64 */
-                     /* The time was guessed from bus traces.       */
       c = jiffy_receive(&flags);
       if (!(flags & IEC_BIT_ATN))
         /* ATN was active at the end of the transfer */
@@ -432,16 +430,16 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
     buf->position = 4;
   }
 
-  while (buf->read) {
-    if (iec_data.iecflags & JIFFY_LOAD) {
-      /* Signal to the C64 that we're ready to send the next block */
-      set_data(0);
-      set_clock(1);
-      /* FFA0 - this delay is required so the C64 can see data low even */
-      /*        if it hits a badline at the worst possible moment       */
-      _delay_us(55);
-    }
+  if (iec_data.iecflags & JIFFY_LOAD) {
+    /* Ready-signal for the first block */
+    set_data(0);
+    set_clock(1);
+    /* FFA0 - this delay is required so the C64 can see data low even */
+    /*        if it hits a badline at the worst possible moment       */
+    _delay_us(50);
+  }
 
+  while (buf->read) {
     do {
       uint8_t finalbyte = (buf->position == buf->lastused);
       if (iec_data.iecflags & JIFFY_LOAD) {
@@ -508,6 +506,24 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
 
     /* Search the buffer again, it can change when using large buffers */
     buf = find_buffer(cmd & 0x0f);
+
+    if (iec_data.iecflags & JIFFY_LOAD) {
+      /* wait until the C64 is at FB06, use timeout in case the STOP key is pressed */
+      start_timeout(TIMEOUT_US(120));
+      while (!IEC_DATA && !has_timed_out()) ;
+
+      /* check if ATN changed */
+      if (check_atn())
+        return -1;
+
+      /* Signal to the C64 that we're ready to send the next block */
+      set_data(0);
+      set_clock(1);
+
+      /* FFA0 - this delay is required so the C64 can see data low even */
+      /*        if it hits a badline at the worst possible moment       */
+      _delay_us(50);
+    }
   }
 
   return 0;

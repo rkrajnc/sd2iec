@@ -294,6 +294,7 @@ jiffy_receive:
 
         ;; Data low
         sbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA ; 1
+        delay_cycles 10*8       ; make sure the C64 can see that
 
         ;; Post-process data and store last bus state
         com     r24             ; invert received data (result)
