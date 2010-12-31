@@ -1,5 +1,5 @@
 /* reltest - REL file test program
-   Copyright (C) 2010  Ingo Korb <ingo@akana.de>
+   Copyright (C) 2010-2011  Ingo Korb <ingo@akana.de>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

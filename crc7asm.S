@@ -1,8 +1,5 @@
 /* sd2iec - SD/MMC to Commodore serial bus interface/controller
-   Copyright (C) 2007-2010  Ingo Korb <ingo@akana.de>
-   Copyright (C) 2007-2010  M.Kiesel <mayne@users.sourceforge.net>
-   Final Cartridge III, DreamLoad fastloader support:
-   Copyright (C) 2008  Thomas Giesel <skoe@directbox.com>
+   Copyright (C) 2007-2011  Ingo Korb <ingo@akana.de>
 
    Inspiration and low-level SD/MMC access based on code from MMC2IEC
      by Lars Pontoppidan et al., see sdcard.c|h and config.h.
