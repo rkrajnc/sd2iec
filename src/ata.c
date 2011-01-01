@@ -172,7 +172,7 @@ static void reset_disk(void) {
 
 #ifdef CF_CHANGE_VECT
 ISR(CF_CHANGE_VECT) {
-  if (CFCARD_DETECT)
+  if (cfcard_detect())
     disk_state = DISK_CHANGED;
   else
     disk_state = DISK_REMOVED;
@@ -181,8 +181,7 @@ ISR(CF_CHANGE_VECT) {
 
 
 void ata_init(void) {
-  CFCARD_DETECT_SETUP();
-  CF_CHANGE_SETUP();
+  cfcard_interface_init();
   disk_state=DISK_OK;
   ATA_drv_flags[0] = STA_NOINIT | STA_FIRSTTIME;
   if(ATA_PORT_DATA_HI_OUT == 0xff)

@@ -400,6 +400,17 @@ static inline uint8_t sdcard_wp(void) {
 #  define SD_SUPPLY_VOLTAGE     (1L<<21)
 #  define SINGLE_LED
 
+static inline void cfcard_interface_init(void) {
+  DDRE  &= ~_BV(PE7);
+  PORTE |=  _BV(PE7);
+  EICRB |=  _BV(ISC70);
+  EIMSK |=  _BV(INT7);
+}
+
+static inline uint8_t cfcard_detect(void) {
+  return !(PINE & _BV(PE7));
+}
+
 static inline void sdcard_interface_init(void) {
   DDRB   &= ~_BV(PB7);
   PORTB  |=  _BV(PB7);
@@ -418,9 +429,6 @@ static inline uint8_t sdcard_wp(void) {
   return PINB & _BV(PB6);
 }
 
-#  define CFCARD_DETECT         (!(PINE & _BV(PE7)))
-#  define CFCARD_DETECT_SETUP() do { DDRE &= ~_BV(PE7); PORTE |= _BV(PE7); } while(0)
-#  define CF_CHANGE_SETUP()     do { EICRB |= _BV(ISC70); EIMSK |= _BV(INT7); } while(0)
 /* No device jumpers on uIEC */
 #  define DEVICE_SELECT         10
 #  define DEVICE_SELECT_SETUP() do {} while (0)
