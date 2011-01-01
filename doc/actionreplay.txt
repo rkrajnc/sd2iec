@@ -40,6 +40,7 @@ low-to-high transision of the data line initated by the C64:
    21us    b4   b5
    29us    b6   b7
  37.5us    0    1
+  ~47us    0    1   (bus settle delay)
 
 Each sector of the file is transferred by sending the number of valid
 bytes in the current sector (i.e. 254 for a full sector or the second
@@ -50,6 +51,11 @@ After transmitting the last sector a single byte with value 0 is sent
 to the computer to mark the end of the transmission. There is no way
 to signal read errors to the computer. The computer will send a
 command to close the file itself.
+
+Note: The final bus settle delay doesn't need to be explicit if your
+CPU is slow enough, but a fast processor might see its own data high
+as start condition because of the slow rise times of the
+open-collector serial bus.
 
 1581 fastsaver
 --------------

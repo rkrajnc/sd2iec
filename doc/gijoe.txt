@@ -70,16 +70,20 @@ Receiving a byte
 1) byte = 0
 2) Repeat 4 times:
   3) Wait until CLK is low
-  4) (for safety only: delay ~5 microseconds)
+  4) delay ~2-5 microseconds
   5) byte = byte >> 1
   6) Read DATA
   7) If DATA was low in step 6: byte = byte | 0x80
   8) Wait until CLK is high
-  9) (for safety only: delay ~5 microseconds)
+  9) delay ~2-5 microseconds
  10) byte = byte >> 1
  11) Read DATA
  12) If DATA was low in step 11: byte = byte | 0x80
 
+Note: The delays in step 4 and 9 are recommended because the C64 sets
+      both the clock and data line at the same time. A small
+      difference in propagation time between the two lines can easily
+      cause data corruption when the delay is too small.
 
 Sending a byte
 --------------

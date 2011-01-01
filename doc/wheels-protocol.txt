@@ -89,6 +89,7 @@ drives:
    28us   !b6  !b4
    45us   !b3  !b1
    61us   !b2  !b0
+   81us   -    -    (recommended delay before returning)
 
 1581/CMD (Wheels 4.4):
    Time  Clock Data
