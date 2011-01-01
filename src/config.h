@@ -49,6 +49,8 @@
 #define CONFIG_H
 
 #include "autoconf.h"
+#include <avr/io.h>
+#include <avr/interrupt.h>
 
 /* Include avrcompat.h to get the PA0..PD7 macros on 1284P */
 #include "avrcompat.h"
@@ -71,26 +73,75 @@
 /* If your device supports SD cards by default, define this symbol. */
 #  define HAVE_SD
 
-/* CARD_DETECT must return non-zero when card is inserted */
-/* This must be a pin capable of generating interrupts.   */
-#  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
-#  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
-
-/* Set up the card detect pin to generate an interrupt on every change */
-#  if defined __AVR_ATmega32__
-#    define SD_CHANGE_SETUP()  do { MCUCR |= _BV(ISC00); GICR |= _BV(INT0); } while(0)
-#  elif defined __AVR_ATmega644__ || defined __AVR_ATmega644P__ || defined __AVR_ATmega1284P__
-#    define SD_CHANGE_SETUP()  do { EICRA |= _BV(ISC00); EIMSK |= _BV(INT0); } while(0)
-#  else
-#    error Unknown chip!
-#  endif
-
 /* Name of the interrupt of the card detect pin */
-#  define SD_CHANGE_VECT INT0_vect
+#  define SD_CHANGE_VECT   INT0_vect
 
-/* CARD Write Protect must return non-zero when card is write protected */
-#  define SDCARD_WP         (PIND & _BV(PD6))
-#  define SDCARD_WP_SETUP() do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
+/* Interrupt vector for card 2 change detection */
+#  define SD2_CHANGE_VECT  INT2_vect
+
+/* Initialize all pins and interrupts related to SD - except SPI */
+static inline void sdcard_interface_init(void) {
+  /* card detect (SD1) */
+  DDRD  &= ~_BV(PD2);
+  PORTD |=  _BV(PD2);
+  /* write protect (SD1) */
+  DDRD &= ~_BV(PD6);
+  PORTD |= _BV(PD6);
+  /* card change interrupt (SD1) */
+  EICRA |= _BV(ISC00);
+  EIMSK |= _BV(INT0);
+  // Note: Wrapping SD2 in CONFIG_TWINSD may be a good idea
+  /* chip select (SD2) */
+  PORTD |= _BV(PD4);
+  DDRD |= _BV(PD4);
+  /* card detect (SD2) */
+  DDRD &= ~_BV(PD3);
+  PORTD |= _BV(PD3);
+  /* write protect (SD2) */
+  DDRD &= ~_BV(PD7);
+  PORTD |= _BV(PD7);
+  /* card change interrupt (SD2) */
+  EICRA |=  _BV(ISC90); // Change interrupt
+  EIMSK |=  _BV(INT9);  // Change interrupt
+}
+
+/* sdcard_detect() must return non-zero while a card is inserted */
+/* This must be a pin capable of generating interrupts.          */
+static inline uint8_t sdcard_detect(void) {
+  return !(PIND & _BV(PD2));
+}
+
+/* Returns non-zero when the currently inserted card is write-protected */
+static inline uint8_t sdcard_wp(void) {
+  return PIND & _BV(PD6);
+}
+
+/* Support for a second SD card - use CONFIG_TWINSD=y in your config file to enable! */
+/* Same as the two functions above, but for card 2 */
+static inline uint8_t sdcard2_detect(void) {
+  return !(PIND & _BV(PD3));
+}
+static inline uint8_t sdcard2_wp(void) {
+  return PIND & _BV(PD7);
+}
+
+/* SD card 1 is assumed to use the standard SS pin   */
+/* If that's not true, #define SDCARD_SS_SPECIAL and */
+/* implement this function:                          */
+//static inline __attribute__((always_inline)) void sdcard_set_ss(uint8_t state) {
+//  if (state)
+//    PORTZ |= _BV(PZ9);
+//  else
+//    PORTZ &= ~_BV(PZ9);
+//}
+
+/* SD card 2 CS pin */
+static inline __attribute__((always_inline)) void sdcard2_set_ss(uint8_t state) {
+  if (state)
+    PORTD |= _BV(PD4);
+  else
+    PORTD &= ~_BV(PD4);
+}
 
 /* SD Card supply voltage - choose the one appropiate to your board */
 /* #  define SD_SUPPLY_VOLTAGE (1L<<15)  / * 2.7V - 2.8V */
@@ -102,27 +153,6 @@
 /* #  define SD_SUPPLY_VOLTAGE (1L<<21)  / * 3.3V - 3.4V */
 /* #  define SD_SUPPLY_VOLTAGE (1L<<22)  / * 3.4V - 3.5V */
 /* #  define SD_SUPPLY_VOLTAGE (1L<<23)  / * 3.5V - 3.6V */
-
-/* Support for a second SD card - use CONFIG_TWINSD=y in your config file to enable! */
-/* The code assumes that detect/select/write-protect lines of the */
-/* second card are all on the same port.                          */
-#   define SD2_PORT             PORTC
-#   define SD2_PIN              PINC
-#   define SD2_PRESENT          _BV(PB2)
-#   define SD2_CS               _BV(PC6)
-#   define SD2_WP               (PINC & _BV(PC7))
-
-/* Same sd SD_DETECT above. */
-#   define SD2_DETECT           (!(PINB & SD2_PRESENT))
-
-/* Full setup of the SD2 port, excluding interrupts. */
-#   define SD2_SETUP()          do { SD2_PORT |= SD2_CS|SD2_WP; DDRC |= SD2_CS; DDRC &= ~SD2_WP; DDRB &= ~SD2_PRESENT; PORTB |= SD2_PRESENT; } while (0)
-
-/* Interrupt vector for card 2 change detection */
-#   define SD2_CHANGE_VECT      INT2_vect
-
-/* Set up and enable the card 2 change interrupt */
-#   define SD2_CHANGE_SETUP()   do { EICRA |= _BV(ISC20); EIMSK |= _BV(INT2);  } while (0)
 
 
 /*** AT45DB161D dataflash support ***/
@@ -246,19 +276,26 @@
 /* Hardware configuration: Shadowolf 1 */
 #  define HW_NAME "SD2IEC"
 #  define HAVE_SD
-#  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
-#  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
-#  if defined __AVR_ATmega32__
-#    define SD_CHANGE_SETUP()   do { MCUCR |= _BV(ISC00); GICR |= _BV(INT0); } while(0)
-#  elif defined __AVR_ATmega644__ || defined __AVR_ATmega644P__ || defined __AVR_ATmega1284P__
-#    define SD_CHANGE_SETUP()   do { EICRA |= _BV(ISC00); EIMSK |= _BV(INT0); } while(0)
-#  else
-#    error Unknown chip!
-#  endif
 #  define SD_CHANGE_VECT        INT0_vect
-#  define SDCARD_WP             (PIND & _BV(PD6))
-#  define SDCARD_WP_SETUP()     do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
 #  define SD_SUPPLY_VOLTAGE     (1L<<18)
+
+static inline void sdcard_interface_init(void) {
+  DDRD &= ~_BV(PD2);
+  PORTD |= _BV(PD2);
+  DDRD &= ~_BV(PD6);
+  PORTD |= _BV(PD6);
+  EICRA |= _BV(ISC00);
+  EIMSK |= _BV(INT0);
+}
+
+static inline uint8_t sdcard_detect(void) {
+  return !(PIND & _BV(PD2));
+}
+
+static inline uint8_t sdcard_wp(void) {
+  return PIND & _BV(PD6);
+}
+
 #  define DEVICE_SELECT         (8+!(PIND & _BV(PD7))+2*!(PIND & _BV(PD5)))
 #  define DEVICE_SELECT_SETUP() do {        \
              DDRD  &= ~(_BV(PD7)|_BV(PD5)); \
@@ -294,20 +331,26 @@
 /* Hardware configuration: LarsP */
 #  define HW_NAME "SD2IEC"
 #  define HAVE_SD
-#  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
-#  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
-#  if defined __AVR_ATmega32__
-#    define SD_CHANGE_SETUP()   do { MCUCR |= _BV(ISC00); GICR |= _BV(INT0); } while(0)
-#  elif defined __AVR_ATmega644__ || defined __AVR_ATmega644P__ || defined __AVR_ATmega1284P__
-#    define SD_CHANGE_SETUP()   do { EICRA |= _BV(ISC00); EIMSK |= _BV(INT0); } while(0)
-#  else
-#    error Unknown chip!
-#  endif
 #  define SD_CHANGE_VECT        INT0_vect
-#  define SDCARD_WP             (PIND & _BV(PD6))
-#  define SDCARD_WP_SETUP()     do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
-#  define SD_CHANGE_ICR         MCUCR
 #  define SD_SUPPLY_VOLTAGE     (1L<<21)
+
+static inline void sdcard_interface_init(void) {
+  DDRD  &= ~_BV(PD2);
+  PORTD |=  _BV(PD2);
+  DDRD  &= ~_BV(PD6);
+  PORTD |=  _BV(PD6);
+  EICRA |=  _BV(ISC00);
+  EIMSK |=  _BV(INT0);
+}
+
+static inline uint8_t sdcard_detect(void) {
+  return !(PIND & _BV(PD2));
+}
+
+static inline uint8_t sdcard_wp(void) {
+  return PIND & _BV(PD6);
+}
+
 #  define DEVICE_SELECT         (8+!(PINA & _BV(PA2))+2*!(PINA & _BV(PA3)))
 #  define DEVICE_SELECT_SETUP() do {        \
              DDRA  &= ~(_BV(PA2)|_BV(PA3)); \
@@ -350,22 +393,37 @@
 /* Hardware configuration: uIEC */
 #  define HW_NAME "UIEC"
 #  define HAVE_ATA
+#  define HAVE_SD
+#  define SPI_LATE_INIT
+#  define CF_CHANGE_VECT        INT7_vect
+#  define SD_CHANGE_VECT        PCINT0_vect
+#  define SD_SUPPLY_VOLTAGE     (1L<<21)
+#  define SINGLE_LED
+
+static inline void sdcard_interface_init(void) {
+  DDRB   &= ~_BV(PB7);
+  PORTB  |=  _BV(PB7);
+  DDRB   &= ~_BV(PB6);
+  PORTB  |=  _BV(PB6);
+  PCMSK0 |=  _BV(PCINT7);
+  PCICR  |=  _BV(PCIE0);
+  PCIFR  |=  _BV(PCIF0);
+}
+
+static inline uint8_t sdcard_detect(void) {
+  return !(PINB & _BV(PB7));
+}
+
+static inline uint8_t sdcard_wp(void) {
+  return PINB & _BV(PB6);
+}
+
 #  define CFCARD_DETECT         (!(PINE & _BV(PE7)))
 #  define CFCARD_DETECT_SETUP() do { DDRE &= ~_BV(PE7); PORTE |= _BV(PE7); } while(0)
 #  define CF_CHANGE_SETUP()     do { EICRB |= _BV(ISC70); EIMSK |= _BV(INT7); } while(0)
-#  define CF_CHANGE_VECT        INT7_vect
-#  define HAVE_SD
-#  define SDCARD_DETECT         (!(PINB & _BV(PB7)))
-#  define SDCARD_DETECT_SETUP() do { DDRB &= ~_BV(PB7); PORTB |= _BV(PB7); } while(0)
-#  define SD_CHANGE_SETUP()     do { PCMSK0 |= _BV(PCINT7); PCICR |= _BV(PCIE0); PCIFR |= _BV(PCIF0); } while (0)
-#  define SD_CHANGE_VECT        PCINT0_vect
-#  define SDCARD_WP             (PINB & _BV(PB6))
-#  define SDCARD_WP_SETUP()     do { DDRB &= ~ _BV(PB6); PORTB |= _BV(PB6); } while(0)
-#  define SD_SUPPLY_VOLTAGE     (1L<<21)
 /* No device jumpers on uIEC */
 #  define DEVICE_SELECT         10
 #  define DEVICE_SELECT_SETUP() do {} while (0)
-#  define SINGLE_LED
 #  define DIRTY_LED_SETDDR()    DDRE  |= _BV(PE3)
 #  define DIRTY_LED_ON()        PORTE |= _BV(PE3)
 #  define DIRTY_LED_OFF()       PORTE &= ~_BV(PE3)
@@ -406,19 +464,53 @@
 /* Hardware configuration: Shadowolf 2 aka sd2iec 1.x */
 #  define HW_NAME "SD2IEC"
 #  define HAVE_SD
-#  define SDCARD_DETECT         (!(PIND & _BV(PD2)))
-#  define SDCARD_DETECT_SETUP() do { DDRD &= ~_BV(PD2); PORTD |= _BV(PD2); } while(0)
-#  if defined __AVR_ATmega32__
-#    define SD_CHANGE_SETUP()   do { MCUCR |= _BV(ISC00); GICR |= _BV(INT0); } while(0)
-#  elif defined __AVR_ATmega644__ || defined __AVR_ATmega644P__ || defined __AVR_ATmega1284P__
-#    define SD_CHANGE_SETUP()   do { EICRA |= _BV(ISC00); EIMSK |= _BV(INT0); } while(0)
-#  else
-#    error Unknown chip!
-#  endif
 #  define SD_CHANGE_VECT        INT0_vect
-#  define SDCARD_WP             (PIND & _BV(PD6))
-#  define SDCARD_WP_SETUP()     do { DDRD &= ~ _BV(PD6); PORTD |= _BV(PD6); } while(0)
+#  define SD2_CHANGE_VECT       INT2_vect
 #  define SD_SUPPLY_VOLTAGE     (1L<<18)
+
+static inline void sdcard_interface_init(void) {
+  DDRD  &= ~_BV(PD2);
+  PORTD |=  _BV(PD2);
+  DDRD  &= ~_BV(PD6);
+  PORTD |=  _BV(PD6);
+  EICRA |=  _BV(ISC00);
+  EIMSK |=  _BV(INT0);
+#ifdef CONFIG_TWINSD
+  PORTD |=  _BV(PD3); // CS
+  DDRD  |=  _BV(PD3); // CS
+  DDRC  &= ~_BV(PC7); // WP
+  PORTC |=  _BV(PC7); // WP
+  DDRB  &= ~_BV(PB2); // Detect
+  PORTB |=  _BV(PB2); // Detect
+  EICRA |=  _BV(ISC20); // Change interrupt
+  EIMSK |=  _BV(INT2);  // Change interrupt
+#endif
+}
+
+static inline uint8_t sdcard_detect(void) {
+  return !(PIND & _BV(PD2));
+}
+
+static inline uint8_t sdcard_wp(void) {
+  return PIND & _BV(PD6);
+}
+
+static inline uint8_t sdcard2_detect(void) {
+  return !(PINB & _BV(PB2));
+}
+
+static inline uint8_t sdcard2_wp(void) {
+  return PINC & _BV(PC7);
+}
+
+static inline __attribute__((always_inline)) void sdcard2_set_ss(uint8_t state) {
+  if (state)
+    PORTD |= _BV(PD3);
+  else
+    PORTD &= ~_BV(PD3);
+}
+
+
 #  define DEVICE_SELECT         (8+!(PIND & _BV(PD7))+2*!(PIND & _BV(PD5)))
 #  define DEVICE_SELECT_SETUP() do {        \
              DDRD  &= ~(_BV(PD7)|_BV(PD5)); \
@@ -461,19 +553,6 @@
 #  define SOFTI2C_BIT_INTRQ     PC6
 #  define SOFTI2C_DELAY         6
 
-#  ifdef CONFIG_TWINSD
-/* Support for multiple SD cards */
-#   define SD2_PORT             PORTD
-#   define SD2_PIN              PIND
-#   define SD2_PRESENT          _BV(PB2)
-#   define SD2_CS               _BV(PD3)
-#   define SD2_WP               (PINC & _BV(PC7))
-#   define SD2_DETECT           (!(PINB & SD2_PRESENT))
-#   define SD2_SETUP()          do { SD2_PORT |= SD2_CS; PORTC |= SD2_WP; DDRD |= SD2_CS; DDRC &= ~SD2_WP; DDRB &= ~SD2_PRESENT; PORTB |= SD2_PRESENT; } while (0)
-#   define SD2_CHANGE_VECT      INT2_vect
-#   define SD2_CHANGE_SETUP()   do { EICRA |= _BV(ISC20); EIMSK |= _BV(INT2);  } while (0)
-#  endif
-
 
 /* Hardware configuration 6 was old NKC MMC2IEC */
 
@@ -482,17 +561,30 @@
 /* Hardware configuration: uIEC v3 */
 #  define HW_NAME "UIEC"
 #  define HAVE_SD
-#  define SDCARD_DETECT         (!(PINE & _BV(PE6)))
-#  define SDCARD_DETECT_SETUP() do { DDRE &= ~_BV(PE6); PORTE |= _BV(PE6); } while(0)
-#  define SD_CHANGE_SETUP()     do { EICRB |= _BV(ISC60); EIMSK |= _BV(INT6); } while(0)
 #  define SD_CHANGE_VECT        INT6_vect
-#  define SDCARD_WP             (PINE & _BV(PE2))
-#  define SDCARD_WP_SETUP()     do { DDRE &= ~ _BV(PE2); PORTE |= _BV(PE2); } while(0)
 #  define SD_SUPPLY_VOLTAGE     (1L<<21)
+#  define SINGLE_LED
+
+static inline void sdcard_interface_init(void) {
+  DDRE  &= ~_BV(PE6);
+  PORTE |=  _BV(PE6);
+  DDRE  &= ~_BV(PE2);
+  PORTE |=  _BV(PE2);
+  EICRB |=  _BV(ISC60);
+  EIMSK |=  _BV(INT6);
+}
+
+static inline uint8_t sdcard_detect(void) {
+  return !(PINE & _BV(PE6));
+}
+
+static inline uint8_t sdcard_wp(void) {
+  return PINE & _BV(PE2);
+}
+
 /* No device jumpers on uIEC */
 #  define DEVICE_SELECT         10
 #  define DEVICE_SELECT_SETUP() do {} while (0)
-#  define SINGLE_LED
 #  define DIRTY_LED_SETDDR()    DDRG  |= _BV(PG0)
 #  define DIRTY_LED_ON()        PORTG |= _BV(PG0)
 #  define DIRTY_LED_OFF()       PORTG &= ~_BV(PG0)
@@ -525,44 +617,6 @@
 #  define BUTTON_MASK           (_BV(PG3)|_BV(PG4))
 #  define BUTTON_NEXT           _BV(PG4)
 #  define BUTTON_PREV           _BV(PG3)
-
-#elif CONFIG_HARDWARE_VARIANT == 99
-/* Hardware configuration: sdlite - not for production use */
-#  define HW_NAME "SD2IEC"
-#  define HAVE_SD
-#  define SDCARD_DETECT         1
-#  define SDCARD_DETECT_SETUP() do { } while(0)
-#  define SD_CHANGE_SETUP()     do { } while(0)
-#  define SDCARD_WP             0
-#  define SDCARD_WP_SETUP()     do { } while(0)
-#  define SD_SUPPLY_VOLTAGE     (1L<<21)
-#  define DATAFLASH_PORT        PORTD
-#  define DATAFLASH_DDR         DDRD
-#  define DATAFLASH_SELECT      _BV(PD2)
-#  define DEVICE_SELECT         8
-#  define DEVICE_SELECT_SETUP() do {} while(0)
-#  define SINGLE_LED
-#  define DIRTY_LED_SETDDR()    DDRD  |= _BV(PD7)
-#  define DIRTY_LED_ON()        PORTD |= _BV(PD7)
-#  define DIRTY_LED_OFF()       PORTD &= ~_BV(PD7)
-#  define DIRTY_LED_PORT        PORTD
-#  define DIRTY_LED_BIT()       _BV(PD7)
-#  define IEC_PIN               PINB
-#  define IEC_DDR               DDRB
-#  define IEC_PORT              PORTB
-#  define IEC_PIN_ATN           PB0
-#  define IEC_PIN_DATA          PB2
-#  define IEC_PIN_CLOCK         PB1
-#  define IEC_PIN_SRQ           PB3
-#  define IEC_ATN_INT_VECT      PCINT1_vect
-#  define IEC_ATN_INT_SETUP()   do { PCICR |= _BV(PCIE1); PCIFR |= _BV(PCIF1); } while (0)
-#  define IEC_PCMSK             PCMSK1
-#  define BUTTON_PIN            PIND
-#  define BUTTON_PORT           PORTD
-#  define BUTTON_DDR            DDRD
-#  define BUTTON_MASK           (_BV(PD5)|_BV(PD6))
-#  define BUTTON_NEXT           _BV(PD6)
-#  define BUTTON_PREV           _BV(PD5)
 
 
 #else
@@ -631,6 +685,16 @@
        if (x) { EIMSK |= _BV(IEC_CLK_INT); } \
        else { EIMSK &= (uint8_t)~_BV(IEC_CLK_INT); }
 #  endif
+#endif
+
+/* SD SS pin default implementation */
+#ifndef SDCARD_SS_SPECIAL
+static inline __attribute__((always_inline)) void sdcard_set_ss(uint8_t state) {
+  if (state)
+    SPI_PORT |= SPI_SS;
+  else
+    SPI_PORT &= ~SPI_SS;
+}
 #endif
 
 /* Create no-op interrupt setups if they are undefined */

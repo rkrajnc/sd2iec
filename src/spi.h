@@ -45,18 +45,10 @@ extern uint8_t spi_current_device;
 
 /* Expose SS pin function for faster sector reads/writes */
 static inline __attribute__((always_inline)) void spi_set_ss(uint8_t state) {
-  if (spi_current_device & 1) {
-    if (state)
-      SPI_PORT |= SPI_SS;
-    else
-      SPI_PORT &= ~SPI_SS;
-  }
-  if (spi_current_device & 2) {
-    if (state)
-      SD2_PORT |= SD2_CS;
-    else
-      SD2_PORT &= ~SD2_CS;
-  }
+  if (spi_current_device & 1)
+    sdcard_set_ss(state);
+  if (spi_current_device & 2)
+    sdcard2_set_ss(state);
 }
 
 static inline void spi_select_device(spi_device_t dev) {
@@ -69,10 +61,7 @@ static inline void spi_select_device(spi_device_t dev) {
 
 /* Expose SS pin function for faster sector reads/writes */
 static inline void spi_set_ss(uint8_t state) {
-  if (state)
-    SPI_PORT |= SPI_SS;
-  else
-    SPI_PORT &= ~SPI_SS;
+  sdcard_set_ss(state);
 }
 
 #endif

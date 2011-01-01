@@ -172,9 +172,9 @@ int main(void) {
   /* card switch diagnostic aid - hold down PREV button to use */
   if (!(BUTTON_PIN & BUTTON_PREV)) {
     while (BUTTON_PIN & BUTTON_NEXT) {
-      set_dirty_led(SDCARD_DETECT);
+      set_dirty_led(sdcard_detect());
 # ifdef BUSY_LED_ON
-      set_busy_led(SDCARD_WP);
+      set_busy_led(sdcard_wp());
 # endif
     }
     reset_key(0xff);

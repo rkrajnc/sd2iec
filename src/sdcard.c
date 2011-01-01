@@ -363,7 +363,7 @@ static void sdInit(const uint8_t card) {
 /* Detect changes of SD card 0 */
 #ifdef SD_CHANGE_VECT
 ISR(SD_CHANGE_VECT) {
-  if (SDCARD_DETECT)
+  if (sdcard_detect())
     disk_state = DISK_CHANGED;
   else
     disk_state = DISK_REMOVED;
@@ -373,7 +373,7 @@ ISR(SD_CHANGE_VECT) {
 #ifdef CONFIG_TWINSD
 /* Detect changes of SD card 1 */
 ISR(SD2_CHANGE_VECT) {
-  if (SD2_DETECT)
+  if (sdcard2_detect())
     disk_state = DISK_CHANGED;
   else
     disk_state = DISK_REMOVED;
@@ -384,14 +384,7 @@ ISR(SD2_CHANGE_VECT) {
 // Public functions
 //
 void sd_init(void) {
-  SDCARD_DETECT_SETUP();
-  SDCARD_WP_SETUP();
-  SD_CHANGE_SETUP();
-#ifdef CONFIG_TWINSD
-  /* Initialize the control lines for card 2 */
-  SD2_SETUP();
-  SD2_CHANGE_SETUP();
-#endif
+  sdcard_interface_init();
 }
 void disk_init(void) __attribute__ ((weak, alias("sd_init")));
 
@@ -399,8 +392,8 @@ void disk_init(void) __attribute__ ((weak, alias("sd_init")));
 DSTATUS sd_status(BYTE drv) {
 #ifdef CONFIG_TWINSD
   if (drv != 0) {
-    if (SD2_DETECT) {
-      if (SD2_PIN & SD2_WP) {
+    if (sdcard2_detect()) {
+      if (sdcard2_wp()) {
         return STA_PROTECT;
       } else {
         return RES_OK;
@@ -410,8 +403,8 @@ DSTATUS sd_status(BYTE drv) {
     }
   } else
 #endif
-  if (SDCARD_DETECT)
-    if (SDCARD_WP)
+  if (sdcard_detect())
+    if (sdcard_wp())
       return STA_PROTECT;
     else
       return RES_OK;
@@ -653,12 +646,13 @@ DRESULT sd_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
 
 #ifdef CONFIG_TWINSD
   if (drv != 0) {
-    if (SD2_PIN & SD2_WP)
+    if (sdcard2_wp())
       return RES_WRPRT;
   } else
 #endif
 
-  if (SDCARD_WP) return RES_WRPRT;
+  if (sdcard_wp())
+    return RES_WRPRT;
 
   for (sec=0;sec<count;sec++) {
     errorcount = 0;
