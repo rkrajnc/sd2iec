@@ -155,14 +155,6 @@ static inline __attribute__((always_inline)) void sdcard2_set_ss(uint8_t state) 
 /* #  define SD_SUPPLY_VOLTAGE (1L<<23)  / * 3.5V - 3.6V */
 
 
-/*** AT45DB161D dataflash support ***/
-/* You can use an Atmel AT45DB161D chip as data storage/additional drive */
-//#  define HAVE_DF
-//#  define DATAFLASH_PORT        PORTD
-//#  define DATAFLASH_DDR         DDRD
-//#  define DATAFLASH_SELECT      _BV(PD2)
-
-
 /*** Device address selection ***/
 /* DEVICE_SELECT should return the selected device number,   */
 /* DEVICE_SELECT_SETUP() is called once to set up the ports. */
@@ -741,10 +733,6 @@ static inline __attribute__((always_inline)) void sdcard_set_ss(uint8_t state) {
 #  define HAVE_ATA
 #endif
 
-#if defined(CONFIG_ADD_DF) && !defined(HAVE_DF)
-#  define HAVE_DF
-#endif
-
 /* Create some temporary symbols so we can calculate the number of */
 /* enabled storage devices.                                        */
 #ifdef HAVE_SD
@@ -753,19 +741,15 @@ static inline __attribute__((always_inline)) void sdcard_set_ss(uint8_t state) {
 #ifdef HAVE_ATA
 #  define TMP_ATA 1
 #endif
-#ifdef HAVE_DF
-#  define TMP_DF 1
-#endif
 
 /* Enable the diskmux if more than one storage device is enabled. */
-#if !defined(NEED_DISKMUX) && (TMP_SD + TMP_ATA + TMP_DF) > 1
+#if !defined(NEED_DISKMUX) && (TMP_SD + TMP_ATA) > 1
 #  define NEED_DISKMUX
 #endif
 
 /* Remove the temporary symbols */
 #undef TMP_SD
 #undef TMP_ATA
-#undef TMP_DF
 
 /* Hardcoded maximum - reducing this won't save any ram */
 #define MAX_DRIVES 8

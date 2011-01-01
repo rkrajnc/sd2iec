@@ -144,7 +144,7 @@ Supported commands:
               implemented values are:
                 0  IDE
                 2  SD
-                3  Dataflash
+                3  (reserved)
      1 byte : Sector size divided by 256
               This field holds the sector size of the storage device
               divided by 256.
@@ -332,7 +332,7 @@ Supported commands:
                 1: Slave ATA device
                 4: Primary SD/MMC device
                 5: Secondary SD/MMC device
-                6: Dataflash device
+                6: (reserved)
                15: no device
 
              Note that only devices supported by the specific hardware

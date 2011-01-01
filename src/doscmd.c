@@ -1867,9 +1867,6 @@ static void parse_xcommand(void) {
           }
           switch(val >> DRIVE_BITS) {
           case DISK_TYPE_NONE:
-#ifdef HAVE_DF
-          case DISK_TYPE_DF:
-#endif
 #ifdef HAVE_SD
           case DISK_TYPE_SD:
 #endif

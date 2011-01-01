@@ -27,7 +27,6 @@
 #include "config.h"
 #include "diskio.h"
 #include "ata.h"
-#include "dataflash.h"
 #include "sdcard.h"
 
 volatile enum diskstates disk_state;
@@ -43,9 +42,6 @@ uint32_t get_default_driveconfig(void) {
   uint32_t result = 0xffffffffL;
 
   /* Order matters: Whatever is checked first will be last in the config */
-#ifdef HAVE_DF
-  result = (result << 4) + (DISK_TYPE_DF  << DRIVE_BITS) + 0;
-#endif
 #ifdef CONFIG_TWINSD
   result = (result << 4) + (DISK_TYPE_SD  << DRIVE_BITS) + 1;
 #endif
@@ -65,18 +61,10 @@ void disk_init(void) {
 #ifdef HAVE_ATA
   ata_init();
 #endif
-#ifdef HAVE_DF
-  df_init();
-#endif
 }
 
 DSTATUS disk_status(BYTE drv) {
   switch(drv >> DRIVE_BITS) {
-#ifdef HAVE_DF
-  case DISK_TYPE_DF:
-    return df_status(drv & DRIVE_MASK);
-#endif
-
 #ifdef HAVE_ATA
   case DISK_TYPE_ATA:
     return ata_status(drv & DRIVE_MASK);
@@ -97,11 +85,6 @@ DSTATUS disk_status(BYTE drv) {
 
 DSTATUS disk_initialize(BYTE drv) {
   switch(drv >> DRIVE_BITS) {
-#ifdef HAVE_DF
-  case DISK_TYPE_DF:
-    return df_initialize(drv & DRIVE_MASK);
-#endif
-
 #ifdef HAVE_ATA
   case DISK_TYPE_ATA:
     return ata_initialize(drv & DRIVE_MASK);
@@ -122,11 +105,6 @@ DSTATUS disk_initialize(BYTE drv) {
 
 DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
   switch(drv >> DRIVE_BITS) {
-#ifdef HAVE_DF
-  case DISK_TYPE_DF:
-    return df_read(drv & DRIVE_MASK,buffer,sector,count);
-#endif
-
 #ifdef HAVE_ATA
   case DISK_TYPE_ATA:
     return ata_read(drv & DRIVE_MASK,buffer,sector,count);
@@ -147,11 +125,6 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
 
 DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
   switch(drv >> DRIVE_BITS) {
-#ifdef HAVE_DF
-  case DISK_TYPE_DF:
-    return df_write(drv & DRIVE_MASK,buffer,sector,count);
-#endif
-
 #ifdef HAVE_ATA
   case DISK_TYPE_ATA:
     return ata_write(drv & DRIVE_MASK,buffer,sector,count);
@@ -172,11 +145,6 @@ DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
 
 DRESULT disk_getinfo(BYTE drv, BYTE page, void *buffer) {
   switch(drv >> DRIVE_BITS) {
-#ifdef HAVE_DF
-  case DISK_TYPE_DF:
-    return df_getinfo(drv & DRIVE_MASK,page,buffer);
-#endif
-
 #ifdef HAVE_ATA
   case DISK_TYPE_ATA:
     return ata_getinfo(drv & DRIVE_MASK,page,buffer);

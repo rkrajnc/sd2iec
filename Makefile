@@ -139,10 +139,6 @@ ifdef CONFIG_ADD_ATA
   SRC += ata.c
 endif
 
-ifdef CONFIG_ADD_DF
-  SRC += spi.c dataflash.c
-endif
-
 # List Assembler source files here.
 #     Make them always end in a capital .S.  Files ending in a lowercase .s
 #     will not be considered source files but generated files (assembler

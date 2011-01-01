@@ -89,7 +89,7 @@ extern volatile enum diskstates disk_state;
 #define DISK_TYPE_ATA        0
 #define DISK_TYPE_ATA2       1
 #define DISK_TYPE_SD         2
-#define DISK_TYPE_DF         3
+/* #define DISK_TYPE_DF         3 - removed */
 #define DISK_TYPE_NONE       7
 
 #ifdef NEED_DISKMUX

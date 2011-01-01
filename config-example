@@ -126,8 +126,6 @@ CONFIG_TWINSD=y
 #CONFIG_ADD_SD=y
 # Add ATA support
 #CONFIG_ADD_ATA=y
-# Add DataFlash support
-#CONFIG_ADD_DF=y
 
 # Length of error message buffer - 1571 uses 36 bytes
 # Increased to 46 because the long version message can be a bit long
