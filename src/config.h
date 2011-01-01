@@ -169,30 +169,45 @@ static inline void device_hw_address_init(void) {
 
 
 /*** LEDs ***/
-/* If your hardware only has a single LED, use only the DIRTY_LED defines */
-/* and set SINGLE_LED. See uIEC below for an example.                     */
-/* #  define SINGLE_LED */
+/* Please don't build single-LED hardware anymore... */
 
-/* BUSY led, recommended color: green */
-/* R.Riedel - using PORTC instead of the original PORTA here plus inverse polarity */
-#  define BUSY_LED_SETDDR() DDRC  |= _BV(PC0)
-#  define BUSY_LED_ON()     PORTC |= _BV(PC0)
-#  define BUSY_LED_OFF()    PORTC &= ~_BV(PC0)
+/* Initialize ports for all LEDs */
+static inline void leds_init(void) {
+  DDRC |= _BV(PC0);
+  DDRC |= _BV(PC1);
+}
 
-/* DIRTY led, recommended color: red */
-/* R.Riedel - using PORTC instead of the original PORTA here plus inverse polarity */
-#  define DIRTY_LED_SETDDR() DDRC  |= _BV(PC1)
-#  define DIRTY_LED_ON()     PORTC |= _BV(PC1)
-#  define DIRTY_LED_OFF()    PORTC &= ~_BV(PC1)
-#  define DIRTY_LED_PORT     PORTC
-#  define DIRTY_LED_BIT()    _BV(PC1)
+/* --- "BUSY" led, recommended color: green (usage similiar to 1541 LED) --- */
+static inline __attribute__((always_inline)) void set_busy_led(uint8_t state) {
+  if (state)
+    PORTC |= _BV(PC0);
+  else
+    PORTC &= ~_BV(PC0);
+}
 
-/* Software power LED */
+/* --- "DIRTY" led, recommended color: red (errors, unwritten data in memory) --- */
+static inline __attribute__((always_inline)) void set_dirty_led(uint8_t state) {
+  if (state)
+    PORTC |= _BV(PC1);
+  else
+    PORTC &= ~_BV(PC1);
+}
+
+/* Toggle function used for error blinking */
+static inline void toggle_dirty_led(void) {
+  /* Sufficiently new AVR cores have a toggle function */
+  PINC |= _BV(PC1);
+}
+
+/* --- Software power LED (enabled at startup, not touched after that) --- */
 /* Currently used on uIEC/SD only */
-//#  define POWER_LED_DDR         DDRG
-//#  define POWER_LED_PORT        PORTG
-//#  define POWER_LED_BIT         _BV(PG1)
-//#  define POWER_LED_POLARITY    0
+//#define HAVE_POWER_LED
+//static inline __attribute__((always_inline)) void set_power_led(uint8_t state) {
+//  if (state)
+//    PORTG |= _BV(PG1);
+//  else
+//    PORTG &= ~_BV(PG1);
+//}
 
 
 /*** IEC signals ***/
@@ -300,14 +315,29 @@ static inline void device_hw_address_init(void) {
   PORTD |=   _BV(PD7)|_BV(PD5);
 }
 
-#  define BUSY_LED_SETDDR()     DDRC  |= _BV(PC0)
-#  define BUSY_LED_ON()         PORTC |= _BV(PC0)
-#  define BUSY_LED_OFF()        PORTC &= ~_BV(PC0)
-#  define DIRTY_LED_SETDDR()    DDRC  |= _BV(PC1)
-#  define DIRTY_LED_ON()        PORTC |= _BV(PC1)
-#  define DIRTY_LED_OFF()       PORTC &= ~_BV(PC1)
-#  define DIRTY_LED_PORT        PORTC
-#  define DIRTY_LED_BIT()       _BV(PC1)
+static inline void leds_init(void) {
+  DDRC |= _BV(PC0);
+  DDRC |= _BV(PC1);
+}
+
+static inline __attribute__((always_inline)) void set_busy_led(uint8_t state) {
+  if (state)
+    PORTC |= _BV(PC0);
+  else
+    PORTC &= ~_BV(PC0);
+}
+
+static inline __attribute__((always_inline)) void set_dirty_led(uint8_t state) {
+  if (state)
+    PORTC |= _BV(PC1);
+  else
+    PORTC &= ~_BV(PC1);
+}
+
+static inline void toggle_dirty_led(void) {
+  PINC |= _BV(PC1);
+}
+
 #  define IEC_PIN               PINA
 #  define IEC_DDR               DDRA
 #  define IEC_PORT              PORTA
@@ -359,14 +389,29 @@ static inline void device_hw_address_init(void) {
   PORTA |=   _BV(PA2)|_BV(PA3);
 }
 
-#  define BUSY_LED_SETDDR()     DDRA  |= _BV(PA0)
-#  define BUSY_LED_ON()         PORTA &= ~_BV(PA0)
-#  define BUSY_LED_OFF()        PORTA |= _BV(PA0)
-#  define DIRTY_LED_SETDDR()    DDRA  |= _BV(PA1)
-#  define DIRTY_LED_ON()        PORTA &= ~_BV(PA1)
-#  define DIRTY_LED_OFF()       PORTA |= _BV(PA1)
-#  define DIRTY_LED_PORT        PORTA
-#  define DIRTY_LED_BIT()       _BV(PA1)
+static inline void leds_init(void) {
+  DDRA |= _BV(PA0);
+  DDRA |= _BV(PA1);
+}
+
+static inline __attribute__((always_inline)) void set_busy_led(uint8_t state) {
+  if (state)
+    PORTA &= ~_BV(PA0);
+  else
+    PORTA |= _BV(PA0);
+}
+
+static inline __attribute__((always_inline)) void set_dirty_led(uint8_t state) {
+  if (state)
+    PORTA &= ~_BV(PA1);
+  else
+    PORTA |= _BV(PA1);
+}
+
+static inline void toggle_dirty_led(void) {
+  PINA |= _BV(PA1);
+}
+
 #  define IEC_PIN               PINC
 #  define IEC_DDR               DDRC
 #  define IEC_PORT              PORTC
@@ -441,11 +486,21 @@ static inline void device_hw_address_init(void) {
   return;
 }
 
-#  define DIRTY_LED_SETDDR()    DDRE  |= _BV(PE3)
-#  define DIRTY_LED_ON()        PORTE |= _BV(PE3)
-#  define DIRTY_LED_OFF()       PORTE &= ~_BV(PE3)
-#  define DIRTY_LED_PORT        PORTE
-#  define DIRTY_LED_BIT()       _BV(PE3)
+static inline void leds_init(void) {
+  DDRE |= _BV(PE3);
+}
+
+static inline __attribute__((always_inline)) void set_led(uint8_t state) {
+  if (state)
+    PORTE |= _BV(PE3);
+  else
+    PORTE &= ~_BV(PE3);
+}
+
+static inline void toggle_led(void) {
+  PINE |= _BV(PE3);
+}
+
 #  define IEC_PIN               PINE
 #  define IEC_DDR               DDRE
 #  define IEC_PORT              PORTE
@@ -536,14 +591,29 @@ static inline void device_hw_address_init(void) {
   PORTD |=   _BV(PD7)|_BV(PD5);
 }
 
-#  define BUSY_LED_SETDDR()     DDRC  |= _BV(PC0)
-#  define BUSY_LED_ON()         PORTC |= _BV(PC0)
-#  define BUSY_LED_OFF()        PORTC &= ~_BV(PC0)
-#  define DIRTY_LED_SETDDR()    DDRC  |= _BV(PC1)
-#  define DIRTY_LED_ON()        PORTC |= _BV(PC1)
-#  define DIRTY_LED_OFF()       PORTC &= ~_BV(PC1)
-#  define DIRTY_LED_PORT        PORTC
-#  define DIRTY_LED_BIT()       _BV(PC1)
+static inline void leds_init(void) {
+  DDRC |= _BV(PC0);
+  DDRC |= _BV(PC1);
+}
+
+static inline __attribute__((always_inline)) void set_busy_led(uint8_t state) {
+  if (state)
+    PORTC |= _BV(PC0);
+  else
+    PORTC &= ~_BV(PC0);
+}
+
+static inline __attribute__((always_inline)) void set_dirty_led(uint8_t state) {
+  if (state)
+    PORTC |= _BV(PC1);
+  else
+    PORTC &= ~_BV(PC1);
+}
+
+static inline void toggle_dirty_led(void) {
+  PINC |= _BV(PC1);
+}
+
 #  define IEC_PIN               PINA
 #  define IEC_DDR               DDRA
 #  define IEC_PORT              PORTA
@@ -584,6 +654,7 @@ static inline void device_hw_address_init(void) {
 #  define SD_CHANGE_VECT        INT6_vect
 #  define SD_SUPPLY_VOLTAGE     (1L<<21)
 #  define SINGLE_LED
+#  define HAVE_POWER_LED
 
 static inline void sdcard_interface_init(void) {
   DDRE  &= ~_BV(PE6);
@@ -611,15 +682,29 @@ static inline void device_hw_address_init(void) {
   return;
 }
 
-#  define DIRTY_LED_SETDDR()    DDRG  |= _BV(PG0)
-#  define DIRTY_LED_ON()        PORTG |= _BV(PG0)
-#  define DIRTY_LED_OFF()       PORTG &= ~_BV(PG0)
-#  define DIRTY_LED_PORT        PORTG
-#  define DIRTY_LED_BIT()       _BV(PG0)
-#  define POWER_LED_DDR         DDRG
-#  define POWER_LED_PORT        PORTG
-#  define POWER_LED_BIT         _BV(PG1)
-#  define POWER_LED_POLARITY    0
+static inline void leds_init(void) {
+  DDRG |= _BV(PG0);
+  DDRG |= _BV(PG1);
+}
+
+static inline __attribute__((always_inline)) void set_led(uint8_t state) {
+  if (state)
+    PORTG |= _BV(PG0);
+  else
+    PORTG &= ~_BV(PG0);
+}
+
+static inline void toggle_led(void) {
+  PING |= _BV(PG0);
+}
+
+static inline __attribute__((always_inline)) void set_power_led(uint8_t state) {
+  if (state)
+    PORTG |= _BV(PG1);
+  else
+    PORTG &= ~_BV(PG1);
+}
+
 #  define IEC_PIN               PINB
 #  define IEC_DDRIN             DDRB
 #  define IEC_PORTIN            PORTB
@@ -741,11 +826,11 @@ static inline __attribute__((always_inline)) void sdcard_set_ss(uint8_t state) {
 #  define HAVE_HOTPLUG
 #endif
 
-/* Generate dummy functions for the BUSY LED if required */
-#ifdef SINGLE_LED
-#  define BUSY_LED_SETDDR() do {} while(0)
-#  define BUSY_LED_ON()     do {} while(0)
-#  define BUSY_LED_OFF()    do {} while(0)
+/* Generate a dummy function for the Power-LED if required */
+#ifndef HAVE_POWER_LED
+static inline void set_power_led(uint8_t state) {
+  return;
+}
 #endif
 
 /* Translate CONFIG_ADD symbols to HAVE symbols */

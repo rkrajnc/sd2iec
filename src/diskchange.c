@@ -58,18 +58,18 @@ static void confirm_blink(uint8_t type) {
     tick_t targettime;
 
 #ifdef SINGLE_LED
-    DIRTY_LED_ON();
+    set_dirty_led(1);
 #else
     if (!i || type & 1)
-      DIRTY_LED_ON();
+      set_dirty_led(1);
     if (!i || type & 2)
-      BUSY_LED_ON();
+      set_busy_led(1);
 #endif
     targettime = ticks + MS_TO_TICKS(100);
     while (time_before(ticks,targettime)) ;
 
-    DIRTY_LED_OFF();
-    BUSY_LED_OFF();
+    set_dirty_led(0);
+    set_busy_led(0);
     targettime = ticks + MS_TO_TICKS(100);
     while (time_before(ticks,targettime)) ;
   }

@@ -46,6 +46,7 @@
 #include "ff.h"
 #include "flags.h"
 #include "iec.h"
+#include "led.h"
 #include "m2iops.h"
 #include "parser.h"
 #include "time.h"
@@ -1499,7 +1500,7 @@ static void parse_scratch(void) {
 
   filename = ustr1tok(command_buffer+1,',',&tmp);
 
-  DIRTY_LED_ON();
+  set_dirty_led(1);
   count = 0;
   /* Loop over all file names */
   while (filename != NULL) {

@@ -133,9 +133,7 @@ int main(void) {
   PORTG = _BV(PG0) | _BV(PG1) | _BV(PG2);
 #endif
 
-  BUSY_LED_SETDDR();
-  DIRTY_LED_SETDDR();
-  power_led_init();
+  leds_init();
 
   set_power_led(1);
   set_busy_led(1);
@@ -173,7 +171,7 @@ int main(void) {
   if (!(BUTTON_PIN & BUTTON_PREV)) {
     while (BUTTON_PIN & BUTTON_NEXT) {
       set_dirty_led(sdcard_detect());
-# ifdef BUSY_LED_ON
+# ifndef SINGLE_LED
       set_busy_led(sdcard_wp());
 # endif
     }

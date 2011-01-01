@@ -46,26 +46,14 @@ void update_leds(void);
 #  define set_busy_led(x)  do{if (x) { led_state |= LED_BUSY ; } else { led_state &= (uint8_t)~LED_BUSY ; }}while(0)
 #  define set_error_led(x) do{if (x) { led_state |= LED_ERROR; } else { led_state &= (uint8_t)~LED_ERROR; }}while(0)
 #else
-#  define set_dirty_led(x) do{if (x) { DIRTY_LED_ON(); } else { DIRTY_LED_OFF(); }}while(0)
-#  define set_busy_led(x)  do{if (x) { BUSY_LED_ON();  } else { BUSY_LED_OFF();  }}while(0)
-#  define set_error_led(x) do{if (x) { led_state |= LED_ERROR; } else { led_state &= (uint8_t)~LED_ERROR; update_leds(); }}while(0)
-#endif
-
-#ifdef POWER_LED_DDR
-static inline void set_power_led(uint8_t state) {
-  if (!!state ^ POWER_LED_POLARITY) {
-    POWER_LED_PORT |= POWER_LED_BIT;
+static inline __attribute__((always_inline)) void set_error_led(uint8_t state) {
+  if (state) {
+    led_state |= LED_ERROR;
   } else {
-    POWER_LED_PORT &= (uint8_t)~POWER_LED_BIT;
+    led_state &= ~LED_ERROR;
+    update_leds();
   }
 }
-
-static inline void power_led_init(void) {
-  POWER_LED_DDR |= POWER_LED_BIT;
-}
-#else
-#  define set_power_led(x) do {} while (0)
-#  define power_led_init() do {} while (0)
 #endif
 
 #endif

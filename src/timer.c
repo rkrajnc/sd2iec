@@ -82,18 +82,14 @@ ISR(TIMER1_COMPA_vect) {
 #ifdef SINGLE_LED
   if (led_state & LED_ERROR) {
     if ((ticks & 15) == 0)
-      DIRTY_LED_PORT ^= DIRTY_LED_BIT();
+      toggle_led();
   } else {
-    if ((led_state & LED_BUSY) || (led_state & LED_DIRTY)) {
-      DIRTY_LED_ON();
-    } else {
-      DIRTY_LED_OFF();
-    }
+    set_led((led_state & LED_BUSY) || (led_state & LED_DIRTY));
   }
 #else
   if (led_state & LED_ERROR)
     if ((ticks & 15) == 0)
-      DIRTY_LED_PORT ^= DIRTY_LED_BIT();
+      toggle_dirty_led();
 #endif
 
   /* Sleep button triggers when held down for 2sec */
