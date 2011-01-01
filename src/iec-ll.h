@@ -27,10 +27,10 @@
 #ifndef IEC_LL_H
 #define IEC_LL_H
 
-#define set_atn(state)   do { if (state) IEC_OUT &= ~IEC_OBIT_ATN;   else IEC_OUT |= IEC_OBIT_ATN;   } while(0)
-#define set_data(state)  do { if (state) IEC_OUT &= ~IEC_OBIT_DATA;  else IEC_OUT |= IEC_OBIT_DATA;  } while(0)
-#define set_clock(state) do { if (state) IEC_OUT &= ~IEC_OBIT_CLOCK; else IEC_OUT |= IEC_OBIT_CLOCK; } while(0)
-#define set_srq(state)   do { if (state) IEC_OUT &= ~IEC_OBIT_SRQ;   else IEC_OUT |= IEC_OBIT_SRQ;   } while(0)
+#define set_atn(state)   do { if (state) IEC_OUTPUT &= ~IEC_OBIT_ATN;   else IEC_OUTPUT |= IEC_OBIT_ATN;   } while(0)
+#define set_data(state)  do { if (state) IEC_OUTPUT &= ~IEC_OBIT_DATA;  else IEC_OUTPUT |= IEC_OBIT_DATA;  } while(0)
+#define set_clock(state) do { if (state) IEC_OUTPUT &= ~IEC_OBIT_CLOCK; else IEC_OUTPUT |= IEC_OBIT_CLOCK; } while(0)
+#define set_srq(state)   do { if (state) IEC_OUTPUT &= ~IEC_OBIT_SRQ;   else IEC_OUTPUT |= IEC_OBIT_SRQ;   } while(0)
 #define toggle_srq()     IEC_PIN |= IEC_OBIT_SRQ
 
 

@@ -189,7 +189,7 @@ void load_fc3(uint8_t freezed) {
 
   if (!buf) {
     /* error, abort and pull down CLOCK and DATA to inform the host */
-    IEC_OUT |= IEC_OBIT_CLOCK | IEC_OBIT_DATA;
+    IEC_OUTPUT |= IEC_OBIT_CLOCK | IEC_OBIT_DATA;
     return;
   }
 
@@ -241,7 +241,7 @@ void load_fc3(uint8_t freezed) {
     } else {
       if (buf->refill(buf)) {
         /* error, abort and pull down CLOCK and DATA to inform the host */
-        IEC_OUT |= IEC_OBIT_CLOCK | IEC_OBIT_DATA;
+        IEC_OUTPUT |= IEC_OBIT_CLOCK | IEC_OBIT_DATA;
         break;
       }
     }
@@ -337,7 +337,7 @@ static void dreamload_send_block(const uint8_t* p) {
     dreamload_send_byte(checksum);
 
     // release CLOCK and DATA
-    IEC_OUT &= (uint8_t)~(IEC_OBIT_ATN|IEC_OBIT_DATA|IEC_OBIT_CLOCK|IEC_OBIT_SRQ);
+    IEC_OUTPUT &= (uint8_t)~(IEC_OBIT_ATN|IEC_OBIT_DATA|IEC_OBIT_CLOCK|IEC_OBIT_SRQ);
   }
 }
 
@@ -352,7 +352,7 @@ void load_dreamload(UNUSED_PARAMETER) {
     set_atn_irq(0);
 
     // Release clock and data
-    IEC_OUT &= (uint8_t)~(IEC_OBIT_ATN|IEC_OBIT_DATA|IEC_OBIT_CLOCK|IEC_OBIT_SRQ);
+    IEC_OUTPUT &= (uint8_t)~(IEC_OBIT_ATN|IEC_OBIT_DATA|IEC_OBIT_CLOCK|IEC_OBIT_SRQ);
 
     /* load final drive code, fixed length */
     type = 0;
@@ -1638,7 +1638,7 @@ void load_nippon(UNUSED_PARAMETER) {
     /* timing is critical for ATN/CLK here, endless loop in $0bf0 at the cevi
      * raise ATN CLK quick, before setting LEDs output to serial console
      */
-    IEC_OUT &= (uint8_t)~(IEC_OBIT_ATN|IEC_OBIT_DATA|IEC_OBIT_CLOCK);
+    IEC_OUTPUT &= (uint8_t)~(IEC_OBIT_ATN|IEC_OBIT_DATA|IEC_OBIT_CLOCK);
     set_busy_led(0);
     uart_putcrlf(); uart_putc('L'); // idle loop entered
 

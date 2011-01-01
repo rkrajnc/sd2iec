@@ -810,7 +810,7 @@ static inline void buttons_init(void) {
 #  define IEC_OBIT_DATA  _BV(IEC_OPIN_DATA)
 #  define IEC_OBIT_CLOCK _BV(IEC_OPIN_CLOCK)
 #  define IEC_OBIT_SRQ   _BV(IEC_OPIN_SRQ)
-#  define IEC_OUT        IEC_PORT
+#  define IEC_OUTPUT     IEC_PORT
 #else
 #  define IEC_OPIN_ATN   IEC_PIN_ATN
 #  define IEC_OPIN_DATA  IEC_PIN_DATA
@@ -820,7 +820,7 @@ static inline void buttons_init(void) {
 #  define IEC_OBIT_DATA  IEC_BIT_DATA
 #  define IEC_OBIT_CLOCK IEC_BIT_CLOCK
 #  define IEC_OBIT_SRQ   IEC_BIT_SRQ
-#  define IEC_OUT        IEC_DDR
+#  define IEC_OUTPUT     IEC_DDR
 #endif
 
 #ifndef IEC_PORTIN
