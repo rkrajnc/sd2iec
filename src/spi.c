@@ -20,112 +20,112 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
-   spi.c: Low level SPI access
-
-   Extended, optimized and cleaned version of code from MMC2IEC,
-   original copyright header follows:
-
-//
-// Title        : SPI module
-// Author       : Lars Pontoppidan
-// Date         : January, 2007
-// Version      : 1.03
-// Target MCU   : Atmel AVR Series
-//
-// DESCRIPTION:
-// This module implements initialization, sending and receiving bytes using
-// hardware SPI on an AVR.
-//
-// DISCLAIMER:
-// The author is in no way responsible for any problems or damage caused by
-// using this code. Use at your own risk.
-//
-// LICENSE:
-// This code is distributed under the GNU Public License
-// which can be found at http://www.gnu.org/licenses/gpl.txt
-//
+   spi.c: Low-level SPI routines, AVR version
 
 */
 
-// FIXME: Integrate into sdcard.c
-
 #include <avr/io.h>
+#include "config.h"
 #include "avrcompat.h"
 #include "spi.h"
 
-// access routines
-void spiInit(void)
-{
-  uint8_t dummy;
+#ifdef CONFIG_TWINSD
+uint8_t spi_current_device;
+#endif
 
-  // setup SPI I/O pins
+/* interrupts disabled, SPI enabled, MSB first, master mode */
+/* leading edge rising, sample on leading edge, clock bits cleared */
+#define SPCR_VAL 0b01010000
+
+/* set up SPSR+SPCR according to the divisor */
+/* compiles to 3-4 instructions */
+static inline __attribute__((always_inline)) void spi_set_divisor(const uint8_t div) {
+  if (div == 2 || div == 8 || div == 32) {
+    SPSR = _BV(SPI2X);
+  } else {
+    SPSR = 0;
+  }
+
+  if (div == 2 || div == 4) {
+    SPCR = SPCR_VAL;
+  } else if (div == 8 || div == 16) {
+    SPCR = SPCR_VAL | SPR0;
+  } else if (div == 32 || div == 64) {
+    SPCR = SPCR_VAL | SPR1;
+  } else { // div == 128
+    SPCR = SPCR_VAL | SPR0 | SPR1;
+  }
+}
+
+void spi_set_speed(spi_speed_t speed) {
+  if (speed == SPI_SPEED_FAST) {
+    spi_set_divisor(SPI_DIVISOR_FAST);
+  } else {
+    spi_set_divisor(SPI_DIVISOR_SLOW);
+  }
+}
+
+void spi_init(spi_speed_t speed) {
+  /* set up SPI I/O pins */
   SPI_PORT = (SPI_PORT & ~SPI_MASK) | SPI_SCK | SPI_SS | SPI_MISO;
   SPI_DDR  = (SPI_DDR  & ~SPI_MASK) | SPI_SCK | SPI_SS | SPI_MOSI;
 
-  // setup SPI interface:
-  //   interrupts disabled, SPI enabled, MSB first, master mode,
-  //   leading edge rising, sample on leading edge, clock = f/16,
-  SPCR = 0b01010001;
+  /* enable and initialize SPI */
+  if (speed == SPI_SPEED_FAST) {
+    spi_set_divisor(SPI_DIVISOR_FAST);
+  } else {
+    spi_set_divisor(SPI_DIVISOR_SLOW);
+  }
 
-  // Enable SPI double speed mode -> clock = f/8
-  SPSR = _BV(SPI2X);
-
-  // clear status
-  dummy = SPSR;
-
-  // clear recieve buffer
-  dummy = SPDR;
+  /* Clear buffers, just to be sure */
+  (void) SPSR;
+  (void) SPDR;
 }
 
-
-uint8_t spiTransferByte(uint8_t data)
-{
-  // send the given data
-  SPDR = data;
-
-  // wait for transfer to complete
+/* Simple and braindead, just like the AVR's SPI unit */
+static uint8_t spi_exchange_byte(uint8_t output) {
+  spi_set_ss(0);
+  SPDR = output;
   loop_until_bit_is_set(SPSR, SPIF);
-  // *** reading of the SPSR and SPDR are crucial
-  // *** to the clearing of the SPIF flag
-  // *** in non-interrupt mode
-
-  // return the received data
+  spi_set_ss(1);
   return SPDR;
 }
 
+void spi_tx_byte(uint8_t data) {
+  spi_exchange_byte(data);
+}
 
-uint32_t spiTransferLong(const uint32_t data)
-{
-  // It seems to be necessary to use the union in order to get efficient
-  // assembler code.
-  // Beware, endian unsafe union
-  union {
-    uint32_t l;
-    uint8_t  c[4];
-  } long2char;
-
-  long2char.l = data;
-
-  // send the given data
-  SPDR = long2char.c[3];
-  // wait for transfer to complete
+void spi_tx_dummy(void) {
+  spi_set_ss(1);
+  SPDR = 0xff;
   loop_until_bit_is_set(SPSR, SPIF);
-  long2char.c[3] = SPDR;
+  (void) SPDR;
+}
 
-  SPDR = long2char.c[2];
-  // wait for transfer to complete
-  loop_until_bit_is_set(SPSR, SPIF);
-  long2char.c[2] = SPDR;
+uint8_t spi_rx_byte(void) {
+  return spi_exchange_byte(0xff);
+}
 
-  SPDR = long2char.c[1];
-  // wait for transfer to complete
-  loop_until_bit_is_set(SPSR, SPIF);
-  long2char.c[1] = SPDR;
+void spi_exchange_block(void *vdata, unsigned int length, uint8_t write) {
+  uint8_t *data = (uint8_t*)vdata;
+  uint8_t dummy;
 
-  SPDR = long2char.c[0];
-  // wait for transfer to complete
-  loop_until_bit_is_set(SPSR, SPIF);
-  long2char.c[0] = SPDR;
+  spi_set_ss(0);
 
-  return long2char.l;
+  while (length--) {
+    if (!write)
+      SPDR = *data;
+    else
+      SPDR = 0xff;
+
+    loop_until_bit_is_set(SPSR, SPIF);
+
+    if (write)
+      *data = SPDR;
+    else
+      dummy = SPDR;
+    data++;
+  }
+
+  spi_set_ss(1);
 }

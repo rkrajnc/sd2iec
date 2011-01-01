@@ -127,6 +127,37 @@
 static uint8_t cardtype[MAX_CARDS];
 
 /**
+ * swap_word - swaps the bytes in a uint32 value
+ * @input: input byte
+ *
+ * This function swaps the words in a uint32 value to convert
+ * between little and big endian. Returns the word with bytes
+ * swapped.
+ */
+#ifdef __thumb2__
+static inline uint32_t swap_word(uint32_t input) {
+  uint32_t result;
+  asm("rev %[result], %[input]" : [result] "=r" (result) : [input] "r" (input));
+  return result;
+}
+#else
+static inline uint32_t swap_word(uint32_t input) {
+  union {
+    uint32_t val32;
+    uint8_t  val8[4];
+  } in,out;
+
+  /* Compiles to a few movs on AVR */
+  in.val32 = input;
+  out.val8[0] = in.val8[3];
+  out.val8[1] = in.val8[2];
+  out.val8[2] = in.val8[1];
+  out.val8[3] = in.val8[0];
+  return out.val32;
+}
+#endif
+
+/**
  * getbits - read value from bit buffer
  * @buffer: pointer to the data buffer
  * @start : index of the first bit in the value
@@ -175,7 +206,7 @@ static uint8_t wait_for_response(uint8_t expected) {
   tick_t timeout = getticks() + HZ/2;
 
   while (time_before(getticks(), timeout)) {
-    uint8_t byte = spiTransferByte(0xff);
+    uint8_t byte = spi_rx_byte();
 
     if (expected == 0 && byte != 0)
       return 1;
@@ -189,8 +220,8 @@ static uint8_t wait_for_response(uint8_t expected) {
 
 static void deselectCard(uint8_t card) {
   // Send 8 clock cycles
-  SPI_SS_HIGH(card);
-  spiTransferByte(0xff);
+  spi_select_device(card);
+  spi_rx_byte();
 }
 
 /**
@@ -216,6 +247,8 @@ static int sendCommand(const uint8_t  card,
   uint8_t i,crc,errorcount;
   tick_t  timeout;
 
+  spi_select_device(card);
+
   long2char.l = parameter;
   crc = crc7update(0  , 0x40+command);
   crc = crc7update(crc, long2char.c[3]);
@@ -227,27 +260,27 @@ static int sendCommand(const uint8_t  card,
   errorcount = 0;
   while (errorcount < CONFIG_SD_AUTO_RETRIES) {
     // Select card
-    SPI_SS_LOW(card);
 #ifdef CONFIG_TWINSD
     if (card == 0 && command == GO_IDLE_STATE)
       /* Force both cards to SPI mode simultaneously */
-      SPI_SS_LOW(1);
+      spi_select_device(SPIDEV_ALLCARDS);
 #endif
 
     // Transfer command
-    spiTransferByte(0x40+command);
-    spiTransferLong(parameter);
-    spiTransferByte(crc);
+    spi_tx_byte(0x40+command);
+    uint32_t tmp = swap_word(parameter);
+    spi_tx_block(&tmp, 4);
+    spi_tx_byte(crc);
 
     // Wait for a valid response
     timeout = getticks() + HZ/2;
     do {
-      i = spiTransferByte(0xff);
+      i = spi_rx_byte();
     } while (i & 0x80 && time_before(getticks(), timeout));
 
 #ifdef CONFIG_TWINSD
     if (card == 0 && command == GO_IDLE_STATE)
-      SPI_SS_HIGH(1);
+      spi_select_device(card);
 #endif
 
     // Check for CRC error
@@ -275,13 +308,14 @@ static uint8_t extendedInit(const uint8_t card) {
   //   0b000110101010 == 2.7-3.6V supply, check pattern 0xAA
   i = sendCommand(card, SEND_IF_COND, 0b000110101010, 0);
   if (i > 1) {
-    // Card returned an error, ok (MMC oder SD1.x) but not SDHC
+    // Card returned an error, ok (MMC or SD1.x) but not SDHC
     deselectCard(card);
     return 1;
   }
 
   // No error, continue SDHC initialization
-  answer = spiTransferLong(0);
+  spi_rx_block(&answer, 4);
+  answer = swap_word(answer);
   deselectCard(card);
 
   if (((answer >> 8) & 0x0f) != 0b0001) {
@@ -405,22 +439,27 @@ DSTATUS sd_initialize(BYTE drv) {
   if (sd_status(drv) & STA_NODISK)
     return sd_status(drv);
 
+#ifdef SPI_LATE_INIT
   /* JLB: Should be in sd_init, but some uIEC versions have
    * IEC lines tied to SPI, so I moved it here to resolve the
    * conflict.
    */
-  spiInit();
+  spi_init(SPI_SPEED_SLOW);
+#else
+  spi_set_speed(SPI_SPEED_SLOW);
+#endif
 
   disk_state = DISK_ERROR;
 
   cardtype[drv] = 0;
 
-  SPI_SS_HIGH(drv);
 
-  // Send 80 clks
+  // Send 80 clocks without(!) selecting a card
   for (i=0; i<10; i++) {
-    spiTransferByte(0xFF);
+    spi_tx_dummy();
   }
+
+  spi_select_device(drv);
 
   // Reset card
   i = sendCommand(drv, GO_IDLE_STATE, 0, 1);
@@ -444,7 +483,8 @@ DSTATUS sd_initialize(BYTE drv) {
   } while (i > 1 && counter-- > 0);
 
   if (counter > 0) {
-    answer = spiTransferLong(0);
+    spi_rx_block(&answer, 4);
+    answer = swap_word(answer);
 
     // See if the card likes our supply voltage
     if (!(answer & SD_SUPPLY_VOLTAGE)) {
@@ -489,6 +529,7 @@ DSTATUS sd_initialize(BYTE drv) {
   }
 
   // Thats it!
+  spi_set_speed(SPI_SPEED_FAST);
   disk_state = DISK_OK;
   return sd_status(drv);
 }
@@ -510,7 +551,7 @@ DSTATUS disk_initialize(BYTE drv) __attribute__ ((weak, alias("sd_initialize")))
  * disk_state will be set to DISK_ERROR and no retries are made.
  */
 DRESULT sd_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
-  uint8_t sec,res,tmp,errorcount;
+  uint8_t sec,res,errorcount;
   uint16_t crc,recvcrc;
 
   if (drv >= MAX_CARDS)
@@ -525,26 +566,26 @@ DRESULT sd_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
         res = sendCommand(drv, READ_SINGLE_BLOCK, (sector+sec) << 9, 0);
 
       if (res != 0) {
-        SPI_SS_HIGH(drv);
         disk_state = DISK_ERROR;
         return RES_ERROR;
       }
 
       // Wait for data token
       if (!wait_for_response(0xFE)) {
-        SPI_SS_HIGH(drv);
         disk_state = DISK_ERROR;
         return RES_ERROR;
       }
 
-      uint16_t i;
-#ifdef CONFIG_SD_DATACRC
-      BYTE *oldbuffer = buffer;
-#endif
-
-      // Get data
+      // Receive data
       crc = 0;
+
+      /* Interleave transfer/CRC calculation, AVR-specific (but faster) */
+      uint16_t i;
+      uint8_t tmp;
+      BYTE *ptr = buffer;
+
       // Initiate data exchange over SPI
+      spi_set_ss(0); // auto-reset by spi_rx_byte later
       SPDR = 0xff;
 
       for (i=0; i<512; i++) {
@@ -554,22 +595,22 @@ DRESULT sd_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
         // Transmit the next byte while we store the current one
         SPDR = 0xff;
 
-        *(buffer++) = tmp;
-#ifdef CONFIG_SD_DATACRC
+        *(ptr++) = tmp;
+# ifdef CONFIG_SD_DATACRC
         crc = _crc_xmodem_update(crc, tmp);
-#endif
+# endif
       }
       // Wait until the first CRC byte is received
       loop_until_bit_is_set(SPSR, SPIF);
 
       // Check CRC
-      recvcrc = (SPDR << 8) + spiTransferByte(0xff);
+      recvcrc = (SPDR << 8) + spi_rx_byte();
+
 #ifdef CONFIG_SD_DATACRC
       if (recvcrc != crc) {
         uart_putc('X');
         deselectCard(drv);
         errorcount++;
-        buffer = oldbuffer;
         continue;
       }
 #endif
@@ -579,6 +620,7 @@ DRESULT sd_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
     deselectCard(drv);
 
     if (errorcount >= CONFIG_SD_AUTO_RETRIES) return RES_ERROR;
+    buffer += 512;
   }
 
   return RES_OK;
@@ -627,45 +669,44 @@ DRESULT sd_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
         res = sendCommand(drv, WRITE_BLOCK, (sector+sec)<<9, 0);
 
       if (res != 0) {
-        SPI_SS_HIGH(drv);
         disk_state = DISK_ERROR;
         return RES_ERROR;
       }
 
       // Send data token
-      spiTransferByte(0xFE);
-
-      uint16_t i;
-      const BYTE *oldbuffer = buffer;
+      spi_tx_byte(0xfe);
 
       // Send data
       crc = 0;
-      for (i=0; i<512; i++) {
-#ifdef CONFIG_SD_DATACRC
-        crc = _crc_xmodem_update(crc, *buffer);
-#endif
-        spiTransferByte(*(buffer++));
-      }
+      uint16_t i = 512;
+      const BYTE *ptr = buffer;
+
+      crc = 0;
+      spi_set_ss(0); // auto-reset by spi_tx_byte later
+      do {
+        SPDR = *ptr;
+        crc = _crc_xmodem_update(crc, *ptr++);
+        i--;
+        loop_until_bit_is_set(SPSR, SPIF);
+      } while (i != 0);
 
       // Send CRC
-      spiTransferByte(crc >> 8);
-      spiTransferByte(crc & 0xff);
+      spi_tx_byte(crc >> 8);
+      spi_tx_byte(crc & 0xff);
 
       // Get and check status feedback
-      status = spiTransferByte(0xFF);
+      status = spi_rx_byte();
 
       // Retry if neccessary
       if ((status & 0x0F) != 0x05) {
         uart_putc('X');
         deselectCard(drv);
         errorcount++;
-        buffer = oldbuffer;
         continue;
       }
 
       // Wait for write finish
       if (!wait_for_response(0)) {
-        SPI_SS_HIGH(drv);
         disk_state = DISK_ERROR;
         return RES_ERROR;
       }
@@ -678,6 +719,8 @@ DRESULT sd_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
         disk_state = DISK_ERROR;
       return RES_ERROR;
     }
+
+    buffer += 512;
   }
 
   return RES_OK;
@@ -685,7 +728,6 @@ DRESULT sd_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
 DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) __attribute__ ((weak, alias("sd_write")));
 
 DRESULT sd_getinfo(BYTE drv, BYTE page, void *buffer) {
-  uint8_t i;
   uint8_t buf[18];
   uint32_t capacity;
 
@@ -711,9 +753,7 @@ DRESULT sd_getinfo(BYTE drv, BYTE page, void *buffer) {
     return RES_ERROR;
   }
 
-  for (i=0;i<18;i++) {
-    buf[i] = spiTransferByte(0xff);
-  }
+  spi_rx_block(buf, 18);
   deselectCard(drv);
 
   if (cardtype[drv] & CARD_SDHC) {

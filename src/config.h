@@ -53,6 +53,12 @@
 /* Include avrcompat.h to get the PA0..PD7 macros on 1284P */
 #include "avrcompat.h"
 
+/* ----- Common definitions for all AVR hardware variants ------ */
+
+/* SPI clock divisors - 250kHz slow, 2MHz fast */
+#define SPI_DIVISOR_SLOW 32
+#define SPI_DIVISOR_FAST 4
+
 #if CONFIG_HARDWARE_VARIANT==1
 /* Configure for your own hardware                     */
 /* Example values are for the "Shadowolf 1.x" variant. */

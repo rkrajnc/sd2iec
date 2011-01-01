@@ -20,49 +20,89 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
-   spi.h: Definitions for the low-level SPI routines
-
-   Based on original code by Lars Pontoppidan et al., see spi.c
-   for full copyright details.
+   spi.h: Definitions for the low-level SPI routines - AVR version
 
 */
-
 #ifndef SPI_H
 #define SPI_H
 
-// function prototypes
+#include "config.h"
 
-// SPI interface initializer
-void spiInit(void);
+/* Low speed 400kHz for init, fast speed <=20MHz (MMC limit) */
+typedef enum { SPI_SPEED_FAST, SPI_SPEED_SLOW } spi_speed_t;
 
-// spiTransferByte(u08 data) waits until the SPI interface is ready
-// and then sends a single byte over the SPI port.  The function also
-// returns the byte that was received during transmission.
-uint8_t spiTransferByte(uint8_t data);
+/* Available SPI devices - special case to select all SD cards during init */
+/* Note: SD cards must be 0 and 1 */
+/* AVR note: Code assumes that (spi_device_t+1) can be used as bit field of selected cards */
+typedef enum { SPIDEV_CARD0    = 0,
+               SPIDEV_CARD1    = 1,
+               SPIDEV_ALLCARDS = 2 } spi_device_t;
 
-// spiTransferLong(u08 data) waits until the SPI interface is ready
-// and then sends the long with MSB first over the SPI port.
-uint32_t spiTransferLong(uint32_t data);
-
-// Macros for setting slave select:
+/* AVR only accesses SD cards over SPI, so optimize the single-card case */
 #ifdef CONFIG_TWINSD
-# define SPI_SS_HIGH(card) do { \
-    if (card == 0) {            \
-      SPI_PORT |= SPI_SS;       \
-    } else {                    \
-      SD2_PORT |= SD2_CS;       \
-    }                           \
-  } while (0)
-#define SPI_SS_LOW(card) do {       \
-    if (card == 0) {                \
-      SPI_PORT &= (uint8_t)~SPI_SS; \
-    } else {                        \
-      SD2_PORT &= (uint8_t)~SD2_CS; \
-    }                               \
-  } while (0)
+
+extern uint8_t spi_current_device;
+
+/* Expose SS pin function for faster sector reads/writes */
+static inline __attribute__((always_inline)) void spi_set_ss(uint8_t state) {
+  if (spi_current_device & 1) {
+    if (state)
+      SPI_PORT |= SPI_SS;
+    else
+      SPI_PORT &= ~SPI_SS;
+  }
+  if (spi_current_device & 2) {
+    if (state)
+      SD2_PORT |= SD2_CS;
+    else
+      SD2_PORT &= ~SD2_CS;
+  }
+}
+
+static inline void spi_select_device(spi_device_t dev) {
+  spi_set_ss(1);
+  spi_current_device = dev+1;
+}
+
 #else
-# define SPI_SS_HIGH(card)  SPI_PORT |= SPI_SS
-# define SPI_SS_LOW(card)   SPI_PORT &= (uint8_t)~SPI_SS
+#  define spi_select_device(foo) do {} while (0)
+
+/* Expose SS pin function for faster sector reads/writes */
+static inline void spi_set_ss(uint8_t state) {
+  if (state)
+    SPI_PORT |= SPI_SS;
+  else
+    SPI_PORT &= ~SPI_SS;
+}
+
 #endif
+
+/* Initialize SPI interface */
+void spi_init(spi_speed_t speed);
+
+/* Transmit a single byte */
+void spi_tx_byte(uint8_t data);
+
+/* Do a single byte dummy transmission (no device selected) */
+void spi_tx_dummy(void);
+
+/* Exchange a data block - internal API only! */
+void spi_exchange_block(void *data, unsigned int length, uint8_t write);
+
+/* Receive a data block */
+static inline void spi_tx_block(const void *data, unsigned int length) {
+  spi_exchange_block((void *)data, length, 0);
+}
+
+/* Receive a single byte */
+uint8_t spi_rx_byte(void);
+
+/* Receive a data block */
+static inline void spi_rx_block(void *data, unsigned int length) {
+  spi_exchange_block(data, length, 1);
+}
+
+/* Switch speed of SPI interface */
+void spi_set_speed(spi_speed_t speed);
 
 #endif
