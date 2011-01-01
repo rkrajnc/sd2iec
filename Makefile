@@ -6,7 +6,7 @@ MINOR = 10
 PATCHLEVEL = 1
 FIX =
 
-# Forces bootloader version to 0, comment out for release
+# Forces bootloader version to 0, comment out or leave empty for release
 PRERELEASE =
 
 #----------------------------------------------------------------------------
