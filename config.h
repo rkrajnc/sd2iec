@@ -693,7 +693,7 @@
 #define MAX_DRIVES 8
 
 /* Sanity check */
-#ifndef CONFIG_LOADER_GEOS
+#if defined(CONFIG_LOADER_WHEELS) && !defined(CONFIG_LOADER_GEOS)
 #  error "CONFIG_LOADER_GEOS must be enabled for Wheels support!"
 #endif
 
