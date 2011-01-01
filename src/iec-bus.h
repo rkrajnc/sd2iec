@@ -20,12 +20,12 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
-   iec-ll.h: A few wrappers around the port definitions
+   iec-bus.h: A few wrappers around the port definitions
 
 */
 
-#ifndef IEC_LL_H
-#define IEC_LL_H
+#ifndef IEC_BUS_H
+#define IEC_BUS_H
 
 #define set_atn(state)   do { if (state) IEC_OUTPUT &= ~IEC_OBIT_ATN;   else IEC_OUTPUT |= IEC_OBIT_ATN;   } while(0)
 #define set_data(state)  do { if (state) IEC_OUTPUT &= ~IEC_OBIT_DATA;  else IEC_OUTPUT |= IEC_OBIT_DATA;  } while(0)
