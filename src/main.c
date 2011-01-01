@@ -168,8 +168,8 @@ int main(void) {
 
 #ifdef HAVE_SD
   /* card switch diagnostic aid - hold down PREV button to use */
-  if (!(BUTTON_PIN & BUTTON_PREV)) {
-    while (BUTTON_PIN & BUTTON_NEXT) {
+  if (!(buttons_read() & BUTTON_PREV)) {
+    while (buttons_read() & BUTTON_NEXT) {
       set_dirty_led(sdcard_detect());
 # ifndef SINGLE_LED
       set_busy_led(sdcard_wp());

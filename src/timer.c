@@ -43,8 +43,8 @@ volatile tick_t ticks;
 volatile uint8_t active_keys;
 
 // Physical buttons
-uint8_t buttonstate;
-tick_t  lastbuttonchange;
+rawbutton_t buttonstate;
+tick_t      lastbuttonchange;
 
 /* Called by the timer interrupt when the button state has changed */
 static void buttons_changed(void) {
@@ -56,22 +56,22 @@ static void buttons_changed(void) {
       /* Both buttons held down */
         active_keys |= KEY_HOME;
     } else if (!(buttonstate & BUTTON_NEXT) &&
-               (BUTTON_PIN & BUTTON_NEXT)) {
+               (buttons_read() & BUTTON_NEXT)) {
       /* "Next" button released */
       active_keys |= KEY_NEXT;
     } else if (!(buttonstate & BUTTON_PREV) &&
-               (BUTTON_PIN & BUTTON_NEXT)) {
+               (buttons_read() & BUTTON_NEXT)) {
       active_keys |= KEY_PREV;
     }
   }
 
   lastbuttonchange = ticks;
-  buttonstate = BUTTON_PIN & BUTTON_MASK;
+  buttonstate = buttons_read();
 }
 
 /* The main timer interrupt */
 ISR(TIMER1_COMPA_vect) {
-  uint8_t tmp = BUTTON_PIN & BUTTON_MASK;
+  rawbutton_t tmp = buttons_read();
 
   if (tmp != buttonstate) {
     buttons_changed();
@@ -110,7 +110,7 @@ ISR(TIMER1_COMPA_vect) {
 
 #ifdef CONFIG_REMOTE_DISPLAY
   /* Check if the display wants to be queried */
-  if (!(SOFTI2C_PIN & _BV(SOFTI2C_BIT_INTRQ))) {
+  if (display_intrq_active()) {
     active_keys |= KEY_DISPLAY;
   }
 #endif
@@ -128,6 +128,5 @@ void timer_init(void) {
   TIMSK1 |= _BV(OCIE1A);
 
   /* Buttons */
-  BUTTON_DDR  &= (uint8_t)~BUTTON_MASK;
-  BUTTON_PORT |= BUTTON_MASK;
+  buttons_init();
 }

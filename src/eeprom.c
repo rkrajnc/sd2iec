@@ -92,7 +92,7 @@ void read_configuration(void) {
   memset(rom_filename, 0, sizeof(rom_filename));
 
   /* Use the NEXT button to skip reading the EEPROM configuration */
-  if (!(BUTTON_PIN & BUTTON_NEXT)) {
+  if (!(buttons_read() & BUTTON_NEXT)) {
     ignore_keys();
     return;
   }

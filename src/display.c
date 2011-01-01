@@ -203,6 +203,7 @@ void display_service(void) {
 }
 
 uint8_t display_init(uint8_t len, uint8_t *message) {
+  display_intrq_init();
   display_found = !i2c_write_registers(DISPLAY_I2C_ADDR, DISPLAY_INIT, len, message);
   return display_found;
 }

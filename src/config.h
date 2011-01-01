@@ -61,6 +61,9 @@
 #define SPI_DIVISOR_SLOW 32
 #define SPI_DIVISOR_FAST 4
 
+/* Return value of buttons_read() */
+typedef uint8_t rawbutton_t;
+
 #if CONFIG_HARDWARE_VARIANT==1
 /* Configure for your own hardware                     */
 /* Example values are for the "Shadowolf 1.x" variant. */
@@ -255,21 +258,23 @@ static inline void toggle_dirty_led(void) {
 
 
 /*** User interface ***/
-/* Macros for the registers of the port where the buttons are connected */
-/* All buttons must be on the same port. */
-#  define BUTTON_PIN  PINC
-#  define BUTTON_PORT PORTC
-#  define BUTTON_DDR  DDRC
-
-/* Mask value to isolate the button bits */
-#  define BUTTON_MASK (_BV(PC3)|_BV(PC4))
-
 /* Button NEXT changes to the next disk image and enables sleep mode (held) */
 #  define BUTTON_NEXT _BV(PC4)
 
 /* Button PREV changes to the previous disk image */
 /* If you don't have/need this button, define it as 0. */
 #  define BUTTON_PREV _BV(PC3)
+
+/* Read the raw button state - a depressed button should read as 0 */
+static inline rawbutton_t buttons_read(void) {
+  return PINC & (BUTTON_NEXT | BUTTON_PREV);
+}
+
+static inline void buttons_init(void) {
+  DDRC  &= (uint8_t)~(BUTTON_NEXT | BUTTON_PREV);
+  PORTC |= BUTTON_NEXT | BUTTON_PREV;
+}
+
 
 /* Software I2C lines for the RTC */
 #  define SOFTI2C_PORT    PORTC
@@ -348,12 +353,18 @@ static inline void toggle_dirty_led(void) {
 #  define IEC_ATN_INT_VECT      PCINT0_vect
 #  define IEC_ATN_INT_SETUP()   do { PCICR |= _BV(PCIE0); PCIFR |= _BV(PCIF0); } while (0)
 #  define IEC_PCMSK             PCMSK0
-#  define BUTTON_PIN            PINC
-#  define BUTTON_PORT           PORTC
-#  define BUTTON_DDR            DDRC
-#  define BUTTON_MASK           (_BV(PC3)|_BV(PC4))
+
 #  define BUTTON_NEXT           _BV(PC4)
 #  define BUTTON_PREV           _BV(PC3)
+
+static inline rawbutton_t buttons_read(void) {
+  return PINC & (BUTTON_NEXT | BUTTON_PREV);
+}
+
+static inline void buttons_init(void) {
+  DDRC  &= (uint8_t)~(BUTTON_NEXT | BUTTON_PREV);
+  PORTC |= BUTTON_NEXT | BUTTON_PREV;
+}
 
 
 #elif CONFIG_HARDWARE_VARIANT == 3
@@ -422,12 +433,19 @@ static inline void toggle_dirty_led(void) {
 #  define IEC_ATN_INT_VECT      PCINT2_vect
 #  define IEC_ATN_INT_SETUP()   do { PCICR |= _BV(PCIE2); PCIFR |= _BV(PCIF2); } while (0)
 #  define IEC_PCMSK             PCMSK2
-#  define BUTTON_PIN            PINA
-#  define BUTTON_PORT           PORTA
-#  define BUTTON_DDR            DDRA
-#  define BUTTON_MASK           (_BV(PA4)|_BV(PA5))
+
 #  define BUTTON_NEXT           _BV(PA4)
 #  define BUTTON_PREV           _BV(PA5)
+
+static inline rawbutton_t buttons_read(void) {
+  return PINA & (BUTTON_NEXT | BUTTON_PREV);
+}
+
+static inline void buttons_init(void) {
+  DDRA  &= (uint8_t)~(BUTTON_NEXT | BUTTON_PREV);
+  PORTA |= BUTTON_NEXT | BUTTON_PREV;
+}
+
 #  define SOFTI2C_PORT          PORTC
 #  define SOFTI2C_PIN           PINC
 #  define SOFTI2C_DDR           DDRC
@@ -515,12 +533,19 @@ static inline void toggle_led(void) {
 #  define IEC_ATN_INT_SETUP()   do { EICRB |= _BV(ISC60); } while (0)
 #  define IEC_CLK_INT_SETUP()   do { EICRB |= _BV(ISC50); } while (0)
 #  undef  IEC_PCMSK
-#  define BUTTON_PIN            PING
-#  define BUTTON_PORT           PORTG
-#  define BUTTON_DDR            DDRG
-#  define BUTTON_MASK           (_BV(PG3)|_BV(PG4))
+
 #  define BUTTON_NEXT           _BV(PG4)
 #  define BUTTON_PREV           _BV(PG3)
+
+static inline rawbutton_t buttons_read(void) {
+  return PING & (BUTTON_NEXT | BUTTON_PREV);
+}
+
+static inline void buttons_init(void) {
+  DDRG  &= (uint8_t)~(BUTTON_NEXT | BUTTON_PREV);
+  PORTG |= BUTTON_NEXT | BUTTON_PREV;
+}
+
 #  define SOFTI2C_PORT          PORTD
 #  define SOFTI2C_PIN           PIND
 #  define SOFTI2C_DDR           DDRD
@@ -531,6 +556,7 @@ static inline void toggle_led(void) {
 
 /* Use diskmux code to optionally turn off second IDE drive */
 #  define NEED_DISKMUX
+
 
 #elif CONFIG_HARDWARE_VARIANT==5
 /* Hardware configuration: Shadowolf 2 aka sd2iec 1.x */
@@ -629,12 +655,19 @@ static inline void toggle_dirty_led(void) {
 #  define IEC_ATN_INT_VECT      PCINT0_vect
 #  define IEC_ATN_INT_SETUP()   do { PCICR |= _BV(PCIE0); PCIFR |= _BV(PCIF0); } while (0)
 #  define IEC_PCMSK             PCMSK0
-#  define BUTTON_PIN            PINC
-#  define BUTTON_PORT           PORTC
-#  define BUTTON_DDR            DDRC
-#  define BUTTON_MASK           (_BV(PC2)|_BV(PC3))
+
 #  define BUTTON_NEXT           _BV(PC3)
 #  define BUTTON_PREV           _BV(PC2)
+
+static inline rawbutton_t buttons_read(void) {
+  return PINC & (BUTTON_NEXT | BUTTON_PREV);
+}
+
+static inline void buttons_init(void) {
+  DDRC  &= (uint8_t)~(BUTTON_NEXT | BUTTON_PREV);
+  PORTC |= BUTTON_NEXT | BUTTON_PREV;
+}
+
 #  define SOFTI2C_PORT          PORTC
 #  define SOFTI2C_PIN           PINC
 #  define SOFTI2C_DDR           DDRC
@@ -722,12 +755,19 @@ static inline __attribute__((always_inline)) void set_power_led(uint8_t state) {
 #  define IEC_ATN_INT_VECT      PCINT0_vect
 #  define IEC_ATN_INT_SETUP()   do { PCICR |= _BV(PCIE0); PCIFR |= _BV(PCIF0); } while (0)
 #  define IEC_PCMSK             PCMSK0
-#  define BUTTON_PIN            PING
-#  define BUTTON_PORT           PORTG
-#  define BUTTON_DDR            DDRG
+
 #  define BUTTON_MASK           (_BV(PG3)|_BV(PG4))
 #  define BUTTON_NEXT           _BV(PG4)
 #  define BUTTON_PREV           _BV(PG3)
+
+static inline rawbutton_t buttons_read(void) {
+  return PING & (BUTTON_NEXT | BUTTON_PREV);
+}
+
+static inline void buttons_init(void) {
+  DDRG  &= (uint8_t)~(BUTTON_NEXT | BUTTON_PREV);
+  PORTG |= BUTTON_NEXT | BUTTON_PREV;
+}
 
 
 #else
@@ -805,6 +845,18 @@ static inline __attribute__((always_inline)) void sdcard_set_ss(uint8_t state) {
     SPI_PORT |= SPI_SS;
   else
     SPI_PORT &= ~SPI_SS;
+}
+#endif
+
+/* Display interrupt pin */
+#ifdef CONFIG_REMOTE_DISPLAY
+static inline void display_intrq_init(void) {
+  /* Enable pullup on the interrupt line */
+  SOFTI2C_PORT |= _BV(SOFTI2C_BIT_INTRQ);
+}
+
+static inline uint8_t display_intrq_active(void) {
+  return !(SOFTI2C_PIN & _BV(SOFTI2C_BIT_INTRQ));
 }
 #endif
 
