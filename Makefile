@@ -254,7 +254,7 @@ CFLAGS += -mcall-prologues
 
 # these are needed for GCC 4.3.2, which is more aggressive at inlining
 # gcc-4.2 knows one of those, but it tends to increase code size
-ifeq ($(shell $(CC) --version|$(AWK) -f gcctest.awk),YES)
+ifeq ($(shell $(CC) --version|$(AWK) -f scripts/gcctest.awk),YES)
 #CFLAGS += --param inline-call-cost=3
 CFLAGS += -fno-inline-small-functions
 CFLAGS += -fno-move-loop-invariants
@@ -487,9 +487,9 @@ copy2card:
 doxygen:
 	-rm -rf doxyinput
 	mkdir doxyinput
-	cp *.h *.c doxyinput
-	src2doxy.pl doxyinput/*.h doxyinput/*.c
-	doxygen doxygen.conf
+	cp src/*.h src/*.c doxyinput
+	scripts/src2doxy.pl doxyinput/*.h doxyinput/*.c
+	doxygen scripts/doxygen.conf
 
 # Display size of file.
 HEXSIZE = $(SIZE) --target=$(FORMAT) $(TARGET).hex
@@ -555,7 +555,7 @@ extcoff: $(TARGET).elf
 .PRECIOUS : $(OBJDIR)/autoconf.h
 $(OBJDIR)/autoconf.h: $(CONFIG) | $(OBJDIR)
 	$(E) "  CONF2H $(CONFIG)"
-	$(Q)$(AWK) -f conf2h.awk $(CONFIG) > $(OBJDIR)/autoconf.h
+	$(Q)$(AWK) -f scripts/conf2h.awk $(CONFIG) > $(OBJDIR)/autoconf.h
 
 # Create final output files (.hex, .eep) from ELF output file.
 ifeq ($(CONFIG_BOOTLOADER),y)
