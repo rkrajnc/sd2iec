@@ -280,7 +280,7 @@ endif
 #             for use in COFF files, additional information about filenames
 #             and function names needs to be present in the assembler source
 #             files -- see avr-libc docs [FIXME: not yet described there]
-ASFLAGS = -Wa,-adhlns=$(OBJDIR)/$(<:.S=.lst),-gstabs -I$(OBJDIR)
+ASFLAGS = -Wa,-gstabs -I$(OBJDIR) -Isrc
 
 
 #---------------- Library Options ----------------
@@ -557,6 +557,13 @@ $(OBJDIR)/autoconf.h: $(CONFIG) | $(OBJDIR)
 	$(E) "  CONF2H $(CONFIG)"
 	$(Q)$(AWK) -f scripts/conf2h.awk $(CONFIG) > $(OBJDIR)/autoconf.h
 
+# Generate macro-only asmconfig.h from config
+.PRECIOUS: $(OBJDIR)/asmconfig.h
+$(OBJDIR)/asmconfig.h: $(CONFIG) $(OBJDIR)/autoconf.h src/config.h | $(OBJDIR)
+	$(E) "  CPP    config.h"
+	$(Q)$(CC) -E -dM $(ALL_ASFLAGS) src/config.h | grep -v "^#define __" > $@
+
+
 # Create final output files (.hex, .eep) from ELF output file.
 ifeq ($(CONFIG_BOOTLOADER),y)
 $(OBJDIR)/%.bin: $(OBJDIR)/%.elf
@@ -613,7 +620,7 @@ $(OBJDIR)/%.s : %.c | $(OBJDIR) $(OBJDIR)/autoconf.h
 
 
 # Assemble: create object files from assembler source files.
-$(OBJDIR)/%.o : %.S | $(OBJDIR) $(OBJDIR)/autoconf.h
+$(OBJDIR)/%.o : %.S $(OBJDIR)/asmconfig.h $(OBJDIR)/autoconf.h | $(OBJDIR)
 	$(E) "  AS     $<"
 	$(Q)$(CC) -c $(ALL_ASFLAGS) $< -o $@
 
@@ -641,6 +648,7 @@ clean_list :
 	$(Q)$(REMOVE) $(TARGET).lss
 	$(Q)$(REMOVE) $(OBJ)
 	$(Q)$(REMOVE) $(OBJDIR)/autoconf.h
+	$(Q)$(REMOVE) $(OBJDIR)/asmconfig.h
 	$(Q)$(REMOVE) $(OBJDIR)/*.bin
 	$(Q)$(REMOVE) $(LST)
 	$(Q)$(REMOVE) $(CSRC:.c=.s)
@@ -654,7 +662,7 @@ clean_list :
 -include $(shell mkdir .dep 2>/dev/null) $(wildcard .dep/*)
 
 # Manual dependency for the assembler module
-$(OBJDIR)/fastloader-ll.o: config.h fastloader.h $(OBJDIR)/autoconf.h
+$(OBJDIR)/fastloader-ll.o: config.h fastloader.h $(OBJDIR)/asmconfig.h
 
 # Listing of phony targets.
 .PHONY : all begin finish end sizebefore sizeafter gccversion \

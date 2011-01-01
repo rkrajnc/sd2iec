@@ -30,7 +30,7 @@
 */
 
 
-#include "config.h"
+#include "asmconfig.h"
 #include "fastloader.h"
 #include <avr/io.h>
 
