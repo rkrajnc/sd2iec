@@ -244,9 +244,11 @@ static inline void toggle_dirty_led(void) {
 //#  define IEC_PORTIN     PORTX
 
 /* ATN interrupt (required) */
-//#  define IEC_ATN_INT         PCINT0
-//#  define IEC_ATN_INT_VECT    PCINT0_vect
-//#  define IEC_ATN_INT_SETUP() do { PCMSK0 = _BV(PCINT0); PCIFR |= _BV(PCIF0); } while (0)
+#  define IEC_ATN_INT_VECT    PCINT0_vect
+static inline void iec_interrupts_init(void) {
+  PCMSK0 = _BV(PCINT0);
+  PCIFR |= _BV(PCIF0);
+}
 
 /* CLK interrupt (not required) */
 /* Dreamload requires interrupts for both the ATN and CLK lines. If both are served by */
@@ -255,7 +257,9 @@ static inline void toggle_dirty_led(void) {
 /* If the CLK line has its own dedicated interrupt, use the following definitions: */
 //#  define IEC_CLK_INT           INT5
 //#  define IEC_CLK_INT_VECT      INT5_vect
-//#  define IEC_CLK_INT_SETUP()   do { EICRB |= _BV(ISC50); } while (0)
+//static inline void iec_clock_int_setup(void) {
+//  EICRB |= _BV(ISC50);
+//}
 
 
 /*** User interface ***/
@@ -352,8 +356,12 @@ static inline void toggle_dirty_led(void) {
 #  define IEC_PIN_CLOCK         PA2
 #  define IEC_PIN_SRQ           PA3
 #  define IEC_ATN_INT_VECT      PCINT0_vect
-#  define IEC_ATN_INT_SETUP()   do { PCICR |= _BV(PCIE0); PCIFR |= _BV(PCIF0); } while (0)
 #  define IEC_PCMSK             PCMSK0
+
+static inline void iec_interrupts_init(void) {
+  PCICR |= _BV(PCIE0);
+  PCIFR |= _BV(PCIF0);
+}
 
 #  define BUTTON_NEXT           _BV(PC4)
 #  define BUTTON_PREV           _BV(PC3)
@@ -432,8 +440,12 @@ static inline void toggle_dirty_led(void) {
 #  define IEC_PIN_CLOCK         PC2
 #  define IEC_PIN_SRQ           PC3
 #  define IEC_ATN_INT_VECT      PCINT2_vect
-#  define IEC_ATN_INT_SETUP()   do { PCICR |= _BV(PCIE2); PCIFR |= _BV(PCIF2); } while (0)
 #  define IEC_PCMSK             PCMSK2
+
+static inline void iec_interrupts_init(void) {
+  PCICR |= _BV(PCIE2);
+  PCIFR |= _BV(PCIF2);
+}
 
 #  define BUTTON_NEXT           _BV(PA4)
 #  define BUTTON_PREV           _BV(PA5)
@@ -531,9 +543,12 @@ static inline void toggle_led(void) {
 #  define IEC_ATN_INT_VECT      INT6_vect
 #  define IEC_CLK_INT           INT5
 #  define IEC_CLK_INT_VECT      INT5_vect
-#  define IEC_ATN_INT_SETUP()   do { EICRB |= _BV(ISC60); } while (0)
-#  define IEC_CLK_INT_SETUP()   do { EICRB |= _BV(ISC50); } while (0)
 #  undef  IEC_PCMSK
+
+static inline void iec_interrupts_init(void) {
+  EICRB |= _BV(ISC60);
+  EICRB |= _BV(ISC50);
+}
 
 #  define BUTTON_NEXT           _BV(PG4)
 #  define BUTTON_PREV           _BV(PG3)
@@ -654,8 +669,12 @@ static inline void toggle_dirty_led(void) {
 #  define IEC_OPIN_CLOCK        PA6
 #  define IEC_OPIN_SRQ          PA7
 #  define IEC_ATN_INT_VECT      PCINT0_vect
-#  define IEC_ATN_INT_SETUP()   do { PCICR |= _BV(PCIE0); PCIFR |= _BV(PCIF0); } while (0)
 #  define IEC_PCMSK             PCMSK0
+
+static inline void iec_interrupts_init(void) {
+  PCICR |= _BV(PCIE0);
+  PCIFR |= _BV(PCIF0);
+}
 
 #  define BUTTON_NEXT           _BV(PC3)
 #  define BUTTON_PREV           _BV(PC2)
@@ -754,10 +773,13 @@ static inline __attribute__((always_inline)) void set_power_led(uint8_t state) {
 #  define IEC_OPIN_CLOCK        PD6
 #  define IEC_OPIN_SRQ          PD7
 #  define IEC_ATN_INT_VECT      PCINT0_vect
-#  define IEC_ATN_INT_SETUP()   do { PCICR |= _BV(PCIE0); PCIFR |= _BV(PCIF0); } while (0)
 #  define IEC_PCMSK             PCMSK0
 
-#  define BUTTON_MASK           (_BV(PG3)|_BV(PG4))
+static inline void iec_interrupts_init(void) {
+  PCICR |= _BV(PCIE0);
+  PCIFR |= _BV(PCIF0);
+}
+
 #  define BUTTON_NEXT           _BV(PG4)
 #  define BUTTON_PREV           _BV(PG3)
 
@@ -859,14 +881,6 @@ static inline void display_intrq_init(void) {
 static inline uint8_t display_intrq_active(void) {
   return !(SOFTI2C_PIN & _BV(SOFTI2C_BIT_INTRQ));
 }
-#endif
-
-/* Create no-op interrupt setups if they are undefined */
-#ifndef IEC_ATN_INT_SETUP
-#  define IEC_ATN_INT_SETUP() do {} while (0)
-#endif
-#ifndef IEC_CLK_INT_SETUP
-#  define IEC_CLK_INT_SETUP() do {} while (0)
 #endif
 
 /* Disable COMMAND_CHANNEL_DUMP if UART_DEBUG is disabled */

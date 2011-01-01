@@ -553,8 +553,7 @@ void iec_init(void) {
     set_data(0);
 
   /* Prepare IEC interrupts (if any) */
-  IEC_ATN_INT_SETUP();
-  IEC_CLK_INT_SETUP();
+  iec_interrupts_init();
 
   /* Read the hardware-set device address */
   device_hw_address_init();
