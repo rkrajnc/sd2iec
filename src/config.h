@@ -243,8 +243,7 @@ static inline void toggle_dirty_led(void) {
 //#  define IEC_DDROUT     DDRY
 //#  define IEC_PORTIN     PORTX
 
-/* ATN interrupt (not required) */
-/* If this is commented out, the ATN line will be polled by a timer interrupt instead */
+/* ATN interrupt (required) */
 //#  define IEC_ATN_INT         PCINT0
 //#  define IEC_ATN_INT_VECT    PCINT0_vect
 //#  define IEC_ATN_INT_SETUP() do { PCMSK0 = _BV(PCINT0); PCIFR |= _BV(PCIF0); } while (0)

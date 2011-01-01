@@ -117,16 +117,13 @@ static uint8_t check_atn(void) {
       return 0;
 }
 
-#ifndef IEC_ATN_INT_VECT
-
-/// Interrupt routine that simulates the hardware-auto-acknowledge of ATN
-/* This currently runs once every 500 microseconds, keep small! */
-ISR(TIMER2_COMPA_vect) {
+/* IEC ATN handler (if Dreamload is not used) */
+#ifndef CONFIG_LOADER_DREAMLOAD
+ISR(IEC_ATN_INT_VECT) {
   if (!IEC_ATN) {
     set_data(0);
   }
 }
-
 #endif
 
 /* ------------------------------------------------------------------------- */
@@ -558,18 +555,6 @@ void iec_init(void) {
   /* Prepare IEC interrupts (if any) */
   IEC_ATN_INT_SETUP();
   IEC_CLK_INT_SETUP();
-
-#ifndef IEC_ATN_INT_VECT
-  /* Issue an interrupt every 500us with timer 2 for ATN-Acknowledge.    */
-  /* The exact timing isn't critical, it just has to be faster than 1ms. */
-  /* Every 800us was too slow in rare situations.                        */
-  OCR2A = 125;
-  TCNT2 = 0;
-  /* On the mega32 both registers are the same, so OR those bits in */
-  TCCR2B = 0;
-  TCCR2A |= _BV(WGM21); // CTC mode
-  TCCR2B |= _BV(CS20) | _BV(CS21); // prescaler /32
-#endif
 
   /* Read the hardware-set device address */
   device_hw_address_init();
