@@ -246,7 +246,7 @@ CFLAGS += -O$(OPT) -fno-strict-aliasing
 CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 CFLAGS += -Wall -Wstrict-prototypes -Werror
 #CFLAGS += -Wa,-adhlns=$(OBJDIR)/$(<:.c=.lst)
-CFLAGS += -I$(OBJDIR)
+CFLAGS += -I$(OBJDIR) -Isrc
 CFLAGS += $(patsubst %,-I%,$(EXTRAINCDIRS))
 CFLAGS += $(CSTANDARD)
 CFLAGS += -ffunction-sections -fdata-sections
@@ -434,14 +434,19 @@ DEBUG_HOST = localhost
 
 
 # De-dupe the list of C source files
-CSRC := $(sort $(SRC))
+CSRC := $(patsubst %,src/%,$(sort $(SRC)))
+
+# Add subdir to assembler source files
+ASRC_DIR := $(patsubst %,src/%,$(ASRC))
 
 # Define all object files.
-OBJ := $(patsubst %,$(OBJDIR)/%,$(CSRC:.c=.o) $(ASRC:.S=.o))
+OBJ := $(patsubst %,$(OBJDIR)/%,$(CSRC:.c=.o) $(ASRC_DIR:.S=.o))
 
 # Define all listing files.
-LST := $(patsubst %,$(OBJDIR)/%,$(CSRC:.c=.lst) $(ASRC:.S=.lst))
+LST := $(patsubst %,$(OBJDIR)/%,$(CSRC:.c=.lst) $(ASRC_DIR:.S=.lst))
 
+# Define the object directories
+OBJDIRS := $(sort $(dir $(OBJ)))
 
 # Compiler flags to generate dependency files.
 GENDEPFLAGS = -MMD -MP -MF .dep/$(@F).d
@@ -619,7 +624,7 @@ $(OBJDIR)/%.i : %.c | $(OBJDIR) $(OBJDIR)/autoconf.h
 # Create the output directory
 $(OBJDIR):
 	$(E) "  MKDIR  $(OBJDIR)"
-	$(Q)mkdir $(OBJDIR)
+	-$(Q)mkdir -p $(OBJDIRS)
 
 # Target: clean project.
 clean: begin clean_list end
@@ -643,7 +648,7 @@ clean_list :
 	$(Q)$(REMOVE) .dep/*
 	$(Q)$(REMOVE) -rf codedoc
 	$(Q)$(REMOVE) -rf doxyinput
-	-$(Q)rmdir $(OBJDIR)
+	-$(Q)rmdir --ignore-fail-on-non-empty -p $(OBJDIRS)
 
 # Include the dependency files.
 -include $(shell mkdir .dep 2>/dev/null) $(wildcard .dep/*)
