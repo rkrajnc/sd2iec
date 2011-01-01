@@ -156,13 +156,16 @@ static inline __attribute__((always_inline)) void sdcard2_set_ss(uint8_t state) 
 
 
 /*** Device address selection ***/
-/* DEVICE_SELECT should return the selected device number,   */
-/* DEVICE_SELECT_SETUP() is called once to set up the ports. */
-#  define DEVICE_SELECT       (8+!(PIND & _BV(PD7))+2*!(PIND & _BV(PD5)))
-#  define DEVICE_SELECT_SETUP() do { \
-      DDRD  &= ~(_BV(PD7)|_BV(PD5)); \
-      PORTD |=   _BV(PD7)|_BV(PD5);  \
-   } while (0)
+/* device_hw_address() returns the hardware-selected device address */
+static inline uint8_t device_hw_address(void) {
+  return 8 + !(PIND & _BV(PD7)) + 2*!(PIND & _BV(PD5));
+}
+
+/* Configure hardware device address pins */
+static inline void device_hw_address_init(void) {
+  DDRD  &= ~(_BV(PD7) | _BV(PD5));
+  PORTD |=   _BV(PD7) | _BV(PD5);
+}
 
 
 /*** LEDs ***/
@@ -288,11 +291,15 @@ static inline uint8_t sdcard_wp(void) {
   return PIND & _BV(PD6);
 }
 
-#  define DEVICE_SELECT         (8+!(PIND & _BV(PD7))+2*!(PIND & _BV(PD5)))
-#  define DEVICE_SELECT_SETUP() do {        \
-             DDRD  &= ~(_BV(PD7)|_BV(PD5)); \
-             PORTD |=   _BV(PD7)|_BV(PD5);  \
-          } while (0)
+static inline uint8_t device_hw_address(void) {
+  return 8 + !(PIND & _BV(PD7)) + 2*!(PIND & _BV(PD5));
+}
+
+static inline void device_hw_address_init(void) {
+  DDRD  &= ~(_BV(PD7)|_BV(PD5));
+  PORTD |=   _BV(PD7)|_BV(PD5);
+}
+
 #  define BUSY_LED_SETDDR()     DDRC  |= _BV(PC0)
 #  define BUSY_LED_ON()         PORTC |= _BV(PC0)
 #  define BUSY_LED_OFF()        PORTC &= ~_BV(PC0)
@@ -343,11 +350,15 @@ static inline uint8_t sdcard_wp(void) {
   return PIND & _BV(PD6);
 }
 
-#  define DEVICE_SELECT         (8+!(PINA & _BV(PA2))+2*!(PINA & _BV(PA3)))
-#  define DEVICE_SELECT_SETUP() do {        \
-             DDRA  &= ~(_BV(PA2)|_BV(PA3)); \
-             PORTA |=   _BV(PA2)|_BV(PA3);  \
-          } while (0)
+static inline uint8_t device_hw_address(void) {
+  return 8 + !(PINA & _BV(PA2)) + 2*!(PINA & _BV(PA3));
+}
+
+static inline void device_hw_address_init(void) {
+  DDRA  &= ~(_BV(PA2)|_BV(PA3));
+  PORTA |=   _BV(PA2)|_BV(PA3);
+}
+
 #  define BUSY_LED_SETDDR()     DDRA  |= _BV(PA0)
 #  define BUSY_LED_ON()         PORTA &= ~_BV(PA0)
 #  define BUSY_LED_OFF()        PORTA |= _BV(PA0)
@@ -421,9 +432,15 @@ static inline uint8_t sdcard_wp(void) {
   return PINB & _BV(PB6);
 }
 
-/* No device jumpers on uIEC */
-#  define DEVICE_SELECT         10
-#  define DEVICE_SELECT_SETUP() do {} while (0)
+static inline uint8_t device_hw_address(void) {
+  /* No device jumpers on uIEC */
+  return 10;
+}
+
+static inline void device_hw_address_init(void) {
+  return;
+}
+
 #  define DIRTY_LED_SETDDR()    DDRE  |= _BV(PE3)
 #  define DIRTY_LED_ON()        PORTE |= _BV(PE3)
 #  define DIRTY_LED_OFF()       PORTE &= ~_BV(PE3)
@@ -510,12 +527,15 @@ static inline __attribute__((always_inline)) void sdcard2_set_ss(uint8_t state) 
     PORTD &= ~_BV(PD3);
 }
 
+static inline uint8_t device_hw_address(void) {
+  return 8 + !(PIND & _BV(PD7)) + 2*!(PIND & _BV(PD5));
+}
 
-#  define DEVICE_SELECT         (8+!(PIND & _BV(PD7))+2*!(PIND & _BV(PD5)))
-#  define DEVICE_SELECT_SETUP() do {        \
-             DDRD  &= ~(_BV(PD7)|_BV(PD5)); \
-             PORTD |=   _BV(PD7)|_BV(PD5);  \
-          } while (0)
+static inline void device_hw_address_init(void) {
+  DDRD  &= ~(_BV(PD7)|_BV(PD5));
+  PORTD |=   _BV(PD7)|_BV(PD5);
+}
+
 #  define BUSY_LED_SETDDR()     DDRC  |= _BV(PC0)
 #  define BUSY_LED_ON()         PORTC |= _BV(PC0)
 #  define BUSY_LED_OFF()        PORTC &= ~_BV(PC0)
@@ -582,9 +602,15 @@ static inline uint8_t sdcard_wp(void) {
   return PINE & _BV(PE2);
 }
 
-/* No device jumpers on uIEC */
-#  define DEVICE_SELECT         10
-#  define DEVICE_SELECT_SETUP() do {} while (0)
+static inline uint8_t device_hw_address(void) {
+  /* No device jumpers on uIEC */
+  return 10;
+}
+
+static inline void device_hw_address_init(void) {
+  return;
+}
+
 #  define DIRTY_LED_SETDDR()    DDRG  |= _BV(PG0)
 #  define DIRTY_LED_ON()        PORTG |= _BV(PG0)
 #  define DIRTY_LED_OFF()       PORTG &= ~_BV(PG0)

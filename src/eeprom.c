@@ -116,7 +116,7 @@ void read_configuration(void) {
                             EXTENSION_HIDING | FAT32_FREEBLOCKS);
   globalflags |= tmp;
 
-  if (eeprom_read_byte(&storedconfig.hardaddress) == DEVICE_SELECT)
+  if (eeprom_read_byte(&storedconfig.hardaddress) == device_hw_address())
     device_address = eeprom_read_byte(&storedconfig.address);
 
   file_extension_mode = eeprom_read_byte(&storedconfig.fileexts);
@@ -161,7 +161,7 @@ void write_configuration(void) {
                     globalflags & (POSTMATCH |
                                    EXTENSION_HIDING | FAT32_FREEBLOCKS));
   eeprom_write_byte(&storedconfig.address, device_address);
-  eeprom_write_byte(&storedconfig.hardaddress, DEVICE_SELECT);
+  eeprom_write_byte(&storedconfig.hardaddress, device_hw_address());
   eeprom_write_byte(&storedconfig.fileexts, file_extension_mode);
 #ifdef NEED_DISKMUX
   eeprom_write_word(&storedconfig.drvconfig0, drive_config);

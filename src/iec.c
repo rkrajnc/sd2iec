@@ -572,9 +572,9 @@ void iec_init(void) {
 #endif
 
   /* Read the hardware-set device address */
-  DEVICE_SELECT_SETUP();
+  device_hw_address_init();
   _delay_ms(1);
-  device_address = DEVICE_SELECT;
+  device_address = device_hw_address();
 }
 
 void iec_mainloop(void) {
