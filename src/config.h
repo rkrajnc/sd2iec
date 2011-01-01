@@ -65,11 +65,15 @@
 typedef uint8_t rawbutton_t;
 
 #if CONFIG_HARDWARE_VARIANT==1
-/* Configure for your own hardware                     */
-/* Example values are for the "Shadowolf 1.x" variant. */
+/* ---------- Hardware configuration: Example ---------- */
+/* This is a commented example for most of the available options    */
+/* in case someone wants to build Yet Another[tm] hardware variant. */
+/* Some of the values are chosen randomly, so this variant is not   */
+/* expected to compile successfully.                                */
 
-/* Name the software should return in the Dos version messate (73) */
+/* Name the software should return in the Dos version message (73) */
 /* This should be upper-case because it isn't PETSCII-converted.   */
+/* Change this if you're forking the code!                         */
 #  define HW_NAME "SD2IEC"
 
 /*** SD card support ***/
@@ -214,8 +218,6 @@ static inline void toggle_dirty_led(void) {
 
 
 /*** IEC signals ***/
-/* R.Riedel - using PORTA instead of the original PORTC for the IEC */
-
 #  define IEC_PIN  PINA
 #  define IEC_DDR  DDRA
 #  define IEC_PORT PORTA
@@ -288,7 +290,7 @@ static inline void buttons_init(void) {
 /* Pre-configurated hardware variants */
 
 #elif CONFIG_HARDWARE_VARIANT==2
-/* Hardware configuration: Shadowolf 1 */
+/* ---------- Hardware configuration: Shadowolf 1 ---------- */
 #  define HW_NAME "SD2IEC"
 #  define HAVE_SD
 #  define SD_CHANGE_VECT        INT0_vect
@@ -368,7 +370,7 @@ static inline void buttons_init(void) {
 
 
 #elif CONFIG_HARDWARE_VARIANT == 3
-/* Hardware configuration: LarsP */
+/* ---------- Hardware configuration: LarsP ---------- */
 #  define HW_NAME "SD2IEC"
 #  define HAVE_SD
 #  define SD_CHANGE_VECT        INT0_vect
@@ -456,7 +458,7 @@ static inline void buttons_init(void) {
 
 
 #elif CONFIG_HARDWARE_VARIANT == 4
-/* Hardware configuration: uIEC */
+/* ---------- Hardware configuration: uIEC ---------- */
 #  define HW_NAME "UIEC"
 #  define HAVE_ATA
 #  define HAVE_SD
@@ -559,7 +561,7 @@ static inline void buttons_init(void) {
 
 
 #elif CONFIG_HARDWARE_VARIANT==5
-/* Hardware configuration: Shadowolf 2 aka sd2iec 1.x */
+/* ---------- Hardware configuration: Shadowolf 2 aka sd2iec 1.x ---------- */
 #  define HW_NAME "SD2IEC"
 #  define HAVE_SD
 #  define SD_CHANGE_VECT        INT0_vect
@@ -681,7 +683,7 @@ static inline void buttons_init(void) {
 
 
 #elif CONFIG_HARDWARE_VARIANT == 7
-/* Hardware configuration: uIEC v3 */
+/* ---------- Hardware configuration: uIEC v3 ---------- */
 #  define HW_NAME "UIEC"
 #  define HAVE_SD
 #  define SD_CHANGE_VECT        INT6_vect
@@ -885,7 +887,7 @@ static inline void set_power_led(uint8_t state) {
 }
 #endif
 
-/* Translate CONFIG_ADD symbols to HAVE symbols */
+/* ----- Translate CONFIG_ADD symbols to HAVE symbols ----- */
 /* By using two symbols for this purpose it's easier to determine if */
 /* support was enabled by default or added in the config file.       */
 #if defined(CONFIG_ADD_SD) && !defined(HAVE_SD)
