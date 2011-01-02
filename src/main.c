@@ -37,6 +37,7 @@
 #include "ff.h"
 #include "i2c.h"
 #include "iec.h"
+#include "iec-bus.h"
 #include "led.h"
 #include "time.h"
 #include "rtc.h"
