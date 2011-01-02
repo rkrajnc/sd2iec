@@ -26,10 +26,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <avr/boot.h>
-#include <avr/interrupt.h>
-#include <avr/power.h>
-#include <avr/wdt.h>
 #include "config.h"
 #include "buffers.h"
 #include "diskchange.h"
@@ -44,93 +40,20 @@
 #include "led.h"
 #include "time.h"
 #include "rtc.h"
+#include "spi.h"
+#include "system.h"
 #include "timer.h"
 #include "uart.h"
 #include "ustring.h"
 #include "utils.h"
 
 
-/* Make sure the watchdog is disabled as soon as possible    */
-/* Copy this code to your bootloader if you use one and your */
-/* MCU doesn't disable the WDT after reset!                  */
-void get_mcusr(void) \
-      __attribute__((naked)) \
-      __attribute__((section(".init3")));
-void get_mcusr(void)
-{
-  MCUSR = 0;
-  wdt_disable();
-}
-
-#ifdef CONFIG_MEMPOISON
-void poison_memory(void) \
-  __attribute__((naked)) \
-  __attribute__((section(".init1")));
-void poison_memory(void) {
-  register uint16_t i;
-  register uint8_t  *ptr;
-
-  asm("clr r1\n");
-  /* There is no RAMSTARt variable =( */
-  if (RAMEND > 2048 && RAMEND < 4096) {
-    /* 2K memory */
-    ptr = (void *)RAMEND-2047;
-    for (i=0;i<2048;i++)
-      ptr[i] = 0x55;
-  } else if (RAMEND > 4096 && RAMEND < 8192) {
-    /* 4K memory */
-    ptr = (void *)RAMEND-4095;
-    for (i=0;i<4096;i++)
-      ptr[i] = 0x55;
-  } else {
-    /* Assume 8K memory */
-    ptr = (void *)RAMEND-8191;
-    for (i=0;i<8192;i++)
-      ptr[i] = 0x55;
-  }
-}
-#endif
-
-#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ > 1)
+#if defined(__AVR__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ > 1))
 int main(void) __attribute__((OS_main));
 #endif
 int main(void) {
-#if defined __AVR_ATmega644__  || defined __AVR_ATmega644P__ || \
-    defined __AVR_ATmega1281__ || defined __AVR_ATmega2561__ || \
-    defined __AVR_ATmega1284P__
-  asm volatile("in  r24, %0\n"
-               "ori r24, 0x80\n"
-               "out %0, r24\n"
-               "out %0, r24\n"
-               :
-               : "I" (_SFR_IO_ADDR(MCUCR))
-               : "r24"
-               );
-#elif defined __AVR_ATmega32__
-  asm volatile ("in  r24, %0\n"
-                "ori r24, 0x80\n"
-                "out %0, r24\n"
-                "out %0, r24\n"
-                :
-                : "I" (_SFR_IO_ADDR(MCUCSR))
-                : "r24"
-                );
-#elif defined __AVR_ATmega128__ || defined __AVR_ATmega1281__
-  /* Just assume that JTAG doesn't hurt us on the m128 */
-#else
-#  error Unknown chip!
-#endif
-
-#ifdef CLOCK_PRESCALE
-  clock_prescale_set(CLOCK_PRESCALE);
-#endif
-
-#if CONFIG_HARDWARE_VARIANT == 4
-  /* uIEC/CF: Force control lines of the external SRAM high */
-  DDRG  = _BV(PG0) | _BV(PG1) | _BV(PG2);
-  PORTG = _BV(PG0) | _BV(PG1) | _BV(PG2);
-#endif
-
+  /* Early system initialisation */
+  system_init_early();
   leds_init();
 
   set_power_led(1);
@@ -138,13 +61,25 @@ int main(void) {
   set_dirty_led(0);
 
   uart_init();
-  sei();
-  buffers_init();
+#ifndef SPI_LATE_INIT
+  spi_init(SPI_SPEED_SLOW);
+#endif
   timer_init();
   iec_interface_init();
-  iec_init();
-  rtc_init();
-  disk_init();
+
+  /* Second part of system initialisation, switches to full speed on ARM */
+  system_init_late();
+  enable_interrupts();
+
+  /* Internal-only initialisation, called here because it's faster */
+  buffers_init();
+  buttons_init();
+
+  /* Anything that does something which needs the system clock */
+  /* should be placed after system_init_late() */
+  iec_init();    // needs delay
+  rtc_init();    // accesses I2C
+  disk_init();   // accesses card
   read_configuration();
 
   fatops_init(0);
