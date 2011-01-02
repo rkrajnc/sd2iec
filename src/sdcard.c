@@ -221,6 +221,7 @@ static uint8_t wait_for_response(uint8_t expected) {
 static void deselectCard(uint8_t card) {
   // Send 8 clock cycles
   spi_select_device(card);
+  set_sd_led(0);
   spi_rx_byte();
 }
 
@@ -265,6 +266,7 @@ static int sendCommand(const uint8_t  card,
       /* Force both cards to SPI mode simultaneously */
       spi_select_device(SPIDEV_ALLCARDS);
 #endif
+    set_sd_led(1);
 
     // Transfer command
     spi_tx_byte(0x40+command);
@@ -446,6 +448,7 @@ DSTATUS sd_initialize(BYTE drv) {
 
   cardtype[drv] = 0;
 
+  set_sd_led(0);
 
   // Send 80 clocks without(!) selecting a card
   for (i=0; i<10; i++) {
@@ -559,12 +562,14 @@ DRESULT sd_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
         res = sendCommand(drv, READ_SINGLE_BLOCK, (sector+sec) << 9, 0);
 
       if (res != 0) {
+        set_sd_led(0);
         disk_state = DISK_ERROR;
         return RES_ERROR;
       }
 
       // Wait for data token
       if (!wait_for_response(0xFE)) {
+        set_sd_led(0);
         disk_state = DISK_ERROR;
         return RES_ERROR;
       }
@@ -663,6 +668,7 @@ DRESULT sd_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
         res = sendCommand(drv, WRITE_BLOCK, (sector+sec)<<9, 0);
 
       if (res != 0) {
+        set_sd_led(0);
         disk_state = DISK_ERROR;
         return RES_ERROR;
       }
@@ -701,6 +707,7 @@ DRESULT sd_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
 
       // Wait for write finish
       if (!wait_for_response(0)) {
+        set_sd_led(0);
         disk_state = DISK_ERROR;
         return RES_ERROR;
       }

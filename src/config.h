@@ -932,6 +932,11 @@ static inline void set_power_led(uint8_t state) {
 /* Hardcoded maximum - reducing this won't save any ram */
 #define MAX_DRIVES 8
 
+/* SD access LED dummy */
+#ifndef HAVE_SD_LED
+# define set_sd_led(x) do {} while (0)
+#endif
+
 /* Sanity check */
 #if defined(CONFIG_LOADER_WHEELS) && !defined(CONFIG_LOADER_GEOS)
 #  error "CONFIG_LOADER_GEOS must be enabled for Wheels support!"
