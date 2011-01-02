@@ -64,6 +64,9 @@
 /* Return value of buttons_read() */
 typedef uint8_t rawbutton_t;
 
+/* Interrupt handler for system tick */
+#define SYSTEM_TICK_HANDLER ISR(TIMER1_COMPA_vect)
+
 #if CONFIG_HARDWARE_VARIANT==1
 /* ---------- Hardware configuration: Example ---------- */
 /* This is a commented example for most of the available options    */
@@ -80,11 +83,11 @@ typedef uint8_t rawbutton_t;
 /* If your device supports SD cards by default, define this symbol. */
 #  define HAVE_SD
 
-/* Name of the interrupt of the card detect pin */
-#  define SD_CHANGE_VECT   INT0_vect
+/* Declaration of the interrupt handler for SD card change */
+#  define SD_CHANGE_HANDLER ISR(INT0_vect)
 
-/* Interrupt vector for card 2 change detection */
-#  define SD2_CHANGE_VECT  INT2_vect
+/* Declaration of the interrupt handler for SD card 2 change */
+#  define SD2_CHANGE_HANDLER ISR(INT9_vect)
 
 /* Initialize all pins and interrupts related to SD - except SPI */
 static inline void sdcard_interface_init(void) {
@@ -296,7 +299,7 @@ static inline void buttons_init(void) {
 /* ---------- Hardware configuration: Shadowolf 1 ---------- */
 #  define HW_NAME "SD2IEC"
 #  define HAVE_SD
-#  define SD_CHANGE_VECT        INT0_vect
+#  define SD_CHANGE_HANDLER     ISR(INT0_vect)
 #  define SD_SUPPLY_VOLTAGE     (1L<<18)
 
 static inline void sdcard_interface_init(void) {
@@ -380,7 +383,7 @@ static inline void buttons_init(void) {
 /* ---------- Hardware configuration: LarsP ---------- */
 #  define HW_NAME "SD2IEC"
 #  define HAVE_SD
-#  define SD_CHANGE_VECT        INT0_vect
+#  define SD_CHANGE_HANDLER     ISR(INT0_vect)
 #  define SD_SUPPLY_VOLTAGE     (1L<<21)
 
 static inline void sdcard_interface_init(void) {
@@ -474,8 +477,8 @@ static inline void buttons_init(void) {
 #  define HAVE_ATA
 #  define HAVE_SD
 #  define SPI_LATE_INIT
-#  define CF_CHANGE_VECT        INT7_vect
-#  define SD_CHANGE_VECT        PCINT0_vect
+#  define CF_CHANGE_HANDLER     ISR(INT7_vect)
+#  define SD_CHANGE_HANDLER     ISR(PCINT0_vect)
 #  define SD_SUPPLY_VOLTAGE     (1L<<21)
 #  define SINGLE_LED
 
@@ -578,8 +581,8 @@ static inline void buttons_init(void) {
 /* ---------- Hardware configuration: Shadowolf 2 aka sd2iec 1.x ---------- */
 #  define HW_NAME "SD2IEC"
 #  define HAVE_SD
-#  define SD_CHANGE_VECT        INT0_vect
-#  define SD2_CHANGE_VECT       INT2_vect
+#  define SD_CHANGE_HANDLER     ISR(INT0_vect)
+#  define SD2_CHANGE_HANDLER    ISR(INT2_vect)
 #  define SD_SUPPLY_VOLTAGE     (1L<<18)
 
 static inline void sdcard_interface_init(void) {
@@ -704,7 +707,7 @@ static inline void buttons_init(void) {
 /* ---------- Hardware configuration: uIEC v3 ---------- */
 #  define HW_NAME "UIEC"
 #  define HAVE_SD
-#  define SD_CHANGE_VECT        INT6_vect
+#  define SD_CHANGE_HANDLER     ISR(INT6_vect)
 #  define SD_SUPPLY_VOLTAGE     (1L<<21)
 #  define SINGLE_LED
 #  define HAVE_POWER_LED
@@ -864,6 +867,11 @@ typedef uint8_t iec_bus_t;
 #  endif
 #endif
 
+/* The assembler module needs the vector names, */
+/* so the _HANDLER macros are created here.     */
+#define IEC_ATN_HANDLER   ISR(IEC_ATN_INT_VECT)
+#define IEC_CLOCK_HANDLER ISR(IEC_CLK_INT_VECT)
+
 /* SD SS pin default implementation */
 #ifndef SDCARD_SS_SPECIAL
 static inline __attribute__((always_inline)) void sdcard_set_ss(uint8_t state) {
@@ -892,7 +900,7 @@ static inline uint8_t display_intrq_active(void) {
 #endif
 
 /* An interrupt for detecting card changes implies hotplugging capability */
-#if defined(SD_CHANGE_VECT) || defined (CF_CHANGE_VECT)
+#if defined(SD_CHANGE_HANDLER) || defined (CF_CHANGE_HANDLER)
 #  define HAVE_HOTPLUG
 #endif
 

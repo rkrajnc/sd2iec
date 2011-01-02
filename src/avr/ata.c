@@ -170,8 +170,8 @@ static void reset_disk(void) {
 }
 
 
-#ifdef CF_CHANGE_VECT
-ISR(CF_CHANGE_VECT) {
+#ifdef CF_CHANGE_HANDLER
+CF_CHANGE_HANDLER {
   if (cfcard_detect())
     disk_state = DISK_CHANGED;
   else

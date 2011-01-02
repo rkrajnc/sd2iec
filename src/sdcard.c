@@ -57,7 +57,6 @@
 */
 
 #include <avr/io.h>
-#include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include <util/crc16.h>
 #include "config.h"
@@ -363,8 +362,8 @@ static void sdInit(const uint8_t card) {
 }
 
 /* Detect changes of SD card 0 */
-#ifdef SD_CHANGE_VECT
-ISR(SD_CHANGE_VECT) {
+#ifdef SD_CHANGE_HANDLER
+SD_CHANGE_HANDLER {
   if (sdcard_detect())
     disk_state = DISK_CHANGED;
   else
@@ -372,9 +371,9 @@ ISR(SD_CHANGE_VECT) {
 }
 #endif
 
-#ifdef CONFIG_TWINSD
+#if defined(CONFIG_TWINSD) && defined(SD2_CHANGE_HANDLER)
 /* Detect changes of SD card 1 */
-ISR(SD2_CHANGE_VECT) {
+SD2_CHANGE_HANDLER {
   if (sdcard2_detect())
     disk_state = DISK_CHANGED;
   else

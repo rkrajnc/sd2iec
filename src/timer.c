@@ -25,7 +25,6 @@
 */
 
 #include "config.h"
-#include <avr/interrupt.h>
 #include <avr/io.h>
 #include "avrcompat.h"
 #include "diskchange.h"
@@ -70,7 +69,7 @@ static void buttons_changed(void) {
 }
 
 /* The main timer interrupt */
-ISR(TIMER1_COMPA_vect) {
+SYSTEM_TICK_HANDLER {
   rawbutton_t tmp = buttons_read();
 
   if (tmp != buttonstate) {

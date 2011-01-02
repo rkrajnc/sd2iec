@@ -119,7 +119,7 @@ static uint8_t check_atn(void) {
 
 /* IEC ATN handler (if Dreamload is not used) */
 #ifndef CONFIG_LOADER_DREAMLOAD
-ISR(IEC_ATN_INT_VECT) {
+IEC_ATN_HANDLER {
   if (!IEC_ATN) {
     set_data(0);
   }
