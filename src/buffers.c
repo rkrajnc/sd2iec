@@ -23,7 +23,6 @@
    buffers.c: Internal buffer management
 */
 
-#include <avr/io.h>
 #include <stdint.h>
 #include <string.h>
 #include "config.h"

@@ -28,15 +28,15 @@
 
 #include <inttypes.h>
 #include <avr/interrupt.h>
-#include <avr/pgmspace.h>
 #include <util/atomic.h>
 #include "config.h"
+#include "progmem.h"
 #include "time.h"
 #include "rtc.h"
 #include "uart.h"
 
 static volatile uint8_t ms;
-static time_t rtc = 1217647125; // Sat Aug  2 03:18:45 2008 UTC
+static softtime_t rtc = 1217647125; // Sat Aug  2 03:18:45 2008 UTC
 rtcstate_t rtc_state;
 static PROGMEM uint8_t month_days[12] = {
   31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
@@ -63,10 +63,10 @@ static PROGMEM uint8_t month_days[12] = {
  * This algorithm was first published by Gauss (I think).
  *
  * WARNING: this function will overflow on 2106-02-07 06:28:16 on
- * machines were long is 32-bit! (However, as time_t is signed, we
+ * machines were long is 32-bit! (However, as softtime_t is signed, we
  * will already get problems at other places on 2038-01-19 03:14:08)
  */
-static time_t mktime(struct tm *tm)
+static softtime_t mktime(struct tm *tm)
 {
   uint8_t mon = tm->tm_mon + 1;
   uint16_t year = tm->tm_year + 1900;
@@ -83,7 +83,7 @@ static time_t mktime(struct tm *tm)
     )*60 + tm->tm_sec; /* finally seconds */
 }
 
-static void gmtime(time_t *t, struct tm * tm)
+static void gmtime(softtime_t *t, struct tm * tm)
 {
   uint32_t    tim = *t;
   uint16_t    i;
@@ -125,7 +125,7 @@ void increment_rtc(void) {
 
 /* Read the current time from the RTC */
 void read_rtc(struct tm *time) {
-  time_t t;
+  softtime_t t;
 
   ATOMIC_BLOCK( ATOMIC_FORCEON ) {
     t = rtc;
@@ -135,7 +135,7 @@ void read_rtc(struct tm *time) {
 
 /* Set the time in the RTC */
 void set_rtc(struct tm *time) {
-  time_t t = mktime(time);
+  softtime_t t = mktime(time);
 
   ATOMIC_BLOCK( ATOMIC_FORCEON ) {
     rtc = t;

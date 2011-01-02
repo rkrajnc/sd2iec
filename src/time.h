@@ -1,7 +1,7 @@
 #ifndef TIME_H
 #define TIME_H
 
-typedef uint32_t time_t;
+typedef uint32_t softtime_t;
 struct tm {
   uint8_t tm_sec;  // 0..59
   uint8_t tm_min;  // 0..59
