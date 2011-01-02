@@ -1,3 +1,4 @@
+
 /* sd2iec - SD/MMC to Commodore serial bus interface/controller
    Copyright (C) 2007-2011  Ingo Korb <ingo@akana.de>
 
@@ -152,7 +153,7 @@ static int16_t _iec_getc(void) {
   while (!IEC_DATA) ;                                  // FF20
 
   /* Timer for EOI detection */
-  start_timeout(TIMEOUT_US(256));
+  start_timeout(256);
 
   do {
     if (check_atn()) return -1;                        // E9DF
@@ -179,7 +180,7 @@ static int16_t _iec_getc(void) {
     /* Check for JiffyDOS                                       */
     /*   Source: http://home.arcor.de/jochen.adler/ajnjil-t.htm */
     if (iec_data.bus_state == BUS_ATNACTIVE && i == 7) {
-      start_timeout(TIMEOUT_US(218));
+      start_timeout(218);
 
       do {
         tmp = iec_bus_read();
@@ -314,7 +315,7 @@ static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
    * Bus traces seem to indicate that a real 1541 needs
    * about 350us between two bytes, sd2iec is usually WAY faster.
    */
-  start_timeout(TIMEOUT_US(250));
+  start_timeout(250);
   while (!IEC_DATA && IEC_ATN && !has_timed_out()) ;
 
   return 0;
@@ -507,7 +508,7 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
 
     if (iec_data.iecflags & JIFFY_LOAD) {
       /* wait until the C64 is at FB06, use timeout in case the STOP key is pressed */
-      start_timeout(TIMEOUT_US(120));
+      start_timeout(120);
       while (!IEC_DATA && !has_timed_out()) ;
 
       /* check if ATN changed */
@@ -609,7 +610,7 @@ void iec_mainloop(void) {
       /*   The C64 doesn't always pull down the clock line */
       /*   before ATN, this loop should keep us in sync.   */
 
-      start_timeout(TIMEOUT_US(250));
+      start_timeout(250);
       while (IEC_CLOCK && !has_timed_out())
         if (IEC_ATN)
           iec_data.bus_state = BUS_ATNPROCESS;

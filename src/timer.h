@@ -28,6 +28,7 @@
 #define TIMER_H
 
 #include <util/atomic.h>
+#include "arch-timer.h"
 
 // Bit masks for the (simulated) keys
 #define KEY_NEXT    (1<<0)
@@ -88,29 +89,7 @@ static inline tick_t getticks(void) {
 #define time_before(a,b)        time_after(b,a)
 
 
-/// Calculate timer start value for given timeout in microseconds
-#define TIMEOUT_US(x) (256-((float)F_CPU/8000000.0)*x)
-
-/**
- * start_timeout - start a timeout using timer0
- * @startval: starting value for timer
- *
- * This function sets timer 0 to the specified value and clears its overflow
- * flag. Use in conjunction with TIMEOUT_US to cause a timer overflow after
- * a specified number of microseconds. DON'T use a variable as a parameter to
- * the TIMEOUT_US macro because that would require run-time float calculations.
- */
-#define start_timeout(startval) do { TCNT0 = startval; TIFR0 |= _BV(TOV0); } while (0)
-
-/**
- * has_timed_out - returns true if timeout was reached
- *
- * This function returns true if the overflow flag of timer 0 is set which
- * (together with start_timeout and TIMEOUT_US) will happen when the
- * specified time has elapsed.
- */
-#define has_timed_out() (TIFR0 & _BV(TOV0))
-
+/* Timer initialisation - defined in $ARCH/timer-init.c */
 void timer_init(void);
 
 #endif
