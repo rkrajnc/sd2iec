@@ -275,28 +275,31 @@ static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
   }
 
   set_clock(0);                                        // E94B
-  delay_us(60); // Yet another "looked at the bus trace and guessed until it worked" delay
+  delay_us(40); // estimated
   do {
     if (check_atn()) return -1;
   } while (!(iec_debounced() & IEC_BIT_DATA));
+  delay_us(21); // calculated - E951 (best case after bus read) - E95B
 
   for (i=0;i<8;i++) {
     if (!(iec_debounced() & IEC_BIT_DATA)) { // E95C
       iec_data.bus_state = BUS_CLEANUP;
       return -1;
     }
+    delay_us(45);     // calculated
 
     set_data(data & 1<<i);
-    delay_us(70);     // Implicid delay, fudged
-    set_clock(1);     // E976
+    delay_us(22);     // calculated
+    set_clock(1);
     if (globalflags & VC20MODE)
       delay_us(34);   // Calculated delay
     else
       delay_us(75);   // Calculated delay
 
     set_clock(0);     // FEFB
+    delay_us(22);     // calculated
     set_data(1);      // FEFE
-    delay_us(5);      // Settle time
+    delay_us(14);     // Settle time, approximate
   }
 
   do {
