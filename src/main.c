@@ -66,6 +66,7 @@ int main(void) {
 #endif
   timer_init();
   iec_interface_init();
+  i2c_init();
 
   /* Second part of system initialisation, switches to full speed on ARM */
   system_init_late();
@@ -85,7 +86,7 @@ int main(void) {
   fatops_init(0);
   change_init();
 
-  uart_puts_P(PSTR("\nsd2iec " VERSION " #"));
+  uart_puts_P(PSTR("\r\nsd2iec " VERSION " #"));
   uart_puthex(device_address);
   uart_putcrlf();
 
