@@ -27,9 +27,9 @@
 #ifndef FILEOPS_H
 #define FILEOPS_H
 
-#include <avr/pgmspace.h>
-#include "dirent.h"
 #include "buffers.h"
+#include "dirent.h"
+#include "progmem.h"
 
 enum open_modes { OPEN_READ, OPEN_WRITE, OPEN_APPEND, OPEN_MODIFY };
 extern const PROGMEM uint8_t filetypes[];

@@ -28,6 +28,7 @@
 #include <stddef.h>
 #include "utils.h"
 
+/* Append a decimal number to a string */
 uint8_t *appendnumber(uint8_t *msg, uint8_t value) {
   if (value >= 100) {
     *msg++ = '0' + value/100;

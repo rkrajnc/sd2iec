@@ -24,12 +24,13 @@
 
 */
 
-#include <avr/io.h>
 #include "config.h"
 #include "buffers.h"
 #include "led.h"
 
 volatile uint8_t led_state;
+
+/* Notice: leds_init() is in config.h because it's hardware-specific */
 
 /**
  * update_leds - set LEDs to correspond to the buffer status
