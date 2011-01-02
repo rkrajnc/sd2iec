@@ -30,6 +30,8 @@
 #ifndef RTC_H
 #define RTC_H
 
+#include "time.h"
+
 typedef enum {
   RTC_NOT_FOUND,  /* No RTC present                    */
   RTC_INVALID,    /* RTC present, but contents invalid */
