@@ -185,7 +185,7 @@ void mark_buffer_clean(buffer_t *buf);
 /* AVR-specific hack: Address 1 is r1 which is always zero in C code */
 #  define NULLSTRING ((uint8_t *)1)
 #else
-#  define NULLSTRING ""
+#  define NULLSTRING ((uint8_t *)"")
 #endif
 
 #endif
