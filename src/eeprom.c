@@ -24,7 +24,6 @@
 
 */
 
-#include <avr/io.h>
 #include <string.h>
 #include "config.h"
 #include "arch-eeprom.h"
@@ -81,7 +80,7 @@ static EEMEM struct {
  * be changed.
  */
 void read_configuration(void) {
-  uint16_t i,size;
+  uint_fast16_t i,size;
   uint8_t checksum, tmp;
 
   /* Set default values */
@@ -106,7 +105,7 @@ void read_configuration(void) {
 
   /* Abort if the checksum doesn't match */
   if (checksum != eeprom_read_byte(&storedconfig.checksum)) {
-    EEAR = 0;
+    eeprom_safety();
     return;
   }
 
@@ -142,8 +141,8 @@ void read_configuration(void) {
   if (size > 29)
     eeprom_read_block(rom_filename, &storedconfig.romname, ROM_NAME_LENGTH);
 
-  /* Paranoia: Set EEPROM address register to the dummy entry */
-  EEAR = 0;
+  /* Prevent problems due to accidental writes */
+  eeprom_safety();
 }
 
 /**
@@ -152,7 +151,7 @@ void read_configuration(void) {
  * This function stores the current configuration values to the EEPROM.
  */
 void write_configuration(void) {
-  uint16_t i;
+  uint_fast16_t i;
   uint8_t checksum;
 
   /* Write configuration to EEPROM */
@@ -179,7 +178,7 @@ void write_configuration(void) {
   /* Store checksum to EEPROM */
   eeprom_write_byte(&storedconfig.checksum, checksum);
 
-  /* Paranoia: Set EEPROM address register to the dummy entry */
-  EEAR = 0;
+  /* Prevent problems due to accidental writes */
+  eeprom_safety();
 }
 
