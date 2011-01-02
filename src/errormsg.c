@@ -127,12 +127,6 @@ static const prog_uint8_t messages[] = {
   EC(127)
 };
 
-/* Workaround for the make-challenged */
-#ifndef VERSION
-#  warning "VERSION not defined, using dummy"
-#  define VERSION "X.X"
-#endif
-
 static uint8_t *appendmsg(uint8_t *msg, const prog_uint8_t *table, const uint8_t entry) {
   uint8_t i,tmp;
 
