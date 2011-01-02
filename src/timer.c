@@ -25,8 +25,6 @@
 */
 
 #include "config.h"
-#include <avr/io.h>
-#include "avrcompat.h"
 #include "diskchange.h"
 #include "display.h"
 #include "led.h"
@@ -113,19 +111,4 @@ SYSTEM_TICK_HANDLER {
     active_keys |= KEY_DISPLAY;
   }
 #endif
-}
-
-void timer_init(void) {
-  /* Count F_CPU/8 in timer 0 */
-  TCCR0B = _BV(CS01);
-
-  /* Set up a 100Hz interrupt using timer 1 */
-  OCR1A  = 1249;
-  TCNT1  = 0;
-  TCCR1A = 0;
-  TCCR1B = _BV(WGM12) | _BV(CS10) | _BV(CS11);
-  TIMSK1 |= _BV(OCIE1A);
-
-  /* Buttons */
-  buttons_init();
 }

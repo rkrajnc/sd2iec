@@ -63,7 +63,7 @@ TARGET = $(OBJDIR)/sd2iec
 SRC  = buffers.c fatops.c fileops.c iec.c main.c errormsg.c
 SRC += doscmd.c ff.c fastloader.c m2iops.c d64ops.c diskchange.c
 SRC += eeprom.c parser.c utils.c led.c diskio.c sdcard.c
-SRC += timer.c $(CONFIG_ARCH)/spi.c
+SRC += timer.c $(CONFIG_ARCH)/arch-timer.c $(CONFIG_ARCH)/spi.c
 
 ifeq ($(CONFIG_UART_DEBUG),y)
   SRC += $(CONFIG_ARCH)/uart.c
