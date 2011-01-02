@@ -572,6 +572,13 @@ DRESULT sd_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
       // Receive data
       crc = 0;
 
+#ifdef CONFIG_SD_BLOCKTRANSFER
+      /* Transfer data first, calculate CRC afterwards */
+      spi_rx_block(buffer, 512);
+
+      recvcrc = spi_rx_byte() << 8 | spi_rx_byte();
+      crc = crc_xmodem_block(0, buffer, 512);
+#else
       /* Interleave transfer/CRC calculation, AVR-specific (but faster) */
       uint16_t i;
       uint8_t tmp;
@@ -598,6 +605,7 @@ DRESULT sd_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
 
       // Check CRC
       recvcrc = (SPDR << 8) + spi_rx_byte();
+#endif  // ----- AVR version -----
 
 #ifdef CONFIG_SD_DATACRC
       if (recvcrc != crc) {
@@ -672,7 +680,14 @@ DRESULT sd_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
       spi_tx_byte(0xfe);
 
       // Send data
+#ifdef CONFIG_SD_BLOCKTRANSFER
+      spi_tx_block(buffer, 512);
+# ifdef CONFIG_SD_DATACRC
+      crc = crc_xmodem_block(0, buffer, 512);
+# else
       crc = 0;
+# endif
+#else // interleaved transfer for AVR
       uint16_t i = 512;
       const BYTE *ptr = buffer;
 
@@ -684,6 +699,7 @@ DRESULT sd_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
         i--;
         loop_until_bit_is_set(SPSR, SPIF);
       } while (i != 0);
+#endif // CONFIG_SD_BLOCKTRANSFER
 
       // Send CRC
       spi_tx_byte(crc >> 8);
