@@ -24,8 +24,6 @@
 
 */
 
-#include <avr/wdt.h>
-#include <avr/interrupt.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
@@ -47,6 +45,7 @@
 #include "led.h"
 #include "m2iops.h"
 #include "parser.h"
+#include "system.h"
 #include "time.h"
 #include "rtc.h"
 #include "uart.h"
@@ -56,8 +55,6 @@
 #include "doscmd.h"
 
 #define CURSOR_RIGHT 0x1d
-
-static void (*restart_call)(void) = 0;
 
 static FIL romfile;
 
@@ -262,6 +259,7 @@ uint16_t datacrc = 0xffff;
 static uint8_t previous_loader;
 
 #ifdef CONFIG_STACK_TRACKING
+//FIXME: AVR-only code
 uint16_t minstack = RAMEND;
 
 void __cyg_profile_func_enter (void *this_fn, void *call_site) __attribute__((no_instrument_function));
@@ -1722,8 +1720,7 @@ static void parse_user(void) {
 
   case 202: /* Shift-J */
     /* The real hard reset command */
-    cli();
-    restart_call();
+    system_reset();
     break;
 
   case '0':
@@ -1814,12 +1811,12 @@ static void parse_xcommand(void) {
           }
           switch(val >> DRIVE_BITS) {
           case DISK_TYPE_NONE:
-#ifdef HAVE_SD
+# ifdef HAVE_SD
           case DISK_TYPE_SD:
-#endif
-#ifdef HAVE_ATA
+# endif
+# ifdef HAVE_ATA
           case DISK_TYPE_ATA:
-#endif
+# endif
             if(map_drive(num) != val) {
               set_map_drive(num,val);
               /* sanity check.  If the user has truly turned off all drives, turn the
@@ -1900,6 +1897,7 @@ static void parse_xcommand(void) {
 #ifdef CONFIG_STACK_TRACKING
   case '?':
     /* Output the largest stack size seen */
+    //FIXME: AVR-only code
     set_error_ts(ERROR_LONGVERSION,(RAMEND-minstack)>>8,(RAMEND-minstack)&0xff);
     break;
 #else
