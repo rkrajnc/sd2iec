@@ -57,7 +57,7 @@
 #define CTL_START_CLOCK 0
 
 /* Default date/time if the RTC isn't preset or not set: 1982-08-31 00:00:00 */
-PROGMEM struct tm defaultdate = {
+static const PROGMEM struct tm defaultdate = {
   0, 0, 0, 31, 8, 82, 2
 };
 
