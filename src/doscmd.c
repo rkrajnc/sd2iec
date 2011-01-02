@@ -29,8 +29,8 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include <util/crc16.h>
 #include "config.h"
+#include "crc.h"
 #include "d64ops.h"
 #include "dirent.h"
 #include "diskchange.h"
@@ -1171,7 +1171,7 @@ static void handle_memwrite(void) {
   previous_loader = FL_NONE;
 
   for (i=0;i<command_buffer[5];i++) {
-    datacrc = _crc16_update(datacrc, command_buffer[i+6]);
+    datacrc = crc16_update(datacrc, command_buffer[i+6]);
 
 #ifdef CONFIG_LOADER_GIJOE
     /* Identical code, but lots of different upload variations */

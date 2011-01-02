@@ -56,11 +56,8 @@
 
 */
 
-#include <avr/io.h>
-#include <util/crc16.h>
 #include "config.h"
-#include "avrcompat.h"
-#include "crc7.h"
+#include "crc.h"
 #include "diskio.h"
 #include "spi.h"
 #include "timer.h"
@@ -593,7 +590,7 @@ DRESULT sd_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
 
         *(ptr++) = tmp;
 # ifdef CONFIG_SD_DATACRC
-        crc = _crc_xmodem_update(crc, tmp);
+        crc = crc_xmodem_update(crc, tmp);
 # endif
       }
       // Wait until the first CRC byte is received
@@ -683,7 +680,7 @@ DRESULT sd_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
       spi_set_ss(0); // auto-reset by spi_tx_byte later
       do {
         SPDR = *ptr;
-        crc = _crc_xmodem_update(crc, *ptr++);
+        crc = crc_xmodem_update(crc, *ptr++);
         i--;
         loop_until_bit_is_set(SPSR, SPIF);
       } while (i != 0);

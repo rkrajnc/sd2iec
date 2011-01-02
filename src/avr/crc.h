@@ -20,14 +20,28 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
-   crc7.h: Definitions for CRC7 calculation routines
+   crc.h: Definitions for CRC calculation routines (AVR version)
 
 */
 
-#ifndef CRC7_H
-#define CRC7_H
+#ifndef CRC_H
+#define CRC_H
+
+#include <util/crc16.h>
 
 uint8_t crc7update(uint8_t crc, uint8_t data);
+
+#define crc_xmodem_update(crc, data) _crc_xmodem_update(crc, data)
+#define crc16_update(crc, data) _crc16_update(crc, data)
+
+/* Calculate a CRC over a block of data - more efficient if inlined */
+static inline uint16_t crc_xmodem_block(uint16_t crc, const uint8_t *data, unsigned int length) {
+  while (length--) {
+    crc = _crc_xmodem_update(crc, *data++);
+  }
+  return crc;
+}
+
 
 #endif
 
