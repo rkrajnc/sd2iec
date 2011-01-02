@@ -171,7 +171,7 @@ static inline void toggle_dirty_led(void) {
 
 /* IEC output bits - must be EMR of the same timer used for input */
 /* optionally all lines can be on timer 2 (4 match registers) */
-//#  define IEC_OUTPUTS_INVERTED
+#  define IEC_OUTPUTS_INVERTED
 #  define IEC_ALL_MATCHES_ON_TIMER2
 #  define IEC_OPIN_ATN          2
 #  define IEC_OPIN_CLOCK        0
