@@ -274,10 +274,10 @@ void __cyg_profile_func_enter (void *this_fn, void *call_site) {
 
 #if CONFIG_RTC_VARIANT > 0
 /* Days of the week as used by the CMD FD */
-static PROGMEM uint8_t downames[] = "SUN.MON.TUESWED.THURFRI.SAT.";
+static const PROGMEM uint8_t downames[] = "SUN.MON.TUESWED.THURFRI.SAT.";
 
 /* Skeleton of the ASCII time format */
-static PROGMEM uint8_t asciitime_skel[] = " xx/xx/xx xx:xx:xx xM\r";
+static const PROGMEM uint8_t asciitime_skel[] = " xx/xx/xx xx:xx:xx xM\r";
 #endif
 
 #ifdef CONFIG_CAPTURE_LOADERS
@@ -394,7 +394,7 @@ static int8_t parse_blockparam(uint8_t values[]) {
 
   while (*str && paramcount < 4) {
     /* Skip all spaces, cursor-rights and commas - CC7C */
-    while (*str == ' ' || *str == 0x1d || *str == ',') str++;
+    while (*str == ' ' || *str == CURSOR_RIGHT || *str == ',') str++;
     if (!*str)
       break;
 
@@ -1040,7 +1040,7 @@ static void handle_memexec(void) {
   }
 #endif
 
-  /* Try to find handler for loader */
+  /* Try to find a handler for loader */
   const struct fastloader_handler_s *ptr = fl_handler_table;
   uint8_t loader,parameter;
   fastloader_handler_t handler;
@@ -1247,7 +1247,6 @@ static void handle_memwrite(void) {
 
     detected_loader = FL_GEOS_S1_KEY;
   }
-
 #endif
 
 #ifdef CONFIG_CAPTURE_LOADERS
