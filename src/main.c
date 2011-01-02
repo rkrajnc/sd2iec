@@ -61,6 +61,8 @@ int main(void) {
   set_busy_led(1);
   set_dirty_led(0);
 
+  /* Due to an erratum in the LPC17xx chips anything that may change */
+  /* peripheral clock scalers must come before system_init_late()    */
   uart_init();
 #ifndef SPI_LATE_INIT
   spi_init(SPI_SPEED_SLOW);
