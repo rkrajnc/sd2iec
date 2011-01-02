@@ -91,8 +91,8 @@ struct {
 /* ------------------------------------------------------------------------- */
 
 /// Debounce IEC input - see E9C0
-static uint8_t iec_pin(void) {
-  uint8_t tmp;
+static iec_bus_t iec_pin(void) {
+  iec_bus_t tmp;
 
   do {
     tmp = iec_bus_read();
@@ -138,7 +138,8 @@ ISR(IEC_ATN_INT_VECT) {
  * caller should return to the main loop immediately in that case.
  */
 static int16_t _iec_getc(void) {
-  uint8_t i,val,tmp;
+  uint8_t i,val;
+  iec_bus_t tmp;
 
   val = 0;
 
@@ -348,7 +349,7 @@ static uint8_t iec_listen_handler(const uint8_t cmd) {
 
   while (1) {
     if (iec_data.iecflags & JIFFY_ACTIVE) {
-      uint8_t flags;
+      iec_bus_t flags;
       set_atn_irq(1);
       c = jiffy_receive(&flags);
       if (!(flags & IEC_BIT_ATN))

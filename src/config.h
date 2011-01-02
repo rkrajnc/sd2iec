@@ -805,6 +805,9 @@ static inline void buttons_init(void) {
 #define IEC_BIT_CLOCK    _BV(IEC_PIN_CLOCK)
 #define IEC_BIT_SRQ      _BV(IEC_PIN_SRQ)
 
+/* Return type of iec_bus_read() */
+typedef uint8_t iec_bus_t;
+
 #ifdef IEC_SEPARATE_OUT
 #  define IEC_OBIT_ATN   _BV(IEC_OPIN_ATN)
 #  define IEC_OBIT_DATA  _BV(IEC_OPIN_DATA)

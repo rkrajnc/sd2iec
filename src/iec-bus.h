@@ -80,11 +80,11 @@ static inline __attribute__((always_inline)) void set_srq(uint8_t state) {
 #endif
 
 #ifdef IEC_INPUTS_INVERTED
-static inline uint8_t iec_bus_read(void) {
+static inline iec_bus_t iec_bus_read(void) {
   return (~IEC_INPUT) & (IEC_BIT_ATN | IEC_BIT_DATA | IEC_BIT_CLOCK | IEC_BIT_SRQ);
 }
 #else
-static inline uint8_t iec_bus_read(void) {
+static inline iec_bus_t iec_bus_read(void) {
   return IEC_INPUT & (IEC_BIT_ATN | IEC_BIT_DATA | IEC_BIT_CLOCK | IEC_BIT_SRQ);
 }
 #endif
