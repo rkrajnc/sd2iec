@@ -31,12 +31,12 @@
 #define set_data(state)  do { if (state) IEC_OUTPUT &= ~IEC_OBIT_DATA;  else IEC_OUTPUT |= IEC_OBIT_DATA;  } while(0)
 #define set_clock(state) do { if (state) IEC_OUTPUT &= ~IEC_OBIT_CLOCK; else IEC_OUTPUT |= IEC_OBIT_CLOCK; } while(0)
 #define set_srq(state)   do { if (state) IEC_OUTPUT &= ~IEC_OBIT_SRQ;   else IEC_OUTPUT |= IEC_OBIT_SRQ;   } while(0)
-#define toggle_srq()     IEC_PIN |= IEC_OBIT_SRQ
+#define toggle_srq()     IEC_INPUT |= IEC_OBIT_SRQ
 
 
-#define IEC_ATN   (IEC_PIN & IEC_BIT_ATN)
-#define IEC_DATA  (IEC_PIN & IEC_BIT_DATA)
-#define IEC_CLOCK (IEC_PIN & IEC_BIT_CLOCK)
-#define IEC_SRQ   (IEC_PIN & IEC_BIT_SRQ)
+#define IEC_ATN   (IEC_INPUT & IEC_BIT_ATN)
+#define IEC_DATA  (IEC_INPUT & IEC_BIT_DATA)
+#define IEC_CLOCK (IEC_INPUT & IEC_BIT_CLOCK)
+#define IEC_SRQ   (IEC_INPUT & IEC_BIT_SRQ)
 
 #endif

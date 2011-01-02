@@ -218,9 +218,9 @@ static inline void toggle_dirty_led(void) {
 
 
 /*** IEC signals ***/
-#  define IEC_PIN  PINA
-#  define IEC_DDR  DDRA
-#  define IEC_PORT PORTA
+#  define IEC_INPUT PINA
+#  define IEC_DDR   DDRA
+#  define IEC_PORT  PORTA
 
 /* Pins assigned for the IEC lines */
 #  define IEC_PIN_ATN   PA0
@@ -348,7 +348,7 @@ static inline void toggle_dirty_led(void) {
   PINC |= _BV(PC1);
 }
 
-#  define IEC_PIN               PINA
+#  define IEC_INPUT             PINA
 #  define IEC_DDR               DDRA
 #  define IEC_PORT              PORTA
 #  define IEC_PIN_ATN           PA0
@@ -432,7 +432,7 @@ static inline void toggle_dirty_led(void) {
   PINA |= _BV(PA1);
 }
 
-#  define IEC_PIN               PINC
+#  define IEC_INPUT             PINC
 #  define IEC_DDR               DDRC
 #  define IEC_PORT              PORTC
 #  define IEC_PIN_ATN           PC0
@@ -532,7 +532,7 @@ static inline void toggle_led(void) {
   PINE |= _BV(PE3);
 }
 
-#  define IEC_PIN               PINE
+#  define IEC_INPUT             PINE
 #  define IEC_DDR               DDRE
 #  define IEC_PORT              PORTE
 #  define IEC_PIN_ATN           PE6
@@ -656,7 +656,7 @@ static inline void toggle_dirty_led(void) {
   PINC |= _BV(PC1);
 }
 
-#  define IEC_PIN               PINA
+#  define IEC_INPUT             PINA
 #  define IEC_DDR               DDRA
 #  define IEC_PORT              PORTA
 #  define IEC_PIN_ATN           PA0
@@ -758,7 +758,7 @@ static inline __attribute__((always_inline)) void set_power_led(uint8_t state) {
     PORTG &= ~_BV(PG1);
 }
 
-#  define IEC_PIN               PINB
+#  define IEC_INPUT             PINB
 #  define IEC_DDRIN             DDRB
 #  define IEC_PORTIN            PORTB
 #  define IEC_PIN_ATN           PB4

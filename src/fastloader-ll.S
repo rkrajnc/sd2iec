@@ -69,7 +69,7 @@ IEC_ATN_INT_VECT:
 #endif
 
         ; check if ATN is low
-        sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_ATN
+        sbic    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_ATN
         rjmp    iiv_atn_irq_end
 
         ; ATN is low, continue depending from active fast loader
@@ -92,7 +92,7 @@ iiv_atn_irq_end:
         brtc    iiv_clock_irq_end       ; if it is an IRQ source
 
         ; check if CLOCK is low
-        sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
+        sbic    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_CLOCK
         rjmp    iiv_clock_irq_end
 
         ; CLOCK is low, continue depending from active fast loader
@@ -139,7 +139,7 @@ IEC_CLK_INT_VECT:
         push    r0
 
         ; check if CLOCK is low
-        sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
+        sbic    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_CLOCK
         rjmp    clk_irq_end
 
         ; CLOCK is low, continue depending from active fast loader
@@ -200,13 +200,13 @@ delay1us:
 
         ;; wait for ATN high
 wait_atn_high:
-        sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_ATN
+        sbis    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_ATN
         rjmp    wait_atn_high
         ret
 
         ;; wait for ATN low
 wait_atn_low:
-        sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_ATN
+        sbic    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_ATN
         rjmp    wait_atn_low
         ret
 
@@ -234,16 +234,16 @@ jiffy_receive:
         cbi     _SFR_IO_ADDR(IEC_OUTPUT), IEC_OPIN_DATA
 
         ;; Wait until clock is high and emulate ATN-Ack
-0:      sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_ATN
+0:      sbis    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_ATN
         sbi     _SFR_IO_ADDR(IEC_OUTPUT), IEC_OPIN_DATA ; Data low if ATN is low
-        sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
+        sbis    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_CLOCK
         rjmp    0b
 
         ;; Wait for 13us from clock high -> 104 cycles
         delay_cycles 104 + JIFFY_OFFSET_READ ; 104 + Offset
 
         ;; Read bit 5+4
-        in      r0, _SFR_IO_ADDR(IEC_PIN) ; 1
+        in      r0, _SFR_IO_ADDR(IEC_INPUT) ; 1
 
         ;; Store bits in r24
         bst     r0, IEC_PIN_DATA  ; 1 - get data bit
@@ -255,7 +255,7 @@ jiffy_receive:
         delay_cycles 99         ; 99
 
         ;; Read bit 7+6
-        in      r0, _SFR_IO_ADDR(IEC_PIN) ; 1
+        in      r0, _SFR_IO_ADDR(IEC_INPUT) ; 1
 
         ;; Store bits in r24
         bst     r0, IEC_PIN_DATA  ; 1 - get data bit
@@ -267,7 +267,7 @@ jiffy_receive:
         delay_cycles 83         ; 83
 
         ;; Read bit 1+3 [sic]
-        in      r0, _SFR_IO_ADDR(IEC_PIN) ; 1
+        in      r0, _SFR_IO_ADDR(IEC_INPUT) ; 1
         bst     r0, IEC_PIN_DATA  ; 1 - get data bit
         bld     r24, 1            ; 1 - store as bit 1
         bst     r0, IEC_PIN_CLOCK ; 1 - get clock bit
@@ -277,7 +277,7 @@ jiffy_receive:
         delay_cycles 99         ; 99
 
         ;; Read Bit 0+2
-        in      r0, _SFR_IO_ADDR(IEC_PIN) ; 1
+        in      r0, _SFR_IO_ADDR(IEC_INPUT) ; 1
         bst     r0, IEC_PIN_DATA  ; 1 - get data bit
         bld     r24, 0            ; 1 - store as bit 0
         bst     r0, IEC_PIN_CLOCK ; 1 - get clock bit
@@ -287,7 +287,7 @@ jiffy_receive:
         delay_cycles 99         ; 99
 
         ;; Read EOI mark
-        in      r19, _SFR_IO_ADDR(IEC_PIN) ; 1
+        in      r19, _SFR_IO_ADDR(IEC_INPUT) ; 1
 
         ;; Wait 6us -> 48-1=47 cycles
         delay_cycles 47         ; 47
@@ -377,7 +377,7 @@ jiffy_send:
         com     r0              ; invert data byte
 
         ;; Wait for start condition (calculated above) from C64 - FFB8
-0:      in      r24, _SFR_IO_ADDR(IEC_PIN)
+0:      in      r24, _SFR_IO_ADDR(IEC_INPUT)
         andi    r24, IEC_BIT_CLOCK | IEC_BIT_DATA | IEC_BIT_ATN ; 1
         cp      r24, r21        ; 1
         breq    0b              ; 1
@@ -422,7 +422,7 @@ jiffy_send:
 
         ;; Wait until data is low, check ATN [FFDE]
         ;; This loop won't wait when EOI is signalled.
-0:      in      r24, _SFR_IO_ADDR(IEC_PIN) ; Read bus
+0:      in      r24, _SFR_IO_ADDR(IEC_INPUT) ; Read bus
         sbrs    r24, IEC_PIN_ATN           ; Skip if ATN is high
         rjmp    js_finish                  ; ATN low, exit loop
         sbrc    r24, IEC_PIN_DATA          ; Skip if Data is low
@@ -447,7 +447,7 @@ js_finish:
         .global turbodisk_byte
 turbodisk_byte:
         ;; Wait until data is low
-        sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_DATA
+        sbic    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_DATA
         rjmp    turbodisk_byte
 
         ;; Byte preparation
@@ -459,7 +459,7 @@ turbodisk_byte:
         out     _SFR_IO_ADDR(IEC_OUTPUT), r18
 
         ;; Wait until data is high
-0:      sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_DATA ; 2
+0:      sbis    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_DATA ; 2
         rjmp    0b
 
         rcall   delay1us        ; Move the timing window slightly
@@ -504,7 +504,7 @@ tdbitloop:
         .global turbodisk_buffer
 turbodisk_buffer:
         ;; Wait until data is low
-        sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_DATA
+        sbic    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_DATA
         rjmp    turbodisk_buffer
 
         ;; All bus lines high
@@ -515,7 +515,7 @@ turbodisk_buffer:
         movw    r30,r24         ; output pointer
 
         ;; Wait until data is high
-0:      sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_DATA ; 2
+0:      sbis    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_DATA ; 2
         rjmp    0b
 
         ;; Initial delay of 4 us + move the timing window by 1 us for stability
@@ -607,7 +607,7 @@ send_bits_to_clk_data:
         ;;
 get_bits_from_clk_data:
         ; rcall                         ; 3
-        in      r19, _SFR_IO_ADDR(IEC_PIN)  ; 1
+        in      r19, _SFR_IO_ADDR(IEC_INPUT)  ; 1
         bst     r19, IEC_PIN_DATA       ; 1
         bld     r24, 0                  ; 1
         bst     r19, IEC_PIN_CLOCK      ; 1
@@ -629,15 +629,15 @@ get_bits_from_clk_data:
 clk_data_handshake:
         sbi     _SFR_IO_ADDR(IEC_OUTPUT), IEC_OPIN_CLOCK
 1:
-        sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_ATN
+        sbis    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_ATN
         rjmp    2f
-        sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_DATA
+        sbic    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_DATA
         rjmp    1b
         cbi     _SFR_IO_ADDR(IEC_OUTPUT), IEC_OPIN_CLOCK
 1:
-        sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_ATN
+        sbis    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_ATN
         rjmp    2f
-        sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_DATA
+        sbis    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_DATA
         rjmp    1b
 2:
         ret
@@ -709,7 +709,7 @@ fc3_get_byte:
 
         ; wait until CLOCK goes high
 1:
-        sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK ; 1/2?
+        sbis    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_CLOCK ; 1/2?
         rjmp    1b
 
         ; 17 us later...
@@ -770,25 +770,25 @@ dreamload_get_byte:
 dl_bitloop:
         ; wait until clock goes low
 1:
-        sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
+        sbic    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_CLOCK
         rjmp    1b
 
         lsl     r24
 
         ; read data a short time later
-        in      r19, _SFR_IO_ADDR(IEC_PIN)
+        in      r19, _SFR_IO_ADDR(IEC_INPUT)
         bst     r19, IEC_PIN_DATA
         bld     r24, 0
 
         ; wait until clock goes high
 2:
-        sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
+        sbis    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_CLOCK
         rjmp    2b
 
         lsl     r24
 
         ; read data a short time later
-        in      r19, _SFR_IO_ADDR(IEC_PIN)
+        in      r19, _SFR_IO_ADDR(IEC_INPUT)
         bst     r19, IEC_PIN_DATA
         bld     r24, 0
 
@@ -871,7 +871,7 @@ uload3_get_byte:
         ldi     r25, 0xff       ; prepare a negative return value
         clr     r24
         rcall   clk_data_handshake
-        sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_ATN ;skip ret if ATN is high
+        sbis    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_ATN ;skip ret if ATN is high
         rjmp    uload3_abort                       ;return if ATN is low
 
         ;; assuming an average of 10 cycles between DATA high and the following instruction
@@ -920,14 +920,14 @@ uload3_send_byte:
         sbi     _SFR_IO_ADDR(IEC_OUTPUT), IEC_OPIN_DATA
 
         ;; wait for CLOCK low
-1:      sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
+1:      sbic    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_CLOCK
         rjmp    1b
 
         ;; DATA high
         cbi     _SFR_IO_ADDR(IEC_OUTPUT), IEC_OPIN_DATA
 
         ;; wait for CLOCK high - 2 to 5 cycles, assuming 3
-1:      sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
+1:      sbis    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_CLOCK
         rjmp    1b
 
         ;; prepare transmission
@@ -981,9 +981,9 @@ epyxcart_send_byte:
         andi    r19, ~(IEC_OBIT_DATA|IEC_OBIT_CLOCK|IEC_OBIT_ATN|IEC_OBIT_SRQ)
 
         ;; wait for DATA high or ATN low
-1:      sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_ATN
+1:      sbis    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_ATN
         rjmp    epyxcart_atnabort
-        sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_DATA
+        sbis    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_DATA
         rjmp    1b
 
         mov     r0, r24             ; 1
@@ -1022,18 +1022,18 @@ geos_get_byte_common:
         clr     r24
 
         ;; wait until clock is high
-1:      sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
+1:      sbis    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_CLOCK
         rjmp    1b
 
         ;; wait until clock is low
-1:      sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK ; 1/2
+1:      sbic    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_CLOCK ; 1/2
         rjmp    1b
 
         ;; delay
         delay_cycles 15*8 - 2
 
         ;; get bits 4 and 5
-        in      r19, _SFR_IO_ADDR(IEC_PIN) ; 1
+        in      r19, _SFR_IO_ADDR(IEC_INPUT) ; 1
         bst     r19, IEC_PIN_CLOCK         ; 1
         bld     r24, 4-1                   ; 1 - r24 = ....4...
         bst     r19, IEC_PIN_DATA          ; 1
@@ -1043,7 +1043,7 @@ geos_get_byte_common:
         delay_cycles 14*8 - 5
 
         ;; get bits 6 and 7
-        in      r19, _SFR_IO_ADDR(IEC_PIN) ; 1
+        in      r19, _SFR_IO_ADDR(IEC_INPUT) ; 1
         bst     r19, IEC_PIN_CLOCK         ; 1
         bld     r24, 6-1                   ; 1 - r24 = ..654...
         bst     r19, IEC_PIN_DATA          ; 1
@@ -1116,7 +1116,7 @@ geos_send_byte_common:
         rcall   delay1us
 
         ;; wait until CLOCK is low
-1:      sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
+1:      sbic    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_CLOCK
         rjmp    1b
 
         ;; preserve non-IEC lines on IEC_OUTPUT port
@@ -1308,11 +1308,11 @@ wheels_get_byte_1mhz:
         clr     r24
 
         ;; wait until clock is high
-1:      sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
+1:      sbis    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_CLOCK
         rjmp    1b
 
         ;; wait until clock is low
-1:      sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK ; 1/2
+1:      sbic    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_CLOCK ; 1/2
         rjmp    1b
 
         ;; delay
@@ -1355,11 +1355,11 @@ wheels44_get_byte_1mhz:
         clr     r24
 
         ;; wait until clock is high
-1:      sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
+1:      sbis    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_CLOCK
         rjmp    1b
 
         ;; wait until clock is low
-1:      sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK ; 1/2
+1:      sbic    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_CLOCK ; 1/2
         rjmp    1b
 
         ;; delay
@@ -1402,18 +1402,18 @@ wheels44_get_byte_2mhz:
         clr     r24
 
         ;; wait until clock is high
-1:      sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK
+1:      sbis    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_CLOCK
         rjmp    1b
 
         ;; wait until clock is low
-1:      sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_CLOCK ; 1/2
+1:      sbic    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_CLOCK ; 1/2
         rjmp    1b
 
         ;; delay
         delay_cycles 15*8 - 2
 
         ;; get bits 0 and 1
-        in      r19, _SFR_IO_ADDR(IEC_PIN) ; 1
+        in      r19, _SFR_IO_ADDR(IEC_INPUT) ; 1
         bst     r19, IEC_PIN_CLOCK         ; 1
         bld     r24, 0                     ; 1 - r24 = .......0
         bst     r19, IEC_PIN_DATA          ; 1
@@ -1423,7 +1423,7 @@ wheels44_get_byte_2mhz:
         delay_cycles 11*8 - 5
 
         ;; get bits 2 and 3
-        in      r19, _SFR_IO_ADDR(IEC_PIN) ; 1
+        in      r19, _SFR_IO_ADDR(IEC_INPUT) ; 1
         bst     r19, IEC_PIN_CLOCK         ; 1
         bld     r24, 2                     ; 1 - r24 = .....210
         bst     r19, IEC_PIN_DATA          ; 1
@@ -1433,7 +1433,7 @@ wheels44_get_byte_2mhz:
         delay_cycles 11*8 - 5
 
         ;; get bits 4 and 5
-        in      r19, _SFR_IO_ADDR(IEC_PIN) ; 1
+        in      r19, _SFR_IO_ADDR(IEC_INPUT) ; 1
         bst     r19, IEC_PIN_CLOCK         ; 1
         bld     r24, 4                     ; 1 - r24 = ...43210
         bst     r19, IEC_PIN_DATA          ; 1
@@ -1443,7 +1443,7 @@ wheels44_get_byte_2mhz:
         delay_cycles 11*8 - 5
 
         ;; get bits 6 and 7
-        in      r19, _SFR_IO_ADDR(IEC_PIN) ; 1
+        in      r19, _SFR_IO_ADDR(IEC_INPUT) ; 1
         bst     r19, IEC_PIN_CLOCK         ; 1
         bld     r24, 6                     ; 1 - r24 = .6543210
         bst     r19, IEC_PIN_DATA          ; 1
@@ -1516,7 +1516,7 @@ ar6_1581_send_byte:
         cbi     _SFR_IO_ADDR(IEC_OUTPUT), IEC_OPIN_CLOCK
 
         ;; wait until data is high
-1:      sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_DATA
+1:      sbis    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_DATA
         rjmp    1b
 
         ;; delay
@@ -1567,11 +1567,11 @@ ar6_1581p_get_byte:
         cbi     _SFR_IO_ADDR(IEC_OUTPUT), IEC_OPIN_CLOCK
 
         ;; wait until data is low
-1:      sbic    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_DATA
+1:      sbic    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_DATA
         rjmp    1b
 
         ;; wait until data is high
-1:      sbis    _SFR_IO_ADDR(IEC_PIN), IEC_PIN_DATA
+1:      sbis    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_DATA
         rjmp    1b
 
         ;; delay

@@ -95,9 +95,9 @@ static uint8_t iec_pin(void) {
   uint8_t tmp;
 
   do {
-    tmp = IEC_PIN & (IEC_BIT_ATN | IEC_BIT_DATA | IEC_BIT_CLOCK | IEC_BIT_SRQ);
+    tmp = IEC_INPUT & (IEC_BIT_ATN | IEC_BIT_DATA | IEC_BIT_CLOCK | IEC_BIT_SRQ);
     _delay_us(2); /* 1571 uses LDA/CMP/BNE, approximate by waiting 2us */
-  } while (tmp != (IEC_PIN & (IEC_BIT_ATN | IEC_BIT_DATA | IEC_BIT_CLOCK | IEC_BIT_SRQ)));
+  } while (tmp != (IEC_INPUT & (IEC_BIT_ATN | IEC_BIT_DATA | IEC_BIT_CLOCK | IEC_BIT_SRQ)));
   return tmp;
 }
 
@@ -181,7 +181,7 @@ static int16_t _iec_getc(void) {
       start_timeout(TIMEOUT_US(218));
 
       do {
-        tmp = IEC_PIN & (IEC_BIT_ATN | IEC_BIT_DATA | IEC_BIT_CLOCK | IEC_BIT_SRQ);
+        tmp = IEC_INPUT & (IEC_BIT_ATN | IEC_BIT_DATA | IEC_BIT_CLOCK | IEC_BIT_SRQ);
 
         /* If there is a delay before the last bit, the controller uses JiffyDOS */
         if (!(iec_data.iecflags & JIFFY_ACTIVE) && has_timed_out()) {
@@ -197,7 +197,7 @@ static int16_t _iec_getc(void) {
     } else {
       /* Capture data on rising edge */
       do {                                             // EA0B
-        tmp = IEC_PIN & (IEC_BIT_ATN | IEC_BIT_DATA | IEC_BIT_CLOCK | IEC_BIT_SRQ);
+        tmp = IEC_INPUT & (IEC_BIT_ATN | IEC_BIT_DATA | IEC_BIT_CLOCK | IEC_BIT_SRQ);
       } while (!(tmp & IEC_BIT_CLOCK));
     }
 
