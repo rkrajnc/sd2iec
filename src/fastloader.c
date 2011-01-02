@@ -28,10 +28,10 @@
 
 */
 
-#include <avr/boot.h>
-#include <avr/io.h>
-#include <avr/interrupt.h>
 #include <util/atomic.h>
+#ifdef __AVR__
+# include <avr/boot.h>
+#endif
 #include <string.h>
 #include "config.h"
 #include "buffers.h"
@@ -356,6 +356,9 @@ void load_dreamload(UNUSED_PARAMETER) {
     set_clock(1);
     set_data(1);
 
+    /* wait until the C64 has released clock */
+    while (!IEC_CLOCK) ;
+
     /* load final drive code, fixed length */
     type = 0;
     for (n = 4 * 256; n != 0; --n) {
@@ -586,6 +589,7 @@ static int16_t gijoe_read_byte(void) {
 
     value >>= 1;
 
+    delay_us(3);
     if (!IEC_DATA)
       value |= 0x80;
 
@@ -595,6 +599,7 @@ static int16_t gijoe_read_byte(void) {
 
     value >>= 1;
 
+    delay_us(3);
     if (!IEC_DATA)
       value |= 0x80;
   }
@@ -1485,6 +1490,7 @@ void load_wheels_s2(UNUSED_PARAMETER) {
   while (IEC_CLOCK) ;
   set_data(0);
   set_clock(1);
+  delay_us(3);
 
   while (1) {
     /* Receive command block - redundant clock line check for check_keys */
@@ -1585,6 +1591,7 @@ static uint8_t nippon_read_byte(uint8_t *b) {
   ATOMIC_BLOCK(ATOMIC_FORCEON) {
     set_clock(1);
     set_data(1);
+    delay_us(3); // allow for slow rise times
     for (i=8; i; i--) {
       if (! nippon_atn_clock_handshake())
         return 0;
@@ -1605,6 +1612,7 @@ static uint8_t nippon_send_byte(uint8_t b) {
 
   ATOMIC_BLOCK(ATOMIC_FORCEON) {
     set_clock(1);
+    delay_us(3); // allow for slow rise times
     for (i=8; i; i--) {
       if (! nippon_atn_clock_handshake())
         return 0;
