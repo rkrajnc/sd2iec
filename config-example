@@ -28,6 +28,9 @@
 # This file is included in the main sd2iec Makefile and also parsed
 # into autoconf.h.
 
+# target architecture
+CONFIG_ARCH=avr
+
 # MCU to compile for
 CONFIG_MCU=atmega644p
 
@@ -94,7 +97,7 @@ CONFIG_LOADER_AR6=y
 
 # Select which hardware to compile for
 # Valid values:
-#   1 - custom configuration in config.h
+#   1 - example configuration in config.h (won't compile!)
 #   2 - Shadowolf MMC2IEC PCBs version 1.x
 #   3 - original MMC2IEC
 #   4 - uIEC

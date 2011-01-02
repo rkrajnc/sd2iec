@@ -27,6 +27,7 @@
 # This file is included in the main sd2iec Makefile and also parsed
 # into autoconf.h.
 
+CONFIG_ARCH=avr
 CONFIG_MCU=atmega644p
 CONFIG_LINKER_RELAX=y
 CONFIG_MCU_FREQ=8000000
