@@ -1,4 +1,3 @@
-
 /* sd2iec - SD/MMC to Commodore serial bus interface/controller
    Copyright (C) 2007-2011  Ingo Korb <ingo@akana.de>
 
@@ -30,15 +29,11 @@
 
 */
 
-#include <avr/io.h>
-#include <avr/pgmspace.h>
-#include <avr/interrupt.h>
 #include <util/atomic.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "config.h"
-#include "avrcompat.h"
 #include "buffers.h"
 #include "diskchange.h"
 #include "diskio.h"
@@ -539,7 +534,7 @@ void iec_init(void) {
   if (!IEC_ATN)
     set_data(0);
 
-  /* Prepare IEC interrupts (if any) */
+  /* Prepare IEC interrupts */
   iec_interrupts_init();
 
   /* Read the hardware-set device address */
