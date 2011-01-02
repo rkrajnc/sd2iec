@@ -80,7 +80,12 @@ typedef struct fileops_s {
 } fileops_t;
 
 /* Helper-Define to avoid lots of typedefs */
-#define pgmcall(x) ((typeof(x))pgm_read_word(&(x)))
+#ifdef __AVR__
+#  define pgmcall(x) ((typeof(x))pgm_read_word(&(x)))
+#else
+/* No-op macro - avoids issues with different function pointer sizes */
+#  define pgmcall(x) x
+#endif
 
 /* Wrappers to make the indirect calls look like normal functions */
 #define open_read(path,name,buf) ((pgmcall(partition[(path)->part].fop->open_read))(path,name,buf))
