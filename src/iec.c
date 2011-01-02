@@ -91,7 +91,7 @@ struct {
 /* ------------------------------------------------------------------------- */
 
 /// Debounce IEC input - see E9C0
-static iec_bus_t iec_pin(void) {
+static iec_bus_t iec_debounced(void) {
   iec_bus_t tmp;
 
   do {
@@ -145,7 +145,7 @@ static int16_t _iec_getc(void) {
 
   do {                                                 // E9CD-E9D5
     if (check_atn()) return -1;
-  } while (!(iec_pin() & IEC_BIT_CLOCK));
+  } while (!(iec_debounced() & IEC_BIT_CLOCK));
 
   set_data(1);                                         // E9D7
   /* Wait until all other devices released the data line    */
@@ -157,7 +157,7 @@ static int16_t _iec_getc(void) {
   do {
     if (check_atn()) return -1;                        // E9DF
     tmp = has_timed_out();                             // E9EE
-  } while ((iec_pin() & IEC_BIT_CLOCK) && !tmp);
+  } while ((iec_debounced() & IEC_BIT_CLOCK) && !tmp);
 
   /* See if timeout happened -> EOI */
   if (tmp) {
@@ -170,7 +170,7 @@ static int16_t _iec_getc(void) {
     do {
       if (check_atn())                                 // E9FD
         return -1;
-    } while (iec_pin() & IEC_BIT_CLOCK);
+    } while (iec_debounced() & IEC_BIT_CLOCK);
 
     iec_data.iecflags|=EOI_RECVD;                      // EA07
   }
@@ -206,7 +206,7 @@ static int16_t _iec_getc(void) {
 
     do {                                               // EA1A
       if (check_atn()) return -1;
-    } while (iec_pin() & IEC_BIT_CLOCK);
+    } while (iec_debounced() & IEC_BIT_CLOCK);
   }
 
   _delay_us(5); // Test
@@ -255,7 +255,7 @@ static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
     return 0;
   }
 
-  i = iec_pin();
+  i = iec_debounced();
 
   _delay_us(60); // Fudged delay
   set_clock(1);
@@ -267,26 +267,26 @@ static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
 
   do {
     if (check_atn()) return -1;                        // E925
-  } while (!(iec_pin() & IEC_BIT_DATA));
+  } while (!(iec_debounced() & IEC_BIT_DATA));
 
   if (with_eoi || (i & IEC_BIT_DATA)) {
     do {
       if (check_atn()) return -1;                      // E937
-    } while (!(iec_pin() & IEC_BIT_DATA));
+    } while (!(iec_debounced() & IEC_BIT_DATA));
 
     do {
       if (check_atn()) return -1;                      // E941
-    } while (iec_pin() & IEC_BIT_DATA);
+    } while (iec_debounced() & IEC_BIT_DATA);
   }
 
   set_clock(0);                                        // E94B
   _delay_us(60); // Yet another "looked at the bus trace and guessed until it worked" delay
   do {
     if (check_atn()) return -1;
-  } while (!(iec_pin() & IEC_BIT_DATA));
+  } while (!(iec_debounced() & IEC_BIT_DATA));
 
   for (i=0;i<8;i++) {
-    if (!(iec_pin() & IEC_BIT_DATA)) { // E95C
+    if (!(iec_debounced() & IEC_BIT_DATA)) { // E95C
       iec_data.bus_state = BUS_CLEANUP;
       return -1;
     }
@@ -306,7 +306,7 @@ static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
 
   do {
     if (check_atn()) return -1;
-  } while (iec_pin() & IEC_BIT_DATA);
+  } while (iec_debounced() & IEC_BIT_DATA);
 
   /* More stuff that's not in the original rom:
    *   Wait for 250us or until DATA is high or ATN is low.
