@@ -62,7 +62,7 @@ volatile uint8_t fl_track;
 volatile uint8_t fl_sector;
 
 /* Small helper for fastloaders that need to detect disk changes */
-static uint8_t check_keys(void) {
+static uint8_t __attribute__((unused)) check_keys(void) {
   /* Check for disk changes etc. */
   if (key_pressed(KEY_NEXT | KEY_PREV | KEY_HOME)) {
     change_disk();
@@ -315,7 +315,7 @@ void save_fc3(UNUSED_PARAMETER) {
  *
  */
 #ifdef CONFIG_LOADER_DREAMLOAD
-#ifndef set_clock_irq
+#ifndef HAVE_CLOCK_IRQ
 #  error "Sorry, DreamLoad is only supported on platforms with a CLK interrupt"
 #endif
 
