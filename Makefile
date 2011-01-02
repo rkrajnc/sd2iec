@@ -105,10 +105,13 @@ FORMAT = ihex
 TARGET = $(OBJDIR)/sd2iec
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = buffers.c fatops.c fileops.c iec.c main.c errormsg.c doscmd.c ff.c fastloader.c m2iops.c d64ops.c diskchange.c eeprom.c parser.c utils.c timer.c led.c diskio.c sdcard.c spi.c
+SRC  = buffers.c fatops.c fileops.c iec.c main.c errormsg.c
+SRC += doscmd.c ff.c fastloader.c m2iops.c d64ops.c diskchange.c
+SRC += eeprom.c parser.c utils.c led.c diskio.c sdcard.c
+SRC += timer.c $(CONFIG_ARCH)/spi.c
 
 ifeq ($(CONFIG_UART_DEBUG),y)
-  SRC += uart.c
+  SRC += $(CONFIG_ARCH)/uart.c
 endif
 
 ifeq ($(CONFIG_REMOTE_DISPLAY),y)
@@ -122,21 +125,21 @@ ifeq ($(CONFIG_RTC_VARIANT),2)
   NEED_I2C := y
 endif
 ifeq ($(CONFIG_RTC_VARIANT),1)
-  SRC += rtc.c softrtc.c
+  SRC += rtc.c $(CONFIG_ARCH)/softrtc.c
 endif
 
 # No hardware I2C module yet
 ifdef NEED_I2C
-  SRC += softi2c.c
+  SRC += $(CONFIG_ARCH)/softi2c.c
 endif
 
 # Additional hardware support enabled in the config file
 ifdef CONFIG_ADD_SD
-  SRC += sdcard.c spi.c
+  SRC += sdcard.c
 endif
 
 ifdef CONFIG_ADD_ATA
-  SRC += ata.c
+  SRC += $(CONFIG_ARCH)/ata.c
 endif
 
 # List Assembler source files here.
@@ -146,7 +149,7 @@ endif
 #     Even though the DOS/Win* filesystem matches both .s and .S the same,
 #     it will preserve the spelling of the filenames, and gcc itself does
 #     care about how the name is spelled on its command-line.
-ASRC = fastloader-ll.S crc7asm.S
+ASRC = $(CONFIG_ARCH)/fastloader-ll.S $(CONFIG_ARCH)/crc7asm.S
 
 
 # Optimization level, can be [0, 1, 2, 3, s].
@@ -242,7 +245,7 @@ CFLAGS += -O$(OPT) -fno-strict-aliasing
 CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 CFLAGS += -Wall -Wstrict-prototypes -Werror
 #CFLAGS += -Wa,-adhlns=$(OBJDIR)/$(<:.c=.lst)
-CFLAGS += -I$(OBJDIR) -Isrc
+CFLAGS += -I$(OBJDIR) -Isrc -Isrc/$(CONFIG_ARCH)
 CFLAGS += $(patsubst %,-I%,$(EXTRAINCDIRS))
 CFLAGS += $(CSTANDARD)
 CFLAGS += -ffunction-sections -fdata-sections
@@ -276,7 +279,7 @@ endif
 #             for use in COFF files, additional information about filenames
 #             and function names needs to be present in the assembler source
 #             files -- see avr-libc docs [FIXME: not yet described there]
-ASFLAGS = -Wa,-gstabs -I$(OBJDIR) -Isrc
+ASFLAGS = -Wa,-gstabs -I$(OBJDIR) -Isrc -Isrc/$(CONFIG_ARCH)
 
 
 #---------------- Library Options ----------------
