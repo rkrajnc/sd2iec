@@ -27,8 +27,8 @@
 #ifndef TIMER_H
 #define TIMER_H
 
-#include <util/atomic.h>
 #include "arch-timer.h"
+#include "atomic.h"
 
 // Bit masks for the (simulated) keys
 #define KEY_NEXT    (1<<0)

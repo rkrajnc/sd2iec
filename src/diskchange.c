@@ -24,8 +24,6 @@
 
 */
 
-#include <avr/io.h>
-#include <avr/pgmspace.h>
 #include <string.h>
 #include "config.h"
 #include "buffers.h"
@@ -37,6 +35,7 @@
 #include "ff.h"
 #include "led.h"
 #include "parser.h"
+#include "progmem.h"
 #include "timer.h"
 #include "ustring.h"
 #include "diskchange.h"

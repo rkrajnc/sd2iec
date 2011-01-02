@@ -57,7 +57,6 @@
 */
 
 #include <avr/io.h>
-#include <avr/pgmspace.h>
 #include <util/crc16.h>
 #include "config.h"
 #include "avrcompat.h"

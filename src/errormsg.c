@@ -24,8 +24,6 @@
 
 */
 
-#include <avr/pgmspace.h>
-#include <avr/io.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,6 +35,7 @@
 #include "fatops.h"
 #include "flags.h"
 #include "led.h"
+#include "progmem.h"
 #include "ustring.h"
 #include "utils.h"
 #include "errormsg.h"

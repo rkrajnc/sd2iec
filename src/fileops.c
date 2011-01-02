@@ -24,7 +24,6 @@
 
 */
 
-#include <avr/pgmspace.h>
 #include <stdint.h>
 #include <string.h>
 #include "config.h"
@@ -39,6 +38,7 @@
 #include "ff.h"
 #include "m2iops.h"
 #include "parser.h"
+#include "progmem.h"
 #include "uart.h"
 #include "ustring.h"
 #include "utils.h"

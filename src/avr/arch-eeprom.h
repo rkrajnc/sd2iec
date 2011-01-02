@@ -20,40 +20,18 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
-   uart.h: Definitions for the UART access routines
+   arch-eeprom.h: Wrapper for EEPROM functions
 
 */
 
-#ifndef UART_H
-#define UART_H
+#ifndef ARCH_EEPROM_H
+#define ARCH_EEPROM_H
 
-#ifdef CONFIG_UART_DEBUG
+#include <avr/eeprom.h>
 
-#include "progmem.h"
-
-void uart_init(void);
-unsigned char uart_getc(void);
-void uart_putc(char c);
-void uart_puthex(uint8_t num);
-void uart_trace(void *ptr, uint16_t start, uint16_t len);
-void uart_flush(void);
-void uart_puts_P(prog_char *text);
-void uart_putcrlf(void);
-
-#include <stdio.h>
-#define dprintf(str,...) printf_P(PSTR(str), ##__VA_ARGS__)
-
-#else
-
-#define uart_init()    do {} while(0)
-#define uart_getc()    0
-#define uart_putc(x)   do {} while(0)
-#define uart_puthex(x) do {} while(0)
-#define uart_flush()   do {} while(0)
-#define uart_puts_P(x) do {} while(0)
-#define uart_putcrlf() do {} while(0)
-#define uart_trace(a,b,c) do {} while(0)
-
-#endif
+/* AVR: Set EEPROM address pointer to the dummy entry */
+static inline void eeprom_safety(void) {
+  EEAR = 0;
+}
 
 #endif

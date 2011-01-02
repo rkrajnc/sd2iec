@@ -24,7 +24,6 @@
 
 */
 
-#include <avr/pgmspace.h>
 #include <string.h>
 #include "config.h"
 #include "buffers.h"
@@ -33,6 +32,7 @@
 #include "i2c.h"
 #include "iec.h"
 #include "parser.h"
+#include "progmem.h"
 #include "ustring.h"
 #include "utils.h"
 #include "display.h"

@@ -27,9 +27,9 @@
 #ifndef ERRORMSG_H
 #define ERRORMSG_H
 
-#include <avr/pgmspace.h>
 #include <stdint.h>
 #include "buffers.h"
+#include "progmem.h"
 
 extern uint8_t current_error;
 extern uint8_t error_buffer[CONFIG_ERROR_BUFFER_SIZE];

@@ -24,10 +24,10 @@
 
 */
 
-#include <avr/eeprom.h>
 #include <avr/io.h>
 #include <string.h>
 #include "config.h"
+#include "arch-eeprom.h"
 #include "diskio.h"
 #include "fatops.h"
 #include "flags.h"

@@ -29,11 +29,11 @@
 
 */
 
-#include <util/atomic.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "config.h"
+#include "atomic.h"
 #include "buffers.h"
 #include "diskchange.h"
 #include "diskio.h"

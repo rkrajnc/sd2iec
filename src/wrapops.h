@@ -31,10 +31,10 @@
 #ifndef WRAPOPS_H
 #define WRAPOPS_H
 
-#include <avr/pgmspace.h>
 #include "buffers.h"
 #include "fileops.h"
 #include "ff.h"
+#include "progmem.h"
 
 /**
  * struct fileops_t - function pointers to file operations

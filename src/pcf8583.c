@@ -26,11 +26,11 @@
 
 */
 
-#include <avr/pgmspace.h>
 #include <stdint.h>
 #include <string.h>
 #include "config.h"
 #include "i2c.h"
+#include "progmem.h"
 #include "uart.h"
 #include "ustring.h"
 #include "utils.h"

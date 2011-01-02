@@ -28,12 +28,12 @@
 
 */
 
-#include <util/atomic.h>
 #ifdef __AVR__
 # include <avr/boot.h>
 #endif
 #include <string.h>
 #include "config.h"
+#include "atomic.h"
 #include "buffers.h"
 #include "d64ops.h"
 #include "diskchange.h"
