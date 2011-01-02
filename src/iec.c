@@ -535,20 +535,6 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
 
 
 void iec_init(void) {
-#ifdef IEC_SEPARATE_OUT
-  /* Set up the input port - pullups on all lines */
-  IEC_DDRIN  &= (uint8_t)~(IEC_BIT_ATN  | IEC_BIT_CLOCK  | IEC_BIT_DATA  | IEC_BIT_SRQ);
-  IEC_PORTIN |= IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA | IEC_BIT_SRQ;
-  /* Set up the output port - all lines high */
-  IEC_DDROUT |=            IEC_OBIT_ATN | IEC_OBIT_CLOCK | IEC_OBIT_DATA | IEC_OBIT_SRQ;
-  IEC_PORT   &= (uint8_t)~(IEC_OBIT_ATN | IEC_OBIT_CLOCK | IEC_OBIT_DATA | IEC_OBIT_SRQ);
-#else
-  /* Pullups would be nice, but AVR can't switch from */
-  /* low output to hi-z input directly                */
-  IEC_DDR  &= (uint8_t)~(IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA | IEC_BIT_SRQ);
-  IEC_PORT &= (uint8_t)~(IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA | IEC_BIT_SRQ);
-#endif
-
   /* Keep DATA low if there is already a request on the bus */
   if (!IEC_ATN)
     set_data(0);

@@ -867,6 +867,23 @@ typedef uint8_t iec_bus_t;
 #  endif
 #endif
 
+/* IEC lines initialisation */
+static inline void iec_interface_init(void) {
+#ifdef IEC_SEPARATE_OUT
+  /* Set up the input port - pullups on all lines */
+  IEC_DDRIN  &= (uint8_t)~(IEC_BIT_ATN  | IEC_BIT_CLOCK  | IEC_BIT_DATA  | IEC_BIT_SRQ);
+  IEC_PORTIN |= IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA | IEC_BIT_SRQ;
+  /* Set up the output port - all lines high */
+  IEC_DDROUT |=            IEC_OBIT_ATN | IEC_OBIT_CLOCK | IEC_OBIT_DATA | IEC_OBIT_SRQ;
+  IEC_PORT   &= (uint8_t)~(IEC_OBIT_ATN | IEC_OBIT_CLOCK | IEC_OBIT_DATA | IEC_OBIT_SRQ);
+#else
+  /* Pullups would be nice, but AVR can't switch from */
+  /* low output to hi-z input directly                */
+  IEC_DDR  &= (uint8_t)~(IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA | IEC_BIT_SRQ);
+  IEC_PORT &= (uint8_t)~(IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA | IEC_BIT_SRQ);
+#endif
+}
+
 /* The assembler module needs the vector names, */
 /* so the _HANDLER macros are created here.     */
 #define IEC_ATN_HANDLER   ISR(IEC_ATN_INT_VECT)

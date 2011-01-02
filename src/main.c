@@ -143,6 +143,7 @@ int main(void) {
   sei();
   buffers_init();
   timer_init();
+  iec_interface_init();
   iec_init();
   rtc_init();
   disk_init();
