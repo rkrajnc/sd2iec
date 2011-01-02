@@ -265,7 +265,7 @@ $(OBJDIR)/autoconf.h: $(CONFIG) | $(OBJDIR)
 
 # Generate macro-only asmconfig.h from config
 .PRECIOUS: $(OBJDIR)/asmconfig.h
-$(OBJDIR)/asmconfig.h: $(CONFIG) $(OBJDIR)/autoconf.h src/config.h | $(OBJDIR)
+$(OBJDIR)/asmconfig.h: $(CONFIG) $(OBJDIR)/autoconf.h src/config.h src/$(CONFIG_ARCH)/arch-config.h | $(OBJDIR)
 	$(E) "  CPP    config.h"
 	$(Q)$(CC) -E -dM $(ALL_ASFLAGS) src/config.h | grep -v "^#define __" > $@
 
