@@ -40,8 +40,9 @@ void uart_flush(void);
 void uart_puts_P(prog_char *text);
 void uart_putcrlf(void);
 
-#include <stdio.h>
-#define dprintf(str,...) printf_P(PSTR(str), ##__VA_ARGS__)
+#ifdef __AVR__
+#  define printf(str,...) printf_P(PSTR(str), ##__VA_ARGS__)
+#endif
 
 #else
 
