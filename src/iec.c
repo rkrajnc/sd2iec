@@ -33,7 +33,6 @@
 #include <avr/io.h>
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
-#include <util/delay.h>
 #include <util/atomic.h>
 #include <string.h>
 #include <stdio.h>
@@ -97,7 +96,7 @@ static iec_bus_t iec_debounced(void) {
 
   do {
     tmp = iec_bus_read();
-    _delay_us(2); /* 1571 uses LDA/CMP/BNE, approximate by waiting 2us */
+    delay_us(2); /* 1571 uses LDA/CMP/BNE, approximate by waiting 2us */
   } while (tmp != iec_bus_read());
   return tmp;
 }
@@ -163,7 +162,7 @@ static int16_t _iec_getc(void) {
   /* See if timeout happened -> EOI */
   if (tmp) {
     set_data(0);                                       // E9F2
-    _delay_us(73);                      // E9F5-E9F8, delay calculated from all
+    delay_us(73);                       // E9F5-E9F8, delay calculated from all
     set_data(1);                        //   instructions between IO accesses
 
     uart_putc('E');
@@ -190,7 +189,7 @@ static int16_t _iec_getc(void) {
           if ((val>>1) < 0x60 && ((val>>1) & 0x1f) == device_address) {
             /* If it's for us, notify controller that we support Jiffy too */
             set_data(0);
-            _delay_us(101); // nlq says 405us, but the code shows only 101
+            delay_us(101); // nlq says 405us, but the code shows only 101
             set_data(1);
             iec_data.iecflags |= JIFFY_ACTIVE;
           }
@@ -210,9 +209,9 @@ static int16_t _iec_getc(void) {
     } while (iec_debounced() & IEC_BIT_CLOCK);
   }
 
-  _delay_us(5); // Test
+  delay_us(5); // Test
   set_data(0);                                         // EA28
-  _delay_us(50);  /* Slow down a little bit, may or may not fix some problems */
+  delay_us(50);  /* Slow down a little bit, may or may not fix some problems */
   return val;
 }
 
@@ -258,7 +257,7 @@ static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
 
   i = iec_debounced();
 
-  _delay_us(60); // Fudged delay
+  delay_us(60); // Fudged delay
   set_clock(1);
 
   if (i & IEC_BIT_DATA) { // E923
@@ -281,7 +280,7 @@ static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
   }
 
   set_clock(0);                                        // E94B
-  _delay_us(60); // Yet another "looked at the bus trace and guessed until it worked" delay
+  delay_us(60); // Yet another "looked at the bus trace and guessed until it worked" delay
   do {
     if (check_atn()) return -1;
   } while (!(iec_debounced() & IEC_BIT_DATA));
@@ -293,16 +292,16 @@ static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
     }
 
     set_data(data & 1<<i);
-    _delay_us(70);    // Implicid delay, fudged
+    delay_us(70);     // Implicid delay, fudged
     set_clock(1);     // E976
     if (globalflags & VC20MODE)
-      _delay_us(34);  // Calculated delay
+      delay_us(34);   // Calculated delay
     else
-      _delay_us(75);  // Calculated delay
+      delay_us(75);   // Calculated delay
 
     set_clock(0);     // FEFB
     set_data(1);      // FEFE
-    _delay_us(5);     // Settle time
+    delay_us(5);      // Settle time
   }
 
   do {
@@ -416,7 +415,7 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
 
   if (iec_data.iecflags & JIFFY_ACTIVE)
     /* wait 360us (J1541 E781) to make sure the C64 is at fbb7/fb0c */
-    _delay_ms(0.36);
+    delay_us(360);
 
   if (iec_data.iecflags & JIFFY_LOAD) {
     /* See if the C64 has passed fb06 or if we should abort */
@@ -435,7 +434,7 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
     set_clock(1);
     /* FFA0 - this delay is required so the C64 can see data low even */
     /*        if it hits a badline at the worst possible moment       */
-    _delay_us(50);
+    delay_us(50);
   }
 
   while (buf->read) {
@@ -458,11 +457,11 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
 
         if (finalbyte && buf->sendeoi) {
           /* Send EOI marker */
-          _delay_us(100);
+          delay_us(100);
           set_clock(1);
-          _delay_us(100);
+          delay_us(100);
           set_clock(0);
-          _delay_us(100);
+          delay_us(100);
           set_clock(1);
         }
       } else {
@@ -472,7 +471,7 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
           if (iec_data.iecflags & JIFFY_ACTIVE) {
             /* Jiffy resets the EOI condition on the bus after 30-40us. */
             /* We use 50 to play it safe.                               */
-            _delay_us(50);
+            delay_us(50);
             set_data(1);
             set_clock(0);
           }
@@ -521,7 +520,7 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
 
       /* FFA0 - this delay is required so the C64 can see data low even */
       /*        if it hits a badline at the worst possible moment       */
-      _delay_us(50);
+      delay_us(50);
     }
   }
 
@@ -545,7 +544,7 @@ void iec_init(void) {
 
   /* Read the hardware-set device address */
   device_hw_address_init();
-  _delay_ms(1);
+  delay_ms(1);
   device_address = device_hw_address();
 }
 
@@ -723,9 +722,9 @@ void iec_mainloop(void) {
           break;
       } else if (iec_data.device_state == DEVICE_TALK) {
         set_data(1);
-        _delay_us(50);   // Implicit delay, fudged
+        delay_us(50);    // Implicit delay, fudged
         set_clock(0);
-        _delay_us(70);   // Implicit delay, estimated
+        delay_us(70);    // Implicit delay, estimated
 
         if (iec_talk_handler(cmd))
           break;

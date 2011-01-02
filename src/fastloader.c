@@ -31,7 +31,6 @@
 #include <avr/boot.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <util/delay.h>
 #include <util/atomic.h>
 #include <string.h>
 #include "config.h"
@@ -195,7 +194,7 @@ void load_fc3(uint8_t freezed) {
   }
 
   /* to make sure the C64 VIC DMA is off */
-  _delay_ms(20);
+  delay_ms(20);
 
   for(;;) {
     clk_data_handshake();
@@ -218,7 +217,7 @@ void load_fc3(uint8_t freezed) {
     block[3] = buf->data[pos++];
 
     if (!freezed)
-      _delay_ms(0.19);
+      delay_us(190);
     fastloader_fc3_send_block(block);
 
     /* send the next 64 4-byte-blocks, the last 3 bytes are read behind
@@ -230,7 +229,7 @@ void load_fc3(uint8_t freezed) {
       if (freezed)
         clk_data_handshake();
       else
-        _delay_ms(0.19);
+        delay_us(190);
       fastloader_fc3_send_block(buf->data + pos);
       pos += 4;
     }
@@ -267,7 +266,7 @@ void save_fc3(UNUSED_PARAMETER) {
       return;
 
   /* to make sure the host pulled DATA low and is ready */
-  _delay_ms(5);
+  delay_ms(5);
 
   do {
     set_data(0);
@@ -639,7 +638,7 @@ void load_gijoe(UNUSED_PARAMETER) {
   set_atn_irq(0);
 
   /* Wait until the bus has settled */
-  _delay_ms(10);
+  delay_ms(10);
   while (!IEC_DATA || !IEC_CLOCK) ;
 
   while (1) {
@@ -685,7 +684,7 @@ void load_gijoe(UNUSED_PARAMETER) {
       uint8_t i = buf->position;
 
       set_clock(1);
-      _delay_us(2);
+      delay_us(2);
 
       do {
         if (buf->data[i] == 0xac)
@@ -707,7 +706,7 @@ void load_gijoe(UNUSED_PARAMETER) {
       /* Send "another sector following" marker */
       gijoe_send_byte(0xac);
       gijoe_send_byte(0xc3);
-      _delay_us(50);
+      delay_us(50);
       set_clock(0);
 
       /* Read next block */
@@ -906,7 +905,7 @@ static void geos_transmit_byte_wait(uint8_t byte) {
     set_data(0);
   }
 
-  _delay_us(25); // educated guess
+  delay_us(25); // educated guess
 }
 
 /* Send data block to computer */
@@ -927,7 +926,7 @@ static void geos_transmit_buffer_s3(uint8_t *data, uint16_t len) {
     set_clock(1);
     set_data(0);
 
-    _delay_us(15); // guessed
+    delay_us(15); // guessed
   }
 }
 
@@ -1027,7 +1026,7 @@ void load_geos(UNUSED_PARAMETER) {
 
   /* Initial handshake */
   uart_flush();
-  _delay_ms(1);
+  delay_ms(1);
   set_data(0);
   while (IEC_CLOCK) ;
 
@@ -1194,7 +1193,7 @@ void load_geos_s1(uint8_t version) {
 
   /* Initial handshake */
   uart_flush();
-  _delay_ms(1);
+  delay_ms(1);
   set_data(0);
   while (IEC_CLOCK) ;
 
@@ -1246,11 +1245,11 @@ static void wheels44_transmit_buffer(uint8_t *data, uint16_t len) {
     set_clock(1);
     set_data(1);
 
-    _delay_us(5);
+    delay_us(5);
     while (IEC_CLOCK) ;
 
     set_data(0);
-    _delay_us(15); // guessed
+    delay_us(15); // guessed
   }
 }
 
@@ -1267,15 +1266,15 @@ static void wheels_transmit_byte_wait(uint8_t byte) {
       set_clock(1);
       set_data(1);
 
-      _delay_us(5);
+      delay_us(5);
       while (IEC_CLOCK) ;
       set_data(0);
     }
 
-    _delay_us(15); // educated guess
+    delay_us(15); // educated guess
   } else {
     geos_transmit_byte_wait(byte);
-    _delay_us(15); // educated guess
+    delay_us(15); // educated guess
     while (IEC_CLOCK) ;
   }
 }
@@ -1425,7 +1424,7 @@ void load_wheels_s1(const uint8_t version) {
   buffer_t *buf;
 
   uart_flush();
-  _delay_ms(2);
+  delay_ms(2);
   while (IEC_CLOCK) ;
   set_data(0);
 
@@ -1482,7 +1481,7 @@ void load_wheels_s2(UNUSED_PARAMETER) {
 
   /* Initial handshake */
   uart_flush();
-  _delay_ms(1);
+  delay_ms(1);
   while (IEC_CLOCK) ;
   set_data(0);
   set_clock(1);
@@ -1723,7 +1722,7 @@ void load_ar6_1581(UNUSED_PARAMETER) {
 
   set_clock(0);
   set_data(1);
-  _delay_ms(1);
+  delay_ms(1);
 
   while (1) {
     /* Send number of bytes in sector */
@@ -1746,7 +1745,7 @@ void load_ar6_1581(UNUSED_PARAMETER) {
 
   /* Send end marker */
   ar6_1581_send_byte(0);
-  _delay_ms(1);
+  delay_ms(1);
   set_clock(1);
   set_data(1);
 }
@@ -1765,7 +1764,7 @@ void save_ar6_1581(UNUSED_PARAMETER) {
 
   set_clock(0);
   set_data(1);
-  _delay_ms(1);
+  delay_ms(1);
 
   do {
     mark_buffer_dirty(buf);

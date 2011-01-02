@@ -31,7 +31,6 @@
 #include <avr/pgmspace.h>
 #include <avr/power.h>
 #include <avr/wdt.h>
-#include <util/delay.h>
 #include "config.h"
 #include "buffers.h"
 #include "diskchange.h"

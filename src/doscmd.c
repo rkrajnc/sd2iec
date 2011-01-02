@@ -24,7 +24,6 @@
 
 */
 
-#include <util/delay.h>
 #include <avr/wdt.h>
 #include <avr/interrupt.h>
 #include <ctype.h>

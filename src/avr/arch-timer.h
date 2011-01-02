@@ -27,6 +27,11 @@
 #ifndef ARCH_TIMER_H
 #define ARCH_TIMER_H
 
+#include <util/delay.h>
+
+#define delay_ms(x) _delay_ms(x)
+#define delay_us(x) _delay_us(x)
+
 /* Types for unsigned and signed tick values */
 typedef uint16_t tick_t;
 typedef int16_t stick_t;
