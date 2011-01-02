@@ -44,15 +44,12 @@
 extern volatile uint8_t active_keys;
 
 #define key_pressed(x) (active_keys & (x))
-#define reset_key(x) active_keys &= (uint8_t)~(x)
-#define ignore_keys() active_keys = IGNORE_KEYS;
-
-typedef uint16_t tick_t;
+#define reset_key(x)   active_keys &= (uint8_t)~(x)
+#define ignore_keys()  active_keys = IGNORE_KEYS;
 
 /// Global timing variable, 100 ticks per second
-/// Use atomic access or getticks() !
+/// Use getticks() !
 extern volatile tick_t ticks;
-#define HZ 100
 
 /**
  * getticks - return the current system tick count
@@ -66,6 +63,8 @@ static inline tick_t getticks(void) {
   }
   return tmp;
 }
+
+#define HZ 100
 
 #define MS_TO_TICKS(x) (x/10)
 
@@ -85,7 +84,7 @@ static inline tick_t getticks(void) {
  * (">=0" refers to the time_after_eq macro which wasn't copied)
  */
 #define time_after(a,b)         \
-         ((int16_t)(b) - (int16_t)(a) < 0)
+         ((stick_t)(b) - (stick_t)(a) < 0)
 #define time_before(a,b)        time_after(b,a)
 
 

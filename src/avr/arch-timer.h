@@ -27,6 +27,10 @@
 #ifndef ARCH_TIMER_H
 #define ARCH_TIMER_H
 
+/* Types for unsigned and signed tick values */
+typedef uint16_t tick_t;
+typedef int16_t stick_t;
+
 /**
  * start_timeout - start a timeout using timer0
  * @usecs: number of microseconds before timeout (maximum 256)
