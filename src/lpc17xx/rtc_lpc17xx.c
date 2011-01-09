@@ -29,6 +29,9 @@
 #include "config.h"
 #include "rtc.h"
 
+#define SIGNATURE_GPREG0 0xdeadbeef
+#define SIGNATURE_GPREG1 0xfce2ea31
+
 rtcstate_t rtc_state;
 
 #define CLKEN  0
@@ -36,7 +39,13 @@ rtcstate_t rtc_state;
 
 void rtc_init(void) {
   if (LPC_RTC->CCR & BV(CLKEN)) {
-    rtc_state = RTC_OK;
+    /* Check for signature in battery-backed bytes to determine if RTC was set*/
+    if (LPC_RTC->GPREG0 == SIGNATURE_GPREG0 &&
+        LPC_RTC->GPREG1 == SIGNATURE_GPREG1) {
+      rtc_state = RTC_OK;
+    } else {
+      rtc_state = RTC_INVALID;
+    }
   } else {
     rtc_state = RTC_INVALID;
   }
@@ -55,14 +64,17 @@ void read_rtc(struct tm *time) {
 }
 
 void set_rtc(struct tm *time) {
-  LPC_RTC->CCR   = BV(CTCRST);
-  LPC_RTC->SEC   = time->tm_sec;
-  LPC_RTC->MIN   = time->tm_min;
-  LPC_RTC->HOUR  = time->tm_hour;
-  LPC_RTC->DOM   = time->tm_mday;
-  LPC_RTC->MONTH = time->tm_mon;
-  LPC_RTC->YEAR  = time->tm_year + 1900;
-  LPC_RTC->DOW   = time->tm_wday;
-  LPC_RTC->CCR   = BV(CLKEN);
+  LPC_RTC->CCR    = BV(CTCRST);
+  LPC_RTC->SEC    = time->tm_sec;
+  LPC_RTC->MIN    = time->tm_min;
+  LPC_RTC->HOUR   = time->tm_hour;
+  LPC_RTC->DOM    = time->tm_mday;
+  LPC_RTC->MONTH  = time->tm_mon;
+  LPC_RTC->YEAR   = time->tm_year + 1900;
+  LPC_RTC->DOW    = time->tm_wday;
+  LPC_RTC->CCR    = BV(CLKEN);
+  LPC_RTC->GPREG0 = SIGNATURE_GPREG0;
+  LPC_RTC->GPREG1 = SIGNATURE_GPREG1;
+  rtc_state       = RTC_OK;
 }
 
