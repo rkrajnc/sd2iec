@@ -84,6 +84,22 @@ ifdef CONFIG_ADD_ATA
   SRC += $(CONFIG_ARCH)/ata.c
 endif
 
+# Various RTC implementations
+ifeq ($(CONFIG_RTC_VARIANT),4)
+  SRC += rtc.c ds3231.c
+  NEED_I2C := y
+endif
+# Note: 3 is the LPC17xx internal RTC
+
+ifeq ($(CONFIG_RTC_VARIANT),2)
+  SRC += rtc.c pcf8583.c
+  NEED_I2C := y
+endif
+
+ifeq ($(CONFIG_RTC_VARIANT),1)
+  SRC += rtc.c avr/softrtc.c
+endif
+
 # Optimization level, can be [0, 1, 2, 3, s].
 #     0 = turn off optimization. s = optimize for size.
 #     (Note: 3 is not always the best optimization level. See avr-libc FAQ.)

@@ -3,16 +3,6 @@
 #---------------- Source code ----------------
 ASMSRC = avr/fastloader-ll.S avr/crc7asm.S
 
-
-# Various RTC implementations
-ifeq ($(CONFIG_RTC_VARIANT),2)
-  SRC += rtc.c pcf8583.c
-  NEED_I2C := y
-endif
-ifeq ($(CONFIG_RTC_VARIANT),1)
-  SRC += rtc.c avr/softrtc.c
-endif
-
 ifdef NEED_I2C
   SRC += avr/softi2c.c
 endif
