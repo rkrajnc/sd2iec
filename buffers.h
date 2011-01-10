@@ -146,6 +146,9 @@ buffer_t *alloc_buffer(void);
 /* Buffers are guranteed to have continuous data segments. */
 buffer_t *alloc_linked_buffers(uint8_t count);
 
+/* Call the cleanup function and deallocate a buffer */
+void cleanup_and_free_buffer(buffer_t *buffer);
+
 /* Deallocates a buffer */
 void free_buffer(buffer_t *buffer);
 

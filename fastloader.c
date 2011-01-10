@@ -165,8 +165,7 @@ void load_turbodisk(UNUSED_PARAMETER) {
       }
     }
   }
-  buf->cleanup(buf);
-  free_buffer(buf);
+  cleanup_and_free_buffer(buf);
 
   set_clock(1);
 }
@@ -248,9 +247,7 @@ void load_fc3(uint8_t freezed) {
   }
 
  cleanup:
-  buf->cleanup(buf);
-
-  free_buffer(buf);
+  cleanup_and_free_buffer(buf);
 }
 
 void save_fc3(UNUSED_PARAMETER) {
@@ -302,8 +299,7 @@ void save_fc3(UNUSED_PARAMETER) {
   }
   while (!eof);
 
-  buf->cleanup(buf);
-  free_buffer(buf);
+  cleanup_and_free_buffer(buf);
 }
 #endif
 
@@ -696,8 +692,7 @@ void load_gijoe(UNUSED_PARAMETER) {
         gijoe_send_byte(0xac);
         gijoe_send_byte(0xff);
 
-        buf->cleanup(buf);
-        free_buffer(buf);
+        cleanup_and_free_buffer(buf);
         break;
       }
 
@@ -715,8 +710,7 @@ void load_gijoe(UNUSED_PARAMETER) {
         gijoe_send_byte(0xac);
         gijoe_send_byte(0xf7);
 
-        buf->cleanup(buf);
-        free_buffer(buf);
+        cleanup_and_free_buffer(buf);
         break;
       }
     }
@@ -826,8 +820,7 @@ void load_epyxcart(UNUSED_PARAMETER) {
 
   set_clock(1);
   set_data(1);
-  buf->cleanup(buf);
-  free_buffer(buf);
+  cleanup_and_free_buffer(buf);
 }
 #endif
 
@@ -1460,8 +1453,7 @@ void load_wheels_s1(const uint8_t version) {
   set_data(1);
   set_clock(1);
   if (buf) {
-    buf->cleanup(buf);
-    free_buffer(buf);
+    cleanup_and_free_buffer(buf);
   }
 }
 
@@ -1784,8 +1776,7 @@ void save_ar6_1581(UNUSED_PARAMETER) {
       break;
   } while (buf->data[0] != 0);
 
-  buf->cleanup(buf);
-  free_buffer(buf);
+  cleanup_and_free_buffer(buf);
 }
 
 #endif
