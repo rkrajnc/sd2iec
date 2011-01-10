@@ -195,7 +195,7 @@ void i2c_init(void) {
   i2c_pins_connect();
 }
 
-uint8_t i2c_write_registers(uint8_t address_, uint8_t startreg, uint8_t count_, void *data) {
+uint8_t i2c_write_registers(uint8_t address_, uint8_t startreg, uint8_t count_, const void *data) {
   result = RESULT_NONE;
   address = address_;
   i2creg = startreg;
