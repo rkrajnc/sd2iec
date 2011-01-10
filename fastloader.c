@@ -1,7 +1,7 @@
 /* sd2iec - SD/MMC to Commodore serial bus interface/controller
    Copyright (C) 2007-2011  Ingo Korb <ingo@akana.de>
-   Final Cartridge III, DreamLoad fastloader support:
-   Copyright (C) 2008  Thomas Giesel <skoe@directbox.com>
+   Final Cartridge III, DreamLoad, ELoad fastloader support:
+   Copyright (C) 2008-2011  Thomas Giesel <skoe@directbox.com>
    Nippon Loader support:
    Copyright (C) 2010  Joerg Jungermann <abra@borkum.net>
 
@@ -558,6 +558,70 @@ void load_uload3(UNUSED_PARAMETER) {
     }
   }
 }
+#endif
+
+
+/*
+ *
+ * eload
+ *
+ */
+#ifdef CONFIG_LOADER_ELOAD1
+void load_eload1(UNUSED_PARAMETER) {
+  buffer_t *buf;
+  int16_t cmd;
+  uint8_t count, pos, end;
+
+  while (1) {
+    /* read command */
+    cmd = uload3_get_byte();
+    if (cmd < 0) {
+      /* ATN received */
+      break;
+    }
+
+    switch (cmd) {
+    case 1: /* load a file */
+      buf = find_buffer(0);
+
+      if (!buf) {
+        if (!IEC_ATN)
+          return;
+        uload3_send_byte(0xff); /* error */
+        return;
+      }
+
+      end = 0;
+      do {
+        count = buf->lastused - 1;
+        if (!IEC_ATN)
+          return;
+        uload3_send_byte(count);
+        pos = 2;
+        while (count--) {
+          if (!IEC_ATN)
+            return;
+          uload3_send_byte(buf->data[pos++]);
+        }
+        if (buf->sendeoi) {
+          uload3_send_byte(0); /* EOF */
+          end = 1;
+        }
+        else if (buf->refill(buf)) {
+          uload3_send_byte(0xff); /* error */
+          end = 1;
+        }
+      } while (!end);
+      break;
+
+    default:
+      /* unknown command */
+      uload3_send_byte(0xff);
+      break;
+    }
+  }
+}
+
 #endif
 
 

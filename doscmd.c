@@ -120,6 +120,9 @@ static const PROGMEM struct fastloader_crc_s fl_crc_table[] = {
 #ifdef CONFIG_LOADER_ULOAD3
   { 0xdd81, FL_ULOAD3,           RXTX_NONE          },
 #endif
+#ifdef CONFIG_LOADER_ELOAD1
+  { 0x393e, FL_ELOAD1,           RXTX_NONE          },
+#endif
 #ifdef CONFIG_LOADER_EPYXCART
   { 0x5a01, FL_EPYXCART,         RXTX_NONE          },
 #endif
@@ -189,6 +192,9 @@ static const PROGMEM struct fastloader_handler_s fl_handler_table[] = {
 #endif
 #ifdef CONFIG_LOADER_ULOAD3
   { 0x0336, FL_ULOAD3,           load_uload3,    0 },
+#endif
+#ifdef CONFIG_LOADER_ELOAD1
+  { 0x0300, FL_ELOAD1,           load_eload1,    0 },
 #endif
 #ifdef CONFIG_LOADER_GIJOE
   { 0x0500, FL_GI_JOE,           load_gijoe,     0 },
