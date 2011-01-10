@@ -140,7 +140,7 @@ buffer_t *alloc_buffer(void) {
  * links them. It will also turn on the busy LED to notify the user.
  * Returns a pointer to the first buffer structure or NULL if
  * not enough buffers are free. The data segments of the allocated
- * buffers are guranteed to be continuous.
+ * buffers are guaranteed to be continuous.
  */
 buffer_t *alloc_linked_buffers(uint8_t count) {
   uint8_t i,freebufs,start;
@@ -191,7 +191,7 @@ buffer_t *alloc_linked_buffers(uint8_t count) {
  * This function deallocates the given buffer. If the pointer is NULL,
  * the buffer is already freed or the buffer is assigned to secondary
  * address 15 nothing will happen. This function will also update the
- * two LEDs accordings to the remaining number of open and writeable
+ * two LEDs according to the remaining number of open and writable
  * buffers.
  */
 void free_buffer(buffer_t *buffer) {
