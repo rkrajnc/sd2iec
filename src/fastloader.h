@@ -50,6 +50,7 @@
 #define FL_NIPPON           20
 #define FL_AR6_1581_LOAD    21
 #define FL_AR6_1581_SAVE    22
+#define FL_ELOAD1           23
 
 #ifndef __ASSEMBLER__
 
@@ -64,6 +65,7 @@ void load_fc3(uint8_t freezed);
 void save_fc3(uint8_t);
 void load_dreamload(uint8_t);
 void load_uload3(uint8_t);
+void load_eload1(uint8_t);
 void load_gijoe(uint8_t);
 void load_epyxcart(uint8_t);
 void load_geos(uint8_t);

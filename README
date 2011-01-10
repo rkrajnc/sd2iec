@@ -586,6 +586,10 @@ Note: Using sd2iec without an external crystal or similiar precise
   For other drive types the restrictions on disk image type of GEOS also
   apply to Wheels.
 
+  ELoad Version 1
+  ---------------
+  This loader was made for EasyProg but may also be used in other programs.
+  It detects and supports the sd2iec natively.
 
 JiffyDOS:
 =========

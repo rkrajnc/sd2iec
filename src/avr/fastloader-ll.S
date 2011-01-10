@@ -569,7 +569,7 @@ tdbitloop2:
         ret
 #endif
 
-#if defined(CONFIG_LOADER_DREAMLOAD) || defined(CONFIG_LOADER_FC3) || defined(CONFIG_LOADER_ULOAD3) || defined(CONFIG_LOADER_GEOS)
+#if defined(CONFIG_LOADER_DREAMLOAD) || defined(CONFIG_LOADER_FC3) || defined(CONFIG_LOADER_ULOAD3) || defined(CONFIG_LOADER_ELOAD1) || defined(CONFIG_LOADER_GEOS)
         ;;
         ;; Set bit 0 of r0 on CLOCK and bit 1 on DATA
         ;; A bit value of one means pull down
@@ -616,7 +616,7 @@ get_bits_from_clk_data:
 
 #endif
 
-#if defined(CONFIG_LOADER_FC3) || defined(CONFIG_LOADER_ULOAD3)
+#if defined(CONFIG_LOADER_FC3) || defined(CONFIG_LOADER_ULOAD3) || defined(CONFIG_LOADER_ELOAD1)
         ;;
         ;; Do this kind of handshake:
         ;; set CLOCK low, wait for DATA going low,
@@ -861,7 +861,7 @@ dsb_bitloop:
         ret
 #endif
 
-#ifdef CONFIG_LOADER_ULOAD3
+#if defined CONFIG_LOADER_ULOAD3 || defined CONFIG_LOADER_ELOAD1
         ;;
         ;; Receive a byte using the ULoad Model 3 protocol
         ;;

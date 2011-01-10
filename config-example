@@ -95,6 +95,9 @@ CONFIG_LOADER_NIPPON=y
 # Enable (some) Action Replay 6 fast loaders
 CONFIG_LOADER_AR6=y
 
+# Enable ELoad Version 1 fast loader
+CONFIG_LOADER_ELOAD1=y
+
 # Select which hardware to compile for
 # Valid values:
 #   1 - example configuration in config.h (won't compile!)
