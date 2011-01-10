@@ -185,6 +185,17 @@ buffer_t *alloc_linked_buffers(uint8_t count) {
 }
 
 /**
+ * cleanup_and_free_buffer - cleanup and deallocate a buffer
+ * @buffer: pointer to the buffer structure to cleanup and mark as free
+ *
+ * This function calls the cleanup function and deallocates the buffer.
+ */
+void cleanup_and_free_buffer(buffer_t *buffer) {
+  buffer->cleanup(buffer);
+  free_buffer(buffer);
+}
+
+/**
  * free_buffer - deallocate a buffer
  * @buffer: pointer to the buffer structure to mark as free
  *

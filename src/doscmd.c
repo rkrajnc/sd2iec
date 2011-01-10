@@ -772,13 +772,11 @@ static void parse_copy(void) {
     }
 
     /* Close current source file */
-    srcbuf->cleanup(srcbuf);
-
     /* Free and reallocate the buffer. This is required because most of the  */
     /* file_open code assumes that it will get a "pristine" buffer with      */
     /* 0 is most of the fields. Allocation cannot fail at this point because */
     /* there is at least one free buffer.                                    */
-    free_buffer(srcbuf);
+    cleanup_and_free_buffer(srcbuf);
     srcbuf = alloc_buffer();
 
     /* Next file */
@@ -787,9 +785,8 @@ static void parse_copy(void) {
 
   cleanup:
   /* Close the buffers */
-  dstbuf->cleanup(dstbuf);
   srcbuf->cleanup(srcbuf);
-  free_buffer(dstbuf);
+  cleanup_and_free_buffer(dstbuf);
 }
 
 

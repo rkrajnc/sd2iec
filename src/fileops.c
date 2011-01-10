@@ -778,8 +778,7 @@ void file_open(uint8_t secondary) {
   buf = find_buffer(secondary);
   if (buf != NULL) {
     /* FIXME: What should we do if an error occurs? */
-    buf->cleanup(buf);
-    free_buffer(buf);
+    cleanup_and_free_buffer(buf);
   }
 
   /* Assume everything will go well unless proven otherwise */
