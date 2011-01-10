@@ -3,11 +3,11 @@
 #---------------- Source code ----------------
 ASMSRC = lpc17xx/startup.S lpc17xx/crc.S
 
-SRC += lpc17xx/printf.c lpc17xx/fastloader-ll.c
+SRC += lpc17xx/printf.c lpc17xx/fastloader-ll.c lpc17xx/iec-bus.c
 
 # Various RTC implementations
 ifeq ($(CONFIG_RTC_VARIANT),3)
-  SRC += rtc.c lpc17xx/rtc_lpc17xx.c lpc17xx/iec-bus.c
+  SRC += rtc.c lpc17xx/rtc_lpc17xx.c
 endif
 
 # I2C is always needed for the config EEPROM
