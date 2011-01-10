@@ -196,11 +196,11 @@ void i2c_init(void) {
 }
 
 uint8_t i2c_write_registers(uint8_t address_, uint8_t startreg, uint8_t count_, const void *data) {
-  result = RESULT_NONE;
-  address = address_;
-  i2creg = startreg;
-  count = count_;
-  bufferptr = data;
+  result    = RESULT_NONE;
+  address   = address_;
+  i2creg    = startreg;
+  count     = count_;
+  bufferptr = (void *)data;
   read_mode = 0;
 
   /* send start condition */
@@ -219,33 +219,10 @@ uint8_t i2c_write_register(uint8_t address, uint8_t reg, uint8_t val) {
 
 
 uint8_t i2c_read_registers(uint8_t address_, uint8_t startreg, uint8_t count_, void *data) {
-#if 1
-  // no "repeated start" version
-  result = RESULT_NONE;
-  address = address_ & 0xfe;
-  i2creg = startreg;
-  count = 0;
-  bufferptr = data;
-  read_mode = 0;
-
-  /* send start condition */
-  BITBAND(I2C_REGS->I2CONSET, I2CSTA) = 1;
-
-  /* wait until ISR is done */
-  while (result == RESULT_NONE)
-    __WFI();
-
-  if (result != RESULT_DONE)
-    return 1;
-
-  if ((address_ & 0xfe) == 0xa4)
-    // Wii nunchuck sucks
-    delay_us(200);
-#endif
-  result = RESULT_NONE;
-  address = address_ | 1; //& 0xfe; if using repeated starts
-  i2creg = startreg;
-  count = count_;
+  result    = RESULT_NONE;
+  address   = address_ & 0xfe;
+  i2creg    = startreg;
+  count     = count_;
   bufferptr = data;
   read_mode = 1;
 
