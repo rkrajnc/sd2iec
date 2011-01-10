@@ -57,7 +57,7 @@ static uint8_t displaybuffer[CONFIG_DISPLAY_BUFFER_SIZE];
 
 uint8_t display_found;
 
-void display_send_prefixed(uint8_t cmd, uint8_t prefixbyte, uint8_t len, uint8_t *buffer) {
+void display_send_prefixed(uint8_t cmd, uint8_t prefixbyte, uint8_t len, const uint8_t *buffer) {
   displaybuffer[0] = prefixbyte;
   memcpy(displaybuffer+1, buffer, min(sizeof(displaybuffer)-1, len));
   i2c_write_registers(DISPLAY_I2C_ADDR, cmd, min(len+1,sizeof(displaybuffer)), displaybuffer);
@@ -202,7 +202,54 @@ void display_service(void) {
   }
 }
 
+
+void display_send_cmd(uint8_t cmd, uint8_t len, const void *buf) {
+  if (display_found)
+    i2c_write_registers(DISPLAY_I2C_ADDR, cmd, len, buf);
+}
+
+
+void display_send_cmd_byte(uint8_t cmd, uint8_t val) {
+  display_send_cmd(cmd, 1, &val);
+}
+
+
 uint8_t display_init(uint8_t len, uint8_t *message) {
   display_found = !i2c_write_registers(DISPLAY_I2C_ADDR, DISPLAY_INIT, len, message);
   return display_found;
 }
+
+
+void display_filename_write(uint8_t part, uint8_t len, const unsigned char *buf) {
+  display_send_prefixed(DISPLAY_FILENAME_WRITE, part, len, buf);
+}
+
+void display_menu_show(uint8_t start) {
+  display_send_cmd_byte(DISPLAY_MENU_SHOW, start);
+}
+
+
+void display_address(uint8_t dev) {
+  display_send_cmd_byte(DISPLAY_ADDRESS, dev);
+}
+
+
+void display_current_part(uint8_t part) {
+  display_send_cmd_byte(DISPLAY_CURRENT_PART, part);
+}
+
+
+void display_menu_add(const unsigned char *string) {
+  display_send_cmd(DISPLAY_MENU_ADD, strlen((const char*) string) + 1, string);
+}
+
+
+void display_menu_reset(void) {
+  display_send_cmd(DISPLAY_MENU_RESET, 0, NULL);
+}
+
+
+void display_current_directory(uint8_t part, const unsigned char *name) {
+  display_send_prefixed(DISPLAY_CURRENT_DIR, part, ustrlen(name), name);
+}
+

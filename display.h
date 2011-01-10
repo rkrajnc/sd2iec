@@ -33,10 +33,19 @@ extern uint8_t display_found;
 
 #include "i2c.h"
 
-void display_send_prefixed(uint8_t cmd, uint8_t prefixbyte, uint8_t len, uint8_t *buffer);
+void display_send_prefixed(uint8_t cmd, uint8_t prefixbyte, uint8_t len, const uint8_t *buffer);
 uint8_t display_init(uint8_t len, uint8_t *message);
 void display_service(void);
-# define display_send_cmd(cmd,len,buf) while (display_found && i2c_write_registers(DISPLAY_I2C_ADDR,cmd,len,buf))
+void display_send_cmd(uint8_t cmd, uint8_t len, const void *buf);
+void display_send_cmd_byte(uint8_t cmd, uint8_t val);
+
+void display_filename_write(uint8_t part, uint8_t len, const unsigned char* buf);
+void display_menu_show(uint8_t start);
+void display_address(uint8_t dev);
+void display_current_part(uint8_t part);
+void display_menu_add(const unsigned char* string);
+void display_menu_reset(void);
+void display_current_directory(uint8_t part, const unsigned char* name);
 
 #else // CONFIG_REMOTE_DISPLAY
 
@@ -45,6 +54,15 @@ void display_service(void);
 # define display_init(a,b)              0
 # define display_service()              do {} while (0)
 # define display_send_cmd(cmd,len,buf)  do {} while (0)
+# define display_send_cmd_byte(cmd,v)   do {} while (0)
+
+# define display_filename_write(a,b,c)  do {} while (0)
+# define display_menu_show(a)           do {} while (0)
+# define display_address(a)             do {} while (0)
+# define display_current_part(a)        do {} while (0)
+# define display_menu_add(a)            do {} while (0)
+# define display_menu_reset()           do {} while (0)
+# define display_current_directory(a,b) do {} while (0)
 
 #endif // CONFIG_REMOTE_DISPLAY
 
@@ -67,24 +85,8 @@ enum display_commands {
   DISPLAY_MENU_GETENTRY,     // returns the text of the selected menu entry
 };
 
-static inline void display_menu_show(uint8_t start) {
-  display_send_cmd(DISPLAY_MENU_SHOW, 1, &start);
-}
-
-static inline void display_address(uint8_t dev) {
-  display_send_cmd(DISPLAY_ADDRESS, 1, &dev);
-}
-
-static inline void display_current_part(uint8_t part) {
-  display_send_cmd(DISPLAY_CURRENT_PART, 1, &part);
-}
-
 #define display_filename_read(part,len,buf)     display_send_prefixed(DISPLAY_FILENAME_READ,part,len,buf)
-#define display_filename_write(part,len,buf)    display_send_prefixed(DISPLAY_FILENAME_WRITE,part,len,buf)
 #define display_doscommand(len,buf)             display_send_cmd(DISPLAY_DOSCOMMAND,len,buf)
 #define display_errorchannel(len,buf)           display_send_cmd(DISPLAY_ERRORCHANNEL,len,buf)
-#define display_current_directory(part,len,buf) display_send_prefixed(DISPLAY_CURRENT_DIR,part,len,buf)
-#define display_menu_reset()                    display_send_cmd(DISPLAY_MENU_RESET,0,NULL)
-#define display_menu_add(string)                display_send_cmd(DISPLAY_MENU_ADD,strlen((char *)string)+1,string)
 
 #endif // DISPLAY_H

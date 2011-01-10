@@ -1369,7 +1369,7 @@ uint8_t image_unmount(uint8_t part) {
     path.part    = part;
     path.dir.fat = partition[part].current_dir.fat;
     fat_getdirlabel(&path, entrybuf);
-    display_current_directory(part,ustrlen(entrybuf),entrybuf);
+    display_current_directory(part,entrybuf);
   }
 
   partition[part].fop = &fatops;

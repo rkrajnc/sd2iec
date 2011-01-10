@@ -139,7 +139,7 @@ uint8_t i2c_write_register(uint8_t address, uint8_t reg, uint8_t val) {
 }
 
 /* Returns 1 if there was no ACK to the address */
-uint8_t i2c_write_registers(uint8_t address, uint8_t startreg, uint8_t count, void *data) {
+uint8_t i2c_write_registers(uint8_t address, uint8_t startreg, uint8_t count, const void *data) {
   uint8_t i;
 
   start_condition();
