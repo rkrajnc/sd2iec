@@ -1199,10 +1199,12 @@ static void handle_memwrite(void) {
     detected_loader = loader;
     index = pgm_read_word(&crcptr->rxtx);
 
+#ifdef CONFIG_LOADER_GEOS
     if (index != 0) {
       geos_get_byte  = (fastloader_rx_t)pgm_read_word(&(fl_rxtx_table[index].rxfunc));
       geos_send_byte = (fastloader_tx_t)pgm_read_word(&(fl_rxtx_table[index].txfunc));
     }
+#endif
   }
 
 
