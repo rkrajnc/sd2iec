@@ -920,21 +920,26 @@ uload3_send_byte:
         sbi     _SFR_IO_ADDR(IEC_OUTPUT), IEC_OPIN_DATA
 
         ;; wait for CLOCK low
-1:      sbic    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_CLOCK
+1:      sbis    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_ATN
+        rjmp    2f
+        sbic    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_CLOCK
         rjmp    1b
 
         ;; DATA high
         cbi     _SFR_IO_ADDR(IEC_OUTPUT), IEC_OPIN_DATA
 
-        ;; wait for CLOCK high - 2 to 5 cycles, assuming 3
-1:      sbis    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_CLOCK
+        ;; wait for CLOCK high - 2 to 7 cycles, assuming 5
+1:
+        sbis    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_ATN
+        rjmp    2f
+        sbis    _SFR_IO_ADDR(IEC_INPUT), IEC_PIN_CLOCK
         rjmp    1b
 
         ;; prepare transmission
         mov     r0, r24         ;1 - move data to output register
         com     r0              ;1 - invert byte
         ldi     r24, 4          ;1 - number of loops
-        delay_cycles (14-8) * 8 - 6 + 6 + 3 ; initial delay before first bit pair
+        delay_cycles (14-8) * 8 - 8 + 6 + 3 ; initial delay before first bit pair
 
 uload3_bitloop:
         delay_cycles 8 * 8 - 16 - 3   ; delay between bit pairs
@@ -948,7 +953,7 @@ uload3_bitloop:
         cbi     _SFR_IO_ADDR(IEC_OUTPUT), IEC_OPIN_CLOCK
         cbi     _SFR_IO_ADDR(IEC_OUTPUT), IEC_OPIN_DATA
         rcall   delay1us        ; safety
-
+2:
         sei
         ret
 #endif
