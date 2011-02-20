@@ -49,11 +49,11 @@ static inline __attribute__((always_inline)) void spi_set_divisor(const uint8_t 
   if (div == 2 || div == 4) {
     SPCR = SPCR_VAL;
   } else if (div == 8 || div == 16) {
-    SPCR = SPCR_VAL | SPR0;
+    SPCR = SPCR_VAL | _BV(SPR0);
   } else if (div == 32 || div == 64) {
-    SPCR = SPCR_VAL | SPR1;
+    SPCR = SPCR_VAL | _BV(SPR1);
   } else { // div == 128
-    SPCR = SPCR_VAL | SPR0 | SPR1;
+    SPCR = SPCR_VAL | _BV(SPR0) | _BV(SPR1);
   }
 }
 
