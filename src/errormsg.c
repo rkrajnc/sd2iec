@@ -236,7 +236,7 @@ void set_error_ts(uint8_t errornum, uint8_t track, uint8_t sector) {
     if (errornum == ERROR_LONGVERSION) {
       i = 0;
       msg--;
-      while ((*msg++ = toupper(pgm_read_byte(longverstr+i++)))) ;
+      while ((*msg++ = toupper((int)pgm_read_byte(longverstr+i++)))) ;
     }
 
     msg--;
