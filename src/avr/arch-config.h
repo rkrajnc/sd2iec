@@ -843,6 +843,60 @@ typedef uint8_t iec_bus_t;
 #  endif
 #endif
 
+/* IEC output functions */
+#ifdef IEC_OUTPUTS_INVERTED
+#  define COND_INV(x) (!(x))
+#else
+#  define COND_INV(x) (x)
+#endif
+
+static inline __attribute__((always_inline)) void set_atn(uint8_t state) {
+  if (COND_INV(state))
+    IEC_OUTPUT |= IEC_OBIT_ATN;
+  else
+    IEC_OUTPUT &= ~IEC_OBIT_ATN;
+}
+
+static inline __attribute__((always_inline)) void set_data(uint8_t state) {
+  if (COND_INV(state))
+    IEC_OUTPUT |= IEC_OBIT_DATA;
+  else
+    IEC_OUTPUT &= ~IEC_OBIT_DATA;
+}
+
+static inline __attribute__((always_inline)) void set_clock(uint8_t state) {
+  if (COND_INV(state))
+    IEC_OUTPUT |= IEC_OBIT_CLOCK;
+  else
+    IEC_OUTPUT &= ~IEC_OBIT_CLOCK;
+}
+
+#ifdef IEC_SEPARATE_OUT
+static inline __attribute__((always_inline)) void set_srq(uint8_t state) {
+  if (COND_INV(state))
+    IEC_OUTPUT |= IEC_OBIT_SRQ;
+  else
+    IEC_OUTPUT &= ~IEC_OBIT_SRQ;
+}
+#else
+/* this version of the function turns on the pullups when state is 1 */
+/* note: same pin for in/out implies inverted output via DDR */
+static inline __attribute__((always_inline)) void set_srq(uint8_t state) {
+  if (state) {
+    IEC_DDR  &= ~IEC_OBIT_SRQ;
+    IEC_PORT |=  IEC_OBIT_SRQ;
+  } else {
+    IEC_PORT &= ~IEC_OBIT_SRQ;
+    IEC_DDR  |=  IEC_OBIT_SRQ;
+  }
+}
+#endif
+
+#undef COND_INV
+
+// for testing purposes only, probably does not do what you want!
+#define toggle_srq() IEC_INPUT |= IEC_OBIT_SRQ
+
 /* IEC lines initialisation */
 static inline void iec_interface_init(void) {
 #ifdef IEC_SEPARATE_OUT
@@ -856,7 +910,9 @@ static inline void iec_interface_init(void) {
   /* Pullups would be nice, but AVR can't switch from */
   /* low output to hi-z input directly                */
   IEC_DDR  &= (uint8_t)~(IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA | IEC_BIT_SRQ);
-  IEC_PORT &= (uint8_t)~(IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA | IEC_BIT_SRQ);
+  IEC_PORT &= (uint8_t)~(IEC_BIT_ATN | IEC_BIT_CLOCK | IEC_BIT_DATA);
+  /* SRQ is special-cased because it may be unconnected */
+  IEC_PORT |= IEC_BIT_SRQ;
 #endif
 }
 

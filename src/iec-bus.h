@@ -27,49 +27,7 @@
 #ifndef IEC_BUS_H
 #define IEC_BUS_H
 
-/*** Output functions (generic versions) ***/
-
-/* A little trick */
-#ifdef IEC_OUTPUTS_INVERTED
-#  define COND_INV(x) (!(x))
-#else
-#  define COND_INV(x) (x)
-#endif
-
-#ifndef IEC_OUTPUTFUNC_SPECIAL
-static inline __attribute__((always_inline)) void set_atn(uint8_t state) {
-  if (COND_INV(state))
-    IEC_OUTPUT |= IEC_OBIT_ATN;
-  else
-    IEC_OUTPUT &= ~IEC_OBIT_ATN;
-}
-
-static inline __attribute__((always_inline)) void set_data(uint8_t state) {
-  if (COND_INV(state))
-    IEC_OUTPUT |= IEC_OBIT_DATA;
-  else
-    IEC_OUTPUT &= ~IEC_OBIT_DATA;
-}
-
-static inline __attribute__((always_inline)) void set_clock(uint8_t state) {
-  if (COND_INV(state))
-    IEC_OUTPUT |= IEC_OBIT_CLOCK;
-  else
-    IEC_OUTPUT &= ~IEC_OBIT_CLOCK;
-}
-
-static inline __attribute__((always_inline)) void set_srq(uint8_t state) {
-  if (COND_INV(state))
-    IEC_OUTPUT |= IEC_OBIT_SRQ;
-  else
-    IEC_OUTPUT &= ~IEC_OBIT_SRQ;
-}
-
-//FIXME: AVR only
-# define toggle_srq()     IEC_INPUT |= IEC_OBIT_SRQ
-#endif
-
-#undef COND_INV
+/* output functions are defined in arch-config.h */
 
 /*** Input definitions (generic versions) ***/
 #ifndef IEC_ATN

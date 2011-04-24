@@ -276,9 +276,7 @@ typedef uint32_t iec_bus_t;
 #  define IEC_MTIMER_SRQ   IEC_TIMER_SRQ
 #endif
 
-/* Special IEC output functions because they're faster */
-#define IEC_OUTPUTFUNC_SPECIAL
-
+/* IEC output with bitband access */
 #ifdef IEC_OUTPUTS_INVERTED
 #  define COND_INV(x) (!(x))
 #else
