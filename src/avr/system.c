@@ -107,12 +107,6 @@ void system_init_early(void) {
 #ifdef CLOCK_PRESCALE
   clock_prescale_set(CLOCK_PRESCALE);
 #endif
-
-#if CONFIG_HARDWARE_VARIANT == 4
-  /* uIEC/CF: Force control lines of the external SRAM high */
-  DDRG  = _BV(PG0) | _BV(PG1) | _BV(PG2);
-  PORTG = _BV(PG0) | _BV(PG1) | _BV(PG2);
-#endif
 }
 
 /* Late system initialisation - currently unused on AVR */

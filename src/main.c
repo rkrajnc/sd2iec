@@ -54,10 +54,10 @@ int main(void) __attribute__((OS_main));
 #endif
 int main(void) {
   /* Early system initialisation */
+  board_init();
   system_init_early();
   leds_init();
 
-  set_power_led(1);
   set_busy_led(1);
   set_dirty_led(0);
 

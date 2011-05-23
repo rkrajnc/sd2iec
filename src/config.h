@@ -41,9 +41,9 @@
 #  define HAVE_HOTPLUG
 #endif
 
-/* Generate a dummy function for the Power-LED if required */
-#ifndef HAVE_POWER_LED
-static inline void set_power_led(uint8_t state) {
+/* Generate a dummy function if there is no board-specific initialisation */
+#ifndef HAVE_BOARD_INIT
+static inline void board_init(void) {
   return;
 }
 #endif

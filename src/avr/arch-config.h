@@ -186,16 +186,6 @@ static inline void toggle_dirty_led(void) {
   PINC |= _BV(PC1);
 }
 
-/* --- Software power LED (enabled at startup, not touched after that) --- */
-/* Currently used on uIEC/SD only */
-//#define HAVE_POWER_LED
-//static inline __attribute__((always_inline)) void set_power_led(uint8_t state) {
-//  if (state)
-//    PORTG |= _BV(PG1);
-//  else
-//    PORTG &= ~_BV(PG1);
-//}
-
 
 /*** IEC signals ***/
 #  define IEC_INPUT PINA
@@ -267,6 +257,16 @@ static inline void buttons_init(void) {
 #  define SOFTI2C_BIT_SCL PC4
 #  define SOFTI2C_BIT_SDA PC5
 #  define SOFTI2C_DELAY   6
+
+
+/*** board-specific initialisation ***/
+/* Currently used on uIEC/CF and uIEC/SD only */
+//#define HAVE_BOARD_INIT
+//static inline void board_init(void) {
+//  // turn on power LED
+//  DDRG  |= _BV(PG1);
+//  PORTG |= _BV(PG1);
+//}
 
 
 /* Pre-configurated hardware variants */
@@ -552,6 +552,14 @@ static inline void buttons_init(void) {
 /* Use diskmux code to optionally turn off second IDE drive */
 #  define NEED_DISKMUX
 
+#  define HAVE_BOARD_INIT
+
+static inline void board_init(void) {
+  /* Force control lines of the external SRAM high */
+  DDRG  = _BV(PG0) | _BV(PG1) | _BV(PG2);
+  PORTG = _BV(PG0) | _BV(PG1) | _BV(PG2);
+}
+
 
 #elif CONFIG_HARDWARE_VARIANT==5
 /* ---------- Hardware configuration: Shadowolf 2 aka sd2iec 1.x ---------- */
@@ -686,7 +694,6 @@ static inline void buttons_init(void) {
 #  define SD_CHANGE_HANDLER     ISR(INT6_vect)
 #  define SD_SUPPLY_VOLTAGE     (1L<<21)
 #  define SINGLE_LED
-#  define HAVE_POWER_LED
 
 static inline void sdcard_interface_init(void) {
   DDRE  &= ~_BV(PE6);
@@ -716,7 +723,6 @@ static inline void device_hw_address_init(void) {
 
 static inline void leds_init(void) {
   DDRG |= _BV(PG0);
-  DDRG |= _BV(PG1);
 }
 
 static inline __attribute__((always_inline)) void set_led(uint8_t state) {
@@ -728,13 +734,6 @@ static inline __attribute__((always_inline)) void set_led(uint8_t state) {
 
 static inline void toggle_led(void) {
   PING |= _BV(PG0);
-}
-
-static inline __attribute__((always_inline)) void set_power_led(uint8_t state) {
-  if (state)
-    PORTG |= _BV(PG1);
-  else
-    PORTG &= ~_BV(PG1);
 }
 
 #  define IEC_INPUT             PINB
@@ -769,6 +768,14 @@ static inline rawbutton_t buttons_read(void) {
 static inline void buttons_init(void) {
   DDRG  &= (uint8_t)~(BUTTON_NEXT | BUTTON_PREV);
   PORTG |= BUTTON_NEXT | BUTTON_PREV;
+}
+
+#  define HAVE_BOARD_INIT
+
+static inline void board_init(void) {
+  // turn on power LED
+  DDRG  |= _BV(PG1);
+  PORTG |= _BV(PG1);
 }
 
 
