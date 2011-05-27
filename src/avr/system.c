@@ -29,6 +29,7 @@
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include <avr/power.h>
+#include <avr/sleep.h>
 #include <avr/wdt.h>
 #include "system.h"
 
@@ -111,7 +112,13 @@ void system_init_early(void) {
 
 /* Late system initialisation - currently unused on AVR */
 void system_init_late(void) {
-  return;
+  set_sleep_mode(SLEEP_MODE_IDLE);
+  sleep_enable();
+}
+
+/* Put MCU into low-power mode */
+void system_sleep(void) {
+  sleep_cpu();
 }
 
 /* Reset MCU */

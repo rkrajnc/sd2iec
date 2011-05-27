@@ -79,6 +79,11 @@ void system_init_late(void) {
   //set_debugstate(0);
 }
 
+/* Put MCU in low-power mode */
+void system_sleep(void) {
+  __WFI();
+}
+
 /* Reset MCU */
 void system_reset(void) {
   __disable_irq();

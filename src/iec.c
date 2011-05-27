@@ -47,6 +47,7 @@
 #include "fileops.h"
 #include "iec-bus.h"
 #include "led.h"
+#include "system.h"
 #include "timer.h"
 #include "uart.h"
 #include "iec.h"
@@ -564,7 +565,8 @@ void iec_mainloop(void) {
       set_dirty_led(1);
 
       /* Wait until the sleep key is used again */
-      while (!key_pressed(KEY_SLEEP)) ;
+      while (!key_pressed(KEY_SLEEP))
+        system_sleep();
       reset_key(KEY_SLEEP);
 
       update_leds();
@@ -586,6 +588,7 @@ void iec_mainloop(void) {
           display_service();
           reset_key(KEY_DISPLAY);
         }
+        system_sleep();
       }
 
       if (iec_data.bus_state != BUS_SLEEP)

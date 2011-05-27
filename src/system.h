@@ -33,6 +33,9 @@ void system_init_early(void);
 /* Late initialisation, called after all hardware is set up */
 void system_init_late(void);
 
+/* Put MCU into low-power mode until the next interrupt */
+void system_sleep(void);
+
 /* Reset MCU */
 __attribute__((noreturn)) void system_reset(void);
 
