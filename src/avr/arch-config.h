@@ -237,7 +237,6 @@ static inline void iec_interrupts_init(void) {
 #  define BUTTON_NEXT _BV(PC4)
 
 /* Button PREV changes to the previous disk image */
-/* If you don't have/need this button, define it as 0. */
 #  define BUTTON_PREV _BV(PC3)
 
 /* Read the raw button state - a depressed button should read as 0 */

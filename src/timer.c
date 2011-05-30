@@ -49,14 +49,16 @@ static void buttons_changed(void) {
   if (time_after(ticks, lastbuttonchange + DEBOUNCE_TICKS)) {
     if (active_keys & IGNORE_KEYS) {
       active_keys &= ~IGNORE_KEYS;
-    } else if (!(buttonstate & (BUTTON_PREV|BUTTON_NEXT))) {
+    } else if (BUTTON_PREV && /* match only if PREV exists */
+               !(buttonstate & (BUTTON_PREV|BUTTON_NEXT))) {
       /* Both buttons held down */
         active_keys |= KEY_HOME;
     } else if (!(buttonstate & BUTTON_NEXT) &&
                (buttons_read() & BUTTON_NEXT)) {
       /* "Next" button released */
       active_keys |= KEY_NEXT;
-    } else if (!(buttonstate & BUTTON_PREV) &&
+    } else if (BUTTON_PREV && /* match only if PREV exists */
+               !(buttonstate & BUTTON_PREV) &&
                (buttons_read() & BUTTON_NEXT)) {
       active_keys |= KEY_PREV;
     }
@@ -92,7 +94,7 @@ SYSTEM_TICK_HANDLER {
   /* Sleep button triggers when held down for 2sec */
   if (time_after(ticks, lastbuttonchange + DEBOUNCE_TICKS)) {
     if (!(buttonstate & BUTTON_NEXT) &&
-        (buttonstate & BUTTON_PREV) &&
+        (!BUTTON_PREV || (buttonstate & BUTTON_PREV)) &&
         time_after(ticks, lastbuttonchange + SLEEP_TICKS) &&
         !key_pressed(KEY_SLEEP)) {
       /* Set ignore flag so the release doesn't trigger KEY_NEXT */

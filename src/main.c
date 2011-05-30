@@ -104,7 +104,7 @@ int main(void) {
 
   set_busy_led(0);
 
-#ifdef HAVE_SD
+#if defined(HAVE_SD) && BUTTON_PREV != 0
   /* card switch diagnostic aid - hold down PREV button to use */
   if (!(buttons_read() & BUTTON_PREV)) {
     while (buttons_read() & BUTTON_NEXT) {
