@@ -43,7 +43,7 @@
 
         .section .text
 
-#ifdef IEC_ATN_INT_VECT
+#if defined(IEC_ATN_INT_VECT) && defined(CONFIG_LOADER_DREAMLOAD)
         ;; ===================================================================
         ;; ATN(+CLK) Interrupt service routine for IEC bus
         ;; ===================================================================
@@ -73,15 +73,14 @@ IEC_ATN_INT_VECT:
         rjmp    iiv_atn_irq_end
 
         ; ATN is low, continue depending from active fast loader
-#ifdef CONFIG_LOADER_DREAMLOAD
         lds     r18, detected_loader
         cpi     r18, FL_DREAMLOAD_OLD
         brne    iiv_not_fl_dreamload_old
         ; dreamload (old), receive a command code
         rcall   dreamload_get_command_old
         rjmp    iiv_atn_irq_end         ; no other ATN action needed
+
 iiv_not_fl_dreamload_old:
-#endif
         ; no custom behaviour, this is ATN ACK
         sbi     _SFR_IO_ADDR(IEC_OUT), IEC_OPIN_DATA    ; DATA low
 
@@ -96,15 +95,14 @@ iiv_atn_irq_end:
         rjmp    iiv_clock_irq_end
 
         ; CLOCK is low, continue depending from active fast loader
-#ifdef CONFIG_LOADER_DREAMLOAD
         lds     r18, detected_loader
         cpi     r18, FL_DREAMLOAD
         brne    iiv_not_fl_dreamload
         ; dreamload, receive a command code
         rcall   dreamload_get_command
         rjmp    iiv_clock_irq_end       ; no other CLOCK action needed
+
 iiv_not_fl_dreamload:
-#endif // ifdef CONFIG_LOADER_DREAMLOAD
 #endif // ifdef IEC_PCMSK
 
 iiv_clock_irq_end:
