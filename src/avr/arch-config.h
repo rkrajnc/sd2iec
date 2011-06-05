@@ -160,6 +160,9 @@ static inline void device_hw_address_init(void) {
 
 /* Initialize ports for all LEDs */
 static inline void leds_init(void) {
+  /* Note: Depending on the chip and register these lines can compile */
+  /*       to one instruction each on AVR. For two bits this is one   */
+  /*       instruction shorter than "DDRC |= _BV(PC0) | _BV(PC1);"    */
   DDRC |= _BV(PC0);
   DDRC |= _BV(PC1);
 }

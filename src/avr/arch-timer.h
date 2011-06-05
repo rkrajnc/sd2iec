@@ -38,7 +38,7 @@ typedef int16_t stick_t;
 
 /**
  * start_timeout - start a timeout using timer0
- * @usecs: number of microseconds before timeout (maximum 256)
+ * @usecs: number of microseconds before timeout (maximum 256 for 8MHz clock)
  *
  * This function sets timer 0 so it will time out after the specified number
  * of microseconds. DON'T use a variable as parameter because it would cause

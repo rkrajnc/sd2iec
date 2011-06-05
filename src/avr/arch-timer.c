@@ -32,7 +32,7 @@ void timer_init(void) {
   TCCR0B = _BV(CS01);
 
   /* Set up a 100Hz interrupt using timer 1 */
-  OCR1A  = 1249;
+  OCR1A  = F_CPU / 64 / 100 - 1;
   TCNT1  = 0;
   TCCR1A = 0;
   TCCR1B = _BV(WGM12) | _BV(CS10) | _BV(CS11);
