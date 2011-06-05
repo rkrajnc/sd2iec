@@ -22,8 +22,9 @@
 
    iec-bus.c: Architecture-specific IEC bus initialisation
 
-   This is not in arch-config.h becaue using the set_* functions from
-   iec-bus.h simplifies the code and the ARM version isn't space-constrained yet.
+   This is not in arch-config.h becaue using the set_* functions
+   from iec-bus.h simplifies the code and the ARM version isn't
+   space-constrained yet.
 */
 
 #include "config.h"
@@ -38,3 +39,4 @@ void iec_interface_init(void) {
 
   iec_pins_connect();
 }
+void bus_interface_init(void) __attribute__ ((weak, alias("iec_interface_init")));

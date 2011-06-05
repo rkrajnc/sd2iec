@@ -20,17 +20,17 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
-   iec.h: Definitions for the IEC handling code
+   bus.h: Common IEC/IEEE bus definitions
 
 */
 
-#ifndef IEC_H
-#define IEC_H
+#ifndef BUS_H
+#define BUS_H
 
-#include "bus.h"
+extern uint8_t device_address;
 
-void iec_init(void);
-
-void  __attribute__ ((noreturn)) iec_mainloop(void);
+void bus_interface_init(void);
+void bus_init(void);
+void __attribute__((noreturn)) bus_mainloop(void);
 
 #endif

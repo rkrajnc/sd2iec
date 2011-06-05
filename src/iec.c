@@ -546,6 +546,7 @@ void iec_init(void) {
   delay_ms(1);
   device_address = device_hw_address();
 }
+void bus_init(void) __attribute__((weak, alias("iec_init")));
 
 void iec_mainloop(void) {
   int16_t cmd = 0; // make gcc happy...
@@ -781,3 +782,4 @@ void iec_mainloop(void) {
     }
   }
 }
+void bus_mainloop(void) __attribute__ ((weak, alias("iec_mainloop")));

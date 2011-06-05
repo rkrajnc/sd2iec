@@ -925,6 +925,14 @@ static inline void iec_interface_init(void) {
 #endif
 }
 
+/* weak-aliasing is resolved at link time, so it doesn't work */
+/* for static inline functions - use a conditionally compiled */
+/* wrapper instead                                            */
+static inline void bus_interface_init(void) {
+  iec_interface_init();
+}
+
+
 /* The assembler module needs the vector names, */
 /* so the _HANDLER macros are created here.     */
 #define IEC_ATN_HANDLER   ISR(IEC_ATN_INT_VECT)

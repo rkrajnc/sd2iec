@@ -28,6 +28,7 @@
 #include <string.h>
 #include "config.h"
 #include "buffers.h"
+#include "bus.h"
 #include "diskchange.h"
 #include "diskio.h"
 #include "display.h"
@@ -36,8 +37,6 @@
 #include "fatops.h"
 #include "ff.h"
 #include "i2c.h"
-#include "iec.h"
-#include "iec-bus.h"
 #include "led.h"
 #include "time.h"
 #include "rtc.h"
@@ -68,7 +67,7 @@ int main(void) {
   spi_init(SPI_SPEED_SLOW);
 #endif
   timer_init();
-  iec_interface_init();
+  bus_interface_init();
   i2c_init();
 
   /* Second part of system initialisation, switches to full speed on ARM */
@@ -81,7 +80,7 @@ int main(void) {
 
   /* Anything that does something which needs the system clock */
   /* should be placed after system_init_late() */
-  iec_init();    // needs delay
+  bus_init();    // needs delay
   rtc_init();    // accesses I2C
   disk_init();   // accesses card
   read_configuration();
@@ -117,7 +116,7 @@ int main(void) {
   }
 #endif
 
-  iec_mainloop();
+  bus_mainloop();
 
   while (1);
 }
