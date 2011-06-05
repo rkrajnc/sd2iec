@@ -27,6 +27,7 @@
 #ifndef FASTLOADERLL_H
 #define FASTLOADERLL_H
 
+#ifdef CONFIG_HAVE_IEC
 void turbodisk_byte(uint8_t value);
 void turbodisk_buffer(uint8_t *data, uint8_t length);
 
@@ -60,5 +61,6 @@ void wheels44_send_byte_2mhz(uint8_t byte);
 
 void ar6_1581_send_byte(uint8_t byte);
 uint8_t ar6_1581p_get_byte(void);
+#endif
 
 #endif

@@ -28,6 +28,12 @@
 # This file is included in the main sd2iec Makefile and also parsed
 # into autoconf.h.
 
+# Device has serial Commodore bus?
+CONFIG_HAVE_IEC=y
+
+# Device has old parallel IEEE 488 bus?
+#CONFIG_HAVE_IEEE=y
+
 # target architecture
 CONFIG_ARCH=avr
 

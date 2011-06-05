@@ -235,6 +235,9 @@ static inline void iec_interrupts_init(void) {
 //}
 
 
+/*** IEEE signals ***/
+/* not documented yet, look at petSD/XS-1541 for guidance */
+
 /*** User interface ***/
 /* Button NEXT changes to the next disk image and enables sleep mode (held) */
 #  define BUTTON_NEXT _BV(PC4)
@@ -788,6 +791,19 @@ static inline void board_init(void) {
 
 /* ---------------- End of user-configurable options ---------------- */
 
+#if !defined(CONFIG_HAVE_IEC) && !defined(CONFIG_HAVE_IEEE)
+#  error Need CONFIG_HAVE_IEC and/or CONFIG_HAVE_IEEE
+// Please edit your config-<devicename> if this error occurs.
+#endif
+
+#if defined(CONFIG_HAVE_IEC) && defined(CONFIG_HAVE_IEEE)
+#  error Sorry, dual-interface devices must select only one interface at compile time!
+#endif
+
+
+/* --- IEC --- */
+#ifdef CONFIG_HAVE_IEC
+
 #define IEC_BIT_ATN      _BV(IEC_PIN_ATN)
 #define IEC_BIT_DATA     _BV(IEC_PIN_DATA)
 #define IEC_BIT_CLOCK    _BV(IEC_PIN_CLOCK)
@@ -928,15 +944,41 @@ static inline void iec_interface_init(void) {
 /* weak-aliasing is resolved at link time, so it doesn't work */
 /* for static inline functions - use a conditionally compiled */
 /* wrapper instead                                            */
+#  ifndef CONFIG_HAVE_IEEE
 static inline void bus_interface_init(void) {
   iec_interface_init();
 }
+#  endif
+#endif /* CONFIG_HAVE_IEC */
+
+
+/* --- IEEE --- */
+#ifdef CONFIG_HAVE_IEEE
+#  ifdef IEEE_PCMSK
+/* IEEE-488 ATN interrupt using PCINT */
+static inline void set_atn_irq(uint8_t x) {
+  if (x)
+    IEEE_PCMSK |= _BV(IEEE_PCINT);
+  else
+    IEEE_PCMSK &= (uint8_t) ~_BV(IEEE_PCINT);
+}
+#  endif
+
+/* same weak alias problem as in IEC version */
+#  ifndef CONFIG_HAVE_IEC
+static inline void bus_interface_init(void) {
+  ieee_interface_init();
+}
+#  endif
+#endif /* CONFIG_HAVE_IEEE */
+
 
 
 /* The assembler module needs the vector names, */
 /* so the _HANDLER macros are created here.     */
 #define IEC_ATN_HANDLER   ISR(IEC_ATN_INT_VECT)
 #define IEC_CLOCK_HANDLER ISR(IEC_CLK_INT_VECT)
+#define IEEE_ATN_HANDLER  ISR(IEEE_ATN_INT_VECT)
 
 /* SD SS pin default implementation */
 #ifndef SDCARD_SS_SPECIAL

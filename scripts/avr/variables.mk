@@ -1,7 +1,11 @@
 # architecture-dependent variables
 
 #---------------- Source code ----------------
-ASMSRC = avr/fastloader-ll.S avr/crc7asm.S
+ASMSRC = avr/crc7asm.S
+
+ifeq ($(CONFIG_HAVE_IEC),y)
+  ASMSRC += avr/fastloader-ll.S
+endif
 
 ifdef NEED_I2C
   SRC += avr/softi2c.c

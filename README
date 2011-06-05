@@ -4,11 +4,13 @@ Parts based on code from others, see comments in main.c for details.
 JiffyDos send based on code by M.Kiesel
 Fat LFN support and lots of other ideas+code by Jim Brain
 Final Cartridge III fastloader support by Thomas Giesel
+IEEE488 support by Nils Eilers
 
 Free software under GPL version 2 ONLY, see comments in main.c and
 COPYING for details.
 
 FIXME:This file still needs to be expanded. A lot.
+FIXME: sprinkle mentions of IEEE488 where appropiate
 
 Introduction:
 =============

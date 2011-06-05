@@ -60,11 +60,28 @@ HEXFORMAT = ihex
 TARGET = $(OBJDIR)/sd2iec
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC  = buffers.c fatops.c fileops.c iec.c main.c errormsg.c
-SRC += doscmd.c ff.c fastloader.c m2iops.c d64ops.c diskchange.c
+SRC  = buffers.c fatops.c fileops.c main.c errormsg.c
+SRC += doscmd.c ff.c m2iops.c d64ops.c diskchange.c
 SRC += eeprom.c parser.c utils.c led.c diskio.c sdcard.c
 SRC += timer.c $(CONFIG_ARCH)/arch-timer.c $(CONFIG_ARCH)/spi.c
 SRC += $(CONFIG_ARCH)/system.c
+
+ifneq ($(CONFIG_HAVE_IEC),y)
+  ifneq ($(CONFIG_HAVE_IEEE),y)
+    .PHONY: nobus
+    nobus:
+	@echo 'Neither CONFIG_HAVE_IEC nor CONFIG_HAVE_IEEE are set.'
+	@echo "Please edit $(CONFIG)."
+  endif
+endif
+
+ifeq ($(CONFIG_HAVE_IEC),y)
+  SRC += iec.c fastloader.c
+endif
+
+ifeq ($(CONFIG_HAVE_IEEE),y)
+  SRC += ieee.c
+endif
 
 ifeq ($(CONFIG_UART_DEBUG),y)
   SRC += $(CONFIG_ARCH)/uart.c
