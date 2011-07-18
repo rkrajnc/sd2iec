@@ -68,8 +68,8 @@
 #define RESULT_BUSERROR  3
 #define RESULT_DONE      4
 
-static unsigned char *bufferptr;
 static unsigned char address, i2creg, count, read_mode;
+static volatile unsigned char *bufferptr;
 static volatile char result;
 
 void I2C_HANDLER(void) {
@@ -217,7 +217,6 @@ uint8_t i2c_write_register(uint8_t address, uint8_t reg, uint8_t val) {
   return i2c_write_registers(address, reg, 1, &val);
 }
 
-
 uint8_t i2c_read_registers(uint8_t address_, uint8_t startreg, uint8_t count_, void *data) {
   result    = RESULT_NONE;
   address   = address_ & 0xfe;
@@ -232,6 +231,9 @@ uint8_t i2c_read_registers(uint8_t address_, uint8_t startreg, uint8_t count_, v
   /* wait until ISR is done */
   while (result == RESULT_NONE)
     __WFI();
+
+  /* tell gcc that the contents of data have changed */
+  asm volatile ("" : "=m" (*(char *)data));
 
   return (result != RESULT_DONE);
 }
