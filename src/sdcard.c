@@ -213,9 +213,9 @@ static uint8_t wait_for_response(uint8_t expected) {
   return 0;
 }
 
-static void deselectCard(uint8_t card) {
+static void deselectCard(void) {
   // Send 8 clock cycles
-  spi_select_device(card);
+  spi_select_device(SPIDEV_NONE);
   set_sd_led(0);
   spi_rx_byte();
 }
@@ -243,7 +243,7 @@ static int sendCommand(const uint8_t  card,
   uint8_t i,crc,errorcount;
   tick_t  timeout;
 
-  spi_select_device(card);
+  spi_select_device(card+1);
 
   long2char.l = parameter;
   crc = crc7update(0  , 0x40+command);
@@ -256,6 +256,7 @@ static int sendCommand(const uint8_t  card,
   errorcount = 0;
   while (errorcount < CONFIG_SD_AUTO_RETRIES) {
     // Select card
+    spi_select_device(card+1);
 #ifdef CONFIG_TWINSD
     if (card == 0 && command == GO_IDLE_STATE)
       /* Force both cards to SPI mode simultaneously */
@@ -277,19 +278,19 @@ static int sendCommand(const uint8_t  card,
 
 #ifdef CONFIG_TWINSD
     if (card == 0 && command == GO_IDLE_STATE)
-      spi_select_device(card);
+      spi_select_device(card+1);
 #endif
 
     // Check for CRC error
     // can't reliably retry unless deselect is allowed
     if (deselect && (i & STATUS_CRC_ERROR)) {
       uart_putc('x');
-      deselectCard(card);
+      deselectCard();
       errorcount++;
       continue;
     }
 
-    if (deselect) deselectCard(card);
+    if (deselect) deselectCard();
     break;
   }
 
@@ -306,14 +307,14 @@ static uint8_t extendedInit(const uint8_t card) {
   i = sendCommand(card, SEND_IF_COND, 0b000110101010, 0);
   if (i > 1) {
     // Card returned an error, ok (MMC or SD1.x) but not SDHC
-    deselectCard(card);
+    deselectCard();
     return 1;
   }
 
   // No error, continue SDHC initialization
   spi_rx_block(&answer, 4);
   answer = swap_word(answer);
-  deselectCard(card);
+  deselectCard();
 
   if (((answer >> 8) & 0x0f) != 0b0001) {
     // Card didn't accept our voltage specification
@@ -443,14 +444,15 @@ DSTATUS sd_initialize(BYTE drv) {
 
   cardtype[drv] = 0;
 
+  spi_select_device(SPIDEV_NONE);
   set_sd_led(0);
 
   // Send 80 clocks without(!) selecting a card
   for (i=0; i<10; i++) {
-    spi_tx_dummy();
+    spi_tx_byte(0xff);
   }
 
-  spi_select_device(drv);
+  spi_select_device(drv+1);
 
   // Reset card
   i = sendCommand(drv, GO_IDLE_STATE, 0, 1);
@@ -470,7 +472,7 @@ DSTATUS sd_initialize(BYTE drv) {
     // Send CMD58: READ_OCR
     i = sendCommand(drv, READ_OCR, 0, 0);
     if (i > 1)
-      deselectCard(drv);
+      deselectCard();
   } while (i > 1 && counter-- > 0);
 
   if (counter > 0) {
@@ -481,7 +483,7 @@ DSTATUS sd_initialize(BYTE drv) {
     if (!(answer & SD_SUPPLY_VOLTAGE)) {
       // The code isn't set up to completely ignore the card,
       // but at least report it as nonworking
-      deselectCard(drv);
+      deselectCard();
       return STA_NOINIT | STA_NODISK;
     }
 
@@ -557,6 +559,7 @@ DRESULT sd_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
         res = sendCommand(drv, READ_SINGLE_BLOCK, (sector+sec) << 9, 0);
 
       if (res != 0) {
+        spi_select_device(SPIDEV_NONE);
         set_sd_led(0);
         disk_state = DISK_ERROR;
         return RES_ERROR;
@@ -564,6 +567,7 @@ DRESULT sd_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
 
       // Wait for data token
       if (!wait_for_response(0xFE)) {
+        spi_select_device(SPIDEV_NONE);
         set_sd_led(0);
         disk_state = DISK_ERROR;
         return RES_ERROR;
@@ -585,7 +589,7 @@ DRESULT sd_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
       BYTE *ptr = buffer;
 
       // Initiate data exchange over SPI
-      spi_set_ss(0); // auto-reset by spi_rx_byte later
+      spi_select_device(drv+1);
       SPDR = 0xff;
 
       for (i=0; i<512; i++) {
@@ -610,7 +614,7 @@ DRESULT sd_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
 #ifdef CONFIG_SD_DATACRC
       if (recvcrc != crc) {
         uart_putc('X');
-        deselectCard(drv);
+        deselectCard();
         errorcount++;
         continue;
       }
@@ -618,7 +622,7 @@ DRESULT sd_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
 
       break;
     }
-    deselectCard(drv);
+    deselectCard();
 
     if (errorcount >= CONFIG_SD_AUTO_RETRIES) return RES_ERROR;
     buffer += 512;
@@ -671,6 +675,7 @@ DRESULT sd_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
         res = sendCommand(drv, WRITE_BLOCK, (sector+sec)<<9, 0);
 
       if (res != 0) {
+        spi_select_device(SPIDEV_NONE);
         set_sd_led(0);
         disk_state = DISK_ERROR;
         return RES_ERROR;
@@ -692,7 +697,7 @@ DRESULT sd_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
       const BYTE *ptr = buffer;
 
       crc = 0;
-      spi_set_ss(0); // auto-reset by spi_tx_byte later
+      spi_select_device(drv+1);
       do {
         SPDR = *ptr;
         crc = crc_xmodem_update(crc, *ptr++);
@@ -711,20 +716,21 @@ DRESULT sd_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
       // Retry if neccessary
       if ((status & 0x0F) != 0x05) {
         uart_putc('X');
-        deselectCard(drv);
+        deselectCard();
         errorcount++;
         continue;
       }
 
       // Wait for write finish
       if (!wait_for_response(0)) {
+        spi_select_device(SPIDEV_NONE);
         set_sd_led(0);
         disk_state = DISK_ERROR;
         return RES_ERROR;
       }
       break;
     }
-    deselectCard(drv);
+    deselectCard();
 
     if (errorcount >= CONFIG_SD_AUTO_RETRIES) {
       if (!(status & STATUS_CRC_ERROR))
@@ -755,18 +761,18 @@ DRESULT sd_getinfo(BYTE drv, BYTE page, void *buffer) {
   /* Try to calculate the total number of sectors on the card */
   /* FIXME: Write a generic data read function and merge with sd_read */
   if (sendCommand(drv, SEND_CSD, 0, 0) != 0) {
-    deselectCard(drv);
+    deselectCard();
     return RES_ERROR;
   }
 
   /* Wait for data token */
   if (!wait_for_response(0xfe)) {
-    deselectCard(drv);
+    deselectCard();
     return RES_ERROR;
   }
 
   spi_rx_block(buf, 18);
-  deselectCard(drv);
+  deselectCard();
 
   if (cardtype[drv] & CARD_SDHC) {
     /* Special CSD for SDHC cards */

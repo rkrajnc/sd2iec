@@ -30,16 +30,16 @@
 typedef enum { SPI_SPEED_FAST, SPI_SPEED_SLOW } spi_speed_t;
 
 /* Available SPI devices - special case to select all SD cards for initialisation */
-/* Note: SD cards must be 0 and 1 */
-typedef enum { SPIDEV_CARD0 = 0,
-               SPIDEV_CARD1,
-               SPIDEV_NONE     = 0xfe,
-               SPIDEV_ALLCARDS = 0xff } spi_device_t;
+/* Note: SD cards must be 1 and 2 */
+typedef enum { SPIDEV_NONE     = 0,
+               SPIDEV_CARD0    = 1,
+               SPIDEV_CARD1    = 2,
+               SPIDEV_ALLCARDS = 3 } spi_device_t;
 
 /* Initialize SPI interface */
 void spi_init(spi_speed_t speed);
 
-/* Select device - not supported on AVR */
+/* Select device */
 void spi_select_device(spi_device_t dev);
 
 /* Transmit a single byte */
@@ -56,9 +56,5 @@ void spi_rx_block(void *data, unsigned int length);
 
 /* Switch speed of SPI interface */
 void spi_set_speed(spi_speed_t speed);
-
-/* Do a single byte dummy transmission (no device selected) */
-/* Note: Deselects all devices */
-void spi_tx_dummy(void);
 
 #endif

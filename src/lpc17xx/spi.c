@@ -203,19 +203,14 @@ void spi_select_device(spi_device_t dev) {
   while (!BITBAND(SSP_REGS->SR, 0)) ;
 
   if (dev == SPIDEV_CARD0 || dev == SPIDEV_ALLCARDS)
-    sdcard_ss_mask(1);
+    sdcard_set_ss(0);
   else
-    sdcard_ss_mask(0);
+    sdcard_set_ss(1);
 
 #ifdef CONFIG_TWINSD
   if (dev == SPIDEV_CARD1 || dev == SPIDEV_ALLCARDS)
-    sdcard2_ss_mask(1);
+    sdcard2_set_ss(0);
   else
-    sdcard2_ss_mask(0);
+    sdcard2_set_ss(1);
 #endif
-}
-
-void spi_tx_dummy(void) {
-  spi_select_device(SPIDEV_NONE);
-  spi_tx_byte(0xff);
 }

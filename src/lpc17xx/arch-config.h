@@ -72,19 +72,18 @@ static inline void iec_interrupts_init(void) {
 #  define SPI_ON_SSP 0
 
 #  define SD_DETECT_PIN  25
-#  define SD_CS_GATE_PIN 30
 
-/* SSP 0, SD1-CS gates via P1.30, SD2-CS via P1.31 */
+/* SSP 0, SD0-CS P0.16 */
 /* SD1: Detect P0.25, WP P0.26 */
 /* SD2: Not defined yet        */
 static inline void sdcard_interface_init(void) {
-  /* Connect SSP0 */
-  LPC_PINCON->PINSEL0 |= BV(31);                // SCK
-  LPC_PINCON->PINSEL1 |= BV(1) | BV(3) | BV(5); // SSEL/MISO/MOSI
+  /* configure SD0-CS as output, high */
+  LPC_GPIO0->FIOSET  = BV(16);
+  LPC_GPIO0->FIODIR |= BV(16);
 
-  /* Enable CS-Gate */
-  BITBAND(LPC_GPIO1->FIOPIN, SD_CS_GATE_PIN) = 1;
-  BITBAND(LPC_GPIO1->FIODIR, SD_CS_GATE_PIN) = 1;
+  /* Connect SSP0 */
+  LPC_PINCON->PINSEL0 |= BV(31);        // SCK
+  LPC_PINCON->PINSEL1 |= BV(3) | BV(5); // MISO/MOSI
 
   /* GPIOs are input-with-pullup by default, so Detect and WP "just work" */
 
@@ -95,19 +94,19 @@ static inline void sdcard_interface_init(void) {
   /* Note: The GPIO interrupt is enabled in system_init_late */
 }
 
+static inline void sdcard_set_ss(int state) {
+  if (state)
+    LPC_GPIO0->FIOSET = BV(16);
+  else
+    LPC_GPIO0->FIOCLR = BV(16);
+}
+
 static inline uint8_t sdcard_detect(void) {
   return !BITBAND(LPC_GPIO0->FIOPIN, SD_DETECT_PIN);
 }
 
 static inline uint8_t sdcard_wp(void) {
   return BITBAND(LPC_GPIO0->FIOPIN, 26);
-}
-
-static inline void sdcard_ss_mask(int state) {
-  if (state)
-    BITBAND(LPC_GPIO1->FIOPIN, 30) = 0;
-  else
-    BITBAND(LPC_GPIO1->FIOPIN, 30) = 1;
 }
 
 static inline uint8_t device_hw_address(void) {

@@ -29,10 +29,6 @@
 #include "avrcompat.h"
 #include "spi.h"
 
-#ifdef CONFIG_TWINSD
-uint8_t spi_current_device;
-#endif
-
 /* interrupts disabled, SPI enabled, MSB first, master mode */
 /* leading edge rising, sample on leading edge, clock bits cleared */
 #define SPCR_VAL 0b01010000
@@ -84,22 +80,13 @@ void spi_init(spi_speed_t speed) {
 
 /* Simple and braindead, just like the AVR's SPI unit */
 static uint8_t spi_exchange_byte(uint8_t output) {
-  spi_set_ss(0);
   SPDR = output;
   loop_until_bit_is_set(SPSR, SPIF);
-  spi_set_ss(1);
   return SPDR;
 }
 
 void spi_tx_byte(uint8_t data) {
   spi_exchange_byte(data);
-}
-
-void spi_tx_dummy(void) {
-  spi_set_ss(1);
-  SPDR = 0xff;
-  loop_until_bit_is_set(SPSR, SPIF);
-  (void) SPDR;
 }
 
 uint8_t spi_rx_byte(void) {
@@ -109,8 +96,6 @@ uint8_t spi_rx_byte(void) {
 void spi_exchange_block(void *vdata, unsigned int length, uint8_t write) {
   uint8_t *data = (uint8_t*)vdata;
   uint8_t dummy;
-
-  spi_set_ss(0);
 
   while (length--) {
     if (!write)
@@ -126,6 +111,4 @@ void spi_exchange_block(void *vdata, unsigned int length, uint8_t write) {
       dummy = SPDR;
     data++;
   }
-
-  spi_set_ss(1);
 }
