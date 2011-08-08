@@ -102,8 +102,13 @@ ifdef CONFIG_ADD_ATA
 endif
 
 # Various RTC implementations
+ifeq ($(CONFIG_RTC_VARIANT),5)
+  SRC += rtc.c ds1307-3231.c
+  NEED_I2C := y
+endif
+
 ifeq ($(CONFIG_RTC_VARIANT),4)
-  SRC += rtc.c ds3231.c
+  SRC += rtc.c ds1307-3231.c
   NEED_I2C := y
 endif
 # Note: 3 is the LPC17xx internal RTC

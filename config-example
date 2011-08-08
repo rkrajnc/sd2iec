@@ -163,6 +163,9 @@ CONFIG_MAX_PARTITIONS=2
 #   0 - None
 #   1 - software RTC
 #   2 - PCF8563 using softi2c
+#   3 - LPC1768 internal RTC
+#   4 - DS3231
+#   5 - DS1307
 CONFIG_RTC_VARIANT=0
 
 # I2C display
