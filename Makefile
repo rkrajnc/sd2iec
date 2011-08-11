@@ -92,6 +92,10 @@ ifeq ($(CONFIG_REMOTE_DISPLAY),y)
   NEED_I2C := y
 endif
 
+ifeq ($(CONFIG_P00CACHE),y)
+  SRC += p00cache.c
+endif
+
 # Additional hardware support enabled in the config file
 ifdef CONFIG_ADD_SD
   SRC += sdcard.c

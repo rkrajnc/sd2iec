@@ -64,6 +64,9 @@ static inline void iec_interrupts_init(void) {
   // Noting - GPIO-Interrupt demux is in system.c
 }
 
+/* P00 name cache is in AHB ram */
+#define P00CACHE_ATTRIB __attribute__((section(".ahbram")))
+
 #if CONFIG_HARDWARE_VARIANT == 100
 /* ---------- Hardware configuration: mbed LPC1768 ---------- */
 #  define HW_NAME "SD2IEC"

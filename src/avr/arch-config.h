@@ -1278,4 +1278,9 @@ static inline uint8_t display_intrq_active(void) {
 }
 #endif
 
+/* P00 name cache is in bss by default */
+#ifndef P00CACHE_ATTRIB
+#  define P00CACHE_ATTRIB
+#endif
+
 #endif

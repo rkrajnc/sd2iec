@@ -41,6 +41,7 @@
 #include "flags.h"
 #include "led.h"
 #include "m2iops.h"
+#include "p00cache.h"
 #include "parser.h"
 #include "progmem.h"
 #include "uart.h"
@@ -824,29 +825,39 @@ int8_t fat_readdir(dh_t *dh, cbmdirent_t *dent) {
     exttype_t ext = check_extension(finfo.fname, &ptr);
     if (ext == EXT_IS_X00) {
       /* [PSRU]00 file - try to read the internal name */
-      UINT bytesread;
-
+      uint8_t *name = p00cache_lookup(dh->part, finfo.clust);
       typechar = *ptr;
-      res = l_opencluster(&partition[dh->part].fatfs, &partition[dh->part].imagehandle, finfo.clust);
-      if (res != FR_OK)
-        goto notp00;
 
-      res = f_read(&partition[dh->part].imagehandle, entrybuf, P00_HEADER_SIZE, &bytesread);
-      if (res != FR_OK)
-        goto notp00;
+      if (name != NULL) {
+        /* lookup successful */
+        memcpy(dent->name, name, CBM_NAME_LENGTH);
+      } else {
+        /* read name from file */
+        UINT bytesread;
 
-      if (ustrcmp_P(entrybuf, p00marker))
-        goto notp00;
+        res = l_opencluster(&partition[dh->part].fatfs, &partition[dh->part].imagehandle, finfo.clust);
+        if (res != FR_OK)
+          goto notp00;
 
-      /* Copy the internal name - dent->name is still zeroed */
-      ustrcpy(dent->name, entrybuf+P00_CBMNAME_OFFSET);
+        res = f_read(&partition[dh->part].imagehandle, entrybuf, P00_HEADER_SIZE, &bytesread);
+        if (res != FR_OK)
+          goto notp00;
 
-      /* Some programs pad the name with 0xa0 instead of 0 */
-      ptr = dent->name;
-      for (uint8_t i=0;i<16;i++,ptr++)
-        if (*ptr == 0xa0)
-          *ptr = 0;
+        if (ustrcmp_P(entrybuf, p00marker))
+          goto notp00;
 
+        /* Copy the internal name - dent->name is still zeroed */
+        ustrcpy(dent->name, entrybuf+P00_CBMNAME_OFFSET);
+
+        /* Some programs pad the name with 0xa0 instead of 0 */
+        ptr = dent->name;
+        for (uint8_t i=0;i<16;i++,ptr++)
+          if (*ptr == 0xa0)
+            *ptr = 0;
+
+        /* add name to cache */
+        p00cache_add(dh->part, finfo.clust, dent->name);
+      }
       finfo.fsize -= P00_HEADER_SIZE;
       dent->opstype = OPSTYPE_FAT_X00;
 
@@ -942,6 +953,7 @@ uint8_t fat_delete(path_t *path, cbmdirent_t *dent) {
   set_dirty_led(1);
   if (dent->pvt.fat.realname[0]) {
     name = dent->pvt.fat.realname;
+    p00cache_invalidate();
   } else {
     name = dent->name;
     pet2asc(name);
@@ -1222,7 +1234,10 @@ void fat_rename(path_t *path, cbmdirent_t *dent, uint8_t *newname) {
 
   if (dent->opstype == OPSTYPE_FAT_X00) {
     /* [PSUR]00 rename, just change the internal file name */
-    res = f_open(&partition[path->part].fatfs, &partition[path->part].imagehandle, dent->pvt.fat.realname, FA_WRITE|FA_OPEN_EXISTING);
+    p00cache_invalidate();
+
+    res = f_open(&partition[path->part].fatfs, &partition[path->part].imagehandle,
+                 dent->pvt.fat.realname, FA_WRITE|FA_OPEN_EXISTING);
     if (res != FR_OK) {
       parse_error(res,0);
       return;
@@ -1321,6 +1336,7 @@ void fatops_init(uint8_t preserve_path) {
   /* Remove BAM buffer */
   free_buffer(bam_buffer);
   bam_buffer = NULL;
+  p00cache_invalidate();
 
 #ifndef HAVE_HOTPLUG
   if (!max_part) {
