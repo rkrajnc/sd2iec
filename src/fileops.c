@@ -349,7 +349,7 @@ static uint8_t dir_refill(buffer_t *buf) {
  * used to pad a raw directory to its correct size.
  */
 static uint8_t rawdir_dummy_refill(buffer_t *buf) {
-  if (buf->pvt.dir.filetype++)
+  if (buf->pvt.dir.counter++)
     buf->position = 0;
   else
     buf->position = 2;
