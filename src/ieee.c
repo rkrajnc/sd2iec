@@ -46,6 +46,8 @@
 #include "fastloader.h"
 #include "errormsg.h"
 #include "ctype.h"
+#include "display.h"
+#include "system.h"
 
 /*
   Debug output:
@@ -64,6 +66,8 @@
 
 #define FLAG_EOI 256
 #define FLAG_ATN 512
+
+#define IEEE_TIMEOUT_MS 64
 
 #define uart_puts_p(__s) uart_puts_P(PSTR(__s))
 #define EOI_RECVD       (1<<0)
@@ -92,7 +96,7 @@ struct {
   enum {    BUS_IDLE = 0,
             BUS_FOUNDATN,
             BUS_ATNPROCESS,
-//          BUS_SLEEP                   TODO: add sleep mode
+            BUS_SLEEP
   } bus_state;
 
   enum {    DEVICE_IDLE = 0,
@@ -109,125 +113,84 @@ struct {
 static inline void set_eoi_state(uint8_t x)
 {
   if(x) {                                           // Set EOI high
-    IEEE_C_DDR &= (uint8_t)~_BV(IEEE_PIN_EOI);      // EOI as input
-    IEEE_C_PORT |= (uint8_t)_BV(IEEE_PIN_EOI);      // Enable pull-up
+    IEEE_DDR_EOI &= (uint8_t)~_BV(IEEE_PIN_EOI);    // EOI as input
+    IEEE_PORT_EOI |= (uint8_t)_BV(IEEE_PIN_EOI);    // Enable pull-up
   } else {                                          // Set EOI low
-    IEEE_C_PORT &= (uint8_t)~_BV(IEEE_PIN_EOI);     // EOI low
-    IEEE_C_DDR |= (uint8_t) _BV(IEEE_PIN_EOI);      // EOI as output
+    IEEE_PORT_EOI &= (uint8_t)~_BV(IEEE_PIN_EOI);   // EOI low
+    IEEE_DDR_EOI |= (uint8_t) _BV(IEEE_PIN_EOI);    // EOI as output
   }
 }
 
 /* Read port bits */
-# define IEEE_ATN        (IEEE_C_ATN_PIN & _BV(IEEE_PIN_ATN))
-# define IEEE_NDAC       (IEEE_C_PIN & _BV(IEEE_PIN_NDAC))
-# define IEEE_NRFD       (IEEE_C_PIN & _BV(IEEE_PIN_NRFD))
-# define IEEE_DAV        (IEEE_C_PIN & _BV(IEEE_PIN_DAV))
-# define IEEE_EOI        (IEEE_C_PIN & _BV(IEEE_PIN_EOI))
+# define IEEE_ATN        (IEEE_INPUT_ATN  & _BV(IEEE_PIN_ATN))
+# define IEEE_NDAC       (IEEE_INPUT_NDAC & _BV(IEEE_PIN_NDAC))
+# define IEEE_NRFD       (IEEE_INPUT_NRFD & _BV(IEEE_PIN_NRFD))
+# define IEEE_DAV        (IEEE_INPUT_DAV  & _BV(IEEE_PIN_DAV))
+# define IEEE_EOI        (IEEE_INPUT_EOI  & _BV(IEEE_PIN_EOI))
 
 #ifdef HAVE_7516X
-// FIXME: Translate and move to documentation!
-/*
-   Device should use 75160/75161 bus drivers
-   =========================================
-
-   They are specially designed for the IEEE 488 bus and offer sufficiant sink
-   and source current, bus termination, signal raise times etc. according the
-   standard.
-
-    Signale des SN75161:
-    ====================
-
-    DC muss immer high sein, da petSD Device ist und kein Controller.
-    Damit ist folgende Datenrichtung (aus Sicht des AVR) festgelegt:
-    - ATN ist immer Eingang
-    - SRQ ist immer Ausgang
-    - REN und IFC sind immer Eingaenge
-      (nicht an AVR angeschlossen)
-
-
-    TE regelt die Flussrichtung der Signale:
-
-    - TE high (petSD ist Talker):
-        - DAV ist Ausgang
-        - NDAC und NRFD sind Eingaenge
-        - EOI ist Ausgang (AVR --> 75161 --> Bus) solange ATN high ist.
-          Wenn der Controller ATN setzt (dem Device also "in's Wort faellt"),
-          wird EOI zum Eingang (AVR --> <-- 75161 <-- Bus) umgeschaltet!
-          Da der 75161 offene (=unbeschaltete) Eingaenge als high erkennt,
-          kann der Flussrichtungskonflikt wie folgt umgangen werden:
-          Bei EOI=1 wird der Port als Eingang mit Pull-up geschaltet.
-          Bei EOI=0 wird der Port als Ausgang beschaltet. Hier gibt es
-          keinen Konflikt, da sowohl EOI vom AVR als auch EOI vom 75161 auf
-          low liegen.
-
-    - TE low (petSD ist Listener):
-        - DAV ist Eingang
-        - EOI ist Eingang
-        - NDAD und NRFD sind Ausgaenge
-*/
-
 # define ddr_change_by_atn() \
-    if(ieee_data.device_state == DEVICE_TALK) IEEE_PORTS_LISTEN()
+    if(ieee_data.device_state == DEVICE_TALK) ieee_ports_listen()
 # define set_ieee_data(data) IEEE_D_PORT = (uint8_t) ~ data
 
   static inline void set_te_state(uint8_t x)
   {
-    if(x) IEEE_C_PORT |= _BV(IEEE_PIN_TE);
-    else  IEEE_C_PORT &= ~_BV(IEEE_PIN_TE);
+    if(x) IEEE_PORT_TE |= _BV(IEEE_PIN_TE);
+    else  IEEE_PORT_TE &= ~_BV(IEEE_PIN_TE);
   }
 
   static inline void set_ndac_state(uint8_t x)
   {
-    if (x) IEEE_C_PORT |= _BV(IEEE_PIN_NDAC);
-    else   IEEE_C_PORT &= ~_BV(IEEE_PIN_NDAC);
+    if (x) IEEE_PORT_NDAC |= _BV(IEEE_PIN_NDAC);
+    else   IEEE_PORT_NDAC &= ~_BV(IEEE_PIN_NDAC);
   }
 
   static inline void set_nrfd_state(uint8_t x)
   {
-    if(x) IEEE_C_PORT |= _BV(IEEE_PIN_NRFD);
-    else  IEEE_C_PORT &= ~_BV(IEEE_PIN_NRFD);
+    if(x) IEEE_PORT_NRFD |= _BV(IEEE_PIN_NRFD);
+    else  IEEE_PORT_NRFD &= ~_BV(IEEE_PIN_NRFD);
   }
 
   static inline void set_dav_state(uint8_t x)
   {
-    if(x) IEEE_C_PORT |= _BV(IEEE_PIN_DAV);
-    else  IEEE_C_PORT &= ~_BV(IEEE_PIN_DAV);
+    if(x) IEEE_PORT_DAV |= _BV(IEEE_PIN_DAV);
+    else  IEEE_PORT_DAV &= ~_BV(IEEE_PIN_DAV);
   }
 
-  /* Configure bus to passive/listen or talk */
-  /* Toogle direction of I/O pins and safely avoid connecting two outputs */
+  // Configure bus to passive/listen or talk
+  // Toogle direction of I/O pins and safely avoid connecting two outputs
 
-  static inline void IEEE_PORTS_LISTEN (void)
+  static inline void ieee_ports_listen (void)
   {
-    IEEE_D_DDR=0;           /* data ports as inputs */
-    IEEE_D_PORT=0xff;       /* enable pull-ups for data lines  */
-    IEEE_C_DDR &=(uint8_t) ~ (_BV(IEEE_PIN_DAV)   /* DAV as input */
-                            | _BV(IEEE_PIN_EOI)); /* EOI as input */
-    set_te_state(0);                              /* 7516x listen */
-    IEEE_C_DDR |= (uint8_t) (_BV(IEEE_PIN_NDAC)   /* NDAC as output */
-                          | _BV(IEEE_PIN_NRFD));  /* NRFD as output */
-    /* Enable pull-ups for DAV, EOI */
-    IEEE_C_PORT |= (uint8_t) ( _BV(IEEE_PIN_DAV) | _BV(IEEE_PIN_EOI) );
+    IEEE_D_DDR = 0;                                 // data ports as inputs
+    IEEE_D_PORT = 0xff;                     // enable pull-ups for data lines
+    IEEE_DDR_DAV &= (uint8_t) ~_BV(IEEE_PIN_DAV);   // DAV as input
+    IEEE_DDR_EOI &= (uint8_t) ~_BV(IEEE_PIN_EOI);   // EOI as input
+    set_te_state(0);                                // 7516x listen
+    IEEE_DDR_NDAC |= _BV(IEEE_PIN_NDAC);            // NDAC as output
+    IEEE_DDR_NRFD |= _BV(IEEE_PIN_NRFD);            // NRFD as output
+    IEEE_PORT_DAV |= _BV(IEEE_PIN_DAV);             // Enable pull-up for DAV
+    IEEE_PORT_EOI |= _BV(IEEE_PIN_EOI);             // Enable pull-up for EOI
   }
 
-  static inline void IEEE_PORTS_TALK (void)
+  static inline void ieee_ports_talk (void)
   {
-    IEEE_C_DDR &= (uint8_t)~_BV(IEEE_PIN_NDAC); // NDAC as input
-    IEEE_C_DDR &= (uint8_t)~_BV(IEEE_PIN_NRFD); // NRFD as input
-    /* Enable pull-ups for NDAC, NRFD */
-    IEEE_C_PORT |= (uint8_t) ( _BV(IEEE_PIN_NDAC) | _BV(IEEE_PIN_NRFD) );
-    set_te_state(1);                            // 7516x talk enable
-    IEEE_D_PORT=0xff;                           // all data lines high
-    IEEE_D_DDR=0xff;                            // data ports as outputs
-    set_dav_state(1);                           // Set DAV high
-    IEEE_C_DDR |= (uint8_t)_BV(IEEE_PIN_DAV);   // DAV as output
-    set_eoi_state(1);                           // Set EOI high
-    IEEE_C_DDR |= (uint8_t) _BV(IEEE_PIN_EOI);  // EOI as output
+    IEEE_DDR_NDAC &= (uint8_t)~_BV(IEEE_PIN_NDAC);  // NDAC as input
+    IEEE_DDR_NRFD &= (uint8_t)~_BV(IEEE_PIN_NRFD);  // NRFD as input
+    IEEE_PORT_NDAC |= _BV(IEEE_PIN_NDAC);           // Enable pull-up for NDAC
+    IEEE_PORT_NRFD |= _BV(IEEE_PIN_NRFD);           // Enable pull-up for NRFD
+    set_te_state(1);                                // 7516x talk enable
+    IEEE_D_PORT = 0xff;                             // all data lines high
+    IEEE_D_DDR = 0xff;                              // data ports as outputs
+    set_dav_state(1);                               // Set DAV high
+    IEEE_DDR_DAV |= _BV(IEEE_PIN_DAV);              // DAV as output
+    set_eoi_state(1);                               // Set EOI high
+    IEEE_DDR_EOI |= _BV(IEEE_PIN_EOI);              // EOI as output
   }
 
-  static void inline IEEE_BUS_IDLE (void)
+  static void inline ieee_bus_idle (void)
   {
-    IEEE_PORTS_LISTEN();
+    ieee_ports_listen();
     set_ndac_state(1);
     set_nrfd_state(1);
   }
@@ -239,34 +202,34 @@ static inline void set_eoi_state(uint8_t x)
 
   static inline void set_ndac_state (uint8_t x)
   {
-    if(x) {                                         // Set NDAC high
-      IEEE_C_DDR &= (uint8_t)~_BV(IEEE_PIN_NDAC);   // NDAC as input
-      IEEE_C_PORT |= (uint8_t)_BV(IEEE_PIN_NDAC);   // Enable pull-up
-    } else {                                        // Set NDAC low
-      IEEE_C_PORT &= (uint8_t)~_BV(IEEE_PIN_NDAC);  // NDAC low
-      IEEE_C_DDR |= (uint8_t) _BV(IEEE_PIN_NDAC);   // NDAC as output
+    if(x) {                                             // Set NDAC high
+      IEEE_DDR_NDAC &= (uint8_t)~_BV(IEEE_PIN_NDAC);    // NDAC as input
+      IEEE_PORT_NDAC |= _BV(IEEE_PIN_NDAC);             // Enable pull-up
+    } else {                                            // Set NDAC low
+      IEEE_PORT_NDAC &= (uint8_t)~_BV(IEEE_PIN_NDAC);   // NDAC low
+      IEEE_DDR_NDAC |= _BV(IEEE_PIN_NDAC);              // NDAC as output
     }
   }
 
   static inline void set_nrfd_state (uint8_t x)
   {
-    if(x) {                                         // Set NRFD high
-      IEEE_C_DDR &= (uint8_t)~_BV(IEEE_PIN_NRFD);   // NRFD as input
-      IEEE_C_PORT |= (uint8_t)_BV(IEEE_PIN_NRFD);   // Enable pull-up
-    } else {                                        // Set NRFD low
-      IEEE_C_PORT &= (uint8_t)~_BV(IEEE_PIN_NRFD);  // NRFD low
-      IEEE_C_DDR |= (uint8_t) _BV(IEEE_PIN_NRFD);   // NRFD as output
+    if(x) {                                             // Set NRFD high
+      IEEE_DDR_NRFD &= (uint8_t)~_BV(IEEE_PIN_NRFD);    // NRFD as input
+      IEEE_PORT_NRFD |= _BV(IEEE_PIN_NRFD);             // Enable pull-up
+    } else {                                            // Set NRFD low
+      IEEE_PORT_NRFD &= (uint8_t)~_BV(IEEE_PIN_NRFD);   // NRFD low
+      IEEE_DDR_NRFD |= (uint8_t) _BV(IEEE_PIN_NRFD);    // NRFD as output
     }
   }
 
   static inline void set_dav_state (uint8_t x)
   {
-    if(x) {                                         // Set DAV high
-      IEEE_C_DDR &= (uint8_t)~_BV(IEEE_PIN_DAV);    // DAV as input
-      IEEE_C_PORT |= (uint8_t)_BV(IEEE_PIN_DAV);    // Enable pull-up
-    } else {                                        // Set DAV low
-      IEEE_C_PORT &= (uint8_t)~_BV(IEEE_PIN_DAV);   // DAV low
-      IEEE_C_DDR |= (uint8_t) _BV(IEEE_PIN_DAV);    // DAV as output
+    if(x) {                                             // Set DAV high
+      IEEE_DDR_DAV &= (uint8_t)~_BV(IEEE_PIN_DAV);      // DAV as input
+      IEEE_PORT_DAV |= _BV(IEEE_PIN_DAV);               // Enable pull-up
+    } else {                                            // Set DAV low
+      IEEE_PORT_DAV &= (uint8_t)~_BV(IEEE_PIN_DAV);     // DAV low
+      IEEE_DDR_DAV |= _BV(IEEE_PIN_DAV);                // DAV as output
     }
   }
 
@@ -278,27 +241,35 @@ static inline void set_eoi_state(uint8_t x)
     IEEE_D_PORT = (uint8_t) ~ data;
   }
 
-  static inline void IEEE_BUS_IDLE (void)
+  static inline void ieee_bus_idle (void)
   {
-    IEEE_D_DDR = 0;                 // data ports as input
-    IEEE_D_PORT = 0xff;             // enable pull-ups for data lines
-    /* Define DAV, EOI, NDAC, NRFD as inputs */
-    IEEE_C_DDR &= (uint8_t) ~ ( _BV(IEEE_PIN_DAV) | _BV(IEEE_PIN_EOI)
-      | _BV(IEEE_PIN_NDAC) | _BV(IEEE_PIN_NRFD) );
-    /* Enable pull-ups for DAV, EOI, NDAC, NRFD */
-    IEEE_C_PORT |= _BV(IEEE_PIN_DAV) | _BV(IEEE_PIN_EOI)
-      | _BV(IEEE_PIN_NDAC) | _BV(IEEE_PIN_NRFD);
+    IEEE_D_DDR = 0;                 // Data ports as input
+    IEEE_D_PORT = 0xff;             // Enable pull-ups for data lines
+    IEEE_DDR_DAV  &= (uint8_t) ~_BV(IEEE_PIN_DAV);  // DAV as input
+    IEEE_DDR_EOI  &= (uint8_t) ~_BV(IEEE_PIN_EOI);  // EOI as input
+    IEEE_DDR_NDAC &= (uint8_t) ~_BV(IEEE_PIN_NDAC); // NDAC as input
+    IEEE_DDR_NRFD &= (uint8_t) ~_BV(IEEE_PIN_NRFD); // NRFD as input
+    IEEE_PORT_DAV |= _BV(IEEE_PIN_DAV);             // Enable pull-up for DAV
+    IEEE_PORT_EOI |= _BV(IEEE_PIN_EOI);             // Enable pull-up for EOI
+    IEEE_PORT_NDAC |= _BV(IEEE_PIN_NDAC);           // Enable pull-up for NDAC
+    IEEE_PORT_NRFD |= _BV(IEEE_PIN_NRFD);           // Enable pull-up for NRFD
   }
 
-# define IEEE_PORTS_LISTEN() do { IEEE_BUS_IDLE(); } while (0)
-# define IEEE_PORTS_TALK()   do { IEEE_BUS_IDLE(); } while (0)
+  static void ieee_ports_listen (void) {
+    ieee_bus_idle();
+  }
+
+  static void ieee_ports_talk (void) {
+    ieee_bus_idle();
+  }
+
 # define ddr_change_by_atn() do { } while (0)
 
 #endif  /* HAVE_7516X */
 
 /* Init IEEE bus */
 void ieee_init(void) {
-  IEEE_BUS_IDLE();
+  ieee_bus_idle();
 
   /* Prepare IEEE interrupts */
   ieee_interrupts_init();
@@ -314,9 +285,15 @@ void ieee_init(void) {
 }
 void bus_init(void) __attribute__((weak, alias("ieee_init")));
 
-/* Interrupt routine that simulates the hardware-auto-acknowledge of ATN */
+/* Interrupt routine that simulates the hardware-auto-acknowledge of ATN
+   at falling edge of ATN. If pin change interrupts are used, we have to
+   check for rising or falling edge in software first! */
 IEEE_ATN_HANDLER {
-  if(!IEEE_ATN) {               /* Run code only at falling edge of ATN */
+#ifdef IEEE_PCMSK
+  if(!IEEE_ATN) {
+#else
+  {
+#endif
     ddr_change_by_atn();        /* Switch NDAC+NRFD to outputs */
     set_ndac_state(0);          /* Poll NDAC and NRFD low */
     set_nrfd_state(0);
@@ -344,7 +321,7 @@ int ieee_getc(void) {
   set_nrfd_state(1);            /* ready for new data */
 
   /* Wait for DAV low, check timeout */
-  timeout = getticks() + MS_TO_TICKS(64);
+  timeout = getticks() + MS_TO_TICKS(IEEE_TIMEOUT_MS);
   do {                          /* wait for data valid */
     if(time_after(getticks(), timeout)) return TIMEOUT_ABORT;
   } while (IEEE_DAV);
@@ -358,7 +335,7 @@ int ieee_getc(void) {
   set_ndac_state(1);            /* data accepted, read complete */
 
   /* Wait for DAV high, check timeout */
-  timeout = getticks() + MS_TO_TICKS(64);
+  timeout = getticks() + MS_TO_TICKS(IEEE_TIMEOUT_MS);
   do {              /* wait for controller to remove data from bus */
     if(time_after(getticks(), timeout)) return TIMEOUT_ABORT;
   } while (!IEEE_DAV);
@@ -383,7 +360,7 @@ int ieee_getc(void) {
  */
 
 static uint8_t ieee_putc(uint8_t data, const uint8_t with_eoi) {
-  IEEE_PORTS_TALK();
+  ieee_ports_talk();
   set_eoi_state (!with_eoi);
   set_ieee_data (data);
   if(!IEEE_ATN) return ATN_POLLED;
@@ -391,7 +368,7 @@ static uint8_t ieee_putc(uint8_t data, const uint8_t with_eoi) {
   if(!IEEE_ATN) return ATN_POLLED;
 
   /* Wait for NRFD high , check timeout */
-  timeout = getticks() + MS_TO_TICKS(64);
+  timeout = getticks() + MS_TO_TICKS(IEEE_TIMEOUT_MS);
   do {
     if(!IEEE_ATN) return ATN_POLLED;
     if(time_after(getticks(), timeout)) return TIMEOUT_ABORT;
@@ -399,14 +376,14 @@ static uint8_t ieee_putc(uint8_t data, const uint8_t with_eoi) {
   set_dav_state(0);
 
   /* Wait for NRFD low, check timeout */
-  timeout = getticks() + MS_TO_TICKS(64);
+  timeout = getticks() + MS_TO_TICKS(IEEE_TIMEOUT_MS);
   do {
     if(!IEEE_ATN) return ATN_POLLED;
     if(time_after(getticks(), timeout)) return TIMEOUT_ABORT;
   } while (IEEE_NRFD);
 
   /* Wait for NDAC high , check timeout */
-  timeout = getticks() + MS_TO_TICKS(64);
+  timeout = getticks() + MS_TO_TICKS(IEEE_TIMEOUT_MS);
   do {
     if(!IEEE_ATN) return ATN_POLLED;
     if(time_after(getticks(), timeout)) return TIMEOUT_ABORT;
@@ -524,7 +501,12 @@ static uint8_t ieee_talk_handler (void)
         res = ieee_putc(c, 0);
       }
       if(res) {
-        uart_putc('c'); uart_puthex(res);
+        if(res==0xfc) {
+          uart_puts_P(PSTR("*** TIMEOUT ABORT***")); uart_putcrlf();
+        }
+        if(res!=0xfd) {
+          uart_putc('c'); uart_puthex(res);
+        }
         return 1;
       } else {
         uart_putc('>');
@@ -593,28 +575,57 @@ void ieee_mainloop(void) {
 
   set_error(ERROR_DOSVERSION);
 
-  uart_puts_p("IEEE main loop entered as device ");
-  uart_puthex(device_address); uart_putcrlf();
-
   ieee_data.bus_state = BUS_IDLE;
   ieee_data.device_state = DEVICE_IDLE;
   for(;;) {
     switch(ieee_data.bus_state) {
+      case BUS_SLEEP:                               /* BUS_SLEEP */
+        set_atn_irq(0);
+        ieee_bus_idle();
+        set_error(ERROR_OK);
+        set_busy_led(0);
+        uart_puts_P(PSTR("ieee.c/sleep ")); set_dirty_led(1);
+
+        /* Wait until the sleep key is used again */
+        while (!key_pressed(KEY_SLEEP))
+          system_sleep();
+        reset_key(KEY_SLEEP);
+
+        set_atn_irq(1);
+        update_leds();
+
+        ieee_data.bus_state = BUS_IDLE;
+        break;
+
       case BUS_IDLE:                                /* BUS_IDLE */
-        IEEE_BUS_IDLE();
-        while(IEEE_ATN);    /* wait for ATN */
+        ieee_bus_idle();
+        while(IEEE_ATN) {   ;               /* wait for ATN */
+          if (key_pressed(KEY_NEXT | KEY_PREV | KEY_HOME)) {
+            change_disk();
+          } else if (key_pressed(KEY_SLEEP)) {
+            reset_key(KEY_SLEEP);
+            ieee_data.bus_state = BUS_SLEEP;
+            break;
+          } else if (display_found && key_pressed(KEY_DISPLAY)) {
+            display_service();
+            reset_key(KEY_DISPLAY);
+          }
+          system_sleep();
+      }
+
+      if (ieee_data.bus_state != BUS_SLEEP)
         ieee_data.bus_state = BUS_FOUNDATN;
       break;
 
       case BUS_FOUNDATN:                            /* BUS_FOUNDATN */
-        ieee_data.bus_state     = BUS_ATNPROCESS;
+        ieee_data.bus_state = BUS_ATNPROCESS;
         cmd = ieee_getc();
       break;
 
       case BUS_ATNPROCESS:                          /* BUS_ATNPROCESS */
         if(cmd < 0) {
           uart_putc('c');
-          ieee_data.bus_state   = BUS_IDLE;
+          ieee_data.bus_state = BUS_IDLE;
           break;
         } else cmd &= 0xFF;
         uart_puts_p("ATN "); uart_puthex(cmd);

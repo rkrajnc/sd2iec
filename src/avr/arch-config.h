@@ -807,7 +807,7 @@ static inline void board_init(void) {
 #  define HW_NAME "SD2IEC"
 #  define HAVE_SD
 #  define SD_CHANGE_HANDLER     ISR(PCINT3_vect)
-#  define SD_SUPPLY_VOLTAGE     (1L<<18)
+#  define SD_SUPPLY_VOLTAGE (1L<<21)
 
 /* 288 kHz slow, 2.304 MHz fast */
 #  define SPI_DIVISOR_SLOW 64
@@ -816,8 +816,8 @@ static inline void board_init(void) {
 static inline void sdcard_interface_init(void) {
   DDRD   &= ~_BV(PD4);            /* card detect */
   PORTD  |=  _BV(PD4);
-  DDRD   &= ~_BV(PD3);            /* write protect  */
-  PORTD  |=  _BV(PD3);
+  DDRC   &= ~_BV(PC3);            /* write protect  */
+  PORTC  |=  _BV(PC3);
   PCMSK3 |=  _BV(PCINT28);        /* card change interrupt */
   PCICR  |=  _BV(PCIE3);
   PCIFR  |=  _BV(PCIF3);
@@ -828,7 +828,7 @@ static inline uint8_t sdcard_detect(void) {
 }
 
 static inline uint8_t sdcard_wp(void) {
-  return (PIND & _BV(PD3));
+  return (PINC & _BV(PC3));
 }
 
 static inline uint8_t device_hw_address(void) {
@@ -848,14 +848,14 @@ static inline __attribute__((always_inline)) void set_busy_led(uint8_t state) {
   if (state)
     PORTD |= _BV(PD5);
   else
-    PORTD &= ~_BV(PD5);
+    PORTD &= (uint8_t) ~_BV(PD5);
 }
 
 static inline __attribute__((always_inline)) void set_dirty_led(uint8_t state) {
   if (state)
     PORTD |= _BV(PD6);
   else
-    PORTD &= ~_BV(PD6);
+    PORTD &= (uint8_t) ~_BV(PD6);
 }
 
 static inline void toggle_dirty_led(void) {
@@ -863,84 +863,104 @@ static inline void toggle_dirty_led(void) {
 }
 
 #  define HAVE_IEEE
-#  define IEEE_ATN_INT          PCINT2      /* ATN interrupt (required!) */
-#  define IEEE_PCMSK            PCMSK2
-#  define IEEE_PCINT            PCINT21
-#  define IEEE_ATN_INT_VECT     PCINT2_vect
+#  define IEEE_ATN_INT          INT0    /* ATN interrupt (required!) */
+#  define IEEE_ATN_INT_VECT     INT0_vect
 
 static inline void ieee_interrupts_init(void) {
-  /* clear interrupt flag */
-  PCIFR |= _BV(PCIF2);
-
-  /* enable ATN in pin change enable mask */
-  IEEE_PCMSK |= _BV(IEEE_PCINT);
-
-  /* Enable pin change interrupt 2 (PCINT23..16) */
-  PCICR |= _BV(PCIE2);
+  DDRD &= ~_BV(PD2);
+  PORTD |= _BV(PD2);
+  EICRA |= _BV(ISC00);
+  EIMSK |= _BV(INT0);
 }
 
 #  define HAVE_7516X            /* Device uses 75160/75161 bus drivers */
-#  define IEEE_C_PIN            PINC    /* Control signals */
-#  define IEEE_C_DDR            DDRC
-#  define IEEE_C_PORT           PORTC
-#  define IEEE_C_ATN_PIN        PINC
-#  define IEEE_C_ATN_PORT       PORTC
-#  define IEEE_C_ATN_DDR        DDRC
-#  define IEEE_PIN_TE           PC0     /* 7516x only */
-#  define IEEE_PIN_NDAC         PC1
-#  define IEEE_PIN_NRFD         PC2
-#  define IEEE_PIN_DAV          PC3
-#  define IEEE_PIN_EOI          PC4
-#  define IEEE_PIN_ATN          PC5
-#  define IEEE_PIN_SRQ          PC6
-#  define IEEE_PIN_DC           PC7     /* 7516x only */
+#  define IEEE_PORT_TE          PORTB   /* TE */
+#  define IEEE_DDR_TE           DDRB
+#  define IEEE_PIN_TE           PB0
+#  define IEEE_PORT_DC          PORTC   /* DC */
+#  define IEEE_DDR_DC           DDRC
+#  define IEEE_PIN_DC           PC5
+#  define IEEE_INPUT_ATN        PIND    /* ATN */
+#  define IEEE_PORT_ATN         PORTD
+#  define IEEE_DDR_ATN          DDRD
+#  define IEEE_PIN_ATN          PD2
+#  define IEEE_INPUT_NDAC       PINC    /* NDAC */
+#  define IEEE_PORT_NDAC        PORTC
+#  define IEEE_DDR_NDAC         DDRC
+#  define IEEE_PIN_NDAC         PC6
+#  define IEEE_INPUT_NRFD       PINC    /* NRFD */
+#  define IEEE_PORT_NRFD        PORTC
+#  define IEEE_DDR_NRFD         DDRC
+#  define IEEE_PIN_NRFD         PC7
+#  define IEEE_INPUT_DAV        PINB    /* DAV */
+#  define IEEE_PORT_DAV         PORTB
+#  define IEEE_DDR_DAV          DDRB
+#  define IEEE_PIN_DAV          PB2
+#  define IEEE_INPUT_EOI        PIND    /* EOI */
+#  define IEEE_PORT_EOI         PORTD
+#  define IEEE_DDR_EOI          DDRD
+#  define IEEE_PIN_EOI          PD7
+#  define IEEE_INPUT_SRQ                /* SRQ */
+#  define IEEE_PORT_SRQ         PORTA
+#  define IEEE_DDR_SRQ          DDRA
+#  define IEEE_PIN_SRQ
+#  define IEEE_INPUT_IFC                /* IFC */
+#  define IEEE_PORT_IFC         PORTA
+#  define IEEE_DDR_IFC          DDRA
+#  define IEEE_PIN_IFC
+#  define IEEE_INPUT_REN                /* REN */
+#  define IEEE_PORT_REN         PORTA
+#  define IEEE_DDR_REN          DDRA
+#  define IEEE_PIN_REN
 #  define IEEE_D_PIN            PINA    /* Data */
-#  define IEEE_D_DDR            DDRA
 #  define IEEE_D_PORT           PORTA
+#  define IEEE_D_DDR            DDRA
 #  define IEEE_BIT_DC           _BV(IEEE_PIN_DC)
 #  define IEEE_BIT_TE           _BV(IEEE_PIN_TE)
-#  define IEEE_BIT_SRQ          _BV(IEEE_PIN_SRQ)
-#  define IEEE_BIT_REN          0       /* not connected */
-#  define IEEE_BIT_IFC          0       /* not connected */
+#  define IEEE_BIT_SRQ          0   /* Define as 0 if SRQ not connected */
+#  define IEEE_BIT_REN          0   /* Define as 0 if REN not connected */
+#  define IEEE_BIT_IFC          0   /* Define as 0 if IFC not connected */
 
 static inline void ieee_interface_init(void) {
-  /* Define TE, DC, SRQ as outputs */
-  IEEE_C_DDR |= IEEE_BIT_TE | IEEE_BIT_DC | IEEE_BIT_SRQ;
-
-  /* Define REN, IFC as inputs */
-  IEEE_C_DDR &= (uint8_t) ~(IEEE_BIT_REN | IEEE_BIT_IFC);
-
-  /* DC and SRQ high, pull-up for REN and IFC */
-  IEEE_C_PORT     |= IEEE_BIT_DC | IEEE_BIT_SRQ | IEEE_BIT_REN | IEEE_BIT_IFC;
-  IEEE_C_ATN_DDR  &= (uint8_t)~_BV(IEEE_PIN_ATN); // ATN as input
-  IEEE_C_ATN_PORT |= _BV(IEEE_PIN_ATN);           // enable ATN pullup
+  IEEE_PORT_TE  &= (uint8_t) ~ IEEE_BIT_TE;         // Set TE low
+  IEEE_PORT_DC  |= IEEE_BIT_DC;                     // Set DC high
+  IEEE_PORT_SRQ |= IEEE_BIT_SRQ;                    // Set SRQ high
+  IEEE_DDR_TE   |= IEEE_BIT_TE;                     // Define TE  as output
+  IEEE_DDR_DC   |= IEEE_BIT_DC;                     // Define DC  as output
+  IEEE_DDR_SRQ  |= IEEE_BIT_SRQ;                    // Define SRQ as output
+  IEEE_PORT_ATN |= _BV(IEEE_PIN_ATN);               // Enable pull-up for ATN
+  IEEE_PORT_REN |= IEEE_BIT_REN;                    // Enable pull-up for REN
+  IEEE_PORT_IFC |= IEEE_BIT_IFC;                    // Enable pull-up for IFC
+  IEEE_DDR_ATN  &= (uint8_t) ~ _BV(IEEE_PIN_ATN);   // Define ATN as input
+  IEEE_DDR_REN  &= (uint8_t) ~ IEEE_BIT_REN;        // Define REN as input
+  IEEE_DDR_IFC  &= (uint8_t) ~ IEEE_BIT_IFC;        // Define IFC as input
 }
 
-#  define BUTTON_NEXT           _BV(PB3)
-/* no PREV button on this device =( */
-#  define BUTTON_PREV           0
+#  define BUTTON_NEXT           _BV(PB1)
+#  define BUTTON_PREV           _BV(PB3)
 
 static inline rawbutton_t buttons_read(void) {
-  return (PINB & (BUTTON_NEXT));
+  return (PINB & (BUTTON_NEXT | BUTTON_PREV));
 }
 
 static inline void buttons_init(void) {
-  DDRB  &= (uint8_t) ~(BUTTON_NEXT);
-  PORTB |= BUTTON_NEXT;
+  DDRB  &= (uint8_t)~(BUTTON_NEXT | BUTTON_PREV);
+  PORTB |= BUTTON_NEXT | BUTTON_PREV;
 }
 
-#  define SOFTI2C_PORT          PORTB
-#  define SOFTI2C_PIN           PINB
-#  define SOFTI2C_DDR           DDRB
-#  define SOFTI2C_BIT_SCL       PB1
-#  define SOFTI2C_BIT_SDA       PB0
+#  define SOFTI2C_PORT          PORTC
+#  define SOFTI2C_PIN           PINC
+#  define SOFTI2C_DDR           DDRC
+#  define SOFTI2C_BIT_SCL       PC0
+#  define SOFTI2C_BIT_SDA       PC1
+#  define SOFTI2C_BIT_INTRQ     PC2
 #  define SOFTI2C_DELAY         6
 
 #  define HAVE_BOARD_INIT
 
 static inline void board_init(void) {
-  DDRD  |= _BV(PD2);
-  PORTD |= _BV(PD2);       /* Disable  ENC28J60 */
+  DDRC  |= _BV(PC4);
+  PORTC |= _BV(PC4);       /* Disable  ENC28J60 */
 }
 
 
@@ -950,7 +970,7 @@ static inline void board_init(void) {
 #  define HAVE_SD
 #  define SD_SUPPLY_VOLTAGE     (1L<<18)
 
-/* 230 kHz slow, 1.8432 MHz fast */
+/* 230 kHz slow, 1.8432 2MHz fast */
 #  define SPI_DIVISOR_SLOW 64
 #  define SPI_DIVISOR_FAST 8
 
@@ -1264,6 +1284,14 @@ static inline void set_atn_irq(uint8_t x) {
     IEEE_PCMSK |= _BV(IEEE_PCINT);
   else
     IEEE_PCMSK &= (uint8_t) ~_BV(IEEE_PCINT);
+}
+#  else
+/* Hardware ATN interrupt */
+static inline void set_atn_irq(uint8_t x) {
+  if (x)
+    EIMSK |= _BV(IEEE_ATN_INT);
+  else
+    EIMSK &= (uint8_t) ~_BV(IEEE_ATN_INT);
 }
 #  endif
 
