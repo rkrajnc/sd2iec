@@ -34,10 +34,6 @@
 
 /* ----- Common definitions for all AVR hardware variants ------ */
 
-/* SPI clock divisors - 250kHz slow, 2MHz fast */
-#define SPI_DIVISOR_SLOW 32
-#define SPI_DIVISOR_FAST 4
-
 /* Return value of buttons_read() */
 typedef uint8_t rawbutton_t;
 
@@ -140,6 +136,11 @@ static inline __attribute__((always_inline)) void sdcard2_set_ss(uint8_t state) 
 /* #  define SD_SUPPLY_VOLTAGE (1L<<21)  / * 3.3V - 3.4V */
 /* #  define SD_SUPPLY_VOLTAGE (1L<<22)  / * 3.4V - 3.5V */
 /* #  define SD_SUPPLY_VOLTAGE (1L<<23)  / * 3.5V - 3.6V */
+
+/* SPI clock divisors - the slow one must be 400KHz or slower,        */
+/* the fast one can be as high as you thing your hardware will handle */
+#  define SPI_DIVISOR_SLOW 32
+#  define SPI_DIVISOR_FAST 4
 
 
 /*** Device address selection ***/
@@ -282,6 +283,10 @@ static inline void buttons_init(void) {
 #  define HAVE_SD
 #  define SD_CHANGE_HANDLER     ISR(INT0_vect)
 #  define SD_SUPPLY_VOLTAGE     (1L<<18)
+
+/* 250kHz slow, 2MHz fast */
+#  define SPI_DIVISOR_SLOW 32
+#  define SPI_DIVISOR_FAST 4
 
 static inline void sdcard_interface_init(void) {
   DDRD &= ~_BV(PD2);
@@ -462,6 +467,11 @@ static inline void buttons_init(void) {
 #  define CF_CHANGE_HANDLER     ISR(INT7_vect)
 #  define SD_CHANGE_HANDLER     ISR(PCINT0_vect)
 #  define SD_SUPPLY_VOLTAGE     (1L<<21)
+
+/* 250kHz slow, 2MHz fast */
+#  define SPI_DIVISOR_SLOW 32
+#  define SPI_DIVISOR_FAST 4
+
 #  define SINGLE_LED
 
 static inline void cfcard_interface_init(void) {
@@ -573,6 +583,10 @@ static inline void board_init(void) {
 #  define SD_CHANGE_HANDLER     ISR(INT0_vect)
 #  define SD2_CHANGE_HANDLER    ISR(INT2_vect)
 #  define SD_SUPPLY_VOLTAGE     (1L<<18)
+
+/* 250kHz slow, 2MHz fast */
+#  define SPI_DIVISOR_SLOW 32
+#  define SPI_DIVISOR_FAST 4
 
 static inline void sdcard_interface_init(void) {
   DDRD  &= ~_BV(PD2);
@@ -698,6 +712,11 @@ static inline void buttons_init(void) {
 #  define HAVE_SD
 #  define SD_CHANGE_HANDLER     ISR(INT6_vect)
 #  define SD_SUPPLY_VOLTAGE     (1L<<21)
+
+/* 250kHz slow, 2MHz fast */
+#  define SPI_DIVISOR_SLOW 32
+#  define SPI_DIVISOR_FAST 4
+
 #  define SINGLE_LED
 
 static inline void sdcard_interface_init(void) {
@@ -789,6 +808,10 @@ static inline void board_init(void) {
 #  define HAVE_SD
 #  define SD_CHANGE_HANDLER     ISR(PCINT3_vect)
 #  define SD_SUPPLY_VOLTAGE     (1L<<18)
+
+/* 288 kHz slow, 2.304 MHz fast */
+#  define SPI_DIVISOR_SLOW 64
+#  define SPI_DIVISOR_FAST 8
 
 static inline void sdcard_interface_init(void) {
   DDRD   &= ~_BV(PD4);            /* card detect */
@@ -926,6 +949,10 @@ static inline void board_init(void) {
 #  define HW_NAME "SD2IEC"
 #  define HAVE_SD
 #  define SD_SUPPLY_VOLTAGE     (1L<<18)
+
+/* 230 kHz slow, 1.8432 MHz fast */
+#  define SPI_DIVISOR_SLOW 64
+#  define SPI_DIVISOR_FAST 8
 
 static inline void sdcard_interface_init(void) {
   /* No card detect switch, no write protect switch... nothing */
