@@ -228,17 +228,10 @@ static int8_t m2i_readdir(dh_t *dh, cbmdirent_t *dent) {
 
     /* Get file size */
     if (dent->typeflags != TYPE_DEL) {
-      /* Sorry, but I have to fake the sizes.                        */
-      /* Reading the correct size as above requires a directory scan */
-      /* per file which means that the single FAT buffer switches    */
-      /* between the M2I file and the directory for every single     */
-      /* file -> slooooow (<1 file/s for an M2I with 500 entries)    */
-      dent->blocksize = 1;
-      dent->remainder = 0xff;
-#if 0
+      /* Let's annoy some users */
       FILINFO finfo;
 
-      res = f_stat(entrybuf+M2I_FATNAME_OFFSET, &finfo);
+      FRESULT res = f_stat(&partition[dh->part].fatfs, entrybuf+M2I_FATNAME_OFFSET, &finfo);
       if (res != FR_OK) {
         if (res == FR_NO_FILE)
           continue;
@@ -255,7 +248,6 @@ static int8_t m2i_readdir(dh_t *dh, cbmdirent_t *dent) {
         dent->blocksize = (finfo.fsize+253) / 254;
 
       dent->remainder = finfo.fsize % 254;
-#endif
     } else
       dent->blocksize = 0;
 

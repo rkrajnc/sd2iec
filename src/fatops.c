@@ -190,8 +190,10 @@ imgtype_t check_imageext(uint8_t *name) {
   s = toupper(*++ext);
   t = toupper(*++ext);
 
+#ifdef CONFIG_M2I
   if (f == 'M' && s == '2' && t == 'I')
     return IMG_IS_M2I;
+#endif
 
   if (f == 'D')
     if ((s == '6' && t == '4') ||
@@ -1034,13 +1036,16 @@ uint8_t fat_chdir(path_t *path, cbmdirent_t *dent) {
         return 1;
       }
 
+#ifdef CONFIG_M2I
       if (check_imageext(dent->pvt.fat.realname) == IMG_IS_M2I)
         partition[path->part].fop = &m2iops;
-      else {
-        if (d64_mount(path))
-          return 1;
-        partition[path->part].fop = &d64ops;
-      }
+      else
+#endif
+        {
+          if (d64_mount(path))
+            return 1;
+          partition[path->part].fop = &d64ops;
+        }
 
       return 0;
     }

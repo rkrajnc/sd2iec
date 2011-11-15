@@ -873,12 +873,14 @@ void file_open(uint8_t secondary) {
   if (parse_path(command_buffer, &path, &fname, 0))
       return;
 
+#ifdef CONFIG_M2I
   /* For M2I only: Remove trailing spaces from name */
   if (partition[path.part].fop == &m2iops) {
     res = ustrlen(fname);
     while (--res && fname[res] == ' ')
       fname[res] = 0;
   }
+#endif
 
   /* Filename matching */
   if (opendir(&matchdh, &path))

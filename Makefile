@@ -61,10 +61,14 @@ TARGET = $(OBJDIR)/sd2iec
 
 # List C source files here. (C dependencies are automatically generated.)
 SRC  = buffers.c fatops.c fileops.c main.c errormsg.c
-SRC += doscmd.c ff.c m2iops.c d64ops.c diskchange.c
+SRC += doscmd.c ff.c d64ops.c diskchange.c
 SRC += eeprom.c parser.c utils.c led.c diskio.c sdcard.c
 SRC += timer.c $(CONFIG_ARCH)/arch-timer.c $(CONFIG_ARCH)/spi.c
 SRC += $(CONFIG_ARCH)/system.c
+
+ifeq ($(CONFIG_M2I),y)
+  SRC += m2iops.c
+endif
 
 ifneq ($(CONFIG_HAVE_IEC),y)
   ifneq ($(CONFIG_HAVE_IEEE),y)

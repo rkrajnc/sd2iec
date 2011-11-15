@@ -48,3 +48,4 @@ CONFIG_RTC_VARIANT=1
 #CONFIG_HAVE_IEEE=y
 # Device has a serial Commodore bus
 #CONFIG_HAVE_IEC=y
+CONFIG_M2I=y
