@@ -10,6 +10,15 @@ COPYING for details.
 
 FIXME:This file still needs to be expanded. A lot.
 
+Deprecation notices
+===================
+The following feature(s) will be removed in the next release:
+- M2I support
+   M2I support has been redundant since the introduction of transparent
+   P00 support. To continue to use your M2I-format software, convert
+   your files to P00 format (e.g. with m2itopc64.c) and set your device
+   to extension mode 2 (XE2).
+
 Introduction:
 =============
 sd2iec is firmware, used in hardware designs like MMC2IEC, SD2IEC, or uIEC,
@@ -650,6 +659,9 @@ of this document.
 
 M2I files:
 ==========
+NOTICE: Support for M2I files will be removed in the next release, see
+        the deprecation notices at the top of this file for advice.
+
 M2I files are fully supported. sd2iec supports SEQ and USR files in this
 format in addition to PRG and DEL which were already implemented in MMC2IEC.
 For compatibility reasons the file type is not checked when opening files.
