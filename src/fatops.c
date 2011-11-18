@@ -1371,7 +1371,6 @@ uint8_t image_unmount(uint8_t part) {
   if (partition[part].fop == &d64ops) {
     buf = find_buffer(BUFFER_SYS_BAM);
     if (buf) {
-      buf->cleanup(buf);
       if (--buf->pvt.bam.refcount) {
         /* Invalidate the BAM buffer contents */
         buf->pvt.bam.part = 255;

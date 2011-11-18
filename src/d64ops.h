@@ -52,6 +52,9 @@ extern buffer_t *bam_buffer;
 
 uint8_t d64_mount(path_t *path);
 
+/* commit BAM buffer contents to storage medium */
+uint8_t d64_bam_commit(void);
+
 void d64_raw_directory(path_t *path, buffer_t *buf);
 
 #endif

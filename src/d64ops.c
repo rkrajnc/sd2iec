@@ -299,13 +299,13 @@ static void strnsubst(uint8_t *buffer, uint8_t len, uint8_t oldchar, uint8_t new
 }
 
 /**
- * d64_bam_flush - write BAM buffer to disk
+ * bam_buffer_flush - write BAM buffer to disk
  * @buf: pointer to the BAM buffer
  *
  * This function writes the contents of the BAM buffer to the disk image.
  * Returns 0 if successful, != 0 otherwise.
  */
-static uint8_t d64_bam_flush(buffer_t *buf) {
+static uint8_t bam_buffer_flush(buffer_t *buf) {
   uint8_t res;
 
   if (buf->mustflush && buf->pvt.bam.part < max_part) {
@@ -317,6 +317,19 @@ static uint8_t d64_bam_flush(buffer_t *buf) {
     buf->mustflush = 0;
     return res;
   } else
+    return 0;
+}
+
+/**
+ * d64_bam_commit - write BAM buffer to disk
+ *
+ * This function is the exported interface to force the BAM buffer
+ * contents to disk. Returns 0 if successful, != 0 otherwise.
+ */
+uint8_t d64_bam_commit(void) {
+  if (bam_buffer)
+    return bam_buffer->cleanup(bam_buffer);
+  else
     return 0;
 }
 
@@ -381,8 +394,8 @@ static uint8_t move_bam_window(uint8_t part, uint8_t track, bamdata_t type, uint
       || bam_buffer->pvt.bam.track != t
       || bam_buffer->pvt.bam.sector != s) {
     /* Need to read the BAM sector */
-    if((res = bam_buffer->cleanup(bam_buffer)))
-      return res;
+    if (d64_bam_commit())
+      return 1;
 
     res = image_read(part, sector_offset(part, t, s), bam_buffer->data, 256);
     if(res)
@@ -947,10 +960,6 @@ static uint8_t d64_write(buffer_t *buf) {
     free_buffer(buf);
     return 1;
   }
-  if (bam_buffer->cleanup(bam_buffer)) {
-    free_buffer(buf);
-    return 1;
-  }
 
  storedata:
   /* Store data in the already-reserved sector */
@@ -1077,7 +1086,7 @@ uint8_t d64_mount(path_t *path) {
 
     bam_buffer->secondary    = BUFFER_SYS_BAM;
     bam_buffer->pvt.bam.part = 255;
-    bam_buffer->cleanup      = d64_bam_flush;
+    bam_buffer->cleanup      = bam_buffer_flush;
     stick_buffer(bam_buffer);
   }
 
@@ -1315,9 +1324,6 @@ static void d64_open_write(path_t *path, cbmdirent_t *dent, uint8_t type, buffer
   if (allocate_sector(path->part,t,s))
     return;
 
-  if (bam_buffer->cleanup(bam_buffer))
-    return;
-
   /* Write the directory entry */
   if (image_write(path->part, sector_offset(path->part, dh.dir.d64.track,dh.dir.d64.sector)+
                   dh.dir.d64.entry*32, entrybuf, 32, 1))
@@ -1365,11 +1371,7 @@ static uint8_t d64_delete(path_t *path, cbmdirent_t *dent) {
                   + dent->pvt.dxx.dh.entry * 32, entrybuf, 32, 1))
     return 255;
 
-  /* Write new BAM */
-  if (bam_buffer->cleanup(bam_buffer))
-    return 255;
-  else
-    return 1;
+  return 1;
 }
 
 static void d64_read_sector(buffer_t *buf, uint8_t part, uint8_t track, uint8_t sector) {
@@ -1421,7 +1423,7 @@ static void d64_format(uint8_t part, uint8_t *name, uint8_t *id) {
   memset(buf->data, 0, 256);
 
   /* Flush BAM buffer and mark its contents as invalid */
-  bam_buffer->cleanup(bam_buffer);
+  d64_bam_commit();
   bam_buffer->pvt.bam.part = 0xff;
 
   if (id != NULL) {
@@ -1473,9 +1475,6 @@ static void d64_format(uint8_t part, uint8_t *name, uint8_t *id) {
   bam_buffer->data[get_param(part, ID_OFFSET)+1] = idbuf[1];
   bam_buffer->data[get_param(part, ID_OFFSET)+3] = '2';
   bam_buffer->data[get_param(part, ID_OFFSET)+4] = 'A';
-
-  /* Write the new BAM - mustflush is set because free_sector was used */
-  bam_buffer->cleanup(bam_buffer);
 
   /* FIXME: Clear the error info block */
 }

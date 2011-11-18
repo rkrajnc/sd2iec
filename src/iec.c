@@ -35,6 +35,7 @@
 #include "config.h"
 #include "atomic.h"
 #include "buffers.h"
+#include "d64ops.h"
 #include "diskchange.h"
 #include "diskio.h"
 #include "display.h"
@@ -776,6 +777,7 @@ void iec_mainloop(void) {
 
       /* We're done, clean up unused buffers */
       free_multiple_buffers(FMB_UNSTICKY);
+      d64_bam_commit();
 
       iec_data.bus_state = BUS_IDLE;
       break;
