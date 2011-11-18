@@ -34,6 +34,7 @@
 #include "ff.h"
 #include "parser.h"
 #include "progmem.h"
+#include "rtc.h"
 #include "wrapops.h"
 #include "d64ops.h"
 
@@ -987,6 +988,31 @@ static uint8_t d64_write(buffer_t *buf) {
     return 0;
 }
 
+static uint8_t write_dir_entry(buffer_t *buf) {
+#if CONFIG_RTC_VARIANT > 0
+  struct tm time;
+
+  read_rtc(&time);
+  entrybuf[DIR_OFS_YEAR]   = time.tm_year % 100;
+  entrybuf[DIR_OFS_MONTH]  = time.tm_mon + 1;
+  entrybuf[DIR_OFS_DAY]    = time.tm_mday;
+  entrybuf[DIR_OFS_HOUR]   = time.tm_hour;
+  entrybuf[DIR_OFS_MINUTE] = time.tm_min;
+#else
+  entrybuf[DIR_OFS_YEAR]   = 82;
+  entrybuf[DIR_OFS_MONTH]  = 8;
+  entrybuf[DIR_OFS_DAY]    = 31;
+  entrybuf[DIR_OFS_HOUR]   = 0;
+  entrybuf[DIR_OFS_MINUTE] = 0;
+#endif
+
+  /* Write the directory entry */
+  if (image_write(buf->pvt.d64.part, sector_offset(buf->pvt.d64.part, buf->pvt.d64.dh.track, buf->pvt.d64.dh.sector)+
+      buf->pvt.d64.dh.entry*32, entrybuf, 32, 1))
+    return 1;
+  return 0;
+}
+
 static uint8_t d64_write_cleanup(buffer_t *buf) {
   uint8_t t,s;
 
@@ -1015,7 +1041,7 @@ static uint8_t d64_write_cleanup(buffer_t *buf) {
   entrybuf[DIR_OFS_SIZE_LOW]   = buf->pvt.d64.blocks & 0xff;
   entrybuf[DIR_OFS_SIZE_HI]    = buf->pvt.d64.blocks >> 8;
 
-  if (image_write(buf->pvt.d64.part, sector_offset(buf->pvt.d64.part,t,s)+32*buf->pvt.d64.dh.entry, entrybuf, 32, 1))
+  if(write_dir_entry(buf)) /* timestamp is updated in here */
     return 1;
 
   buf->cleanup = callback_dummy;
@@ -1152,10 +1178,15 @@ static int8_t d64_readdir(dh_t *dh, cbmdirent_t *dent) {
   memcpy(dent->name, entrybuf+DIR_OFS_FILE_NAME, CBM_NAME_LENGTH);
   strnsubst(dent->name, 16, 0xa0, 0);
 
-  /* Fake Date/Time */
-  dent->date.year  = 82;
-  dent->date.month = 8;
-  dent->date.day   = 31;
+  /* sanitize values in case they were not stored */
+  dent->date.minute=  entrybuf[DIR_OFS_MINUTE] % 60;
+  dent->date.hour  =  entrybuf[DIR_OFS_HOUR] % 24;
+  dent->date.day   = (entrybuf[DIR_OFS_DAY]   - 1) % 31 + 1;
+  dent->date.month = (entrybuf[DIR_OFS_MONTH] - 1) % 12 + 1;
+  dent->date.year  =  entrybuf[DIR_OFS_YEAR] % 100;
+  /* adjust year into 1980..2079 range */
+  if (dent->date.year < 80)
+    dent->date.year += 100;
 
   return 0;
 }
@@ -1295,12 +1326,14 @@ static void d64_open_write(path_t *path, cbmdirent_t *dent, uint8_t type, buffer
     mark_write_buffer(buf);
     stick_buffer(buf);
 
+    write_dir_entry(buf); /* timestamp is updated in here */
+
     return;
   }
 
   /* Non-append case */
 
-  /* Search for an empty directotry entry */
+  /* Search for an empty directory entry */
   if (find_empty_entry(path, &dh))
     return;
 
@@ -1341,6 +1374,10 @@ static void d64_open_write(path_t *path, cbmdirent_t *dent, uint8_t type, buffer
   buf->pvt.d64.part   = path->part;
   buf->pvt.d64.track  = t;
   buf->pvt.d64.sector = s;
+
+  if(write_dir_entry(buf)) /* timestamp is updated in here */
+    return;
+
   stick_buffer(buf);
 }
 
@@ -1358,6 +1395,7 @@ static uint8_t d64_delete(path_t *path, cbmdirent_t *dent) {
   /* Free the sector chain in the BAM */
   linkbuf[0] = entrybuf[DIR_OFS_TRACK];
   linkbuf[1] = entrybuf[DIR_OFS_SECTOR];
+
   do {
     free_sector(path->part, linkbuf[0], linkbuf[1]);
 
@@ -1575,7 +1613,7 @@ static void d64_mkdir(path_t *path, uint8_t *dirname) {
   if (buf == NULL)
     return;
 
-  /* Find an empty direcory entry */
+  /* Find an empty directory entry */
   if (find_empty_entry(path, &dh))
     return;
 

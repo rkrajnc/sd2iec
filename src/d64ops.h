@@ -34,6 +34,11 @@
 #define DIR_OFS_TRACK           3
 #define DIR_OFS_SECTOR          4
 #define DIR_OFS_FILE_NAME       5
+#define DIR_OFS_YEAR            0x19
+#define DIR_OFS_MONTH           0x1a
+#define DIR_OFS_DAY             0x1b
+#define DIR_OFS_HOUR            0x1c
+#define DIR_OFS_MINUTE          0x1d
 #define DIR_OFS_SIZE_LOW        0x1e
 #define DIR_OFS_SIZE_HI         0x1f
 

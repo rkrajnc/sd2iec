@@ -57,11 +57,11 @@
 
 /**
  * @date      : 1900-based year
- * @month     : month
- * @day       : day
- * @hour      : hour (24 hours, 0-based)
- * @minute    : minute
- * @second    : second
+ * @month     : month, 1..12
+ * @day       : day,   1..(28-31)
+ * @hour      : hour   0..23
+ * @minute    : minute 0..59
+ * @second    : second 0..59 (FIXME: leap seconds ;) )
  *
  * This struct holds a file timestamp. It must have the "packed" attribute
  * with the fields in descending order of magnitude because it is compared
