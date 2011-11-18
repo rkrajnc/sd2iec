@@ -1562,11 +1562,11 @@ static void parse_timewrite(void) {
       return;
     }
     for (i=0;i<7;i++) {
-      if (memcmp_P(command_buffer+4, downames + 4*i, 4) == 0)
+      if (memcmp_P(command_buffer+4, downames + 4*i, 2) == 0) // only need to compare 2
         break;
     }
     if (i == 7) {
-      set_error(ERROR_SYNTAX_UNKNOWN); // FIXME: Check the real error
+      set_error(ERROR_SYNTAX_UNABLE);
       return;
     }
     time.tm_wday = i;
