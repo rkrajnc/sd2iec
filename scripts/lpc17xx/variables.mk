@@ -3,7 +3,11 @@
 #---------------- Source code ----------------
 ASMSRC = lpc17xx/startup.S lpc17xx/crc.S
 
-SRC += lpc17xx/printf.c lpc17xx/fastloader-ll.c lpc17xx/iec-bus.c
+SRC += lpc17xx/fastloader-ll.c lpc17xx/iec-bus.c
+
+ifeq ($(CONFIG_UART_DEBUG),y)
+  SRC += lpc17xx/printf.c
+endif
 
 # Various RTC implementations
 ifeq ($(CONFIG_RTC_VARIANT),3)
