@@ -53,13 +53,13 @@
 
 extern const fileops_t d64ops;
 
-extern buffer_t *bam_buffer;
-
 uint8_t d64_mount(path_t *path);
+void    d64_unmount(uint8_t part);
 
 /* commit BAM buffer contents to storage medium */
 uint8_t d64_bam_commit(void);
 
 void d64_raw_directory(path_t *path, buffer_t *buf);
+void d64_invalidate(void);
 
 #endif

@@ -1338,9 +1338,8 @@ void fatops_init(uint8_t preserve_path) {
     set_changelist(NULL, NULLSTRING);
   }
 
-  /* Remove BAM buffer */
-  free_buffer(bam_buffer);
-  bam_buffer = NULL;
+  /* Invalidate some caches */
+  d64_invalidate();
   p00cache_invalidate();
 
 #ifndef HAVE_HOTPLUG
@@ -1362,25 +1361,13 @@ void fatops_init(uint8_t preserve_path) {
  */
 uint8_t image_unmount(uint8_t part) {
   FRESULT res;
-  buffer_t *buf;
 
   free_multiple_buffers(FMB_USER_CLEAN);
 
-  /* Free the BAM buffer if this was the last D64 */
-  // FIXME: Move to d64ops.c/d64_unmount
-  if (partition[part].fop == &d64ops) {
-    buf = find_buffer(BUFFER_SYS_BAM);
-    if (buf) {
-      if (--buf->pvt.bam.refcount) {
-        /* Invalidate the BAM buffer contents */
-        buf->pvt.bam.part = 255;
-      } else {
-        /* Last image unmounted */
-        free_buffer(buf);
-        bam_buffer = NULL;
-      }
-    }
-  }
+  /* call D64 unmount function to handle BAM refcounting etc. */
+  // FIXME: ops entry?
+  if (partition[part].fop == &d64ops)
+    d64_unmount(part);
 
   if (display_found) {
     /* Send current path to display */

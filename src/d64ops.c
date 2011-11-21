@@ -85,7 +85,9 @@ struct {
   uint8_t errors[MAX_SECTORS_PER_TRACK];
 } errorcache;
 
-buffer_t *bam_buffer;
+static buffer_t *bam_buffer;  // recently-used buffer
+static buffer_t *bam_buffer2; // secondary buffer
+static uint8_t   bam_refcount;
 
 /* ------------------------------------------------------------------------- */
 /*  Forward declarations                                                     */
@@ -299,6 +301,11 @@ static void strnsubst(uint8_t *buffer, uint8_t len, uint8_t oldchar, uint8_t new
   } while (i--);
 }
 
+
+/* ------------------------------------------------------------------------- */
+/*  BAM buffer handling                                                      */
+/* ------------------------------------------------------------------------- */
+
 /**
  * bam_buffer_flush - write BAM buffer to disk
  * @buf: pointer to the BAM buffer
@@ -316,20 +323,79 @@ static uint8_t bam_buffer_flush(buffer_t *buf) {
                                     buf->pvt.bam.sector),
                       buf->data, 256, 1);
     buf->mustflush = 0;
+
     return res;
   } else
     return 0;
 }
 
 /**
- * d64_bam_commit - write BAM buffer to disk
+ * d64_bam_commit - write BAM buffers to disk
  *
  * This function is the exported interface to force the BAM buffer
  * contents to disk. Returns 0 if successful, != 0 otherwise.
  */
 uint8_t d64_bam_commit(void) {
+  uint8_t res = 0;
+
   if (bam_buffer)
-    return bam_buffer->cleanup(bam_buffer);
+    res |= bam_buffer->cleanup(bam_buffer);
+
+  if (bam_buffer2)
+    res |= bam_buffer2->cleanup(bam_buffer2);
+
+  return 0;
+}
+
+/**
+ * bam_buffer_alloc - allocates a buffer for the BAM
+ * @buf: pointer to the BAM buffer pointer
+ *
+ * This function tries to allocate a buffer for holding the BAM,
+ * using the pointer pointed to by @buf. Returns 0 if successful,
+ * != 0 otherwise.
+ */
+static uint8_t bam_buffer_alloc(buffer_t **buf) {
+  *buf = alloc_system_buffer();
+  if (!*buf)
+    return 1;
+
+  (*buf)->secondary    = BUFFER_SYS_BAM;
+  (*buf)->pvt.bam.part = 255;
+  (*buf)->cleanup      = bam_buffer_flush;
+  stick_buffer(*buf);
+
+  return 0;
+}
+
+/**
+ * bam_buffer_swap - swap the two BAM buffers
+ *
+ * Thus function swaps the pointers to the two BAM buffers
+ */
+static void bam_buffer_swap(void) {
+  buffer_t *tmp = bam_buffer;
+  bam_buffer    = bam_buffer2;
+  bam_buffer2   = tmp;
+}
+
+/**
+ * bam_buffer_match - checks if a BAM buffer contains a specific sector
+ * @buf   : BAM buffer to check
+ * @part  : partition
+ * @track : track
+ * @sector: sector
+ *
+ * This function checks if the BAM buffer @buf currently holds the data
+ * for the given @part, @track and @sector. Returns 1 if it does,
+ * 0 otherwise.
+ */
+static uint8_t bam_buffer_match(buffer_t *buf, uint8_t part,
+                                uint8_t track, uint8_t sector) {
+  if (buf->pvt.bam.part   == part  &&
+      buf->pvt.bam.track  == track &&
+      buf->pvt.bam.sector == sector)
+    return 1;
   else
     return 0;
 }
@@ -346,6 +412,8 @@ uint8_t d64_bam_commit(void) {
  * calculates the correct pointer into the BAM sector for the appropriate
  * track.  Since the BAM contains both sector counts and sector allocation
  * bitmaps, type is used to signal which reference is desired.
+ * This function may swap the BAM buffer pointers, after it returns
+ * bam_buffer is always the buffer with the requested sector.
  * Returns 0 if successful, != 0 otherwise.
  */
 static uint8_t move_bam_window(uint8_t part, uint8_t track, bamdata_t type, uint8_t **ptr) {
@@ -391,11 +459,37 @@ static uint8_t move_bam_window(uint8_t part, uint8_t track, bamdata_t type, uint
     break;
   }
 
-  if (bam_buffer->pvt.bam.part != part
-      || bam_buffer->pvt.bam.track != t
-      || bam_buffer->pvt.bam.sector != s) {
-    /* Need to read the BAM sector */
-    if (d64_bam_commit())
+  if (!bam_buffer_match(bam_buffer, part, t, s)) {
+    /* check if the second BAM buffer exists */
+    if (bam_buffer2) {
+      /* unconditionally swap to the other BAM buffer        */
+      /* either it has the data or it was less-recently used */
+
+      /* Note for future optimization:
+       * If buf1 is invalid and buf2 valid but not matching this will swap and
+       * use buf2 for the data instead of buf1 - using buf1
+       * while keeping buf2 without swapping would be better.
+       */
+      bam_buffer_swap();
+
+      /* check again, now in the other buffer */
+      if (bam_buffer_match(bam_buffer, part, t, s))
+        goto found;
+    } else {
+      /* allocate and swap to the second BAM buffer if the first one is valid */
+      if (bam_buffer->pvt.bam.part != 255) {
+        if (bam_buffer_alloc(&bam_buffer2)) {
+          /* allocation failed, reset error and continue with just one buffer */
+          set_error(ERROR_OK);
+        } else {
+          /* switch to the new buffer */
+          bam_buffer_swap();
+        }
+      }
+    }
+
+    /* Need to read the BAM sector - flush only the target buffer */
+    if (bam_buffer->cleanup(bam_buffer))
       return 1;
 
     res = image_read(part, sector_offset(part, t, s), bam_buffer->data, 256);
@@ -407,6 +501,7 @@ static uint8_t move_bam_window(uint8_t part, uint8_t track, bamdata_t type, uint
     bam_buffer->pvt.bam.sector = s;
   }
 
+ found:
   *ptr = bam_buffer->data + pos;
   return 0;
 }
@@ -934,7 +1029,7 @@ static uint8_t d64_seek(buffer_t *buf, uint32_t position, uint8_t index) {
  * This is the callback used as refill for files opened for writing.
  */
 static uint8_t d64_write(buffer_t *buf) {
-  uint8_t t,s,savederror;
+  uint8_t t, s, savederror;
 
   savederror = 0;
   t = buf->pvt.d64.track;
@@ -1104,23 +1199,17 @@ uint8_t d64_mount(path_t *path) {
     partition[part].d64data.last_track = fsize / (256*256L);
   }
 
-  /* Allocate a BAM buffer if required */
+  /* allocate the first BAM buffer if required */
   if (bam_buffer == NULL) {
-    bam_buffer = alloc_system_buffer();
-    if (!bam_buffer)
+    if (bam_buffer_alloc(&bam_buffer))
       return 1;
-
-    bam_buffer->secondary    = BUFFER_SYS_BAM;
-    bam_buffer->pvt.bam.part = 255;
-    bam_buffer->cleanup      = bam_buffer_flush;
-    stick_buffer(bam_buffer);
   }
 
   partition[part].imagetype = imagetype;
   path->dir.dxx.track  = get_param(part, DIR_TRACK);
   path->dir.dxx.sector = get_param(part, DIR_START_SECTOR);
 
-  bam_buffer->pvt.bam.refcount++;
+  bam_refcount++;
 
   if (imagetype & D64_HAS_ERRORINFO)
     /* Invalidate error cache */
@@ -1460,9 +1549,11 @@ static void d64_format(uint8_t part, uint8_t *name, uint8_t *id) {
   mark_buffer_dirty(buf);
   memset(buf->data, 0, 256);
 
-  /* Flush BAM buffer and mark its contents as invalid */
+  /* Flush BAM buffers and mark their contents as invalid */
   d64_bam_commit();
   bam_buffer->pvt.bam.part = 0xff;
+  if (bam_buffer2)
+    bam_buffer2->pvt.bam.part = 0xff;
 
   if (id != NULL) {
     uint16_t i;
@@ -1709,6 +1800,51 @@ static void d64_mkdir(path_t *path, uint8_t *dirname) {
   image_write(path->part, sector_offset(path->part, dh.dir.d64.track, dh.dir.d64.sector)
                           + dh.dir.d64.entry * 32 + 2, entrybuf+2, 30, 1);
 }
+
+/**
+ * d64_invalidate - invalidate internal state
+ *
+ * This function invalidates all cached state when
+ * a card change is detected.
+ */
+void d64_invalidate(void) {
+  free_buffer(bam_buffer);
+  bam_buffer   = NULL;
+  free_buffer(bam_buffer2);
+  bam_buffer2  = NULL;
+  bam_refcount = 0;
+}
+
+/**
+ * d64_unmount - unmount disk image
+ * @part: partition number
+ *
+ * This function in called on image unmount and handles
+ * refcounting for the BAM buffers.
+ */
+void d64_unmount(uint8_t part) {
+  /* invalidate BAM buffers that point to the current partition */
+  if (bam_buffer) {
+    bam_buffer->cleanup(bam_buffer);
+    if (bam_buffer->pvt.bam.part == part)
+      bam_buffer->pvt.bam.part = 255;
+  }
+
+  if (bam_buffer2) {
+    bam_buffer2->cleanup(bam_buffer2);
+    if (bam_buffer2->pvt.bam.part == part)
+      bam_buffer2->pvt.bam.part = 255;
+  }
+
+  /* decrease BAM buffer refcounter - it can never be zero while a Dxx is mounted*/
+  if (--bam_refcount) {
+    free_buffer(bam_buffer);
+    free_buffer(bam_buffer2);
+    bam_buffer  = NULL;
+    bam_buffer2 = NULL;
+  }
+}
+
 
 const PROGMEM fileops_t d64ops = {
   d64_open_read,
