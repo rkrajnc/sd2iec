@@ -211,8 +211,9 @@ Supported commands:
   missing bytes are assumed to be zero.
 
 - N:
-  Format works only if a D64 image is already mounted. This command is
-  limited to 1541 disk images, usually known as .D64.
+  Format works only if a D64 image is already mounted. This command will
+  be ignored for DNP images unless the current directory is the root
+  directory of the DNP image.
 
 - R
   Renaming files should work the same as it does on CMD drives, although

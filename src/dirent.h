@@ -55,6 +55,9 @@
 #define FLAG_RO     (1<<6)
 #define FLAG_SPLAT  (1<<7)
 
+/* forward declaration to avoid an include loop */
+struct buffer_s;
+
 /**
  * @date      : 1900-based year
  * @month     : month, 1..12
@@ -219,7 +222,8 @@ typedef struct dh_s {
 /* This enum must match the struct param_s below! */
 typedef enum { DIR_TRACK = 0, DIR_START_SECTOR,
                LAST_TRACK, LABEL_OFFSET, ID_OFFSET,
-               FILE_INTERLEAVE, DIR_INTERLEAVE } param_t;
+               FILE_INTERLEAVE, DIR_INTERLEAVE
+               /* , FORMAT_FUNCTION */ } param_t;
 
 /**
  * struct param_s - Dxx image file parameters
@@ -230,6 +234,7 @@ typedef enum { DIR_TRACK = 0, DIR_START_SECTOR,
  * @id_offset       : as label_offset, for the disk ID
  * @file_interleave : interleave factor for file sectors
  * @dir_interleave  : interleave factor for directory sectors
+ * @format_function : image-specific format function
  *
  * This structure holds those parameters that differ between various Dxx
  * disk images and which could be abstracted out easily.
@@ -242,6 +247,8 @@ struct param_s {
   uint8_t id_offset;
   uint8_t file_interleave;
   uint8_t dir_interleave;
+  // Insert new fields here, otherwise get_param will fail!
+  void    (*format_function)(uint8_t part, struct buffer_s *buf, uint8_t *name, uint8_t *idbuf);
 };
 
 /**

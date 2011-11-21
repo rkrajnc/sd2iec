@@ -35,6 +35,7 @@
 #include "parser.h"
 #include "progmem.h"
 #include "rtc.h"
+#include "ustring.h"
 #include "wrapops.h"
 #include "d64ops.h"
 
@@ -60,6 +61,8 @@
 
 #define DNP_BAM_TRACK                     1
 #define DNP_BAM_SECTOR                    2
+#define DNP_BAM_LAST_TRACK_OFS            8
+#define DNP_ROOTDIR_SECTOR               34 // only for formatting!
 #define DNP_BAM_BYTES_PER_TRACK          32
 #define DNP_DIRHEADER_DIR_TRACK           0
 #define DNP_DIRHEADER_DIR_SECTOR          1
@@ -95,24 +98,29 @@ static uint8_t   bam_refcount;
 
 static uint8_t d64_opendir(dh_t *dh, path_t *path);
 
+static void format_d41_image(uint8_t part, buffer_t *buf, uint8_t *name, uint8_t *idbuf);
+static void format_d71_image(uint8_t part, buffer_t *buf, uint8_t *name, uint8_t *idbuf);
+static void format_d81_image(uint8_t part, buffer_t *buf, uint8_t *name, uint8_t *idbuf);
+static void format_dnp_image(uint8_t part, buffer_t *buf, uint8_t *name, uint8_t *idbuf);
+
 /* ------------------------------------------------------------------------- */
 /*  Utility functions                                                        */
 /* ------------------------------------------------------------------------- */
 
 static const PROGMEM struct param_s d41param = {
-  18, 1, 35, 0x90, 0xa2, 10, 3
+  18, 1, 35, 0x90, 0xa2, 10, 3, format_d41_image
 };
 
 static const PROGMEM struct param_s d71param = {
-  18, 1, 70, 0x90, 0xa2, 6, 3
+  18, 1, 70, 0x90, 0xa2, 6, 3, format_d71_image
 };
 
 static const PROGMEM struct param_s d81param = {
-  40, 3, 80, 0x04, 0x16, 1, 1
+  40, 3, 80, 0x04, 0x16, 1, 1, format_d81_image
 };
 
 static const PROGMEM struct param_s dnpparam = {
-  1, 1, 0, DNP_LABEL_OFFSET, DNP_ID_OFFSET, 1, 1
+  1, 1, 0, DNP_LABEL_OFFSET, DNP_ID_OFFSET, 1, 1, format_dnp_image
 };
 
 /**
@@ -299,6 +307,15 @@ static void strnsubst(uint8_t *buffer, uint8_t len, uint8_t oldchar, uint8_t new
     if (buffer[i] == oldchar)
       buffer[i] = newchar;
   } while (i--);
+}
+
+/* fill a sector with 0 0xff 0* to generate a new empty directory sector */
+/* needs a 256 byte work area in *data */
+static uint8_t clear_dir_sector(uint8_t part, uint8_t t, uint8_t s, uint8_t *data) {
+  memset(data, 0, 256);
+
+  data[1] = 0xff;
+  return image_write(part, sector_offset(part, t, s), data, 256, 0);
 }
 
 
@@ -1529,84 +1546,6 @@ static void d64_rename(path_t *path, cbmdirent_t *dent, uint8_t *newname) {
               dent->pvt.dxx.dh.entry*32, entrybuf, 32, 1);
 }
 
-static void d64_format(uint8_t part, uint8_t *name, uint8_t *id) {
-  buffer_t *buf;
-  uint8_t  *ptr;
-  uint8_t  idbuf[2];
-  uint8_t  t,s;
-
-  /* Limit to D64 until fixed */
-  if (partition[part].imagetype != D64_TYPE_D41) {
-    set_error(ERROR_SYNTAX_UNABLE);
-    return;
-  }
-
-  buf = alloc_buffer();
-  if (buf == NULL)
-    return;
-
-  mark_write_buffer(buf);
-  mark_buffer_dirty(buf);
-  memset(buf->data, 0, 256);
-
-  /* Flush BAM buffers and mark their contents as invalid */
-  d64_bam_commit();
-  bam_buffer->pvt.bam.part = 0xff;
-  if (bam_buffer2)
-    bam_buffer2->pvt.bam.part = 0xff;
-
-  if (id != NULL) {
-    uint16_t i;
-
-    /* Clear the data area of the disk image */
-    for (i=0;i<683 /* FIXME: TOTAL_SECTORS */ ;i++)
-      if (image_write(part, 256L * i, buf->data, 256, 0))
-        return;
-
-    /* Copy the new ID into the buffer */
-    idbuf[0] = id[0];
-    idbuf[1] = id[1];
-  } else {
-    /* Read the old ID into the buffer */
-    if (image_read(part, sector_offset(part, get_param(part, DIR_TRACK),0) + get_param(part, ID_OFFSET), idbuf, 2))
-      return;
-  }
-
-  /* Clear the first directory sector */
-  buf->data[1] = 0xff;
-  if (image_write(part,
-                  sector_offset(part,
-                                get_param(part, DIR_TRACK),
-                                get_param(part, DIR_START_SECTOR)),
-                  buf->data, 256, 0))
-    return;
-
-  /* Mark all sectors as free */
-  for (t=1; t<=get_param(part, LAST_TRACK); t++)
-    for (s=0; s<sectors_per_track(part, t); s++)
-      if (t != 18 || s > 1)
-        free_sector(part,t,s);
-
-  ptr = bam_buffer->data;
-  ptr[0] = get_param(part, DIR_TRACK);
-  ptr[1] = get_param(part, DIR_START_SECTOR);
-  ptr[2] = 0x41;
-  memset(ptr+0x90, 0xa0, 0xaa-0x90+1);
-
-  /* Copy the disk label */
-  ptr += 0x90;
-  t = 16;
-  while (*name && t--)
-    *ptr++ = *name++;
-
-  /* Set the ID */
-  bam_buffer->data[get_param(part, ID_OFFSET)  ] = idbuf[0];
-  bam_buffer->data[get_param(part, ID_OFFSET)+1] = idbuf[1];
-  bam_buffer->data[get_param(part, ID_OFFSET)+3] = '2';
-  bam_buffer->data[get_param(part, ID_OFFSET)+4] = 'A';
-
-  /* FIXME: Clear the error info block */
-}
 
 /**
  * d64_raw_directory - open directory track as file
@@ -1845,6 +1784,216 @@ void d64_unmount(uint8_t part) {
   }
 }
 
+
+/* ------------------------------------------------------------------------- */
+/*  Formatting disk images                                                   */
+/* ------------------------------------------------------------------------- */
+
+/* create a 1581/DNP BAM signature */
+static void format_add_bam_signature(uint8_t doschar, uint8_t *idbuf) {
+  uint8_t *ptr = bam_buffer->data + 2;
+
+  *ptr++ = doschar;
+  *ptr++ = doschar ^ 0xff;
+  *ptr++ = idbuf[0];
+  *ptr++ = idbuf[1];
+  *ptr++ = 0xc0;
+}
+
+/* copy name and id into some buffer */
+static void format_copy_label(uint8_t part, uint8_t *data, uint8_t *name, uint8_t *idbuf) {
+  uint8_t *ptr;
+  uint8_t count;
+
+  ptr = data + get_param(part, LABEL_OFFSET);
+  memset(ptr, 0xa0, 25); /* 25=name+id+dos+spaces+padding */
+
+  count = 16;
+  while (*name && count--)
+    *ptr++ = *name++;
+
+  memcpy(data + get_param(part, ID_OFFSET), idbuf, 5);
+}
+
+static void format_d41_image(uint8_t part, buffer_t *buf, uint8_t *name, uint8_t *idbuf) {
+  /* allocate BAM and first directory sector */
+  for (uint8_t s=0; s<2; s++)
+    allocate_sector(part, D41_BAM_TRACK, s);
+
+  /* 18/0 is now available via bam_buffer */
+  uint8_t *ptr = bam_buffer->data;
+  *ptr++ = 18;
+  *ptr++ = 1;
+  *ptr++ = 0x41;
+
+  /* copy disk label and ID */
+  idbuf[3] = '2';
+  idbuf[4] = 'A';
+  format_copy_label(part, bam_buffer->data, name, idbuf);
+  /* two additional 0xa0 characters on 5.25" disks */
+  bam_buffer->data[0xa9] = 0xa0;
+  bam_buffer->data[0xaa] = 0xa0;
+
+  clear_dir_sector(part, D41_BAM_TRACK, 1, buf->data);
+}
+
+static void format_d71_image(uint8_t part, buffer_t *buf, uint8_t *name, uint8_t *idbuf) {
+  /* almost everything is the same as D41 */
+  format_d41_image(part, buf, name, idbuf);
+
+  /* add double-sided marker in 18/0 (still in bam_buffer) */
+  bam_buffer->data[3] = 0x80;
+
+  /* allocate all of track 53 */
+  for (uint8_t s=0; s<19; s++)
+    allocate_sector(part, D71_BAM2_TRACK, s);
+}
+
+static void format_d81_image(uint8_t part, buffer_t *buf, uint8_t *name, uint8_t *idbuf) {
+  /* allocate 40/0 to 40/3 */
+  for (uint8_t s=0; s<4; s++)
+    allocate_sector(part, D81_BAM_TRACK, s);
+
+  /* bam_buffer buffer now holds 40/1 */
+  bam_buffer->data[0] = 40;
+  bam_buffer->data[1] = 2;
+  format_add_bam_signature('D', idbuf);
+  // mustflush was already set by allocate_sector
+
+  /* switch bam_buffer to 40/2 */
+  (void)sectors_free(part, 41);
+  bam_buffer->data[0] = 0;
+  bam_buffer->data[1] = 0xff;
+  format_add_bam_signature('D', idbuf);
+  bam_buffer->mustflush = 1;
+
+  /* build contents of 40/0 */
+  uint8_t *ptr = buf->data;
+  *ptr++ = 40;
+  *ptr++ = 3;
+  *ptr++ = 'D';
+
+  /* copy disk label and ID to buffer */
+  idbuf[3] = '3';
+  idbuf[4] = 'D';
+  format_copy_label(part, buf->data, name, idbuf);
+
+  /* write 40/0 */
+  if (image_write(part, /*sector_offset(part, 40, 0)*/ 40*40*256L,
+                  buf->data, 256, 0))
+    return;
+
+  clear_dir_sector(part, D81_BAM_TRACK, 3, buf->data);
+}
+
+static void format_dnp_image(uint8_t part, buffer_t *buf, uint8_t *name, uint8_t *idbuf) {
+  /* Note: Formatting is only accepted while in the root dir, so the
+           d64param struct doesn't need to be changed */
+  for (uint8_t s=0; s<35; s++)
+    allocate_sector(part, DNP_BAM_TRACK, s);
+
+  /* add BAM signature - first BAM sector is in bam_buffer because of allocate_sector */
+  format_add_bam_signature('H', idbuf);
+  bam_buffer->data[DNP_BAM_LAST_TRACK_OFS] = get_param(part, LAST_TRACK);
+
+  /* build root dirheader */
+  uint8_t *ptr = buf->data;
+  memset(ptr, 0, 256);
+  *ptr++ = 1;
+  *ptr++ = 34;
+  *ptr++ = 'H';
+  idbuf[3] = '1';
+  idbuf[4] = 'H';
+  format_copy_label(part, buf->data, name, idbuf);
+  buf->data[DNP_DIRHEADER_ROOTHDR_TRACK]  = 1;
+  buf->data[DNP_DIRHEADER_ROOTHDR_SECTOR] = 1;
+
+  /* write 1/1 */
+  if (image_write(part, /*sector_offset(part, 1, 1)*/ 256,
+                  buf->data, 256, 0))
+    return;
+
+  clear_dir_sector(part, 1, DNP_ROOTDIR_SECTOR, buf->data);
+}
+
+static void d64_format(uint8_t part, uint8_t *name, uint8_t *id) {
+  buffer_t *buf;
+  uint8_t  idbuf[5];
+  uint16_t t;
+  uint16_t  s;
+
+  /* allow format on DNP only when in the root directory */
+  if (partition[part].imagetype == D64_TYPE_DNP &&
+      (partition[part].current_dir.dxx.track  != 1 ||
+       partition[part].current_dir.dxx.sector != 1)) {
+    /* just ignore, CMD HD doesn't return an error either */
+    return;
+  }
+
+  /* grab a buffer as work area */
+  buf = alloc_buffer();
+  if (buf == NULL)
+    return;
+
+  mark_write_buffer(buf);
+  mark_buffer_dirty(buf);
+  memset(buf->data, 0, 256);
+
+  /* Flush BAM buffers and mark their contents as invalid */
+  d64_bam_commit();
+  bam_buffer->pvt.bam.part = 0xff;
+  if (bam_buffer2)
+    bam_buffer2->pvt.bam.part = 0xff;
+
+  if (id != NULL) {
+    /* Clear the data area of the disk image */
+    for (t=1; t<=get_param(part, LAST_TRACK); t++) {
+      for (s=0; s<sectors_per_track(part, t); s++) {
+        if (image_write(part, sector_offset(part, t, s),
+                        buf->data, 256, 0))
+          return;
+      }
+    }
+
+    /* Copy the new ID into the buffer */
+    idbuf[0] = id[0];
+    idbuf[1] = id[1];
+  } else {
+    /* Read the old ID into the buffer */
+    path_t path;
+    path.part = part;
+    path.dir.dxx.track  = get_param(part, DIR_TRACK);
+    path.dir.dxx.sector = 1; // only relevant for DNP
+    if (d64_getid(&path, idbuf))
+      return;
+
+    /* clear the entire directory track */
+    /* This is not accurate, but I do not care. */
+    t = get_param(part, DIR_TRACK);
+    for (s=0; s < sectors_per_track(part, t); s++) {
+      if (image_write(part, sector_offset(part, t, s),
+                      buf->data, 256, 0))
+        return;
+    }
+  }
+  idbuf[2] = 0xa0;
+
+  /* Mark all sectors as free */
+  for (t=1; t<=get_param(part, LAST_TRACK); t++) {
+    for (s=0; s<sectors_per_track(part, t); s++)
+      free_sector(part,t,s);
+  }
+
+  /* call imagetype-specific format function */
+  partition[part].d64data.format_function(part, buf, name, idbuf);
+
+  /* FIXME: Clear the error info block */
+}
+
+
+/* ------------------------------------------------------------------------- */
+/*  ops struct                                                               */
+/* ------------------------------------------------------------------------- */
 
 const PROGMEM fileops_t d64ops = {
   d64_open_read,

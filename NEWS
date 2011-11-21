@@ -1,3 +1,7 @@
+2011-xx-xx - release 1.0.0
+        - EasyLoad fast loader
+        - formatting for D71/D81/DNP images
+
 2010-12-25 - release 0.10.1
         - Bugfix: Remove remains of previous commands while parsing B-*
         - Bugfix: Fix response of UI command for unknown suffix chars
