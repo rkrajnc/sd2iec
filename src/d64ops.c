@@ -41,6 +41,7 @@
 
 #define D41_ERROR_OFFSET 174848
 #define D71_ERROR_OFFSET 349696
+#define D81_ERROR_OFFSET 819200
 
 #define D41_BAM_TRACK           18
 #define D41_BAM_SECTOR          0
@@ -77,8 +78,8 @@
 #define DNP_LABEL_AREA_SIZE             (28-4+1)
 #define DNP_ID_OFFSET                    22
 
-/* No errorinfo support for D81 */
-#define MAX_SECTORS_PER_TRACK 21
+/* used for error info only */
+#define MAX_SECTORS_PER_TRACK 40
 
 typedef enum { BAM_BITFIELD, BAM_FREECOUNT } bamdata_t;
 
@@ -242,15 +243,31 @@ static uint8_t checked_read(uint8_t part, uint8_t track, uint8_t sector, uint8_t
     if (errorcache.part != part || errorcache.track != track) {
       /* Read the error info for this track */
       memset(errorcache.errors, 1, sizeof(errorcache.errors));
-      /* Needs fix for errorinfo on anything but D64/D71! */
-      if ((partition[part].imagetype & D64_TYPE_MASK) == D64_TYPE_D41) {
-        if (image_read(part, D41_ERROR_OFFSET+sector_lba(part,track,0),
+
+      switch (partition[part].imagetype & D64_TYPE_MASK) {
+      case D64_TYPE_D41:
+        if (image_read(part, D41_ERROR_OFFSET + sector_lba(part,track,0),
                        errorcache.errors, sectors_per_track(part, track)) >= 2)
           return 2;
-      } else {
-        if (image_read(part, D71_ERROR_OFFSET+sector_lba(part,track,0),
+        break;
+
+      case D64_TYPE_D71:
+        if (image_read(part, D71_ERROR_OFFSET + sector_lba(part,track,0),
                        errorcache.errors, sectors_per_track(part, track)) >= 2)
           return 2;
+        break;
+
+      case D64_TYPE_D81:
+        if (image_read(part, D81_ERROR_OFFSET + sector_lba(part,track,0),
+                       errorcache.errors, sectors_per_track(part, track)) >= 2)
+          return 2;
+        break;
+
+      default:
+        /* Should not happen unless someone enables error info
+           for additional image formats */
+        return 2;
+
       }
       errorcache.part  = part;
       errorcache.track = track;
@@ -1198,13 +1215,10 @@ uint8_t d64_mount(path_t *path) {
     memcpy_P(&partition[part].d64data, &d81param, sizeof(struct param_s));
     break;
 
-    /* Warning: If you enable this, increase the MAX_SECTORS_PER_TRACK #define
-                and the offset calculation in checked_read!
   case 822400:
     imagetype = D64_TYPE_D81 | D64_HAS_ERRORINFO;
     memcpy_P(&partition[part].d64data, &d81param, sizeof(struct param_s));
     break;
-    */
 
   default:
     if ((fsize % (256*256L)) != 0) {
