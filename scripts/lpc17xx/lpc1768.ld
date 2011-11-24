@@ -49,7 +49,7 @@ SECTIONS
   } >flash
   __exidx_end = .;
 
-  /* I hope this does what I think it does */
+  /* read-only data section */
   .rodata : AT (ALIGN(__exidx_end,4))
   {
     *(.rodata)
