@@ -2258,7 +2258,8 @@ FRESULT f_unlink (
   FRESULT res;
   DIR dj;
   BYTE *dir, *sdir;
-  DWORD dclust, dsect;
+  DWORD dclust;
+  DWORD __attribute__((unused)) dsect;
   UCHAR fn[8+3+1];
 #if _USE_DRIVE_PREFIX != 0
   FATFS *fs;
@@ -2591,7 +2592,7 @@ FRESULT f_rename (
 {
   FRESULT res;
   DIR dj;
-  DWORD sect_old;
+  DWORD __attribute__((unused)) sect_old;
   BYTE *dir_old, *dir_new, direntry[32-11];
   UCHAR fn[8+3+1];
 #if _USE_DRIVE_PREFIX != 0

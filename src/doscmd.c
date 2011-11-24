@@ -796,17 +796,13 @@ static void parse_changepart(void) {
   uint8_t *str;
   uint8_t part;
 
-  switch(command_buffer[1]) {
-  case 'P':
+  if (command_buffer[1] == 'P') {
     clean_cmdbuffer();
     str  = command_buffer + 2;
     part = parse_partition(&str);
-    break;
-
-  case 0xd0: /* Shift-P */
-    /* binary version */
+  } else {
+    /* Shift-P - binary version */
     part = command_buffer[2] - 1;
-    break;
   }
 
   if(part>=max_part) {
@@ -814,7 +810,7 @@ static void parse_changepart(void) {
     return;
   }
 
-  current_part=part;
+  current_part = part;
   if (globalflags & AUTOSWAP_ACTIVE)
     set_changelist(NULL, NULLSTRING);
 
@@ -1148,13 +1144,13 @@ static void handle_memread(void) {
 /* --- M-W --- */
 static void handle_memwrite(void) {
   uint16_t address;
-  uint8_t  length,i;
+  uint8_t  i;
 
   if (command_length < 6)
     return;
 
   address = command_buffer[3] + (command_buffer[4]<<8);
-  length  = command_buffer[5];
+  //length  = command_buffer[5];
 
   if (address == 119) {
     /* Change device address, 1541 style */
