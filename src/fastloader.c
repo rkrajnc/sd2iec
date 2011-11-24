@@ -925,7 +925,7 @@ static void geos_receive_datablock(void *data_, uint16_t length) {
 /* Receive a data block from the computer */
 static void geos_receive_lenblock(uint8_t *data) {
   uint8_t exitflag = 0;
-  uint16_t length;
+  uint16_t length = 0;
 
   /* Receive data length */
   while (!IEC_CLOCK && IEC_ATN)
