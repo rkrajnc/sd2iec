@@ -372,6 +372,9 @@ static inline void buttons_init(void) {
 #  define SD_CHANGE_HANDLER     ISR(INT0_vect)
 #  define SD_SUPPLY_VOLTAGE     (1L<<21)
 
+#  define SPI_DIVISOR_SLOW 32
+#  define SPI_DIVISOR_FAST 4
+
 static inline void sdcard_interface_init(void) {
   DDRD  &= ~_BV(PD2);
   PORTD |=  _BV(PD2);
