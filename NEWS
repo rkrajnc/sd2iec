@@ -1,6 +1,12 @@
-2011-xx-xx - release 1.0.0
-        - EasyLoad fast loader
+201x-xx-xx - release 1.0.0
         - formatting for D71/D81/DNP images
+
+2011-12-18 - release 0.10.2
+        - Bugfix: End of generated raw directory was incorrect
+        - Bugfix: Various compilation fixes when fastloaders are disabled
+        - ULoad M3 automatically exits when ATN becomes active
+        - Minor code space improvements
+        - New fastloader: ELoad Version 1 (EasyProg)
 
 2010-12-25 - release 0.10.1
         - Bugfix: Remove remains of previous commands while parsing B-*
