@@ -800,7 +800,7 @@ sd2iec requires avr-libc version 1.6.x.
 sd2iec is set up to be compiled in multiple configurations, controlled by
 configuration files. By default the Makefile looks for a file named
 'config', but you can override it by providing the name on the make
-command line with "make CONFIG=filename".
+command line with "make CONFIG=filename[,filename...]".
 
 An example configuration file named "config-example" is provided with
 the source code, as well as abridged files corresponding to the
