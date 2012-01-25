@@ -4,7 +4,7 @@ ifndef CONFIG
   CONFIG = config
 endif
 
-CONFDATA := $(shell scripts/configparser.pl --confdata $(CONFIG))
+CONFDATA     := $(shell scripts/configparser.pl --confdata $(CONFIG))
 CONFIGSUFFIX := $(word 1,$(CONFDATA))
 OBJDIR       := obj-$(CONFIGSUFFIX)
 CONFFILES    := $(wordlist 2,99,$(CONFDATA))
@@ -30,3 +30,8 @@ $(OBJDIR)/make.inc: $(CONFFILES) | $(OBJDIR)
 $(OBJDIR):
 	$(E) "  MKDIR  $(OBJDIR)"
 	-$(Q)mkdir $(OBJDIR)
+
+copy clean fuses program: FORCE | $(OBJDIR) $(OBJDIR)/make.inc
+	$(Q)$(MAKE) -f scripts/Makefile.main $@
+
+FORCE: ;
