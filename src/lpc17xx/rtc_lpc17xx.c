@@ -52,6 +52,11 @@ void rtc_init(void) {
 }
 
 void read_rtc(struct tm *time) {
+  if (rtc_state != RTC_OK) {
+    memcpy(time, &rtc_default_date, sizeof(struct tm));
+    return;
+  }
+
   do {
     time->tm_sec  = LPC_RTC->SEC;
     time->tm_min  = LPC_RTC->MIN;

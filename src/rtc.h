@@ -40,6 +40,7 @@ typedef enum {
 
 # if CONFIG_RTC_VARIANT > 0
 
+extern const /* PROGMEM */ struct tm rtc_default_date;
 extern rtcstate_t rtc_state;
 
 void rtc_init(void);

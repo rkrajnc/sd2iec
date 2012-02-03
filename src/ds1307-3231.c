@@ -74,11 +74,6 @@
 
 #define STATUS_OSF     0x80  // oscillator stopped (1307: CH bit in reg 0)
 
-/* Default date/time if the RTC isn't preset or not set: 2011-01-01 00:00:00 */
-static const PROGMEM struct tm defaultdate = {
-  0, 0, 0, 1, 1, 11, 5
-};
-
 rtcstate_t rtc_state;
 
 /* Read the current time from the RTC */
@@ -86,7 +81,7 @@ void read_rtc(struct tm *time) {
   uint8_t tmp[7];
 
   /* Set to default value in case we abort */
-  memcpy_P(time, &defaultdate, sizeof(struct tm));
+  memcpy_P(time, &rtc_default_date, sizeof(struct tm));
   if (rtc_state != RTC_OK)
     return;
 

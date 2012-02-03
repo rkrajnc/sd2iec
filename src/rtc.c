@@ -26,8 +26,14 @@
 
 #include <inttypes.h>
 #include "config.h"
+#include "progmem.h"
 #include "time.h"
 #include "rtc.h"
+
+/* Default date/time if the RTC isn't present or not set: 1982-08-31 00:00:00 */
+const PROGMEM struct tm rtc_default_date = {
+  0, 0, 0, 31, 8, 82, 2
+};
 
 /* Return current time in a FAT-compatible format */
 uint32_t get_fattime(void) {
