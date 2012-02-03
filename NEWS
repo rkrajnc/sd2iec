@@ -1,4 +1,5 @@
 201x-xx-xx - release 1.0.0
+        - Bugfix: use valid default date if RTC is not detected
         - formatting for D71/D81/DNP images
 
 2011-12-18 - release 0.10.2
