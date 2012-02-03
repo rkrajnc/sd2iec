@@ -291,6 +291,33 @@ static uint8_t checked_read(uint8_t part, uint8_t track, uint8_t sector, uint8_t
 }
 
 /**
+ * update_timestamp - update timestamp of a directory entry
+ * @buffer: pointer to the directory entry
+ *
+ * This function updates the time stamp of a directory entry
+ * at the address pointed to by @buffer with the current
+ * date/time if available or the default timestamp if not.
+ */
+static void update_timestamp(uint8_t *buffer) {
+#if CONFIG_RTC_VARIANT > 0
+  struct tm time;
+
+  read_rtc(&time);
+  buffer[DIR_OFS_YEAR]   = time.tm_year % 100;
+  buffer[DIR_OFS_MONTH]  = time.tm_mon + 1;
+  buffer[DIR_OFS_DAY]    = time.tm_mday;
+  buffer[DIR_OFS_HOUR]   = time.tm_hour;
+  buffer[DIR_OFS_MINUTE] = time.tm_min;
+#else
+  buffer[DIR_OFS_YEAR]   = 82;
+  buffer[DIR_OFS_MONTH]  = 8;
+  buffer[DIR_OFS_DAY]    = 31;
+  buffer[DIR_OFS_HOUR]   = 0;
+  buffer[DIR_OFS_MINUTE] = 0;
+#endif
+}
+
+/**
  * read_entry - read a single directory entry
  * @part: partition number
  * @dh  : pointer to d64dh pointing to the entry
@@ -1118,23 +1145,6 @@ static uint8_t d64_write(buffer_t *buf) {
 }
 
 static uint8_t write_dir_entry(buffer_t *buf) {
-#if CONFIG_RTC_VARIANT > 0
-  struct tm time;
-
-  read_rtc(&time);
-  entrybuf[DIR_OFS_YEAR]   = time.tm_year % 100;
-  entrybuf[DIR_OFS_MONTH]  = time.tm_mon + 1;
-  entrybuf[DIR_OFS_DAY]    = time.tm_mday;
-  entrybuf[DIR_OFS_HOUR]   = time.tm_hour;
-  entrybuf[DIR_OFS_MINUTE] = time.tm_min;
-#else
-  entrybuf[DIR_OFS_YEAR]   = 82;
-  entrybuf[DIR_OFS_MONTH]  = 8;
-  entrybuf[DIR_OFS_DAY]    = 31;
-  entrybuf[DIR_OFS_HOUR]   = 0;
-  entrybuf[DIR_OFS_MINUTE] = 0;
-#endif
-
   /* Write the directory entry */
   if (image_write(buf->pvt.d64.part, sector_offset(buf->pvt.d64.part, buf->pvt.d64.dh.track, buf->pvt.d64.dh.sector)+
       buf->pvt.d64.dh.entry*32, entrybuf, 32, 1))
@@ -1167,8 +1177,9 @@ static uint8_t d64_write_cleanup(buffer_t *buf) {
   entrybuf[DIR_OFS_FILE_TYPE] |= FLAG_SPLAT;
   entrybuf[DIR_OFS_SIZE_LOW]   = buf->pvt.d64.blocks & 0xff;
   entrybuf[DIR_OFS_SIZE_HI]    = buf->pvt.d64.blocks >> 8;
+  update_timestamp(entrybuf);
 
-  if(write_dir_entry(buf)) /* timestamp is updated in here */
+  if(write_dir_entry(buf))
     return 1;
 
   buf->cleanup = callback_dummy;
@@ -1444,7 +1455,8 @@ static void d64_open_write(path_t *path, cbmdirent_t *dent, uint8_t type, buffer
     mark_write_buffer(buf);
     stick_buffer(buf);
 
-    write_dir_entry(buf); /* timestamp is updated in here */
+    update_timestamp(entrybuf);
+    write_dir_entry(buf);
 
     return;
   }
@@ -1476,6 +1488,7 @@ static void d64_open_write(path_t *path, cbmdirent_t *dent, uint8_t type, buffer
     return;
 
   /* Write the directory entry */
+  update_timestamp(entrybuf);
   if (image_write(path->part, sector_offset(path->part, dh.dir.d64.track,dh.dir.d64.sector)+
                   dh.dir.d64.entry*32, entrybuf, 32, 1))
     return;
@@ -1492,9 +1505,6 @@ static void d64_open_write(path_t *path, cbmdirent_t *dent, uint8_t type, buffer
   buf->pvt.d64.part   = path->part;
   buf->pvt.d64.track  = t;
   buf->pvt.d64.sector = s;
-
-  if(write_dir_entry(buf)) /* timestamp is updated in here */
-    return;
 
   stick_buffer(buf);
 }
@@ -1747,6 +1757,7 @@ static void d64_mkdir(path_t *path, uint8_t *dirname) {
   entrybuf[DIR_OFS_TRACK]     = h_track;
   entrybuf[DIR_OFS_SECTOR]    = h_sector;
   entrybuf[DIR_OFS_SIZE_LOW]  = 2;
+  update_timestamp(entrybuf);
 
   image_write(path->part, sector_offset(path->part, dh.dir.d64.track, dh.dir.d64.sector)
                           + dh.dir.d64.entry * 32 + 2, entrybuf+2, 30, 1);
