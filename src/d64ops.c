@@ -318,6 +318,23 @@ static void update_timestamp(uint8_t *buffer) {
 }
 
 /**
+ * write_entry - write a single directory entry
+ * @part : partition number
+ * @dh   : pointer to d64dh pointing to the entry
+ * @buf  : pointer to the buffer where the data should be read from
+ * @flush: if true, data is flushed to disk immediately
+ *
+ * This function writes a single directory entry specified by @dh
+ * from the buffer @buf.
+ * Assumes that it is never called with an invalid track/sector.
+ * Returns the same as image_write
+ */
+static uint8_t write_entry(uint8_t part, struct d64dh *dh, uint8_t *buf, uint8_t flush) {
+  return image_write(part, sector_offset(part, dh->track, dh->sector) +
+                           dh->entry * 32, buf, 32, flush);
+}
+
+/**
  * read_entry - read a single directory entry
  * @part: partition number
  * @dh  : pointer to d64dh pointing to the entry
@@ -1016,11 +1033,8 @@ static uint8_t find_empty_entry(path_t *path, dh_t *dh) {
     memset(entrybuf, 0, 32);
     entrybuf[1] = 0xff;
     for (uint8_t i=0;i<256/32;i++) {
-      if (image_write(path->part,
-                      sector_offset(path->part,
-                                    dh->dir.d64.track,
-                                    dh->dir.d64.sector)+32*i,
-                      entrybuf, 32, 0))
+      dh->dir.d64.entry = i;
+      if (write_entry(path->part, &dh->dir.d64, entrybuf, 0))
         return 1;
 
       entrybuf[1] = 0;
@@ -1144,14 +1158,6 @@ static uint8_t d64_write(buffer_t *buf) {
     return 0;
 }
 
-static uint8_t write_dir_entry(buffer_t *buf) {
-  /* Write the directory entry */
-  if (image_write(buf->pvt.d64.part, sector_offset(buf->pvt.d64.part, buf->pvt.d64.dh.track, buf->pvt.d64.dh.sector)+
-      buf->pvt.d64.dh.entry*32, entrybuf, 32, 1))
-    return 1;
-  return 0;
-}
-
 static uint8_t d64_write_cleanup(buffer_t *buf) {
   uint8_t t,s;
 
@@ -1179,7 +1185,7 @@ static uint8_t d64_write_cleanup(buffer_t *buf) {
   entrybuf[DIR_OFS_SIZE_HI]    = buf->pvt.d64.blocks >> 8;
   update_timestamp(entrybuf);
 
-  if(write_dir_entry(buf))
+  if (write_entry(buf->pvt.d64.part, &buf->pvt.d64.dh, entrybuf, 1))
     return 1;
 
   buf->cleanup = callback_dummy;
@@ -1456,7 +1462,7 @@ static void d64_open_write(path_t *path, cbmdirent_t *dent, uint8_t type, buffer
     stick_buffer(buf);
 
     update_timestamp(entrybuf);
-    write_dir_entry(buf);
+    write_entry(buf->pvt.d64.part, &buf->pvt.d64.dh, entrybuf, 1);
 
     return;
   }
@@ -1489,8 +1495,7 @@ static void d64_open_write(path_t *path, cbmdirent_t *dent, uint8_t type, buffer
 
   /* Write the directory entry */
   update_timestamp(entrybuf);
-  if (image_write(path->part, sector_offset(path->part, dh.dir.d64.track,dh.dir.d64.sector)+
-                  dh.dir.d64.entry*32, entrybuf, 32, 1))
+  if (write_entry(path->part, &dh.dir.d64, entrybuf, 1))
     return;
 
   /* Prepare the data buffer */
@@ -1533,8 +1538,7 @@ static uint8_t d64_delete(path_t *path, cbmdirent_t *dent) {
 
   /* Clear directory entry */
   entrybuf[DIR_OFS_FILE_TYPE] = 0;
-  if (image_write(path->part, sector_offset(path->part, dent->pvt.dxx.dh.track, dent->pvt.dxx.dh.sector)
-                  + dent->pvt.dxx.dh.entry * 32, entrybuf, 32, 1))
+  if (write_entry(path->part, &dent->pvt.dxx.dh, entrybuf, 1))
     return 255;
 
   return 1;
@@ -1563,9 +1567,7 @@ static void d64_rename(path_t *path, cbmdirent_t *dent, uint8_t *newname) {
   ptr = entrybuf+DIR_OFS_FILE_NAME;
   while (*newname) *ptr++ = *newname++;
 
-  image_write(path->part,
-              sector_offset(path->part, dent->pvt.dxx.dh.track, dent->pvt.dxx.dh.sector)+
-              dent->pvt.dxx.dh.entry*32, entrybuf, 32, 1);
+  write_entry(path->part, &dent->pvt.dxx.dh, entrybuf, 1);
 }
 
 
