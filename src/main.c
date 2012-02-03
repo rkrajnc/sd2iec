@@ -93,9 +93,12 @@ int main(void) {
   uart_putcrlf();
 
 #ifdef CONFIG_REMOTE_DISPLAY
-  ustrcpy_P(entrybuf,versionstr);
-  ustrcpy_P(entrybuf+ustrlen(entrybuf),longverstr);
-  if (display_init(ustrlen(entrybuf), entrybuf)) {
+  /* at this point all buffers should be free, */
+  /* so just use the data area of the first to build the string */
+  uint8_t *strbuf = buffers[0].data;
+  ustrcpy_P(strbuf, versionstr);
+  ustrcpy_P(strbuf+ustrlen(strbuf), longverstr);
+  if (display_init(ustrlen(strbuf), strbuf)) {
     display_address(device_address);
     display_current_part(0);
   }
