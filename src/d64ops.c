@@ -1161,9 +1161,7 @@ static uint8_t d64_write_cleanup(buffer_t *buf) {
     return 1;
 
   /* Update directory entry */
-  t = buf->pvt.d64.dh.track;
-  s = buf->pvt.d64.dh.sector;
-  if (image_read(buf->pvt.d64.part, sector_offset(buf->pvt.d64.part,t,s)+32*buf->pvt.d64.dh.entry, entrybuf, 32))
+  if (read_entry(buf->pvt.d64.part, &buf->pvt.d64.dh, entrybuf))
     return 1;
 
   entrybuf[DIR_OFS_FILE_TYPE] |= FLAG_SPLAT;
