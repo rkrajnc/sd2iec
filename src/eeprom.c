@@ -70,7 +70,7 @@ static EEMEM struct {
   uint16_t drvconfig1;
   uint8_t  imagedirs;
   uint8_t  romname[ROM_NAME_LENGTH];
-} storedconfig;
+} __attribute__((packed)) storedconfig;
 
 /**
  * read_configuration - reads configuration from EEPROM
