@@ -98,6 +98,12 @@ void read_configuration(void) {
 
   size = eeprom_read_word(&storedconfig.structsize);
 
+  /* abort if the size bytes are not set */
+  if (size == 0xffff) {
+    eeprom_safety();
+    return;
+  }
+
   /* Calculate checksum of EEPROM contents */
   checksum = 0;
   for (i=2; i<size; i++)
