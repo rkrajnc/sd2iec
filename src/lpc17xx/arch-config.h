@@ -248,6 +248,199 @@ static inline __attribute__((always_inline)) void uart_pins_connect(void) {
   LPC_PINCON->PINSEL0 |= BV(4) | BV(6);
 }
 
+#elif CONFIG_HARDWARE_VARIANT == 101
+/* ---------- Hardware configuration: arm2iec v1.x ---------- */
+#  define HW_NAME "SD2IEC"
+#  define HAVE_SD
+#  define SD_SUPPLY_VOLTAGE (1L<<21)
+
+/* SSP 1, SD0-CS P0.6 */
+/* SD1: Detect P0.0, WP P0.1 */
+/* SD2: Not defined yet      */
+
+#  define SPI_ON_SSP 1
+#  define SD_DETECT_PIN  0
+#  define SD_WP_PIN      1
+#  define SD_CS_PIN      6
+
+static inline void sdcard_interface_init(void) {
+  /* configure SD0-CS as output, high */
+  LPC_GPIO0->FIOSET  = BV(SD_CS_PIN);
+  LPC_GPIO0->FIODIR |= BV(SD_CS_PIN);
+
+  /* Connect SSP1 */
+  LPC_PINCON->PINSEL0 |= BV(15) | BV(17) | BV(19); // SCK, MISO, MOSI
+
+  /* GPIOs are input-with-pullup by default, so Detect and WP "just work" */
+
+  /* Enable both rising and falling interrupt for change line */
+  LPC_GPIOINT->IO0IntEnR |= BV(SD_DETECT_PIN);
+  LPC_GPIOINT->IO0IntEnF |= BV(SD_DETECT_PIN);
+
+  /* Note: The GPIO interrupt is enabled in system_init_late */
+}
+
+static inline void sdcard_set_ss(int state) {
+  if (state)
+    LPC_GPIO0->FIOSET = BV(SD_CS_PIN);
+  else
+    LPC_GPIO0->FIOCLR = BV(SD_CS_PIN);
+}
+
+static inline uint8_t sdcard_detect(void) {
+  return !BITBAND(LPC_GPIO0->FIOPIN, SD_DETECT_PIN);
+}
+
+static inline uint8_t sdcard_wp(void) {
+  return BITBAND(LPC_GPIO0->FIOPIN, SD_WP_PIN);
+}
+
+static inline uint8_t device_hw_address(void) {
+  /* DIP switches are P4.29, P4.28, P2.26, P3.25 */
+  return 8 +   !BITBAND(LPC_GPIO4->FIOPIN, 29)
+           + 2*!BITBAND(LPC_GPIO4->FIOPIN, 28)
+           + 4*!BITBAND(LPC_GPIO3->FIOPIN, 26)
+           + 8*!BITBAND(LPC_GPIO3->FIOPIN, 25);
+}
+
+#define HAVE_SD_LED
+
+static inline void leds_init(void) {
+  /* 22 onboard red, 27 red, 28 yellow */
+  LPC_GPIO0->FIODIR |= BV(22) | BV(27) | BV(28);
+  LPC_GPIO0->FIOPIN |=          BV(27) | BV(28);
+  LPC_GPIO0->FIOPIN &= BV(22);
+  LPC_GPIO2->FIODIR |= BV(13);
+  LPC_GPIO2->FIOPIN |= BV(13);
+}
+
+static inline __attribute__((always_inline)) void set_busy_led(uint8_t state) {
+  /* red */
+  if (state)
+    BITBAND(LPC_GPIO2->FIOCLR, 13) = 1;
+  else
+    BITBAND(LPC_GPIO2->FIOSET, 13) = 1;
+}
+
+static inline __attribute__((always_inline)) void set_dirty_led(uint8_t state) {
+  /* green */
+  if (state)
+    BITBAND(LPC_GPIO0->FIOCLR, 27) = 1;
+  else
+    BITBAND(LPC_GPIO0->FIOSET, 27) = 1;
+}
+
+static inline __attribute__((always_inline)) void set_test_led(uint8_t state) {
+  /* onboard red */
+  if (state)
+    BITBAND(LPC_GPIO0->FIOSET, 22) = 1;
+  else
+    BITBAND(LPC_GPIO0->FIOCLR, 22) = 1;
+}
+
+static inline __attribute__((always_inline)) void set_sd_led(uint8_t state) {
+  /* yellow */
+  if (state)
+    BITBAND(LPC_GPIO0->FIOCLR, 28) = 1;
+  else
+    BITBAND(LPC_GPIO0->FIOSET, 28) = 1;
+}
+
+static inline void toggle_dirty_led(void) {
+  BITBAND(LPC_GPIO0->FIOPIN, 27) = !BITBAND(LPC_GPIO0->FIOPIN, 27);
+}
+
+/* IEC input bits */
+#  define IEC_INPUT             LPC_GPIO1->FIOPIN
+#  define IEC_INPUTS_INVERTED
+#  define IEC_PIN_ATN           18
+#  define IEC_PIN_CLOCK         26
+#  define IEC_PIN_DATA          27
+#  define IEC_PIN_SRQ           19
+#  define IEC_TIMER_ATN         LPC_TIM1
+#  define IEC_TIMER_CLOCK       LPC_TIM0
+#  define IEC_TIMER_DATA        LPC_TIM0
+#  define IEC_TIMER_SRQ         LPC_TIM1
+#  define IEC_CAPTURE_ATN       0
+#  define IEC_CAPTURE_CLOCK     0
+#  define IEC_CAPTURE_DATA      1
+#  define IEC_CAPTURE_SRQ       1
+
+/* IEC output bits - must be EMR of the same timer used for input */
+/* optionally all lines can be on timer 2 (4 match registers) */
+#  define IEC_OPIN_ATN          0
+#  define IEC_OPIN_CLOCK        0
+#  define IEC_OPIN_DATA         1
+#  define IEC_OPIN_SRQ          1
+#  define IEC_MATCH_ATN         MR0
+#  define IEC_MATCH_CLOCK       MR0
+#  define IEC_MATCH_DATA        MR1
+#  define IEC_MATCH_SRQ         MR1
+/* name the two IEC timers as A and B (simplifies initialisation), A is the main reference */
+/* Note: timer A is also used for timeouts */
+#  define IEC_TIMER_A           LPC_TIM1
+#  define IEC_TIMER_B           LPC_TIM0
+/* interrupts */
+#  define IEC_TIMER_A_IRQn      TIMER1_IRQn
+#  define IEC_TIMER_B_IRQn      TIMER0_IRQn
+#  define IEC_TIMER_A_HANDLER   TIMER1_IRQHandler
+#  define IEC_TIMER_B_HANDLER   TIMER0_IRQHandler
+/* LPC_SC->PCONP bits */
+#  define IEC_TIMER_A_PCONBIT   2
+#  define IEC_TIMER_B_PCONBIT   1
+/* PCLKSELx registers */
+#  define IEC_TIMER_A_PCLKREG   PCLKSEL0
+#  define IEC_TIMER_B_PCLKREG   PCLKSEL0
+/* PCLKSELx bits for 1:1 prescaler */
+#  define IEC_TIMER_A_PCLKBIT   2
+#  define IEC_TIMER_B_PCLKBIT   4
+
+/* timeout timer - one of the two remaining ones */
+#  define TIMEOUT_TIMER         LPC_TIM2
+#  define TIMEOUT_TIMER_PCONBIT 22
+#  define TIMEOUT_TIMER_PCLKREG PCLKSEL1
+#  define TIMEOUT_TIMER_PCLKBIT 12
+
+static inline void iec_pins_connect(void) {
+  /* Enable all capture and match pins of timers 0+1 */
+  LPC_PINCON->PINSEL3 |= 0b1111111111000011000011110000;
+}
+
+#  define BUTTON_NEXT           BV(24)
+#  define BUTTON_PREV           BV(22)  // GPIO0, shifted
+#  define BUTTON_MENU           BV(23)
+#  define BUTTON_SWAP           BV(21)
+
+static inline rawbutton_t buttons_read(void) {
+  return (LPC_GPIO1->FIOPIN & (BUTTON_NEXT | BUTTON_MENU | BUTTON_SWAP)) |
+        ((LPC_GPIO0->FIOPIN << 1) & BUTTON_PREV);
+}
+
+static inline void buttons_init(void) {
+  // None
+}
+
+#  define I2C_NUMBER          1
+#  define I2C_PCLKDIV         1
+#  define I2C_CLOCK           100000
+#  define I2C_EEPROM_ADDRESS  0xa0
+#  define I2C_EEPROM_SIZE     8192
+#  define I2C_EEPROM_PAGESIZE 32
+
+static inline __attribute__((always_inline)) void i2c_pins_connect(void) {
+  /* I2C pins open drain */
+  LPC_PINCON->PINMODE_OD0 |= BV(19) | BV(20);
+  LPC_PINCON->PINSEL1     |= BV(7) | BV(6) | // SDA1
+                             BV(9) | BV(8);  // SCL1
+}
+
+#  define UART_NUMBER 0
+
+static inline __attribute__((always_inline)) void uart_pins_connect(void) {
+  /* same port as the boot loader */
+  LPC_PINCON->PINSEL0 |= BV(4) | BV(6);
+}
+
 #else
 #  error "CONFIG_HARDWARE_VARIANT is unset or set to an unknown value."
 #endif
