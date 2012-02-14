@@ -22,17 +22,14 @@
 
    i2c_lpc17xx.c: Hardware I2C bus master for LPC17xx
 
-   Note: Doesn't use repeated start when reading,
-         so it's broken on multi-master busses
 */
 
+#include <stdbool.h>
+#include <stddef.h>
 #include <arm/NXP/LPC17xx/LPC17xx.h>
 #include <arm/bits.h>
 #include "config.h"
 #include "i2c.h"
-
-#include "uart.h"
-#include "timer.h"
 
 #if I2C_NUMBER == 0
 #  define I2C_REGS    LPC_I2C0
@@ -41,13 +38,13 @@
 #  define I2C_HANDLER I2C0_IRQHandler
 #  define I2C_IRQ     I2C0_IRQn
 #elif I2C_NUMBER == 1
-#  define I2C_REGS LPC_I2C1
+#  define I2C_REGS    LPC_I2C1
 #  define I2C_PCLKREG PCLKSEL1
 #  define I2C_PCLKBIT 6
 #  define I2C_HANDLER I2C1_IRQHandler
 #  define I2C_IRQ     I2C1_IRQn
 #elif I2C_NUMBER == 2
-#  define I2C_REGS LPC_I2C2
+#  define I2C_REGS    LPC_I2C2
 #  define I2C_PCLKREG PCLKSEL1
 #  define I2C_PCLKBIT 20
 #  define I2C_HANDLER I2C2_IRQHandler
@@ -68,9 +65,61 @@
 #define RESULT_BUSERROR  3
 #define RESULT_DONE      4
 
-static unsigned char address, i2creg, count, read_mode;
+/* internal buffers for read/write_register(s) */
+static uint8_t    reg_buffer;
+static i2cblock_t data_block;
+static i2cblock_t reg_block = {
+  1, &reg_buffer, &data_block
+};
+
+static i2cblock_t *current_block;
+static unsigned int count;
+static unsigned char address, write_buffers;
+static bool read_mode;
 static volatile unsigned char *bufferptr;
 static volatile char result;
+
+/* returns true if no more data is available */
+static bool data_available(void) {
+  /* if count is 0, there was no new buffer to switch to */
+  return (count != 0);
+}
+
+/* returns true if only one more byte can be stored/read */
+static bool on_last_byte(void) {
+  if (count == 1 && current_block->next == NULL)
+    return true;
+  else
+    return false;
+}
+
+/* returns the next byte from the buffer chain */
+static uint8_t read_byte(void) {
+  uint8_t b = *bufferptr++;
+  count--;
+
+  if (count == 0 && current_block->next != NULL) {
+    current_block = current_block->next;
+    count     = current_block->length;
+    bufferptr = current_block->data;
+    write_buffers--;
+  }
+
+  return b;
+}
+
+/* write one byte to the buffer chain */
+static void write_byte(uint8_t v) {
+  *bufferptr++ = v;
+  count--;
+
+  if (count == 0 && current_block->next) {
+    /* at least one more buffer */
+    current_block = current_block->next;
+    count         = current_block->length;
+    bufferptr     = current_block->data;
+  }
+}
 
 void I2C_HANDLER(void) {
   unsigned int tmp = I2C_REGS->I2STAT;
@@ -84,8 +133,8 @@ void I2C_HANDLER(void) {
     break;
 
   case 0x18: // SLA+W transmitted, ACK received
-    /* send register */
-    I2C_REGS->I2DAT = i2creg;
+    /* send first data byte */
+    I2C_REGS->I2DAT = read_byte();
     I2C_REGS->I2CONCLR = BV(I2CSTA) | BV(I2CSI);
     break;
 
@@ -100,21 +149,21 @@ void I2C_HANDLER(void) {
 
   case 0x28: // byte transmitted, ACK received
     /* send next data byte or stop */
-    if (read_mode) {
+    if (read_mode && write_buffers == 0) {
       /* switch to master receiver mode */
       address |= 1;
       I2C_REGS->I2CONSET = BV(I2CSTA);
       I2C_REGS->I2CONCLR = BV(I2CSI);
-    } else
-      if (count) {
-        I2C_REGS->I2DAT = *bufferptr++;
-        count--;
+    } else {
+      if (data_available()) {
+        I2C_REGS->I2DAT = read_byte();
         I2C_REGS->I2CONCLR = BV(I2CSTA) | BV(I2CSI);
       } else {
         I2C_REGS->I2CONSET = BV(I2CSTO);
         I2C_REGS->I2CONCLR = BV(I2CSTA) | BV(I2CSI);
         result = RESULT_DONE;
       }
+    }
     break;
 
   case 0x38: // arbitration lost
@@ -125,28 +174,28 @@ void I2C_HANDLER(void) {
 
   case 0x40: // SLA+R transmitted, ACK received
     /* prepare read cycle */
-    if (--count)
-      I2C_REGS->I2CONSET = BV(I2CAA);
-    else
+    if (on_last_byte())
       I2C_REGS->I2CONCLR = BV(I2CAA);
+    else
+      I2C_REGS->I2CONSET = BV(I2CAA);
 
     I2C_REGS->I2CONCLR = BV(I2CSTA) | BV(I2CSI);
     break;
 
   case 0x50: // data byte received, ACK sent
     /* decide to ACK/NACK next cycle, read current byte */
-    if (--count)
-      I2C_REGS->I2CONSET = BV(I2CAA);
-    else
+    if (on_last_byte())
       I2C_REGS->I2CONCLR = BV(I2CAA);
+    else
+      I2C_REGS->I2CONSET = BV(I2CAA);
 
-    *bufferptr++ = I2C_REGS->I2DAT;
+    write_byte(I2C_REGS->I2DAT);
     I2C_REGS->I2CONCLR = BV(I2CSTA) | BV(I2CSI);
     break;
 
   case 0x58: // data byte received, no ACK sent
     /* read last byte, send stop */
-    *bufferptr++ = I2C_REGS->I2DAT;
+    write_byte(I2C_REGS->I2DAT);
     I2C_REGS->I2CONSET = BV(I2CSTO);
     I2C_REGS->I2CONCLR = BV(I2CSTA) | BV(I2CSI);
     result = RESULT_DONE;
@@ -196,21 +245,11 @@ void i2c_init(void) {
 }
 
 uint8_t i2c_write_registers(uint8_t address_, uint8_t startreg, uint8_t count_, const void *data) {
-  result    = RESULT_NONE;
-  address   = address_;
-  i2creg    = startreg;
-  count     = count_;
-  bufferptr = (void *)data;
-  read_mode = 0;
+  reg_buffer        = startreg;
+  data_block.length = count_;
+  data_block.data   = (void *)data;
 
-  /* send start condition */
-  BITBAND(I2C_REGS->I2CONSET, I2CSTA) = 1;
-
-  /* wait until ISR is done */
-  while (result == RESULT_NONE)
-    __WFI();
-
-  return (result != RESULT_DONE);
+  return i2c_write_blocks(address_, &reg_block);
 }
 
 uint8_t i2c_write_register(uint8_t address, uint8_t reg, uint8_t val) {
@@ -218,24 +257,16 @@ uint8_t i2c_write_register(uint8_t address, uint8_t reg, uint8_t val) {
 }
 
 uint8_t i2c_read_registers(uint8_t address_, uint8_t startreg, uint8_t count_, void *data) {
-  result    = RESULT_NONE;
-  address   = address_ & 0xfe;
-  i2creg    = startreg;
-  count     = count_;
-  bufferptr = data;
-  read_mode = 1;
+  reg_buffer        = startreg;
+  data_block.length = count_;
+  data_block.data   = data;
 
-  /* send start condition */
-  BITBAND(I2C_REGS->I2CONSET, I2CSTA) = 1;
-
-  /* wait until ISR is done */
-  while (result == RESULT_NONE)
-    __WFI();
+  uint8_t res = i2c_read_blocks(address_, &reg_block, 1);
 
   /* tell gcc that the contents of data have changed */
   asm volatile ("" : "=m" (*(char *)data));
 
-  return (result != RESULT_DONE);
+  return res;
 }
 
 int16_t i2c_read_register(uint8_t address, uint8_t reg) {
@@ -247,3 +278,40 @@ int16_t i2c_read_register(uint8_t address, uint8_t reg) {
     return tmp;
 }
 
+uint8_t i2c_write_blocks(uint8_t addr, i2cblock_t *head) {
+  result        = RESULT_NONE;
+  address       = addr;
+  bufferptr     = head->data;
+  count         = head->length;
+  read_mode     = false;
+  write_buffers = 0;
+  current_block = head;
+
+  /* send start condition */
+  BITBAND(I2C_REGS->I2CONSET, I2CSTA) = 1;
+
+  /* wait until ISR is done */
+  while (result == RESULT_NONE)
+    __WFI();
+
+  return (result != RESULT_DONE);
+}
+
+uint8_t i2c_read_blocks(uint8_t addr, i2cblock_t *head, unsigned char writeblocks) {
+  result        = RESULT_NONE;
+  address       = addr & 0xfe;
+  bufferptr     = head->data;
+  count         = head->length;
+  read_mode     = true;
+  write_buffers = writeblocks;
+  current_block = head;
+
+  /* send start condition */
+  BITBAND(I2C_REGS->I2CONSET, I2CSTA) = 1;
+
+  /* wait until ISR is done */
+  while (result == RESULT_NONE)
+    __WFI();
+
+  return (result != RESULT_DONE);
+}

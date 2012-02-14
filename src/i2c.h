@@ -34,11 +34,23 @@
 
 #ifdef HAVE_I2C
 
+typedef struct i2cblock_s {
+  unsigned int       length;
+  void              *data;
+  struct i2cblock_s *next;
+} i2cblock_t;
+
 void i2c_init(void);
 uint8_t i2c_write_register(uint8_t address, uint8_t reg, uint8_t val);
 uint8_t i2c_write_registers(uint8_t address, uint8_t startreg, uint8_t count, const void *data);
 int16_t i2c_read_register(uint8_t address, uint8_t reg);
 uint8_t i2c_read_registers(uint8_t address, uint8_t startreg, uint8_t count, void *data);
+
+/* send a chain of i2cblock_t over the bus */
+uint8_t i2c_write_blocks(uint8_t address, i2cblock_t *head);
+
+/* write @writeblocks i2cblock_t over the bus, switch to read mode and fill the remaining ones */
+uint8_t i2c_read_blocks(uint8_t address, i2cblock_t *head, unsigned char writeblocks);
 
 #else
 #  define i2c_init() do {} while (0)
