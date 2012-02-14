@@ -50,35 +50,45 @@ void timer_init(void) {
   /*** set up IEC timers to count microseconds ***/
 
   /* enable power to timers */
-  BITBAND(LPC_SC->PCONP, IEC_TIMER_A_PCONBIT) = 1;
-  BITBAND(LPC_SC->PCONP, IEC_TIMER_B_PCONBIT) = 1;
+  BITBAND(LPC_SC->PCONP, IEC_TIMER_A_PCONBIT)   = 1;
+  BITBAND(LPC_SC->PCONP, IEC_TIMER_B_PCONBIT)   = 1;
+  BITBAND(LPC_SC->PCONP, TIMEOUT_TIMER_PCONBIT) = 1;
 
   /* Use full 100MHz clock */
-  BITBAND(LPC_SC->IEC_TIMER_A_PCLKREG, IEC_TIMER_A_PCLKBIT) = 1;
-  BITBAND(LPC_SC->IEC_TIMER_B_PCLKREG, IEC_TIMER_B_PCLKBIT) = 1;
+  BITBAND(LPC_SC->IEC_TIMER_A_PCLKREG, IEC_TIMER_A_PCLKBIT)     = 1;
+  BITBAND(LPC_SC->IEC_TIMER_B_PCLKREG, IEC_TIMER_B_PCLKBIT)     = 1;
+  BITBAND(LPC_SC->TIMEOUT_TIMER_PCLKREG, TIMEOUT_TIMER_PCLKBIT) = 1;
 
   /* keep timers reset */
-  BITBAND(IEC_TIMER_A->TCR, 1) = 1;
-  BITBAND(IEC_TIMER_B->TCR, 1) = 1;
+  BITBAND(IEC_TIMER_A->TCR, 1)   = 1;
+  BITBAND(IEC_TIMER_B->TCR, 1)   = 1;
+  BITBAND(TIMEOUT_TIMER->TCR, 1) = 1;
 
   /* prescale 100MHz down to 10 */
-  IEC_TIMER_A->PR = 10-1;
-  IEC_TIMER_B->PR = 10-1;
+  IEC_TIMER_A->PR   = 10-1;
+  IEC_TIMER_B->PR   = 10-1;
+  TIMEOUT_TIMER->PR = 10-1;
 
-  /* enable all capture interrupts */
+  /* enable all capture interrupts for IEC */
   IEC_TIMER_A->CCR = 0b100100;
   IEC_TIMER_B->CCR = 0b100100;
 
-  /* Move both timers out of reset */
-  BITBAND(IEC_TIMER_A->TCR, 1) = 0;
-  BITBAND(IEC_TIMER_B->TCR, 1) = 0;
+  /* Move timers out of reset */
+  BITBAND(IEC_TIMER_A->TCR, 1)   = 0;
+  BITBAND(IEC_TIMER_B->TCR, 1)   = 0;
+  BITBAND(TIMEOUT_TIMER->TCR, 1) = 0;
 
-  /* stop timer A on match (for timeout functions) */
-  BITBAND(IEC_TIMER_A->MCR, 2) = 1; // MR0S - stop timer on match
+  /* stop timeout-timer on match */
+  BITBAND(TIMEOUT_TIMER->MCR, 2) = 1; // MR0S - stop timer on match
 
-  /* Enable both timers */
-  BITBAND(IEC_TIMER_A->TCR, 0) = 1;
-  BITBAND(IEC_TIMER_B->TCR, 0) = 1;
+  /* Enable timers */
+  BITBAND(IEC_TIMER_A->TCR, 0)   = 1;
+  BITBAND(IEC_TIMER_B->TCR, 0)   = 1;
+  BITBAND(TIMEOUT_TIMER->TCR, 0) = 1;
+
+  /* enable interrupts for the IEC timers */
+  NVIC_EnableIRQ(IEC_TIMER_A_IRQn);
+  NVIC_EnableIRQ(IEC_TIMER_B_IRQn);
 }
 
 void delay_us(unsigned int time) {
@@ -115,9 +125,9 @@ void delay_ms(unsigned int time) {
  * number of microseconds.
  */
 void start_timeout(unsigned int usecs) {
-  IEC_TIMER_A->TC = 0;
-  IEC_TIMER_A->MR0 = usecs*10;
-  BITBAND(IEC_TIMER_A->TCR, 0) = 1; // start timer
+  TIMEOUT_TIMER->TC  = 0;
+  TIMEOUT_TIMER->MR0 = usecs*10;
+  BITBAND(TIMEOUT_TIMER->TCR, 0) = 1; // start timer
 }
 
 /**
@@ -127,5 +137,5 @@ void start_timeout(unsigned int usecs) {
  * has reached its timeout value.
  */
 unsigned int has_timed_out(void) {
-  return !BITBAND(IEC_TIMER_A->TCR, 0);
+  return !BITBAND(TIMEOUT_TIMER->TCR, 0);
 }

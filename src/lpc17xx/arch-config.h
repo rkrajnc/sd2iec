@@ -61,7 +61,7 @@ static inline void device_hw_address_init(void) {
 }
 
 static inline void iec_interrupts_init(void) {
-  // Noting - GPIO-Interrupt demux is in system.c
+  // Nothing, handled in arch-timer.c
 }
 
 /* P00 name cache is in AHB ram */
@@ -187,6 +187,11 @@ static inline void toggle_dirty_led(void) {
 /* Note: timer A is also used for timeouts */
 #  define IEC_TIMER_A           LPC_TIM2
 #  define IEC_TIMER_B           LPC_TIM3
+/* interrupts */
+#  define IEC_TIMER_A_IRQn      TIMER2_IRQn
+#  define IEC_TIMER_B_IRQn      TIMER3_IRQn
+#  define IEC_TIMER_A_HANDLER   TIMER2_IRQHandler
+#  define IEC_TIMER_B_HANDLER   TIMER3_IRQHandler
 /* LPC_SC->PCONP bits */
 #  define IEC_TIMER_A_PCONBIT   22
 #  define IEC_TIMER_B_PCONBIT   23
@@ -196,6 +201,12 @@ static inline void toggle_dirty_led(void) {
 /* PCLKSELx bits for 1:1 prescaler */
 #  define IEC_TIMER_A_PCLKBIT   12
 #  define IEC_TIMER_B_PCLKBIT   14
+
+/* timeout timer - one of the two remaining ones */
+#  define TIMEOUT_TIMER         LPC_TIM0
+#  define TIMEOUT_TIMER_PCONBIT 1
+#  define TIMEOUT_TIMER_PCLKREG PCLKSEL0
+#  define TIMEOUT_TIMER_PCLKBIT 2
 
 static inline void iec_pins_connect(void) {
   /* Enable all capture and match pins of timer 2 */
@@ -316,22 +327,18 @@ static inline __attribute__((always_inline)) void set_srq(unsigned int state) {
 /* Enable/disable ATN interrupt */
 static inline __attribute__((always_inline)) void set_atn_irq(uint8_t state) {
   if (state) {
-    BITBAND(LPC_GPIOINT->IO0IntEnR, IEC_PIN_ATN) = 1;
-    BITBAND(LPC_GPIOINT->IO0IntEnF, IEC_PIN_ATN) = 1;
+    IEC_TIMER_ATN->CCR |=   0b111 << (3 * IEC_CAPTURE_ATN);
   } else {
-    BITBAND(LPC_GPIOINT->IO0IntEnR, IEC_PIN_ATN) = 0;
-    BITBAND(LPC_GPIOINT->IO0IntEnF, IEC_PIN_ATN) = 0;
+    IEC_TIMER_ATN->CCR &= ~(0b111 << (3 * IEC_CAPTURE_ATN));
   }
 }
 
 /* Enable/disable CLOCK interrupt */
 static inline __attribute__((always_inline)) void set_clock_irq(uint8_t state) {
   if (state) {
-    BITBAND(LPC_GPIOINT->IO0IntEnR, IEC_PIN_CLOCK) = 1;
-    BITBAND(LPC_GPIOINT->IO0IntEnF, IEC_PIN_CLOCK) = 1;
+    IEC_TIMER_CLOCK->CCR |=   0b111 << (3 * IEC_CAPTURE_CLOCK);
   } else {
-    BITBAND(LPC_GPIOINT->IO0IntEnR, IEC_PIN_CLOCK) = 0;
-    BITBAND(LPC_GPIOINT->IO0IntEnF, IEC_PIN_CLOCK) = 0;
+    IEC_TIMER_CLOCK->CCR &= ~(0b111 << (3 * IEC_CAPTURE_CLOCK));
   }
 }
 #define HAVE_CLOCK_IRQ

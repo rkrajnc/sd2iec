@@ -115,6 +115,43 @@ SD_CHANGE_HANDLER;
 IEC_ATN_HANDLER;
 IEC_CLOCK_HANDLER;
 
+/* timer interrupts, used to detect IEC pin changes */
+void IEC_TIMER_A_HANDLER(void) {
+  if (IEC_TIMER_ATN == IEC_TIMER_A) {
+    if (BITBAND(IEC_TIMER_ATN->IR, 4 + IEC_CAPTURE_ATN)) {
+      IEC_TIMER_ATN->IR = 1 << (4 + IEC_CAPTURE_ATN);
+      iec_atn_handler();
+    }
+  }
+
+#ifdef CONFIG_LOADER_DREAMLOAD
+  if (IEC_TIMER_CLOCK == IEC_TIMER_A) {
+    if (BITBAND(IEC_TIMER_CLOCK->IR, 4 + IEC_CAPTURE_CLOCK)) {
+      IEC_TIMER_CLOCK->IR = 1 << (4 + IEC_CAPTURE_CLOCK);
+      iec_clock_handler();
+    }
+  }
+#endif
+}
+
+void IEC_TIMER_B_HANDLER(void) {
+  if (IEC_TIMER_ATN == IEC_TIMER_B) {
+    if (BITBAND(IEC_TIMER_ATN->IR, 4 + IEC_CAPTURE_ATN)) {
+      IEC_TIMER_ATN->IR = 1 << (4 + IEC_CAPTURE_ATN);
+      iec_atn_handler();
+    }
+  }
+
+#ifdef CONFIG_LOADER_DREAMLOAD
+  if (IEC_TIMER_CLOCK == IEC_TIMER_B) {
+    if (BITBAND(IEC_TIMER_CLOCK->IR, 4 + IEC_CAPTURE_CLOCK)) {
+      IEC_TIMER_CLOCK->IR = 1 << (4 + IEC_CAPTURE_CLOCK);
+      iec_clock_handler();
+    }
+  }
+#endif
+}
+
 /* GPIO interrupt handler, shared with EINT3 */
 void EINT3_IRQHandler(void) {
   if (BITBAND(LPC_GPIOINT->IO0IntStatF, SD_DETECT_PIN) ||
@@ -122,20 +159,6 @@ void EINT3_IRQHandler(void) {
     BITBAND(LPC_GPIOINT->IO0IntClr, SD_DETECT_PIN) = 1;
     sdcard_change_handler();
   }
-
-  if (BITBAND(LPC_GPIOINT->IO0IntStatF, IEC_PIN_ATN) ||
-      BITBAND(LPC_GPIOINT->IO0IntStatR, IEC_PIN_ATN)) {
-    BITBAND(LPC_GPIOINT->IO0IntClr, IEC_PIN_ATN) = 1;
-    iec_atn_handler();
-  }
-
-#ifdef CONFIG_LOADER_DREAMLOAD
-  if (BITBAND(LPC_GPIOINT->IO0IntStatF, IEC_PIN_CLOCK) ||
-      BITBAND(LPC_GPIOINT->IO0IntStatR, IEC_PIN_CLOCK)) {
-    BITBAND(LPC_GPIOINT->IO0IntClr, IEC_PIN_CLOCK) = 1;
-    iec_clock_handler();
-  }
-#endif
 }
 
 void HardFault_Handler(void) {

@@ -55,6 +55,7 @@ typedef struct {
 } generic_2bit_t;
 
 static uint32_t reference_time;
+static uint32_t timer_a_ccr, timer_b_ccr;
 
 /* ---------- utility functions ---------- */
 
@@ -74,7 +75,15 @@ static void fastloader_setup(void) {
   //LPC_TIM2->PC = 0;
   //LPC_TIM3->PC = 22;
 
-  /* Clear all match functions except interrupts */
+  /* disable IEC interrupts */
+  NVIC_DisableIRQ(IEC_TIMER_A_IRQn);
+  NVIC_DisableIRQ(IEC_TIMER_B_IRQn);
+
+  /* Clear all capture/match functions except interrupts */
+  timer_a_ccr = IEC_TIMER_A->CCR;
+  timer_b_ccr = IEC_TIMER_B->CCR;
+  IEC_TIMER_A->CCR = 0b100100;
+  IEC_TIMER_B->CCR = 0b100100;
   IEC_TIMER_A->MCR = 0b001001001001;
   IEC_TIMER_B->MCR = 0b001001001001;
 
@@ -90,6 +99,18 @@ static void fastloader_teardown(void) {
   /* Reset all match conditions */
   IEC_TIMER_A->EMR &= 0b1111;
   IEC_TIMER_B->EMR &= 0b1111;
+
+  /* clear capture/match interrupts */
+  IEC_TIMER_A->MCR = 0;
+  IEC_TIMER_B->MCR = 0;
+  IEC_TIMER_A->CCR = timer_a_ccr;
+  IEC_TIMER_B->CCR = timer_b_ccr;
+  IEC_TIMER_A->IR  = 0b111111;
+  IEC_TIMER_B->IR  = 0b111111;
+
+  /* reenable IEC interrupts */
+  NVIC_EnableIRQ(IEC_TIMER_A_IRQn);
+  NVIC_EnableIRQ(IEC_TIMER_B_IRQn);
 }
 
 /**
