@@ -1,10 +1,10 @@
 # Hey Emacs, this is a -*- makefile -*-
 
 # Define version number
-MAJOR = 0
-MINOR = 10
-PATCHLEVEL = 1
-FIX =
+MAJOR = 1
+MINOR = 0
+PATCHLEVEL = 0
+FIX = alpha0
 
 # Forces bootloader version to 0, comment out or leave empty for release
 PRERELEASE =
