@@ -227,11 +227,12 @@ static inline void buttons_init(void) {
   // None
 }
 
-#  define I2C_NUMBER         1
-#  define I2C_PCLKDIV        1
-#  define I2C_CLOCK          100000
-#  define I2C_EEPROM_ADDRESS 0xa0
-#  define I2C_EEPROM_SIZE    256
+#  define I2C_NUMBER          1
+#  define I2C_PCLKDIV         1
+#  define I2C_CLOCK           100000
+#  define I2C_EEPROM_ADDRESS  0xa0
+#  define I2C_EEPROM_SIZE     256
+#  define I2C_EEPROM_PAGESIZE 8
 
 static inline __attribute__((always_inline)) void i2c_pins_connect(void) {
   /* I2C pins open drain */
