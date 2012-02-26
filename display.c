@@ -205,7 +205,8 @@ void display_service(void) {
 
 void display_send_cmd(uint8_t cmd, uint8_t len, const void *buf) {
   if (display_found)
-    i2c_write_registers(DISPLAY_I2C_ADDR, cmd, len, buf);
+    /* repeat until successful - the display may be busy */
+    while (i2c_write_registers(DISPLAY_I2C_ADDR, cmd, len, buf)) ;
 }
 
 
