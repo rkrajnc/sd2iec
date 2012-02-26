@@ -1,3 +1,6 @@
+2012-02-26 - release 0.10.3
+        - Bugfix: Un-break I2C display communication
+
 2011-12-18 - release 0.10.2
         - Bugfix: End of generated raw directory was incorrect
         - Bugfix: Various compilation fixes when fastloaders are disabled

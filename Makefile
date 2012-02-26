@@ -3,7 +3,7 @@
 # Define version number
 MAJOR = 0
 MINOR = 10
-PATCHLEVEL = 2
+PATCHLEVEL = 3
 FIX =
 
 # Forces bootloader version to 0, comment out for release
