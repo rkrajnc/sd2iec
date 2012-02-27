@@ -120,7 +120,7 @@ static inline uint8_t device_hw_address(void) {
 
 static inline void leds_init(void) {
   LPC_GPIO1->FIODIR |= BV(18) | BV(20) | BV(21) | BV(23);
-  LPC_GPIO1->FIOPIN &= ~(BV(18) | BV(20) | BV(21) | BV(23));
+  LPC_GPIO1->FIOCLR  = BV(18) | BV(20) | BV(21) | BV(23);
 }
 
 static inline __attribute__((always_inline)) void set_busy_led(uint8_t state) {
@@ -308,10 +308,10 @@ static inline uint8_t device_hw_address(void) {
 static inline void leds_init(void) {
   /* 22 onboard red, 27 red, 28 yellow */
   LPC_GPIO0->FIODIR |= BV(22) | BV(27) | BV(28);
-  LPC_GPIO0->FIOPIN |=          BV(27) | BV(28);
-  LPC_GPIO0->FIOPIN &= BV(22);
+  LPC_GPIO0->FIOSET  =          BV(27) | BV(28);
+  LPC_GPIO0->FIOCLR  = BV(22);
   LPC_GPIO2->FIODIR |= BV(13);
-  LPC_GPIO2->FIOPIN |= BV(13);
+  LPC_GPIO2->FIOSET  = BV(13);
 }
 
 static inline __attribute__((always_inline)) void set_busy_led(uint8_t state) {
