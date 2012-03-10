@@ -36,6 +36,7 @@
 #include "timer.h"
 #include "uart.h"
 #include "buffers.h"
+#include "d64ops.h"
 #include "diskchange.h"
 #include "diskio.h"
 #include "doscmd.h"
