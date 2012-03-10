@@ -21,7 +21,7 @@ else
 endif
 
 all: $(OBJDIR) $(OBJDIR)/make.inc
-	$(Q)$(MAKE) -f scripts/Makefile.main
+	$(Q)$(MAKE) --no-print-directory -f scripts/Makefile.main
 
 $(OBJDIR)/make.inc: $(CONFFILES) | $(OBJDIR)
 	$(E) "  CONFIG $(CONFFILES)"
@@ -32,6 +32,6 @@ $(OBJDIR):
 	-$(Q)mkdir $(OBJDIR)
 
 copy clean fuses program: FORCE | $(OBJDIR) $(OBJDIR)/make.inc
-	$(Q)$(MAKE) -f scripts/Makefile.main $@
+	$(Q)$(MAKE) --no-print-directory -f scripts/Makefile.main $@
 
 FORCE: ;
