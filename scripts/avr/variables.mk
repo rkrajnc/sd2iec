@@ -143,8 +143,8 @@ ARCH_LDFLAGS = $(EXTMEMOPTS)
 
 # these are needed for GCC 4.3.2, which is more aggressive at inlining
 # gcc-4.2 knows one of those, but it tends to increase code size
-ifeq ($(shell $(CC) --version|$(AWK) -f scripts/gcctest.awk),YES)
-#CFLAGS += --param inline-call-cost=3
+ifeq ($(shell $(CC) --version|scripts/gcctest.pl),YES)
+#ARCH_CFLAGS += --param inline-call-cost=3
 ARCH_CFLAGS += -fno-inline-small-functions
 ARCH_CFLAGS += -fno-move-loop-invariants
 ARCH_CFLAGS += -fno-split-wide-types
