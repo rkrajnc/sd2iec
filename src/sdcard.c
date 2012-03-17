@@ -1,8 +1,7 @@
 /* sd2iec - SD/MMC to Commodore serial bus interface/controller
    Copyright (C) 2007-2012  Ingo Korb <ingo@akana.de>
 
-   Inspiration and low-level SD/MMC access based on code from MMC2IEC
-     by Lars Pontoppidan et al., see sdcard.c|h and config.h.
+   Inspired by MMC2IEC by Lars Pontoppidan et al.
 
    FAT filesystem access based on code from ChaN and Jim Brain, see ff.c|h.
 
@@ -22,37 +21,10 @@
 
    sdcard.c: SD/MMC access routines
 
-   Extended, optimized and cleaned version of code from MMC2IEC,
-   original copyright header follows:
 
-//
-// Title        : SD/MMC Card driver
-// Author       : Lars Pontoppidan, Aske Olsson, Pascal Dufour,
-// Date         : Jan. 2006
-// Version      : 0.42
-// Target MCU   : Atmel AVR Series
-//
-// CREDITS:
-// This module is developed as part of a project at the technical univerisity of
-// Denmark, DTU.
-//
-// DESCRIPTION:
-// This SD card driver implements the fundamental communication with a SD card.
-// The driver is confirmed working on 8 MHz and 14.7456 MHz AtMega32 and has
-// been tested successfully with a large number of different SD and MMC cards.
-//
-// DISCLAIMER:
-// The author is in no way responsible for any problems or damage caused by
-// using this code. Use at your own risk.
-//
-// LICENSE:
-// This code is distributed under the GNU Public License
-// which can be found at http://www.gnu.org/licenses/gpl.txt
-//
-
-  The exported functions in this file are weak-aliased to their corresponding
-  versions defined in diskio.h so when this file is the only diskio provider
-  compiled in they will be automatically used by the linker.
+   The exported functions in this file are weak-aliased to their corresponding
+   versions defined in diskio.h so when this file is the only diskio provider
+   compiled in they will be automatically used by the linker.
 
 */
 
@@ -70,56 +42,59 @@
 #  define MAX_CARDS 1
 #endif
 
-// SD/MMC commands
-#define GO_IDLE_STATE           0
-#define SEND_OP_COND            1
-#define SWITCH_FUNC             6
-#define SEND_IF_COND            8
-#define SEND_CSD                9
-#define SEND_CID               10
-#define STOP_TRANSMISSION      12
-#define SEND_STATUS            13
-#define SET_BLOCKLEN           16
-#define READ_SINGLE_BLOCK      17
-#define READ_MULTIPLE_BLOCK    18
-#define WRITE_BLOCK            24
-#define WRITE_MULTIPLE_BLOCK   25
-#define PROGRAM_CSD            27
-#define SET_WRITE_PROT         28
-#define CLR_WRITE_PROT         29
-#define SEND_WRITE_PROT        30
-#define ERASE_WR_BLK_STAR_ADDR 32
-#define ERASE_WR_BLK_END_ADDR  33
-#define ERASE                  38
-#define LOCK_UNLOCK            42
-#define APP_CMD                55
-#define GEN_CMD                56
-#define READ_OCR               58
-#define CRC_ON_OFF             59
+/* SD/MMC commands */
+#define GO_IDLE_STATE             0x40
+#define SEND_OP_COND              0x41
+#define SWITCH_FUNC               0x46
+#define SEND_IF_COND              0x48
+#define SEND_CSD                  0x49
+#define SEND_CID                  0x4a
+#define STOP_TRANSMISSION         0x4c
+#define SEND_STATUS               0x4d
+#define SET_BLOCKLEN              0x50
+#define READ_SINGLE_BLOCK         0x51
+#define READ_MULTIPLE_BLOCK       0x52
+#define WRITE_BLOCK               0x58
+#define WRITE_MULTIPLE_BLOCK      0x59
+#define PROGRAM_CSD               0x5b
+#define SET_WRITE_PROT            0x5c
+#define CLR_WRITE_PROT            0x5d
+#define SEND_WRITE_PROT           0x5e
+#define ERASE_WR_BLK_STAR_ADDR    0x60
+#define ERASE_WR_BLK_END_ADDR     0x61
+#define ERASE                     0x66
+#define LOCK_UNLOCK               0x6a
+#define APP_CMD                   0x77
+#define GEN_CMD                   0x78
+#define READ_OCR                  0x7a
+#define CRC_ON_OFF                0x7b
 
-// SD ACMDs
-#define SD_STATUS                 13
-#define SD_SEND_NUM_WR_BLOCKS     22
-#define SD_SET_WR_BLK_ERASE_COUNT 23
-#define SD_SEND_OP_COND           41
-#define SD_SET_CLR_CARD_DETECT    42
-#define SD_SEND_SCR               51
+/* SD ACMDs */
+#define SD_STATUS                 0x4d
+#define SD_SEND_NUM_WR_BLOCKS     0x56
+#define SD_SET_WR_BLK_ERASE_COUNT 0x57
+#define SD_SEND_OP_COND           0x69
+#define SD_SET_CLR_CARD_DETECT    0x6a
+#define SD_SEND_SCR               0x73
 
-// R1 status bits
-#define STATUS_IN_IDLE          1
-#define STATUS_ERASE_RESET      2
-#define STATUS_ILLEGAL_COMMAND  4
-#define STATUS_CRC_ERROR        8
-#define STATUS_ERASE_SEQ_ERROR 16
-#define STATUS_ADDRESS_ERROR   32
-#define STATUS_PARAMETER_ERROR 64
+/* R1 status bits */
+#define STATUS_IN_IDLE            0x01
+#define STATUS_ERASE_RESET        0x02
+#define STATUS_ILLEGAL_COMMAND    0x04
+#define STATUS_CRC_ERROR          0x08
+#define STATUS_ERASE_SEQ_ERROR    0x10
+#define STATUS_ADDRESS_ERROR      0x20
+#define STATUS_PARAMETER_ERROR    0x40
 
-
-/* Card types - cardtype == 0 is MMC */
-#define CARD_SD   (1<<0)
-#define CARD_SDHC (1<<1)
+/* card types */
+#define CARD_MMCSD 0
+#define CARD_SDHC  1
 
 static uint8_t cardtype[MAX_CARDS];
+
+/* ------------------------------------------------------------------------- */
+/*  Utility functions                                                        */
+/* ------------------------------------------------------------------------- */
 
 /**
  * swap_word - swaps the bytes in a uint32 value
@@ -188,175 +163,9 @@ static uint32_t getbits(void *buffer, uint16_t start, int8_t bits) {
   return result;
 }
 
-/**
- * wait_for_response - waits for a response from the SD card
- * @expected: expected data byte (0 for anything != 0)
- *
- * This function waits until reading from the SD card returns the
- * byte in expected or until reading returns a non-zero byte if
- * expected is 0. Returns false if the expected response wasn't
- * received within 500ms or true if it was.
- */
-static uint8_t wait_for_response(uint8_t expected) {
-  tick_t timeout = getticks() + HZ/2;
-
-  while (time_before(getticks(), timeout)) {
-    uint8_t byte = spi_rx_byte();
-
-    if (expected == 0 && byte != 0)
-      return 1;
-
-    if (expected != 0 && byte == expected)
-      return 1;
-  }
-
-  return 0;
-}
-
-static void deselectCard(void) {
-  // Send 8 clock cycles
-  spi_select_device(SPIDEV_NONE);
-  set_sd_led(0);
-  spi_rx_byte();
-}
-
-/**
- * sendCommand - send a command to the SD card
- * @card     : card number to be accessed
- * @command  : command to be sent
- * @parameter: parameter to be sent
- * @deselect : Flags if the card should be deselected afterwards
- *
- * This function calculates the correct CRC7 for the command and
- * parameter and transmits all of it to the SD card. If requested
- * the card will be deselected afterwards.
- */
-static int sendCommand(const uint8_t  card,
-                       const uint8_t  command,
-                       const uint32_t parameter,
-                       const uint8_t  deselect) {
-  union {
-    uint32_t l;
-    uint8_t  c[4];
-  } long2char;
-
-  uint8_t i,crc,errorcount;
-  tick_t  timeout;
-
-  spi_select_device(card+1);
-
-  long2char.l = parameter;
-  crc = crc7update(0  , 0x40+command);
-  crc = crc7update(crc, long2char.c[3]);
-  crc = crc7update(crc, long2char.c[2]);
-  crc = crc7update(crc, long2char.c[1]);
-  crc = crc7update(crc, long2char.c[0]);
-  crc = (crc << 1) | 1;
-
-  errorcount = 0;
-  while (errorcount < CONFIG_SD_AUTO_RETRIES) {
-    // Select card
-    spi_select_device(card+1);
-#ifdef CONFIG_TWINSD
-    if (card == 0 && command == GO_IDLE_STATE)
-      /* Force both cards to SPI mode simultaneously */
-      spi_select_device(SPIDEV_ALLCARDS);
-#endif
-    set_sd_led(1);
-
-    // Transfer command
-    spi_tx_byte(0x40+command);
-    uint32_t tmp = swap_word(parameter);
-    spi_tx_block(&tmp, 4);
-    spi_tx_byte(crc);
-
-    // Wait for a valid response
-    timeout = getticks() + HZ/2;
-    do {
-      i = spi_rx_byte();
-    } while (i & 0x80 && time_before(getticks(), timeout));
-
-#ifdef CONFIG_TWINSD
-    if (card == 0 && command == GO_IDLE_STATE)
-      spi_select_device(card+1);
-#endif
-
-    // Check for CRC error
-    // can't reliably retry unless deselect is allowed
-    if (deselect && (i & STATUS_CRC_ERROR)) {
-      uart_putc('x');
-      deselectCard();
-      errorcount++;
-      continue;
-    }
-
-    if (deselect) deselectCard();
-    break;
-  }
-
-  return i;
-}
-
-// Extended init sequence for SDHC support
-static uint8_t extendedInit(const uint8_t card) {
-  uint8_t  i;
-  uint32_t answer;
-
-  // Send CMD8: SEND_IF_COND
-  //   0b000110101010 == 2.7-3.6V supply, check pattern 0xAA
-  i = sendCommand(card, SEND_IF_COND, 0b000110101010, 0);
-  if (i > 1) {
-    // Card returned an error, ok (MMC or SD1.x) but not SDHC
-    deselectCard();
-    return 1;
-  }
-
-  // No error, continue SDHC initialization
-  spi_rx_block(&answer, 4);
-  answer = swap_word(answer);
-  deselectCard();
-
-  if (((answer >> 8) & 0x0f) != 0b0001) {
-    // Card didn't accept our voltage specification
-    return 0;
-  }
-
-  // Verify echo-back of check pattern
-  if ((answer & 0xff) != 0b10101010) {
-    // Check pattern mismatch, working but not SD2.0 compliant
-    // The specs say we should not use the card, but let's try anyway.
-    return 1;
-  }
-
-  return 1;
-}
-
-// SD common initialisation
-static void sdInit(const uint8_t card) {
-  uint8_t i;
-  uint16_t counter;
-
-  counter = 0xffff;
-  do {
-    // Prepare for ACMD, send CMD55: APP_CMD
-    i = sendCommand(card, APP_CMD, 0, 1);
-    if (i > 1) {
-      // Command not accepted, could be MMC
-      return;
-    }
-
-    // Send ACMD41: SD_SEND_OP_COND
-    //   1L<<30 == Host has High Capacity Support
-    i = sendCommand(card, SD_SEND_OP_COND, 1L<<30, 1);
-    // Repeat while card card accepts command but isn't ready
-  } while (i == 1 && --counter > 0);
-
-  // Ignore failures, there is at least one Sandisk MMC card
-  // that accepts CMD55, but not ACMD41.
-  if (i == 0)
-    /* We know that a card is SD if ACMD41 was accepted. */
-    cardtype[card] |= CARD_SD;
-}
+/* ------------------------------------------------------------------------- */
+/*  internal SD functions                                                    */
+/* ------------------------------------------------------------------------- */
 
 /* Detect changes of SD card 0 */
 #ifdef SD_CHANGE_HANDLER
@@ -378,15 +187,129 @@ SD2_CHANGE_HANDLER {
 }
 #endif
 
-//
-// Public functions
-//
+/* wait for a certain byte from the card */
+/* (with 500ms timeout) */
+static uint8_t expect_byte(uint8_t value) {
+  uint8_t b;
+  tick_t  timeout = getticks() + HZ/2;
+
+  do {
+    b = spi_rx_byte();
+  } while (b != value && time_before(getticks(), timeout));
+
+  return b == value;
+}
+
+/* deselect card(s) and send 24 clocks */
+/* (was 8, but some cards prefer more) */
+static void deselect_card(void) {
+  spi_select_device(SPIDEV_NONE);
+  set_sd_led(0);
+  spi_rx_byte();
+  spi_rx_byte();
+  spi_rx_byte();
+}
+
+/* check if card in @drv is write protected */
+static uint8_t sd_wrprot(uint8_t drv) {
+#ifdef CONFIG_TWINSD
+  if (drv != 0)
+    return sdcard2_wp();
+  else
+#endif
+    return sdcard_wp();
+}
+
+/**
+ * sendCommand - send a command to the SD card
+ * @card     : card number to be accessed
+ * @cmd      : command to be sent
+ * @parameter: parameter to be sent
+ *
+ * This function calculates the correct CRC7 for the command and
+ * parameter and transmits all of it to the SD card.
+ */
+static uint8_t send_command(const uint8_t  card,
+                            const uint8_t  cmd,
+                            const uint32_t parameter) {
+  tick_t   timeout;
+  uint8_t  crc, errors, res;
+  uint32_t tmp;
+
+  // FIXME: Only works on little-endian
+  // (but is much more efficient on AVR)
+  union {
+    uint32_t val32;
+    uint8_t  val8[4];
+  } convert;
+
+  /* calculate CRC for command+parameter */
+  convert.val32 = parameter;
+  crc = crc7update(0,   cmd);
+  crc = crc7update(crc, convert.val8[3]);
+  crc = crc7update(crc, convert.val8[2]);
+  crc = crc7update(crc, convert.val8[1]);
+  crc = crc7update(crc, convert.val8[0]);
+  crc = (crc << 1) | 1;
+
+  errors = 0;
+  while (errors < CONFIG_SD_AUTO_RETRIES) {
+    /* select card */
+    spi_select_device(card+1);
+    set_sd_led(1);
+
+    /* send command */
+    spi_tx_byte(cmd);
+    tmp = swap_word(parameter); // AVR spi_tx_block clobbers the buffer
+    spi_tx_block(&tmp, 4);
+    spi_tx_byte(crc);
+
+    /* wait up to 500ms for a valid response */
+    timeout = getticks() + HZ/2;
+    do {
+      res = spi_rx_byte();
+    } while ((res & 0x80) &&
+             time_before(getticks(), timeout));
+
+    /* check for CRC error */
+    if (res & STATUS_CRC_ERROR) {
+      uart_putc('x');
+      deselect_card();
+      errors++;
+      continue;
+    }
+
+    break; // FIXME: Ugly control flow
+  }
+
+  return res;
+}
+
+/* ------------------------------------------------------------------------- */
+/*  external SD functions                                                    */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * sd_init - initialize SD interface
+ *
+ * This function initializes the SD interface hardware
+ */
 void sd_init(void) {
   sdcard_interface_init();
 }
 void disk_init(void) __attribute__ ((weak, alias("sd_init")));
 
 
+/**
+ * sd_status - get card status
+ * @drv: drive
+ *
+ * This function reads the current status of the chosen
+ * SD card. Returns STA_PROTECT for a write-protected
+ * card, STA_NOINIT|STA_NODISK if no card is present in
+ * the selected slot, RES_OK if a card is present and
+ * not write-protected.
+ */
 DSTATUS sd_status(BYTE drv) {
 #ifdef CONFIG_TWINSD
   if (drv != 0) {
@@ -397,7 +320,7 @@ DSTATUS sd_status(BYTE drv) {
         return RES_OK;
       }
     } else {
-      return STA_NOINIT|STA_NODISK;
+      return STA_NOINIT | STA_NODISK;
     }
   } else
 #endif
@@ -407,7 +330,7 @@ DSTATUS sd_status(BYTE drv) {
     else
       return RES_OK;
   else
-    return STA_NOINIT|STA_NODISK;
+    return STA_NOINIT | STA_NODISK;
 }
 DSTATUS disk_status(BYTE drv) __attribute__ ((weak, alias("sd_status")));
 
@@ -419,14 +342,15 @@ DSTATUS disk_status(BYTE drv) __attribute__ ((weak, alias("sd_status")));
  * This function tries to initialize the selected SD card.
  */
 DSTATUS sd_initialize(BYTE drv) {
-  uint8_t  i;
-  uint16_t counter;
-  uint32_t answer;
+  uint32_t parameter;
+  uint16_t tries = 3;
+  uint8_t  i,res;
+  tick_t   timeout;
 
   if (drv >= MAX_CARDS)
-    return STA_NOINIT|STA_NODISK;
+    return STA_NOINIT | STA_NODISK;
 
-  /* Don't bother initializing a card that isn't there */
+  /* skip initialisation if the card is not present */
   if (sd_status(drv) & STA_NODISK)
     return sd_status(drv);
 
@@ -440,90 +364,124 @@ DSTATUS sd_initialize(BYTE drv) {
   spi_set_speed(SPI_SPEED_SLOW);
 #endif
 
+ retry:
   disk_state = DISK_ERROR;
+  cardtype[drv] = CARD_MMCSD;
 
-  cardtype[drv] = 0;
-
+  /* send 80 clocks with SS high */
   spi_select_device(SPIDEV_NONE);
   set_sd_led(0);
 
-  // Send 80 clocks without(!) selecting a card
-  for (i=0; i<10; i++) {
+  for (i=0; i<10; i++)
     spi_tx_byte(0xff);
-  }
 
-  spi_select_device(drv+1);
+#ifdef CONFIG_TWINSD
+  /* move both cards into SPI mode at the same time */
+  if (drv == 0) {
+    spi_select_device(SPIDEV_ALLCARDS);
+    spi_tx_byte(GO_IDLE_STATE);
+    parameter = 0;
+    spi_tx_block(&parameter, 0);
+    spi_tx_byte(0x95);
 
-  // Reset card
-  i = sendCommand(drv, GO_IDLE_STATE, 0, 1);
-  if (i != 1) {
-    return STA_NOINIT | STA_NODISK;
-  }
-
-  if (!extendedInit(drv))
-    return STA_NOINIT | STA_NODISK;
-
-  sdInit(drv);
-
-  counter = 0xffff;
-  // According to the spec READ_OCR should work at this point
-  // without retries. One of my Sandisk-cards thinks otherwise.
-  do {
-    // Send CMD58: READ_OCR
-    i = sendCommand(drv, READ_OCR, 0, 0);
-    if (i > 1)
-      deselectCard();
-  } while (i > 1 && counter-- > 0);
-
-  if (counter > 0) {
-    spi_rx_block(&answer, 4);
-    answer = swap_word(answer);
-
-    // See if the card likes our supply voltage
-    if (!(answer & SD_SUPPLY_VOLTAGE)) {
-      // The code isn't set up to completely ignore the card,
-      // but at least report it as nonworking
-      deselectCard();
-      return STA_NOINIT | STA_NODISK;
-    }
-
-    // See what card we've got
-    if (answer & 0x40000000) {
-      cardtype[drv] |= CARD_SDHC;
-    }
-  }
-
-  // Keep sending CMD1 (SEND_OP_COND) command until zero response
-  counter = 0xffff;
-  do {
-    i = sendCommand(drv, SEND_OP_COND, 1L<<30, 1);
-    counter--;
-  } while (i != 0 && counter > 0);
-
-  if (counter==0) {
-    return STA_NOINIT | STA_NODISK;
-  }
-
-#ifdef CONFIG_SD_DATACRC
-  // Enable CRC checking
-  // The SD spec says that the host "should" send CRC_ON_OFF before ACMD_SEND_OP_COND.
-  // The MMC manual I have says that CRC_ON_OFF isn't allowed before SEND_OP_COND.
-  // Let's just hope that all SD cards work with this order. =(
-  i = sendCommand(drv, CRC_ON_OFF, 1, 1);
-  if (i > 1) {
-    return STA_NOINIT | STA_NODISK;
+    /* send ten more bytes and ignore status */
+    for (i=0; i<10; i++)
+      spi_tx_byte(0xff);
   }
 #endif
 
-  // Send MMC CMD16(SET_BLOCKLEN) to 512 bytes
-  i = sendCommand(drv, SET_BLOCKLEN, 512, 1);
-  if (i != 0) {
-    return STA_NOINIT | STA_NODISK;
+  /* switch card to idle state */
+  res = send_command(drv, GO_IDLE_STATE, 0);
+  deselect_card();
+  if (res & 0x80)
+    return STA_NOINIT;
+
+  /* attempt initialisation again if it failed */
+  if (res != 1) {
+    if (--tries)
+      goto retry;
+    else
+      return STA_NOINIT;
   }
 
-  // Thats it!
-  spi_set_speed(SPI_SPEED_FAST);
+  /* send interface conditions (required for SDHC) */
+  res = send_command(drv, SEND_IF_COND, 0b000110101010);
+  if (res == 1) {
+    /* read answer and check */
+    spi_rx_block(&parameter, 4);
+    parameter = swap_word(parameter);
+    deselect_card();
+    if (((parameter >> 8) & 0x0f) != 0b0001)
+      /* the card did not accept the voltage specs */
+      return STA_NOINIT | STA_NODISK;
+
+    /* do not check pattern echo because IIRC */
+    /* some MMC cards would fail here */
+  } else {
+    deselect_card();
+  }
+
+  deselect_card();
+
+  /* tell SD/SDHC cards to initialize */
+  timeout = getticks() + HZ/2;
+  do {
+    /* send APP_CMD */
+    res = send_command(drv, APP_CMD, 0);
+    deselect_card();
+    if (res != 1)
+      goto not_sd;
+
+    /* send SD_SEND_OP_COND */
+    res = send_command(drv, SD_SEND_OP_COND, 1L<<30);
+    deselect_card();
+  } while (res == 1 && time_before(getticks(), timeout));
+
+  /* failure just means that the card isn't SDHC */
+  /* there are MMC cards that accept APP_CMD but not SD_SEND_OP_COND */
+  if (res != 0)
+    goto not_sd;
+
+  /* send READ_OCR to detect SDHC cards */
+  res = send_command(drv, READ_OCR, 0);
+
+  if (res <= 1) {
+    parameter = 0;
+    spi_rx_block(&parameter, 4);
+
+    /* check card type */
+    if (parameter & swap_word(0x40000000))
+      cardtype[drv] = CARD_SDHC;
+  }
+
+  deselect_card();
+
+ not_sd:
+  /* tell MMC cards to initialize (SD ignores this) */
+  timeout = getticks() + HZ/2;
+  do {
+    res = send_command(drv, SEND_OP_COND, 1L<<30);
+    deselect_card();
+  } while (res != 0 && time_before(getticks(), timeout));
+
+  if (res != 0)
+    return STA_NOINIT;
+
+  /* enable CRC checks */
+  res = send_command(drv, CRC_ON_OFF, 1);
+  deselect_card();
+  if (res > 1)
+    return STA_NOINIT | STA_NODISK;
+
+  /* set block size to 512 */
+  res = send_command(drv, SET_BLOCKLEN, 512);
+  deselect_card();
+  if (res != 0)
+    return STA_NOINIT;
+
+  spi_set_speed(1);
   disk_state = DISK_OK;
+
   return sd_status(drv);
 }
 DSTATUS disk_initialize(BYTE drv) __attribute__ ((weak, alias("sd_initialize")));
@@ -544,94 +502,94 @@ DSTATUS disk_initialize(BYTE drv) __attribute__ ((weak, alias("sd_initialize")))
  * disk_state will be set to DISK_ERROR and no retries are made.
  */
 DRESULT sd_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) {
-  uint8_t sec,res,errorcount;
-  uint16_t crc,recvcrc;
+  uint8_t  res, sec, errors;
+  uint16_t crc, recvcrc;
 
   if (drv >= MAX_CARDS)
     return RES_PARERR;
 
-  for (sec=0;sec<count;sec++) {
-    errorcount = 0;
-    while (errorcount < CONFIG_SD_AUTO_RETRIES) {
+  /* convert sector number to byte offset for non-SDHC cards */
+  if (cardtype[drv] == CARD_MMCSD)
+    sector <<= 9;
+
+  for (sec = 0; sec < count; sec++) {
+    errors = 0;
+    while (errors < CONFIG_SD_AUTO_RETRIES) {
+      /* send read command */
       if (cardtype[drv] & CARD_SDHC)
-        res = sendCommand(drv, READ_SINGLE_BLOCK, sector+sec, 0);
+        res = send_command(drv, READ_SINGLE_BLOCK, sector + sec);
       else
-        res = sendCommand(drv, READ_SINGLE_BLOCK, (sector+sec) << 9, 0);
+        res = send_command(drv, READ_SINGLE_BLOCK, sector + (sec << 9));
 
+      /* fail if the command wasn't accepted */
       if (res != 0) {
-        spi_select_device(SPIDEV_NONE);
-        set_sd_led(0);
+        deselect_card();
         disk_state = DISK_ERROR;
         return RES_ERROR;
       }
 
-      // Wait for data token
-      if (!wait_for_response(0xFE)) {
-        spi_select_device(SPIDEV_NONE);
-        set_sd_led(0);
+      /* wait for start block token */
+      if (!expect_byte(0xfe)) {
+        deselect_card();
         disk_state = DISK_ERROR;
         return RES_ERROR;
       }
 
-      // Receive data
+      /* transfer data */
       crc = 0;
-
 #ifdef CONFIG_SD_BLOCKTRANSFER
-      /* Transfer data first, calculate CRC afterwards */
+      /* transfer data first, calculate CRC afterwards */
       spi_rx_block(buffer, 512);
 
       recvcrc = spi_rx_byte() << 8 | spi_rx_byte();
       crc = crc_xmodem_block(0, buffer, 512);
 #else
-      /* Interleave transfer/CRC calculation, AVR-specific (but faster) */
+      /* interleave transfer/CRC calculation, AVR-optimized */
       uint16_t i;
-      uint8_t tmp;
-      BYTE *ptr = buffer;
+      uint8_t  tmp;
+      BYTE     *ptr = buffer;
 
-      // Initiate data exchange over SPI
-      spi_select_device(drv+1);
+      /* start SPI data exchange */
       SPDR = 0xff;
 
       for (i=0; i<512; i++) {
-        // Wait until data has been received
+        /* wait until byte available */
         loop_until_bit_is_set(SPSR, SPIF);
         tmp = SPDR;
-        // Transmit the next byte while we store the current one
+        /* transmit the next byte while the current one is processed */
         SPDR = 0xff;
 
-        *(ptr++) = tmp;
-# ifdef CONFIG_SD_DATACRC
+        *ptr++ = tmp;
         crc = crc_xmodem_update(crc, tmp);
-# endif
       }
-      // Wait until the first CRC byte is received
+      /* wait for the first CRC byte */
       loop_until_bit_is_set(SPSR, SPIF);
 
-      // Check CRC
-      recvcrc = (SPDR << 8) + spi_rx_byte();
-#endif  // ----- AVR version -----
-
-#ifdef CONFIG_SD_DATACRC
-      if (recvcrc != crc) {
-        uart_putc('X');
-        deselectCard();
-        errorcount++;
-        continue;
-      }
+      recvcrc  = SPDR << 8;
+      recvcrc |= spi_rx_byte();
 #endif
 
-      break;
-    }
-    deselectCard();
+      /* check CRC */
+      if (recvcrc != crc) {
+        uart_putc('X');
+        deselect_card();
+        errors++;
+        continue;
+      }
 
-    if (errorcount >= CONFIG_SD_AUTO_RETRIES) return RES_ERROR;
+      break; // FIXME: Ugly control flow
+    }
+    deselect_card();
+
+    if (errors >= CONFIG_SD_AUTO_RETRIES)
+      return RES_ERROR;
+
     buffer += 512;
   }
 
   return RES_OK;
 }
 DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) __attribute__ ((weak, alias("sd_read")));
-
 
 
 /**
@@ -650,91 +608,83 @@ DRESULT disk_read(BYTE drv, BYTE *buffer, DWORD sector, BYTE count) __attribute_
  * are made.
  */
 DRESULT sd_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
-  uint8_t res,sec,errorcount,status;
+  uint8_t  res, sec, errors;
   uint16_t crc;
 
   if (drv >= MAX_CARDS)
     return RES_PARERR;
 
-#ifdef CONFIG_TWINSD
-  if (drv != 0) {
-    if (sdcard2_wp())
-      return RES_WRPRT;
-  } else
-#endif
-
-  if (sdcard_wp())
+  /* check write protect */
+  if (sd_wrprot(drv))
     return RES_WRPRT;
 
-  for (sec=0;sec<count;sec++) {
-    errorcount = 0;
-    while (errorcount < CONFIG_SD_AUTO_RETRIES) {
-      if (cardtype[drv] & CARD_SDHC)
-        res = sendCommand(drv, WRITE_BLOCK, sector+sec, 0);
-      else
-        res = sendCommand(drv, WRITE_BLOCK, (sector+sec)<<9, 0);
+  /* convert sector number to byte offset for non-SDHC cards */
+  if (cardtype[drv] == CARD_MMCSD)
+    sector <<= 9;
 
+  for (sec = 0; sec < count; sec++) {
+    errors = 0;
+    while (errors < CONFIG_SD_AUTO_RETRIES) {
+      /* send write command */
+      if (cardtype[drv] & CARD_SDHC)
+        res = send_command(drv, WRITE_BLOCK, sector + sec);
+      else
+        res = send_command(drv, WRITE_BLOCK, sector + (sec << 9));
+
+      /* fail if the command wasn't accepted */
       if (res != 0) {
-        spi_select_device(SPIDEV_NONE);
-        set_sd_led(0);
+        deselect_card();
         disk_state = DISK_ERROR;
         return RES_ERROR;
       }
 
-      // Send data token
+      /* send data token */
       spi_tx_byte(0xfe);
 
-      // Send data
+      /* transfer data */
 #ifdef CONFIG_SD_BLOCKTRANSFER
       spi_tx_block(buffer, 512);
-# ifdef CONFIG_SD_DATACRC
       crc = crc_xmodem_block(0, buffer, 512);
-# else
-      crc = 0;
-# endif
-#else // interleaved transfer for AVR
-      uint16_t i = 512;
+#else
+      /* interleave transfer/CRC calculations, AVR-optimized */
+      uint16_t i;
       const BYTE *ptr = buffer;
 
       crc = 0;
       spi_select_device(drv+1);
-      do {
+      for (i=0; i<512; i++) {
         SPDR = *ptr;
         crc = crc_xmodem_update(crc, *ptr++);
-        i--;
         loop_until_bit_is_set(SPSR, SPIF);
-      } while (i != 0);
-#endif // CONFIG_SD_BLOCKTRANSFER
+      }
+#endif
 
-      // Send CRC
+      /* send CRC */
       spi_tx_byte(crc >> 8);
       spi_tx_byte(crc & 0xff);
 
-      // Get and check status feedback
-      status = spi_rx_byte();
+      /* read status byte */
+      res = spi_rx_byte();
 
-      // Retry if neccessary
-      if ((status & 0x0F) != 0x05) {
+      /* retry on error */
+      if ((res & 0x0f) != 0x05) {
         uart_putc('X');
-        deselectCard();
-        errorcount++;
+        deselect_card();
+        errors++;
         continue;
       }
 
-      // Wait for write finish
-      if (!wait_for_response(0)) {
-        spi_select_device(SPIDEV_NONE);
-        set_sd_led(0);
-        disk_state = DISK_ERROR;
-        return RES_ERROR;
-      }
-      break;
-    }
-    deselectCard();
+      /* wait until write is finished */
+      // FIXME: Timeout?
+      do {
+        res = spi_rx_byte();
+      } while (res == 0);
 
-    if (errorcount >= CONFIG_SD_AUTO_RETRIES) {
-      if (!(status & STATUS_CRC_ERROR))
-        disk_state = DISK_ERROR;
+      break; // FIXME: Ugly control flow
+    }
+    deselect_card();
+
+    if (errors >= CONFIG_SD_AUTO_RETRIES) {
       return RES_ERROR;
     }
 
@@ -745,8 +695,21 @@ DRESULT sd_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) {
 }
 DRESULT disk_write(BYTE drv, const BYTE *buffer, DWORD sector, BYTE count) __attribute__ ((weak, alias("sd_write")));
 
+
+/**
+ * sd_getinfo - read card information
+ * @drv   : drive
+ * @page  : information page
+ * @buffer: target buffer
+ *
+ * This function returns the requested information page @page
+ * for card @drv in the buffer @buffer. Currently only page
+ * 0 is supported which is the diskinfo0_t structure defined
+ * in diskio.h. Returns a DRESULT to indicate success/failure.
+ */
 DRESULT sd_getinfo(BYTE drv, BYTE page, void *buffer) {
   uint8_t buf[18];
+  uint8_t res;
   uint32_t capacity;
 
   if (drv >= MAX_CARDS)
@@ -759,20 +722,19 @@ DRESULT sd_getinfo(BYTE drv, BYTE page, void *buffer) {
     return RES_ERROR;
 
   /* Try to calculate the total number of sectors on the card */
-  /* FIXME: Write a generic data read function and merge with sd_read */
-  if (sendCommand(drv, SEND_CSD, 0, 0) != 0) {
-    deselectCard();
+  if (send_command(drv, SEND_CSD, 0) != 0) {
+    deselect_card();
     return RES_ERROR;
   }
 
   /* Wait for data token */
-  if (!wait_for_response(0xfe)) {
-    deselectCard();
-    return RES_ERROR;
-  }
+  // FIXME: Timeout?
+  do {
+    res = spi_rx_byte();
+  } while (res == 0);
 
   spi_rx_block(buf, 18);
-  deselectCard();
+  deselect_card();
 
   if (cardtype[drv] & CARD_SDHC) {
     /* Special CSD for SDHC cards */
