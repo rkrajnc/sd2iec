@@ -520,7 +520,8 @@ static uint8_t fat_file_close(buffer_t *buf) {
 
   if (buf->write) {
     /* Write the remaining data using the callback */
-    buf->refill(buf);
+    if (buf->refill(buf))
+      return 1;
   }
 
   res = f_close(&buf->pvt.fat.fh);
