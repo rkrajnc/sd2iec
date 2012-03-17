@@ -4,8 +4,7 @@
    Final Cartridge III, DreamLoad fastloader support:
    Copyright (C) 2008  Thomas Giesel <skoe@directbox.com>
 
-   Inspiration and low-level SD/MMC access based on code from MMC2IEC
-     by Lars Pontoppidan et al., see sdcard.c|h and config.h.
+   Inspired by MMC2IEC by Lars Pontoppidan et al.
 
    FAT filesystem access based on code from ChaN, see tff.c|h.
 
