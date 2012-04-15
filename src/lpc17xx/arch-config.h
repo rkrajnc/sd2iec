@@ -53,6 +53,7 @@ typedef unsigned int rawbutton_t;
 #define SD_CHANGE_HANDLER  void sdcard_change_handler(void)
 #define IEC_ATN_HANDLER    void iec_atn_handler(void)
 #define IEC_CLOCK_HANDLER  void iec_clock_handler(void)
+#define PARALLEL_HANDLER   void parallel_handler(void)
 
 static inline void device_hw_address_init(void) {
   // Nothing, pins are input+pullups by default
@@ -396,6 +397,16 @@ static inline void toggle_dirty_led(void) {
 #  define IEC_TIMER_A_PCLKBIT   2
 #  define IEC_TIMER_B_PCLKBIT   4
 
+/* parallel cable */
+#  define HAVE_PARALLEL
+#  define PARALLEL_PGPIO        LPC_GPIO2
+#  define PARALLEL_PSTARTBIT    0           // start bit on port
+#  define PARALLEL_HGPIO        LPC_GPIO2
+#  define PARALLEL_HSK_IN_BIT   8
+#  define PARALLEL_HSK_OUT_BIT  11
+#  define PARALLEL_HSK_ON_GPIO2
+
+
 /* timeout timer - one of the two remaining ones */
 #  define TIMEOUT_TIMER         LPC_TIM2
 #  define TIMEOUT_TIMER_PCONBIT 22
@@ -454,6 +465,12 @@ static inline __attribute__((always_inline)) void uart_pins_connect(void) {
 #  define SD_CHANGE_GPIOINT 1
 #else
 #  define SD_CHANGE_GPIOINT 0
+#endif
+
+#ifdef PARALLEL_HSK_ON_GPIO2
+#  define PARALLEL_HSK_GPIOINT 1
+#else
+#  define PARALLEL_HSK_GPIOINT 0
 #endif
 
 /* Bit number to bit value, used in iec_bus_read() */
@@ -546,6 +563,22 @@ static inline __attribute__((always_inline)) void set_clock_irq(uint8_t state) {
 #define HAVE_CLOCK_IRQ
 
 #undef COND_INV
+
+#ifdef HAVE_PARALLEL
+static inline void parallel_init(void) {
+  /* set HSK_OUT to output, high */
+  PARALLEL_HGPIO->FIOPIN |= BV(PARALLEL_HSK_OUT_BIT);
+  PARALLEL_HGPIO->FIODIR |= BV(PARALLEL_HSK_OUT_BIT);
+
+# ifdef PARALLEL_HSK_ON_GPIO2
+  LPC_GPIOINT->IO2IntEnF |= BV(PARALLEL_HSK_IN_BIT);
+# else
+  LPC_GPIOINT->IO0IntEnF |= BV(PARALLEL_HSK_IN_BIT);
+# endif
+}
+#else
+static inline void parallel_init(void) {}
+#endif
 
 /* Display interrupt request line */
 // FIXME2: Init function!

@@ -75,5 +75,13 @@ void load_nippon(uint8_t);
 void load_ar6_1581(uint8_t);
 void save_ar6_1581(uint8_t);
 
+# ifdef PARALLEL_ENABLED
+extern volatile uint8_t parallel_rxflag;
+static inline void parallel_clear_rxflag(void) { parallel_rxflag = 0; }
+# else
+#  define parallel_rxflag 0
+static inline void parallel_clear_rxflag(void) {}
+# endif
+
 #endif
 #endif

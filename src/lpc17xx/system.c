@@ -126,6 +126,7 @@ void enable_interrupts(void) {
 
 /* Declare handler functions */
 SD_CHANGE_HANDLER;
+PARALLEL_HANDLER;
 IEC_ATN_HANDLER;
 IEC_CLOCK_HANDLER;
 
@@ -173,6 +174,13 @@ void EINT3_IRQHandler(void) {
     BITBAND(lpc_gpioint_ptr[SD_CHANGE_GPIOINT].IOIntClr, SD_DETECT_PIN) = 1;
     sdcard_change_handler();
   }
+
+#ifdef PARALLEL_ENABLED
+  if (BITBAND(lpc_gpioint_ptr[PARALLEL_HSK_GPIOINT].IOIntStatF, PARALLEL_HSK_IN_BIT)) {
+    BITBAND(lpc_gpioint_ptr[PARALLEL_HSK_GPIOINT].IOIntClr, PARALLEL_HSK_IN_BIT) = 1;
+    parallel_handler();
+  }
+#endif
 }
 
 void HardFault_Handler(void) {

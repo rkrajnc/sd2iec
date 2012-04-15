@@ -1044,3 +1044,30 @@ void wheels44_send_byte_2mhz(uint8_t byte) {
   geos_send_generic(byte, &wheels44_2mhz_send_def, 15);
 }
 
+
+/* ---------------- */
+/* --- Parallel --- */
+/* ---------------- */
+
+uint8_t parallel_read(void) {
+  return (PARALLEL_PGPIO->FIOPIN >> PARALLEL_PSTARTBIT) & 0xff;
+}
+
+void parallel_write(uint8_t value) {
+  PARALLEL_PGPIO->FIOPIN =
+    (PARALLEL_PGPIO->FIOPIN & ~(0xff << PARALLEL_PSTARTBIT)) |
+    (value << PARALLEL_PSTARTBIT);
+}
+
+void parallel_set_dir(parallel_dir_t direction) {
+  if (direction == PARALLEL_DIR_IN)
+    PARALLEL_PGPIO->FIODIR &= ~(0xff << PARALLEL_PSTARTBIT);
+  else
+    PARALLEL_PGPIO->FIODIR |= 0xff << PARALLEL_PSTARTBIT;
+}
+
+void parallel_send_handshake(void) {
+  PARALLEL_HGPIO->FIOCLR = BV(PARALLEL_HSK_OUT_BIT);
+  delay_us(1);
+  PARALLEL_HGPIO->FIOSET = BV(PARALLEL_HSK_OUT_BIT);
+}

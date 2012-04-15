@@ -37,5 +37,6 @@ void iec_interface_init(void) {
   set_srq(1);
 
   iec_pins_connect();
+  parallel_init();
 }
 void bus_interface_init(void) __attribute__ ((weak, alias("iec_interface_init")));

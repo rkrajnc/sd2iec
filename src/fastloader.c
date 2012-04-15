@@ -60,6 +60,11 @@ volatile uint8_t fl_track;
 /* sector to load, used as a kind of jobcode */
 volatile uint8_t fl_sector;
 
+#ifdef PARALLEL_ENABLED
+/* parallel byte received */
+volatile uint8_t parallel_rxflag;
+#endif
+
 /* Small helper for fastloaders that need to detect disk changes */
 static uint8_t __attribute__((unused)) check_keys(void) {
   /* Check for disk changes etc. */
@@ -1853,4 +1858,18 @@ void save_ar6_1581(UNUSED_PARAMETER) {
   cleanup_and_free_buffer(buf);
 }
 
+#endif
+
+
+#ifdef PARALLEL_ENABLED
+/*
+ *
+ *  Generic parallel speeder
+ *
+ */
+
+/* parallel handshake interrupt handler */
+PARALLEL_HANDLER {
+  parallel_rxflag = 1;
+}
 #endif
