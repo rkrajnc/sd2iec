@@ -479,7 +479,7 @@ DSTATUS sd_initialize(BYTE drv) {
   if (res != 0)
     return STA_NOINIT;
 
-  spi_set_speed(1);
+  spi_set_speed(SPI_SPEED_FAST);
   disk_state = DISK_OK;
 
   return sd_status(drv);
