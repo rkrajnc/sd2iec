@@ -34,6 +34,7 @@
  * @command_recvd  : Command or filename received
  * @jiffy_active   : JiffyDOS-capable master detected
  * @jiffy_load     : JiffyDOS LOAD operation detected
+ * @dolphin_active : DolphinDOS parallel mode active
  *
  * NOTE: This was converted from a struct with bitfields to
  *       a single variable with macros because the struct
@@ -47,6 +48,12 @@
 #define COMMAND_RECVD   (1<<1)
 #define JIFFY_ACTIVE    (1<<2)
 #define JIFFY_LOAD      (1<<3)
+
+#ifdef CONFIG_PARALLEL_DOLPHIN
+#  define DOLPHIN_ACTIVE (1<<4)
+#else
+#  define DOLPHIN_ACTIVE 0
+#endif
 
 typedef struct {
   uint8_t iecflags;

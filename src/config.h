@@ -84,9 +84,17 @@ static inline void board_init(void) {
 # define set_sd_led(x) do {} while (0)
 #endif
 
-/* Sanity check */
+/* Sanity checks */
 #if defined(CONFIG_LOADER_WHEELS) && !defined(CONFIG_LOADER_GEOS)
 #  error "CONFIG_LOADER_GEOS must be enabled for Wheels support!"
+#endif
+
+#if defined(CONFIG_PARALLEL_DOLPHIN)
+#  if !defined(HAVE_PARALLEL)
+#    error "CONFIG_PARALLEL_DOLPHIN enabled on a hardware without parallel port!"
+#  else
+#    define PARALLEL_ENABLED
+#  endif
 #endif
 
 #endif

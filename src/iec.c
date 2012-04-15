@@ -338,8 +338,12 @@ static uint8_t iec_listen_handler(const uint8_t cmd) {
           iec_data.iecflags |= EOI_RECVD;
         else
           iec_data.iecflags &= (uint8_t)~EOI_RECVD;
-    } else
-      c = iec_getc();
+    } else {
+      if (iec_data.iecflags & DOLPHIN_ACTIVE)
+        c = dolphin_getc();
+      else
+        c = iec_getc();
+    }
     if (c < 0) return 1;
 
     if ((cmd & 0x0f) == 0x0f || (cmd & 0xf0) == 0xf0) {
@@ -441,9 +445,15 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
           set_clock(1);
         }
       } else {
+        uint8_t res;
+
         if (finalbyte && buf->sendeoi) {
           /* Send with EOI */
-          uint8_t res = iec_putc(buf->data[buf->position],1);
+          if (iec_data.iecflags & DOLPHIN_ACTIVE)
+            res = dolphin_putc(buf->data[buf->position], 1);
+          else
+            res = iec_putc(buf->data[buf->position], 1);
+
           if (iec_data.iecflags & JIFFY_ACTIVE) {
             /* Jiffy resets the EOI condition on the bus after 30-40us. */
             /* We use 50 to play it safe.                               */
@@ -457,7 +467,12 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
           }
         } else {
           /* Send without EOI */
-          if (iec_putc(buf->data[buf->position],0)) {
+          if (iec_data.iecflags & DOLPHIN_ACTIVE)
+            res = dolphin_putc(buf->data[buf->position], 0);
+          else
+            res = iec_putc(buf->data[buf->position], 0);
+
+          if (res) {
             uart_putc('V');
             return 1;
           }
@@ -688,8 +703,25 @@ void iec_mainloop(void) {
       iec_data.bus_state = BUS_ATNFINISH;
       break;
 
-    case BUS_ATNFINISH: // E902
-      while (!IEC_ATN) ;
+    case BUS_ATNFINISH: // E902 + DolphinDOS A7CC
+      iec_data.iecflags &= ~DOLPHIN_ACTIVE;
+      parallel_clear_rxflag();
+
+      while (!IEC_ATN) {
+        if (iec_data.device_state != DEVICE_IDLE &&
+            parallel_rxflag) {
+          /* parallel byte received */
+          parallel_clear_rxflag();
+          iec_data.iecflags |= DOLPHIN_ACTIVE;
+          parallel_send_handshake();
+
+          if (iec_data.device_state == DEVICE_TALK)
+            parallel_set_dir(PARALLEL_DIR_OUT);
+          else
+            parallel_set_dir(PARALLEL_DIR_IN);
+        }
+      }
+
       iec_data.bus_state = BUS_ATNPROCESS;
       break;
 

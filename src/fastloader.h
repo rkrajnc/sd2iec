@@ -75,6 +75,11 @@ void load_nippon(uint8_t);
 void load_ar6_1581(uint8_t);
 void save_ar6_1581(uint8_t);
 
+int16_t dolphin_getc(void);
+uint8_t dolphin_putc(uint8_t data, uint8_t with_eoi);
+void load_dolphin(void);
+void save_dolphin(void);
+
 # ifdef PARALLEL_ENABLED
 extern volatile uint8_t parallel_rxflag;
 static inline void parallel_clear_rxflag(void) { parallel_rxflag = 0; }
