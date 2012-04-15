@@ -77,7 +77,7 @@ static iec_bus_t iec_debounced(void) {
 }
 
 /// Checks if ATN has changed and changes state to match (EA59)
-static uint8_t check_atn(void) {
+uint8_t iec_check_atn(void) {
   if (iec_data.bus_state == BUS_ATNACTIVE)
     if (IEC_ATN) {
       iec_data.bus_state = BUS_ATNPROCESS; // A9AC
@@ -119,7 +119,7 @@ static int16_t _iec_getc(void) {
   val = 0;
 
   do {                                                 // E9CD-E9D5
-    if (check_atn()) return -1;
+    if (iec_check_atn()) return -1;
   } while (!(iec_debounced() & IEC_BIT_CLOCK));
 
   set_data(1);                                         // E9D7
@@ -130,7 +130,7 @@ static int16_t _iec_getc(void) {
   start_timeout(256);
 
   do {
-    if (check_atn()) return -1;                        // E9DF
+    if (iec_check_atn()) return -1;                    // E9DF
     tmp = has_timed_out();                             // E9EE
   } while ((iec_debounced() & IEC_BIT_CLOCK) && !tmp);
 
@@ -143,7 +143,7 @@ static int16_t _iec_getc(void) {
     uart_putc('E');
 
     do {
-      if (check_atn())                                 // E9FD
+      if (iec_check_atn())                             // E9FD
         return -1;
     } while (iec_debounced() & IEC_BIT_CLOCK);
 
@@ -180,7 +180,7 @@ static int16_t _iec_getc(void) {
     val = (val >> 1) | (!!(tmp & IEC_BIT_DATA) << 7);  // EA18
 
     do {                                               // EA1A
-      if (check_atn()) return -1;
+      if (iec_check_atn()) return -1;
     } while (iec_debounced() & IEC_BIT_CLOCK);
   }
 
@@ -219,12 +219,12 @@ static int16_t iec_getc(void) {
 static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
   uint8_t i;
 
-  if (check_atn()) return -1;                          // E916
+  if (iec_check_atn()) return -1;                      // E916
 
   if (iec_data.iecflags & JIFFY_ACTIVE) {
     /* This is the non-load Jiffy case */
     if (jiffy_send(data, with_eoi, 0)) {
-      check_atn();
+      iec_check_atn();
       return -1;
     }
     return 0;
@@ -241,23 +241,23 @@ static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
   }
 
   do {
-    if (check_atn()) return -1;                        // E925
+    if (iec_check_atn()) return -1;                    // E925
   } while (!(iec_debounced() & IEC_BIT_DATA));
 
   if (with_eoi || (i & IEC_BIT_DATA)) {
     do {
-      if (check_atn()) return -1;                      // E937
+      if (iec_check_atn()) return -1;                  // E937
     } while (!(iec_debounced() & IEC_BIT_DATA));
 
     do {
-      if (check_atn()) return -1;                      // E941
+      if (iec_check_atn()) return -1;                  // E941
     } while (iec_debounced() & IEC_BIT_DATA);
   }
 
   set_clock(0);                                        // E94B
   delay_us(40); // estimated
   do {
-    if (check_atn()) return -1;
+    if (iec_check_atn()) return -1;
   } while (!(iec_debounced() & IEC_BIT_DATA));
   delay_us(21); // calculated - E951 (best case after bus read) - E95B
 
@@ -283,7 +283,7 @@ static uint8_t iec_putc(uint8_t data, const uint8_t with_eoi) {
   }
 
   do {
-    if (check_atn()) return -1;
+    if (iec_check_atn()) return -1;
   } while (iec_debounced() & IEC_BIT_DATA);
 
   /* More stuff that's not in the original rom:
@@ -398,7 +398,7 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
   if (iec_data.iecflags & JIFFY_LOAD) {
     /* See if the C64 has passed fb06 or if we should abort */
     do {                /* J1541 FF30 - wait until DATA inactive/high */
-      if (check_atn()) return -1;
+      if (iec_check_atn()) return -1;
     } while (!IEC_DATA);
     /* The LOAD path is only used after the first two bytes have been */
     /* read. Reset the buffer position because there is a chance that */
@@ -429,7 +429,7 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
         /* see a previous data bit as the marker.                     */
         if (jiffy_send(buf->data[buf->position],0,128 | !finalbyte)) {
           /* Abort if ATN was seen */
-          check_atn();
+          iec_check_atn();
           return -1;
         }
 
@@ -489,7 +489,7 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
       while (!IEC_DATA && !has_timed_out()) ;
 
       /* check if ATN changed */
-      if (check_atn())
+      if (iec_check_atn())
         return -1;
 
       /* Signal to the C64 that we're ready to send the next block */
@@ -605,7 +605,7 @@ void iec_mainloop(void) {
       cmd = iec_getc();
 
       if (cmd < 0) {
-        /* check_atn changed our state */
+        /* iec_check_atn changed our state */
         uart_putc('C');
         break;
       }
