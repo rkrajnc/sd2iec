@@ -50,7 +50,6 @@ typedef unsigned int rawbutton_t;
 #define IEC_SEPARATE_OUT
 
 /* The GPIO interrupt is demuxed in system.c, function names are fixed */
-//FIXME: Code currently assumes everything is on GPIO0
 #define SD_CHANGE_HANDLER  void sdcard_change_handler(void)
 #define IEC_ATN_HANDLER    void iec_atn_handler(void)
 #define IEC_CLOCK_HANDLER  void iec_clock_handler(void)
@@ -65,6 +64,9 @@ static inline void iec_interrupts_init(void) {
 
 /* P00 name cache is in AHB ram */
 #define P00CACHE_ATTRIB __attribute__((section(".ahbram")))
+
+// FIXME: Add a fully-commented example configuration that
+//        demonstrates all configuration possilibilites
 
 #if CONFIG_HARDWARE_VARIANT == 100
 /* ---------- Hardware configuration: mbed LPC1768 ---------- */
@@ -446,6 +448,13 @@ static inline __attribute__((always_inline)) void uart_pins_connect(void) {
 
 
 /* ---------------- End of user-configurable options ---------------- */
+
+/* GPIO interrupt port-to-array-offset */
+#ifdef SD_CHANGE_ON_GPIO2
+#  define SD_CHANGE_GPIOINT 1
+#else
+#  define SD_CHANGE_GPIOINT 0
+#endif
 
 /* Bit number to bit value, used in iec_bus_read() */
 #define IEC_BIT_ATN      BV(IEC_PIN_ATN)

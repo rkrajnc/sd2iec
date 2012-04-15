@@ -28,6 +28,21 @@
 #include <arm/bits.h>
 #include "system.h"
 
+
+/* single-copy "rewrite" of LPC_GPIOINT_TypeDef */
+/* for array-like access to the two ports       */
+typedef struct {
+  volatile uint32_t IntStatus;  // only exists in [0]
+  volatile uint32_t IOIntStatR;
+  volatile uint32_t IOIntStatF;
+  volatile uint32_t IOIntClr;
+  volatile uint32_t IOIntEnR;
+  volatile uint32_t IOIntEnF;
+  volatile uint32_t unused[2];
+} lpc_gpioint_single_t;
+
+static lpc_gpioint_single_t *lpc_gpioint_ptr = (lpc_gpioint_single_t *)LPC_GPIOINT;
+
 /* Early system initialisation */
 void system_init_early(void) {
   __disable_irq();
@@ -107,7 +122,7 @@ void enable_interrupts(void) {
   __enable_irq();
 }
 
-/*** GPIO interrupt demux ***/
+/*** Timer/GPIO interrupt demux ***/
 
 /* Declare handler functions */
 SD_CHANGE_HANDLER;
@@ -153,9 +168,9 @@ void IEC_TIMER_B_HANDLER(void) {
 
 /* GPIO interrupt handler, shared with EINT3 */
 void EINT3_IRQHandler(void) {
-  if (BITBAND(LPC_GPIOINT->IO0IntStatF, SD_DETECT_PIN) ||
-      BITBAND(LPC_GPIOINT->IO0IntStatR, SD_DETECT_PIN)) {
-    BITBAND(LPC_GPIOINT->IO0IntClr, SD_DETECT_PIN) = 1;
+  if (BITBAND(lpc_gpioint_ptr[SD_CHANGE_GPIOINT].IOIntStatF, SD_DETECT_PIN) ||
+      BITBAND(lpc_gpioint_ptr[SD_CHANGE_GPIOINT].IOIntStatR, SD_DETECT_PIN)) {
+    BITBAND(lpc_gpioint_ptr[SD_CHANGE_GPIOINT].IOIntClr, SD_DETECT_PIN) = 1;
     sdcard_change_handler();
   }
 }
