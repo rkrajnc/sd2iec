@@ -59,28 +59,7 @@
 /* Current device address */
 uint8_t device_address;
 
-/**
- * struct iecflags_t - Bitfield of various flags, mostly IEC-related
- * @eoi_recvd      : Received EOI with the last byte read
- * @command_recvd  : Command or filename received
- * @jiffy_active   : JiffyDOS-capable master detected
- * @jiffy_load     : JiffyDOS LOAD operation detected
- *
- * This is a bitfield for a number of boolean variables used
- */
-
-#define EOI_RECVD       (1<<0)
-#define COMMAND_RECVD   (1<<1)
-#define JIFFY_ACTIVE    (1<<2)
-#define JIFFY_LOAD      (1<<3)
-
-struct {
-  uint8_t iecflags;
-  enum { BUS_IDLE = 0, BUS_ATNACTIVE, BUS_FOUNDATN, BUS_FORME, BUS_NOTFORME, BUS_ATNFINISH, BUS_ATNPROCESS, BUS_CLEANUP, BUS_SLEEP } bus_state;
-  enum { DEVICE_IDLE = 0, DEVICE_LISTEN, DEVICE_TALK } device_state;
-  uint8_t secondary_address;
-} iec_data;
-
+iec_data_t iec_data;
 
 /* ------------------------------------------------------------------------- */
 /*  Very low-level bus handling                                              */
