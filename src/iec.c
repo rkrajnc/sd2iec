@@ -404,9 +404,7 @@ static uint8_t iec_talk_handler(uint8_t cmd) {
     /* read. Reset the buffer position because there is a chance that */
     /* the third byte has slipped through.                            */
     buf->position = 4;
-  }
 
-  if (iec_data.iecflags & JIFFY_LOAD) {
     /* Ready-signal for the first block */
     set_data(0);
     set_clock(1);
