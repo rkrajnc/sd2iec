@@ -66,8 +66,13 @@ typedef enum { PARALLEL_DIR_IN = 0,
 
 uint8_t parallel_read(void);
 void parallel_write(uint8_t value);
-void parallel_set_dir(parallel_dir_t direction);
 void parallel_send_handshake(void);
+
+#ifdef HAVE_PARALLEL
+void parallel_set_dir(parallel_dir_t direction);
+#else
+# define parallel_set_dir(x) do {} while (0)
+#endif
 
 #endif
 
