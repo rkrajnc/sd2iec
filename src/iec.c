@@ -569,6 +569,7 @@ void iec_mainloop(void) {
 
     case BUS_IDLE:  // EBFF
       /* Wait for ATN */
+      parallel_set_dir(PARALLEL_DIR_IN);
       set_atn_irq(1);
       while (IEC_ATN) {
         if (key_pressed(KEY_NEXT | KEY_PREV | KEY_HOME)) {
