@@ -400,8 +400,10 @@ static inline void toggle_dirty_led(void) {
 /* parallel cable */
 #  define HAVE_PARALLEL
 #  define PARALLEL_PGPIO        LPC_GPIO2
+#  define PARALLEL_POD          PINMODE_OD2
 #  define PARALLEL_PSTARTBIT    0           // start bit on port
 #  define PARALLEL_HGPIO        LPC_GPIO2
+#  define PARALLEL_HOD          PINMODE_OD2
 #  define PARALLEL_HSK_IN_BIT   8
 #  define PARALLEL_HSK_OUT_BIT  11
 #  define PARALLEL_HSK_ON_GPIO2
@@ -566,9 +568,11 @@ static inline __attribute__((always_inline)) void set_clock_irq(uint8_t state) {
 
 #ifdef HAVE_PARALLEL
 static inline void parallel_init(void) {
-  /* set HSK_OUT to output, high */
+  /* set HSK_OUT to output, open drain, weak-high (pullup is default-on) */
   PARALLEL_HGPIO->FIOPIN |= BV(PARALLEL_HSK_OUT_BIT);
   PARALLEL_HGPIO->FIODIR |= BV(PARALLEL_HSK_OUT_BIT);
+  LPC_PINCON->PARALLEL_HOD |= BV(PARALLEL_HSK_OUT_BIT);
+  LPC_PINCON->PARALLEL_POD |= 0xff << PARALLEL_PSTARTBIT;
 
 # ifdef PARALLEL_HSK_ON_GPIO2
   LPC_GPIOINT->IO2IntEnF |= BV(PARALLEL_HSK_IN_BIT);

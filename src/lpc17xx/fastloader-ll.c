@@ -1060,10 +1060,10 @@ void parallel_write(uint8_t value) {
 }
 
 void parallel_set_dir(parallel_dir_t direction) {
-  if (direction == PARALLEL_DIR_IN)
-    PARALLEL_PGPIO->FIODIR &= ~(0xff << PARALLEL_PSTARTBIT);
-  else
-    PARALLEL_PGPIO->FIODIR |= 0xff << PARALLEL_PSTARTBIT;
+  if (direction == PARALLEL_DIR_IN) {
+    /* set all lines high - FIODIR is not used in open drain mode */
+    PARALLEL_PGPIO->FIOSET |= 0xff << PARALLEL_PSTARTBIT;
+  }
 }
 
 void parallel_send_handshake(void) {
