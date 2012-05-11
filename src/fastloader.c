@@ -1984,8 +1984,8 @@ uint8_t dolphin_putc(uint8_t data, uint8_t with_eoi) {
 
 /* send a byte with hardware handshaking */
 static void dolphin_write_hs(uint8_t value) {
-  parallel_clear_rxflag();
   parallel_write(value);
+  parallel_clear_rxflag();
   parallel_send_handshake();
   while (!parallel_rxflag) ;
 }
