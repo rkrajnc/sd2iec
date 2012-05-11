@@ -1906,6 +1906,16 @@ static void parse_xcommand(void) {
     break;
 #endif
 
+#ifdef CONFIG_PARALLEL_DOLPHIN
+  case 'Q': // fast load
+    load_dolphin();
+    break;
+
+  case 'Z': // fast save
+    save_dolphin();
+    break;
+#endif
+
   default:
     /* Unknown command, just show the status */
     set_error_ts(ERROR_STATUS,device_address,0);
