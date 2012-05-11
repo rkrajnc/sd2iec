@@ -1057,6 +1057,7 @@ void parallel_write(uint8_t value) {
   PARALLEL_PGPIO->FIOPIN =
     (PARALLEL_PGPIO->FIOPIN & ~(0xff << PARALLEL_PSTARTBIT)) |
     (value << PARALLEL_PSTARTBIT);
+  delay_us(1);
 }
 
 void parallel_set_dir(parallel_dir_t direction) {
