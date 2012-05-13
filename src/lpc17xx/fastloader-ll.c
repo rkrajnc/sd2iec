@@ -1069,6 +1069,6 @@ void parallel_set_dir(parallel_dir_t direction) {
 
 void parallel_send_handshake(void) {
   PARALLEL_HGPIO->FIOCLR = BV(PARALLEL_HSK_OUT_BIT);
-  delay_us(1);
+  delay_us(2);
   PARALLEL_HGPIO->FIOSET = BV(PARALLEL_HSK_OUT_BIT);
 }
