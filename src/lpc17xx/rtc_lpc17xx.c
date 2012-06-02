@@ -32,8 +32,6 @@
 #define SIGNATURE_GPREG0 0xdeadbeef
 #define SIGNATURE_GPREG1 0xfce2ea31
 
-rtcstate_t rtc_state;
-
 #define CLKEN  0
 #define CTCRST 1
 

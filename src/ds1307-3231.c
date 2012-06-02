@@ -69,8 +69,6 @@
 
 #define STATUS_OSF     0x80  // oscillator stopped (1307: CH bit in reg 0)
 
-rtcstate_t rtc_state;
-
 /* Read the current time from the RTC */
 void read_rtc(struct tm *time) {
   uint8_t tmp[7];

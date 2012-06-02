@@ -36,7 +36,6 @@
 
 static volatile uint8_t ms;
 static softtime_t rtc = 1217647125; // Sat Aug  2 03:18:45 2008 UTC
-rtcstate_t rtc_state;
 static PROGMEM uint8_t month_days[12] = {
   31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
 };

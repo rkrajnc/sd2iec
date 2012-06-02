@@ -55,8 +55,6 @@
 #define CTL_STOP_CLOCK  0x80
 #define CTL_START_CLOCK 0
 
-rtcstate_t rtc_state;
-
 /* Read the current time from the RTC */
 /* Will auto-adjust the stored year if required */
 void read_rtc(struct tm *time) {
