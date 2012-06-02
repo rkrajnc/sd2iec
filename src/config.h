@@ -58,23 +58,10 @@ static inline void board_init(void) {
 #  define HAVE_ATA
 #endif
 
-/* Create some temporary symbols so we can calculate the number of */
-/* enabled storage devices.                                        */
-#ifdef HAVE_SD
-#  define TMP_SD 1
-#endif
-#ifdef HAVE_ATA
-#  define TMP_ATA 1
-#endif
-
 /* Enable the diskmux if more than one storage device is enabled. */
-#if !defined(NEED_DISKMUX) && (TMP_SD + TMP_ATA) > 1
+#if !defined(NEED_DISKMUX) && (defined(HAVE_SD) + defined(HAVE_ATA)) > 1
 #  define NEED_DISKMUX
 #endif
-
-/* Remove the temporary symbols */
-#undef TMP_SD
-#undef TMP_ATA
 
 /* Hardcoded maximum - reducing this won't save any ram */
 #define MAX_DRIVES 8
