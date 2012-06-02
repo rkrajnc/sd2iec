@@ -25,7 +25,11 @@
 
 #include <inttypes.h>
 #include "config.h"
+#include "ds1307-3231.h"
+#include "pcf8583.h"
 #include "progmem.h"
+#include "rtc_lpc17xx.h"
+#include "softrtc.h"
 #include "time.h"
 #include "rtc.h"
 
@@ -48,3 +52,114 @@ uint32_t get_fattime(void) {
     ((uint32_t)time.tm_min)   << 5  |
     ((uint32_t)time.tm_sec)   >> 1;
 }
+
+#ifdef NEED_RTCMUX
+/* RTC "multiplexer" to select the best available RTC at runtime */
+
+typedef enum { RTC_NONE, RTC_SOFTWARE, RTC_PCF8583,
+               RTC_LPC17XX, RTC_DSRTC } rtc_type_t;
+
+static rtc_type_t current_rtc = RTC_NONE;
+
+void rtc_init(void) {
+#if defined(CONFIG_RTC_DS3231) || defined(CONFIG_RTC_DS1307)
+  dsrtc_init();
+  if (rtc_state != RTC_NOT_FOUND) {
+    current_rtc = RTC_DSRTC;
+    return;
+  }
+#endif
+
+#ifdef CONFIG_RTC_PCF8583
+  pcf8583_init();
+  if (rtc_state != RTC_NOT_FOUND) {
+    current_rtc = RTC_PCF8583;
+    return;
+  }
+#endif
+
+#ifdef CONFIG_RTC_LPC17XX
+  lpcrtc_init();
+  if (rtc_state != RTC_NOT_FOUND) {
+    current_rtc = RTC_LPC17XX;
+    return;
+  }
+#endif
+
+#ifdef CONFIG_RTC_SOFTWARE
+  softrtc_init();
+  /* This is the fallback RTC that will always work */
+  return;
+#endif
+
+  /* none of the enabled RTCs were found */
+  rtc_state = RTC_NOT_FOUND;
+}
+
+void read_rtc(struct tm *time) {
+  switch (current_rtc) {
+
+#if defined(CONFIG_RTC_DS3231) || defined(CONFIG_RTC_DS1307)
+  case RTC_DSRTC:
+    dsrtc_read(time);
+    break;
+#endif
+
+#ifdef CONFIG_RTC_PCF8583
+  case RTC_PCF8583:
+    pcf8583_read(time);
+    break;
+#endif
+
+#ifdef CONFIG_RTC_LPC17XX
+  case RTC_LPC17XX:
+    lpcrtc_read(time);
+    break;
+#endif
+
+#ifdef CONFIG_RTC_SOFTWARE
+  case RTC_SOFTWARE:
+    softrtc_read(time);
+    break;
+#endif
+
+  case RTC_NONE:
+  default:
+    return;
+  }
+}
+
+void set_rtc(struct tm *time) {
+  switch (current_rtc) {
+
+#if defined(CONFIG_RTC_DS3231) || defined(CONFIG_RTC_DS1307)
+  case RTC_DSRTC:
+    dsrtc_set(time);
+    break;
+#endif
+
+#ifdef CONFIG_RTC_PCF8583
+  case RTC_PCF8583:
+    pcf8583_set(time);
+    break;
+#endif
+
+#ifdef CONFIG_RTC_LPC17XX
+  case RTC_LPC17XX:
+    lpcrtc_set(time);
+    break;
+#endif
+
+#ifdef CONFIG_RTC_SOFTWARE
+  case RTC_SOFTWARE:
+    softrtc_set(time);
+    break;
+#endif
+
+  case RTC_NONE:
+  default:
+    return;
+  }
+}
+
+#endif
