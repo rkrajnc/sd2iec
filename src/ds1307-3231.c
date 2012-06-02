@@ -21,7 +21,9 @@
 
    ds1307-3231.c: RTC support for DS1307/DS3231 chips
 
-   This file implements the functions defined in rtc.h.
+   The exported functions in this file are weak-aliased to their corresponding
+   versions defined in rtc.h so when this file is the only RTC implementation
+   compiled in they will be automatically used by the linker.
 
 */
 
@@ -35,6 +37,7 @@
 #include "utils.h"
 #include "time.h"
 #include "rtc.h"
+#include "ds1307-3231.h"
 
 #if defined(CONFIG_RTC_DS3231) && defined(CONFIG_RTC_DS1307)
 #  error "Cannot use both CONFIG_RTC_DS3231 and CONFIG_RTC_DS1307 at the same time!"
@@ -70,7 +73,7 @@
 #define STATUS_OSF     0x80  // oscillator stopped (1307: CH bit in reg 0)
 
 /* Read the current time from the RTC */
-void read_rtc(struct tm *time) {
+void dsrtc_read(struct tm *time) {
   uint8_t tmp[7];
 
   /* Set to default value in case we abort */
@@ -90,9 +93,10 @@ void read_rtc(struct tm *time) {
   time->tm_year = bcd2int(tmp[REG_YEAR]) + 100 * !!(tmp[REG_MONTH] & 0x80) + 100;
   // FIXME: Leap year calculation is wrong in 2100
 }
+void read_rtc(struct tm *time) __attribute__ ((weak, alias("dsrtc_read")));
 
 /* Set the time in the RTC */
-void set_rtc(struct tm *time) {
+void dsrtc_set(struct tm *time) {
   uint8_t tmp[7];
 
   if (rtc_state == RTC_NOT_FOUND)
@@ -113,10 +117,11 @@ void set_rtc(struct tm *time) {
 #endif
   rtc_state = RTC_OK;
 }
+void set_rtc(struct tm *time) __attribute__ ((weak, alias("dsrtc_set")));
 
 #ifdef CONFIG_RTC_DS3231
 /* DS3231 version, checks oscillator stop flag in status register */
-void rtc_init(void) {
+void dsrtc_init(void) {
   int16_t tmp;
 
   rtc_state = RTC_NOT_FOUND;
@@ -136,9 +141,11 @@ void rtc_init(void) {
   }
   uart_putcrlf();
 }
+void rtc_init(void) __attribute__ ((weak, alias("dsrtc_init")));
+
 #else
 /* DS1307 version, checks clock halt bit in seconds register */
-void rtc_init(void) {
+void dsrtc_init(void) {
   int16_t tmp;
 
   rtc_state = RTC_NOT_FOUND;
@@ -157,4 +164,5 @@ void rtc_init(void) {
   }
   uart_putcrlf();
 }
+void rtc_init(void) __attribute__ ((weak, alias("dsrtc_init")));
 #endif

@@ -27,7 +27,9 @@
 #include <arm/bits.h>
 #include <string.h>
 #include "config.h"
+#include "time.h"
 #include "rtc.h"
+#include "rtc_lpc17xx.h"
 
 #define SIGNATURE_GPREG0 0xdeadbeef
 #define SIGNATURE_GPREG1 0xfce2ea31
@@ -35,7 +37,7 @@
 #define CLKEN  0
 #define CTCRST 1
 
-void rtc_init(void) {
+void lpcrtc_init(void) {
   if (LPC_RTC->CCR & BV(CLKEN)) {
     /* Check for signature in battery-backed bytes to determine if RTC was set*/
     if (LPC_RTC->GPREG0 == SIGNATURE_GPREG0 &&
@@ -48,8 +50,9 @@ void rtc_init(void) {
     rtc_state = RTC_INVALID;
   }
 }
+void rtc_init(void) __attribute__ ((weak, alias("lpcrtc_init")));
 
-void read_rtc(struct tm *time) {
+void lpcrtc_read(struct tm *time) {
   if (rtc_state != RTC_OK) {
     memcpy(time, &rtc_default_date, sizeof(struct tm));
     return;
@@ -65,8 +68,9 @@ void read_rtc(struct tm *time) {
     time->tm_wday = LPC_RTC->DOW;
   } while (time->tm_sec != LPC_RTC->SEC);
 }
+void read_rtc(struct tm *time) __attribute__ ((weak, alias("lpcrtc_read")));
 
-void set_rtc(struct tm *time) {
+void lpcrtc_set(struct tm *time) {
   LPC_RTC->CCR    = BV(CTCRST);
   LPC_RTC->SEC    = time->tm_sec;
   LPC_RTC->MIN    = time->tm_min;
@@ -80,4 +84,4 @@ void set_rtc(struct tm *time) {
   LPC_RTC->GPREG1 = SIGNATURE_GPREG1;
   rtc_state       = RTC_OK;
 }
-
+void set_rtc(struct tm *time) __attribute__ ((weak, alias("lpcrtc_set")));

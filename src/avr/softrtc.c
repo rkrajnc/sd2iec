@@ -19,9 +19,11 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
-   softrtc.c: RTC support for non-RTC designs
+   softrtc.c: software RTC emulation
 
-   This file implements the functions defined in rtc.h.
+   The exported functions in this file are weak-aliased to their corresponding
+   versions defined in rtc.h so when this file is the only RTC implementation
+   compiled in they will be automatically used by the linker.
 
 */
 
@@ -33,6 +35,7 @@
 #include "time.h"
 #include "rtc.h"
 #include "uart.h"
+#include "softrtc.h"
 
 static volatile uint8_t ms;
 static softtime_t rtc = 1217647125; // Sat Aug  2 03:18:45 2008 UTC
@@ -122,7 +125,7 @@ void increment_rtc(void) {
 }
 
 /* Read the current time from the RTC */
-void read_rtc(struct tm *time) {
+void softrtc_read(struct tm *time) {
   softtime_t t;
 
   ATOMIC_BLOCK( ATOMIC_FORCEON ) {
@@ -130,16 +133,19 @@ void read_rtc(struct tm *time) {
   }
   gmtime(&t,time);
 }
+void read_rtc(struct tm *time) __attribute__ ((weak, alias("softrtc_read")));
 
 /* Set the time in the RTC */
-void set_rtc(struct tm *time) {
+void softrtc_set(struct tm *time) {
   softtime_t t = mktime(time);
 
   ATOMIC_BLOCK( ATOMIC_FORCEON ) {
     rtc = t;
   }
 }
+void set_rtc(struct tm *time) __attribute__ ((weak, alias("softrtc_set")));
 
-void rtc_init(void) {
+void softrtc_init(void) {
   rtc_state = RTC_OK;
 }
+void rtc_init(void) __attribute__ ((weak, alias("softrtc_init")));

@@ -21,7 +21,9 @@
 
    pcf8583.c: RTC support for PCF8583 chips
 
-   This file implements the functions defined in rtc.h.
+   The exported functions in this file are weak-aliased to their corresponding
+   versions defined in rtc.h so when this file is the only RTC implementation
+   compiled in they will be automatically used by the linker.
 
 */
 
@@ -35,6 +37,7 @@
 #include "utils.h"
 #include "time.h"
 #include "rtc.h"
+#include "pcf8583.h"
 
 #define PCF8583_ADDR 0xa0
 
@@ -57,7 +60,7 @@
 
 /* Read the current time from the RTC */
 /* Will auto-adjust the stored year if required */
-void read_rtc(struct tm *time) {
+void pcf8583_read(struct tm *time) {
   union {
     uint8_t  bytes[5];
     uint16_t words[2];
@@ -92,9 +95,10 @@ void read_rtc(struct tm *time) {
 
   time->tm_year = tmp.words[0]-1900;
 }
+void read_rtc(struct tm *time) __attribute__ ((weak, alias("pcf8583_read")));
 
 /* Set the time in the RTC */
-void set_rtc(struct tm *time) {
+void pcf8583_set(struct tm *time) {
   union {
     uint8_t  bytes[5];
     uint16_t words[2];
@@ -116,8 +120,9 @@ void set_rtc(struct tm *time) {
   i2c_write_register(PCF8583_ADDR, REG_CONTROL, CTL_START_CLOCK);
   rtc_state = RTC_OK;
 }
+void set_rtc(struct tm *time) __attribute__ ((weak, alias("pcf8583_set")));
 
-void rtc_init(void) {
+void pcf8583_init(void) {
   uint8_t tmp[4];
 
   rtc_state = RTC_NOT_FOUND;
@@ -139,5 +144,7 @@ void rtc_init(void) {
       uart_puts_P(PSTR("invalid"));
     }
   }
+
   uart_putcrlf();
 }
+void rtc_init(void) __attribute__ ((weak, alias("pcf8583_init")));
