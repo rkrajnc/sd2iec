@@ -28,6 +28,7 @@
 #include <string.h>
 #include "config.h"
 #include "time.h"
+#include "uart.h"
 #include "rtc.h"
 #include "rtc_lpc17xx.h"
 
@@ -42,13 +43,17 @@ void lpcrtc_init(void) {
     /* Check for signature in battery-backed bytes to determine if RTC was set*/
     if (LPC_RTC->GPREG0 == SIGNATURE_GPREG0 &&
         LPC_RTC->GPREG1 == SIGNATURE_GPREG1) {
+      uart_puts_P(PSTR("LPC RTC ok"));
       rtc_state = RTC_OK;
     } else {
+      uart_puts_P(PSTR("LPC RTC invalid (signature)"));
       rtc_state = RTC_INVALID;
     }
   } else {
+    uart_puts_P(PSTR("LPC RTC invalid (disabled)"));
     rtc_state = RTC_INVALID;
   }
+  uart_putcrlf();
 }
 void rtc_init(void) __attribute__ ((weak, alias("lpcrtc_init")));
 
