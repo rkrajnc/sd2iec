@@ -51,9 +51,6 @@ void read_rtc(struct tm *time);
 /* Set time from struct tm */
 void set_rtc(struct tm *time);
 
-#  ifdef CONFIG_RTC_SOFTWARE
-void increment_rtc(void);
-#  endif
 # else  // HAVE_RTC
 
 #  define rtc_state RTC_NOT_FOUND

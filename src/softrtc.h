@@ -32,4 +32,10 @@ void softrtc_read(struct tm *time);
 void softrtc_set(struct tm *time);
 void softrtc_init(void);
 
+#ifdef CONFIG_RTC_SOFTWARE
+void softrtc_tick(void);
+#else
+#  define softrtc_tick() do {} while (0)
+#endif
+
 #endif

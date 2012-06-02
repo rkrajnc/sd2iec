@@ -116,7 +116,7 @@ static void gmtime(softtime_t *t, struct tm * tm)
 
 /* Public functions */
 
-void increment_rtc(void) {
+void softrtc_tick(void) {
   ms++;
   if(ms == 100) {
     rtc++;

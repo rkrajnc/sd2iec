@@ -29,6 +29,7 @@
 #include "led.h"
 #include "time.h"
 #include "rtc.h"
+#include "softrtc.h"
 #include "timer.h"
 
 #define DEBOUNCE_TICKS 4
@@ -102,9 +103,9 @@ SYSTEM_TICK_HANDLER {
       lastbuttonchange = ticks;
     }
   }
-#ifdef CONFIG_RTC_SOFTWARE
-  increment_rtc();
-#endif
+
+  /* send tick to the software RTC emulation */
+  softrtc_tick();
 
 #ifdef CONFIG_REMOTE_DISPLAY
   /* Check if the display wants to be queried */
