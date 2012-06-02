@@ -10,7 +10,7 @@ ifeq ($(CONFIG_UART_DEBUG),y)
 endif
 
 # Various RTC implementations
-ifeq ($(CONFIG_RTC_VARIANT),3)
+ifeq ($(CONFIG_RTC_LPC17XX),y)
   SRC += rtc.c lpc17xx/rtc_lpc17xx.c
 endif
 

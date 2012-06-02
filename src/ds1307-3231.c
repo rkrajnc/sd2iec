@@ -36,12 +36,8 @@
 #include "time.h"
 #include "rtc.h"
 
-#if CONFIG_RTC_VARIANT == 4
-#  define RTC_IS_3231
-#elif CONFIG_RTC_VARIANT == 5
-#  define RTC_IS_1307
-#else
-#  error CONFIG_RTC_VARIANT is set to an unknown value!
+#if defined(CONFIG_RTC_DS3231) && defined(CONFIG_RTC_DS1307)
+#  error "Cannot use both CONFIG_RTC_DS3231 and CONFIG_RTC_DS1307 at the same time!"
 #endif
 
 #define RTC_ADDR 0xd0
@@ -54,7 +50,7 @@
 #define REG_MONTH       5
 #define REG_YEAR        6
 
-#ifdef RTC_IS_3231
+#ifdef CONFIG_RTC_DS3231
 #  define REG_AL1_SECOND  7
 #  define REG_AL1_MINUTE  8
 #  define REG_AL1_HOUR    9
@@ -114,13 +110,13 @@ void set_rtc(struct tm *time) {
   i2c_write_registers(RTC_ADDR, REG_SECOND, 7, tmp);
   i2c_write_register(RTC_ADDR, REG_CONTROL, 0);   // 3231: enable oscillator on battery, interrupts off
                                                   // 1307: disable SQW output
-#ifdef RTC_IS_3231
+#ifdef CONFIG_RTC_DS3231
   i2c_write_register(RTC_ADDR, REG_CTLSTATUS, 0); // clear "oscillator stopped" flag
 #endif
   rtc_state = RTC_OK;
 }
 
-#ifdef RTC_IS_3231
+#ifdef CONFIG_RTC_DS3231
 /* DS3231 version, checks oscillator stop flag in status register */
 void rtc_init(void) {
   int16_t tmp;

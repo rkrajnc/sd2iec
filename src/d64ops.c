@@ -298,7 +298,7 @@ static uint8_t checked_read(uint8_t part, uint8_t track, uint8_t sector, uint8_t
  * date/time if available or the default timestamp if not.
  */
 static void update_timestamp(uint8_t *buffer) {
-#if CONFIG_RTC_VARIANT > 0
+#ifdef HAVE_RTC
   struct tm time;
 
   read_rtc(&time);

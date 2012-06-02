@@ -37,11 +37,12 @@ typedef enum {
   RTC_OK          /* RTC present and working           */
 } rtcstate_t;
 
-# if CONFIG_RTC_VARIANT > 0
+# ifdef HAVE_RTC
 
 extern const /* PROGMEM */ struct tm rtc_default_date;
 extern rtcstate_t rtc_state;
 
+/* detect and initialize RTC */
 void rtc_init(void);
 
 /* Return current time in struct tm */
@@ -50,15 +51,15 @@ void read_rtc(struct tm *time);
 /* Set time from struct tm */
 void set_rtc(struct tm *time);
 
-#  if CONFIG_RTC_VARIANT == 1
+#  ifdef CONFIG_RTC_SOFTWARE
 void increment_rtc(void);
 #  endif
-# else  // CONFIG_RTC_VARIANT
+# else  // HAVE_RTC
 
 #  define rtc_state RTC_NOT_FOUND
 
 #  define rtc_init()    do {} while(0)
 
-# endif // CONFIG_RTC_VARIANT
+# endif // HAVE_RTC
 
 #endif

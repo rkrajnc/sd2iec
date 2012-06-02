@@ -274,7 +274,7 @@ void __cyg_profile_func_enter (void *this_fn, void *call_site) {
 }
 #endif
 
-#if CONFIG_RTC_VARIANT > 0
+#ifdef HAVE_RTC
 /* Days of the week as used by the CMD FD */
 static const PROGMEM uint8_t downames[] = "SUN.MON.TUESWED.THURFRI.SAT.";
 
@@ -1476,7 +1476,7 @@ static void parse_scratch(void) {
 }
 
 
-#if CONFIG_RTC_VARIANT > 0
+#ifdef HAVE_RTC
 /* ------------------ */
 /*  T - Time commands */
 /* ------------------ */
@@ -1660,7 +1660,7 @@ static void parse_time(void) {
       set_error(ERROR_SYNTAX_UNKNOWN);
   }
 }
-#endif /* CONFIG_RTC_VARIANT */
+#endif /* HAVE_RTC */
 
 
 /* ------------ */
@@ -2027,7 +2027,7 @@ void parse_doscommand(void) {
     parse_scratch();
     break;
 
-#if CONFIG_RTC_VARIANT > 0
+#ifdef HAVE_RTC
   case 'T':
     parse_time();
     break;

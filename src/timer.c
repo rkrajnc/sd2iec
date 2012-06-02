@@ -102,7 +102,7 @@ SYSTEM_TICK_HANDLER {
       lastbuttonchange = ticks;
     }
   }
-#if CONFIG_RTC_VARIANT == 1
+#ifdef CONFIG_RTC_SOFTWARE
   increment_rtc();
 #endif
 
