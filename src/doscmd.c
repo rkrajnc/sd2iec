@@ -1942,7 +1942,6 @@ void parse_doscommand(void) {
   /* Debugging aid: Dump the whole command via serial */
   if (detected_loader == FL_NONE) {
     /* Dump only if no loader was detected because it may ruin the timing */
-    uart_flush();
     uart_trace(command_buffer,0,command_length);
   }
 #endif
