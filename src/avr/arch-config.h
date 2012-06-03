@@ -568,6 +568,24 @@ static inline void buttons_init(void) {
 #  define SOFTI2C_BIT_INTRQ     PD2
 #  define SOFTI2C_DELAY         6
 
+/* parallel cable - conflicts with the SOFTI2C pins above! */
+#  ifdef CONFIG_NO_SD
+#    define HAVE_PARALLEL
+#    define PARALLEL_HANDLER      ISR(PCINT0_vect)
+#    define PARALLEL_PDDR         DDRD      // CONN2 pins 1,3,...,15
+#    define PARALLEL_PPORT        PORTD
+#    define PARALLEL_PPIN         PIND
+#    define PARALLEL_HDDR         DDRB
+#    define PARALLEL_HPORT        PORTB
+#    define PARALLEL_HPIN         PINB
+#    define PARALLEL_HSK_OUT_BIT  5         // CONN2 pin 14, to C64 FLAG2
+#    define PARALLEL_HSK_IN_BIT   4         // CONN2 pin 16, to C64 PC2
+#    define PARALLEL_PCMSK        PCMSK0
+#    define PARALLEL_PCINT_GROUP  0
+#  elif defined(CONFIG_PARALLEL_DOLPHIN)
+#    error CONFIG_PARALLEL_DOLPHIN on uIEC requires CONFIG_NO_SD=y !
+#  endif
+
 /* Use diskmux code to optionally turn off second IDE drive */
 #  define NEED_DISKMUX
 
