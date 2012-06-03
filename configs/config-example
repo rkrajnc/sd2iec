@@ -183,3 +183,7 @@ CONFIG_DISPLAY_BUFFER_SIZE=40
 
 # size of the [PSUR]00 name cache in bytes
 #CONFIG_P00CACHE_SIZE=32768
+
+# disable SD support
+# (the build system assumes that everything uses SD unless you enable this)
+#CONFIG_NO_SD=y

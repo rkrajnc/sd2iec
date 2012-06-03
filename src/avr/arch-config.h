@@ -464,7 +464,9 @@ static inline void buttons_init(void) {
 /* Note: This CONFIG_HARDWARE_VARIANT number is tested in system.c */
 #  define HW_NAME "UIEC"
 #  define HAVE_ATA
-#  define HAVE_SD
+#  ifndef CONFIG_NO_SD
+#    define HAVE_SD
+#  endif
 #  define SPI_LATE_INIT
 #  define CF_CHANGE_HANDLER     ISR(INT7_vect)
 #  define SD_CHANGE_HANDLER     ISR(PCINT0_vect)
