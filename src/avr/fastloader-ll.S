@@ -1616,4 +1616,49 @@ ar6_1581p_get_byte:
         clr     r25
         ret
 #endif
+
+#ifdef PARALLEL_ENABLED
+        ;; ====================================================================
+        ;;  Parallel port
+        ;; ====================================================================
+
+        ;; uint8_t parallel_read(void)
+        .global parallel_read
+parallel_read:
+        in      r24, _SFR_IO_ADDR(PARALLEL_PPIN)
+        ret
+
+        ;; void parallel_write(uint8_t value)
+        .global parallel_write
+parallel_write:
+        out     _SFR_IO_ADDR(PARALLEL_PDDR),  r1   ; set all lines to input
+        out     _SFR_IO_ADDR(PARALLEL_PPORT), r24  ; enable pullups on 1-bits
+        com     r24                                ; invert byte
+        out     _SFR_IO_ADDR(PARALLEL_PDDR), r24   ; set 0-bits to output to simulate open collector
+        call    delay1us
+        ret
+
+        ;; void parallel_set_dir(parallel_dir_t direction)
+        .global parallel_set_dir
+parallel_set_dir:
+        tst     r24                               ; check if input is selected
+        brne    1f                                ; do nothing if not
+        out     _SFR_IO_ADDR(PARALLEL_PDDR), r1   ; set all lines to input
+        com     r24                               ; set r24=0xff
+        out     _SFR_IO_ADDR(PARALLEL_PPORT), r24 ; enable all pullups
+1:      ret
+
+        ;; void parallel_send_handshake(void)
+        .global parallel_send_handshake
+parallel_send_handshake:
+        cbi     _SFR_IO_ADDR(PARALLEL_HPORT), PARALLEL_HSK_OUT_BIT ; prepare 0 in PORT register
+        sbi     _SFR_IO_ADDR(PARALLEL_HDDR), PARALLEL_HSK_OUT_BIT  ; set pin to output
+        call    delay1us                                           ; delay
+        call    delay1us
+        cbi     _SFR_IO_ADDR(PARALLEL_HDDR), PARALLEL_HSK_OUT_BIT  ; set pin to input
+        sbi     _SFR_IO_ADDR(PARALLEL_HPORT), PARALLEL_HSK_OUT_BIT ; enable pullup
+        ret
+
+#endif
+
         .end

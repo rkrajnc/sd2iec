@@ -1266,6 +1266,29 @@ static inline void iec_interface_init(void) {
   /* SRQ is special-cased because it may be unconnected */
   IEC_PORT |= IEC_BIT_SRQ;
 #endif
+
+#ifdef HAVE_PARALLEL
+  /* set data lines to input with pullup */
+  PARALLEL_PDDR  = 0;
+  PARALLEL_PPORT = 0xff;
+
+  /* set HSK_OUT and _IN to input with pullup */
+  PARALLEL_HDDR  &= ~(_BV(PARALLEL_HSK_OUT_BIT) |
+                      _BV(PARALLEL_HSK_IN_BIT));
+  PARALLEL_HPORT |= _BV(PARALLEL_HSK_OUT_BIT) |
+                    _BV(PARALLEL_HSK_IN_BIT);
+
+  /* enable interrupt for parallel handshake */
+#  ifdef PARALLEL_PCINT_GROUP
+  /* excluse PCINT group */
+  PARALLEL_PCMSK |= _BV(PARALLEL_HSK_IN_BIT);
+  PCICR |= _BV(PARALLEL_PCINT_GROUP);
+  PCIFR |= _BV(PARALLEL_PCINT_GROUP);
+#  else
+  /* exclusive INTx line */
+#    error Implement me!
+#  endif
+#endif
 }
 
 /* weak-aliasing is resolved at link time, so it doesn't work */
@@ -1340,6 +1363,17 @@ static inline uint8_t display_intrq_active(void) {
 /* P00 name cache is in bss by default */
 #ifndef P00CACHE_ATTRIB
 #  define P00CACHE_ATTRIB
+#endif
+
+/* -- ensure that the timing for Dolphin is achievable        -- */
+/* the C64 will switch to an alternate, not-implemented protocol */
+/* if the answer to the XQ/XZ commands is too late and the       */
+/* file name/command dump takes too long if the buffer is        */
+/* smaller than the output from uart_trace                       */
+#if defined(CONFIG_PARALLEL_DOLPHIN) && \
+    defined(CONFIG_UART_DEBUG) && \
+  CONFIG_UART_BUF_SHIFT < 8  // 7 may work with short file names
+#  error Enabling both DolphinDOS and UART debugging requires CONFIG_UART_BUF_SHIFT >= 8 !
 #endif
 
 #endif

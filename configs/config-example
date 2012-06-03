@@ -103,6 +103,9 @@ CONFIG_LOADER_AR6=y
 # Enable ELoad Version 1 fast loader
 CONFIG_LOADER_ELOAD1=y
 
+# Enable DolphinDOS parallel speeder
+CONFIG_PARALLEL_DOLPHIN=y
+
 # Select which hardware to compile for
 # Valid values:
 #   1 - example configuration in config.h (won't compile!)
