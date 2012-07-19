@@ -103,7 +103,7 @@ static const PROGMEM struct fastloader_crc_s fl_crc_table[] = {
   { 0x9c9f, FL_TURBODISK,        RXTX_NONE          },
 #endif
 #ifdef CONFIG_LOADER_FC3
-  { 0x6510, FL_FC3_LOAD,         RXTX_NONE          }, // Final Cartridge III
+  { 0xdab0, FL_FC3_LOAD,         RXTX_NONE          }, // Final Cartridge III
   { 0x7e38, FL_FC3_LOAD,         RXTX_NONE          }, // EXOS v3
   { 0x2c86, FL_FC3_SAVE,         RXTX_NONE          },
   { 0x9930, FL_FC3_FREEZED,      RXTX_NONE          },
