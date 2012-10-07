@@ -104,8 +104,10 @@ static const PROGMEM struct fastloader_crc_s fl_crc_table[] = {
 #endif
 #ifdef CONFIG_LOADER_FC3
   { 0xdab0, FL_FC3_LOAD,         RXTX_NONE          }, // Final Cartridge III
+  { 0x973b, FL_FC3_LOAD,         RXTX_NONE          }, // Final Cartridge III variation
   { 0x7e38, FL_FC3_LOAD,         RXTX_NONE          }, // EXOS v3
-  { 0x2c86, FL_FC3_SAVE,         RXTX_NONE          },
+  { 0x1b30, FL_FC3_SAVE,         RXTX_NONE          }, // note: really early CRC; lots of C64 code at the end
+  { 0x8b0e, FL_FC3_SAVE,         RXTX_NONE          }, // variation
   { 0x9930, FL_FC3_FREEZED,      RXTX_NONE          },
 #endif
 #ifdef CONFIG_LOADER_DREAMLOAD
@@ -179,6 +181,7 @@ static const PROGMEM struct fastloader_handler_s fl_handler_table[] = {
   { 0x059a, FL_FC3_LOAD,         load_fc3,       0 }, // FC3
   { 0x0400, FL_FC3_LOAD,         load_fc3,       0 }, // EXOS
   { 0x059c, FL_FC3_SAVE,         save_fc3,       0 },
+  { 0x059a, FL_FC3_SAVE,         save_fc3,       0 }, // variation
   { 0x0403, FL_FC3_FREEZED,      load_fc3,       1 },
 #endif
 #ifdef CONFIG_LOADER_DREAMLOAD
