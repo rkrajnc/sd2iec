@@ -1903,7 +1903,7 @@ static void format_d81_image(uint8_t part, buffer_t *buf, uint8_t *name, uint8_t
   format_copy_label(part, buf->data, name, idbuf);
 
   /* write 40/0 */
-  if (image_write(part, /*sector_offset(part, 40, 0)*/ 40*40*256L,
+  if (image_write(part, /*sector_offset(part, 40, 0)*/ (40-1)*40*256L,
                   buf->data, 256, 0))
     return;
 
