@@ -1,22 +1,24 @@
-/* startup code for LPC17xx
+/* pre-startup code for LPC17xx
  *
- * Written 2010 by Ingo Korb, no copyright claimed
+ * Written 2012 by Ingo Korb, no copyright claimed
  */
 #include "asmconfig.h"
 
+/* address definitions */
+/* CMSIS only provides C structs, nothing assembler-friendly */
+#define VTOR_Offset 8
+        
         .syntax unified
 
-        .section .vectors
+        .section .bootvectors
 
         .macro  except label
-        .weak   \label
-        .set    \label, __unhandled_exception
-        .word   \label
+        .word   __unhandled_exception
         .endm
 
         /* Cortex M3 standard except vectors */
         .word   __stack
-        .word   _start
+        .word   _trampoline_start
         except  NMI_Handler
         except  HardFault_Handler  /* 2 */
         except  MemManage_Handler
@@ -69,47 +71,30 @@
 
 
         /* include the bootloader information block */
-        .section .mainbootinfo
+        .section .bootinfo
 
 #include "lpc17xx/bootinfo.S"
 
+        /* ASCII string with additional information, zero-terminated */
+        .ascii "sd2iec " VERSION LONGVERSION
+        .byte   0
+        
 
-        .section .text
+        .section .boottrampoline, "x"
 
-        .global _start
+        .global _trampoline_start
         .thumb_func
-_start:
-        /* copy data section to ram */
-        ldr     r0, =__data_load_start
-        ldr     r1, =__data_load_end
-        ldr     r2, =__data_start
-dataloop:
-        ldr.w   r3, [r0], #4
-        str.w   r3, [r2], #4
-        cmp     r0, r1
-        blo     dataloop
 
-        /* clear bss section */
-        ldr     r0, =__bss_start__
-        ldr     r1, =__bss_end__
-        ldr     r2, =0
-bssloop:
-        str.w   r2, [r0], #4
-        cmp     r0, r1
-        blo     bssloop
+_trampoline_start:
+        /* change vector table offset */
+        ldr     r0, =0x4000
+        ldr     r1, =SCB_BASE
+        str     r0, [r1, #VTOR_Offset]
 
-        /* start main() */
-        b       main
+        /* load start address */
+        ldr     r1, [r0, #4]
 
-
-        /* dummy exception handler: endless loop */
-        .weak __unhandled_exception
-        .thumb_func
-__unhandled_exception:
-        /* turn on LED 4 on an mbed module */
-        //ldr     r0, =0x2009c038
-        //ldr     r1, =0x800000
-        //str     r1, [r0]
-        b       __unhandled_exception
+        /* jump to main code */
+        bx      r1
 
         .end

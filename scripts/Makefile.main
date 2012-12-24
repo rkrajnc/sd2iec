@@ -4,10 +4,10 @@
 MAJOR = 1
 MINOR = 0
 PATCHLEVEL = 0
-FIX = alpha0
+FIX =
 
 # Forces bootloader version to 0, comment out or leave empty for release
-PRERELEASE =
+PRERELEASE = alpha0
 
 #----------------------------------------------------------------------------
 # WinAVR Makefile Template written by Eric B. Weddington, Joerg Wunsch, et al.
@@ -311,8 +311,8 @@ $(OBJDIR)/%.bin: $(OBJDIR)/%.elf
 	$(Q)$(OBJCOPY) -O binary -R .eeprom $< $@
 	$(E) "  CRCGEN $@"
 	-$(Q)$(CRCGEN) $@ $(BINARY_LENGTH) $(CONFIG_BOOT_DEVID) $(BOOT_VERSION)
-	$(E) "  COPY   $(CONFIG_HARDWARE_NAME)-firmware-$(PROGRAMVERSION).bin"
-	$(Q)$(COPY) $@ $(OBJDIR)/$(CONFIG_HARDWARE_NAME)-firmware-$(PROGRAMVERSION).bin
+#	$(E) "  COPY   $(CONFIG_HARDWARE_NAME)-firmware-$(PROGRAMVERSION).bin"
+#	$(Q)$(COPY) $@ $(OBJDIR)/$(CONFIG_HARDWARE_NAME)-firmware-$(PROGRAMVERSION).bin
 else
 $(OBJDIR)/%.bin: $(OBJDIR)/%.elf
 	$(E) "  BIN    $@"

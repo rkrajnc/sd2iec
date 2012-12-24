@@ -4,11 +4,9 @@
 copy:
 	cp $(TARGET).bin /mbed
 
-ifneq ($(CONFIG_BOOTLOADER),y)
 bin:
 	$(E) "  CHKSUM $(TARGET).bin"
 	$(Q)scripts/lpc17xx/lpc_checksum.pl $(TARGET).bin
-endif
 
 program: bin
 	$(E) "  FLASH  $(TARGET).bin"
@@ -36,3 +34,8 @@ program: bin
 #        sleep 200
 #        wdtreset
 #    }
+
+# Manual dependencies for the bootinfo include
+$(OBJDIR)/src/lpc17xx/startup.o: src/lpc17xx/bootinfo.S
+
+$(OBJDIR)/src/lpc17xx/pseudoboot.o: src/lpc17xx/bootinfo.S

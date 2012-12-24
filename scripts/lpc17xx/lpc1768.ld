@@ -10,7 +10,8 @@ ENTRY(_start)
 
 MEMORY
 {
-  flash  (rx)  : ORIGIN = 0x00000000, LENGTH = 512K
+  boot   (rx)  : ORIGIN = 0x00000000, LENGTH = 16K
+  flash  (rx)  : ORIGIN = 0x00004000, LENGTH = 496K
   ram    (rwx) : ORIGIN = 0x10000000, LENGTH = 32K
   ahbram (rwx) : ORIGIN = 0x2007C000, LENGTH = 32K
   eeprom (rw)  : ORIGIN = 0x80000000, LENGTH = 64K /* hack ;) */
@@ -18,9 +19,20 @@ MEMORY
 
 SECTIONS
 {
+  /* provide some dummy data so the binary can be flashed directly without bootloader */
+  .boot :
+  {
+    KEEP(*(.bootvectors))
+    . = 0x100;
+    KEEP(*(.bootinfo))    /* info block for the on-disk firmware */
+    KEEP(*(.boottrampoline))
+  } > boot
+
   .text :
   {
     KEEP(*(.vectors))
+    . = 0x100;
+    KEEP(*(.mainbootinfo)) /* info block for the flashed firmware */
     KEEP(*(.init))
     *(.text)
     *(.text.*)

@@ -1,7 +1,7 @@
 # architecture-dependent variables
 
 #---------------- Source code ----------------
-ASMSRC = lpc17xx/startup.S lpc17xx/crc.S
+ASMSRC = lpc17xx/pseudoboot.S lpc17xx/startup.S lpc17xx/crc.S
 
 SRC += lpc17xx/fastloader-ll.c lpc17xx/iec-bus.c
 
@@ -24,6 +24,11 @@ OBJCOPY = arm-none-eabi-objcopy
 OBJDUMP = arm-none-eabi-objdump
 SIZE = arm-none-eabi-size
 NM = arm-none-eabi-nm
+
+
+#---------------- Bootloader ----------------
+BINARY_LENGTH = 0x80000
+CRCGEN        = scripts/lpc17xx/crcgen-lpc.pl
 
 
 #---------------- Architecture variables ----------------
