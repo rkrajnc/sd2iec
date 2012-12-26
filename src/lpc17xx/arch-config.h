@@ -312,12 +312,13 @@ static inline void leds_init(void) {
   LPC_GPIO0->FIODIR |= BV(22) | BV(27) | BV(28);
   LPC_GPIO0->FIOSET  =          BV(27) | BV(28);
   LPC_GPIO0->FIOCLR  = BV(22);
+  /* green */
   LPC_GPIO2->FIODIR |= BV(13);
   LPC_GPIO2->FIOSET  = BV(13);
 }
 
 static inline __attribute__((always_inline)) void set_busy_led(uint8_t state) {
-  /* red */
+  /* green */
   if (state)
     BITBAND(LPC_GPIO2->FIOCLR, 13) = 1;
   else
@@ -325,7 +326,7 @@ static inline __attribute__((always_inline)) void set_busy_led(uint8_t state) {
 }
 
 static inline __attribute__((always_inline)) void set_dirty_led(uint8_t state) {
-  /* green */
+  /* red */
   if (state)
     BITBAND(LPC_GPIO0->FIOCLR, 27) = 1;
   else
