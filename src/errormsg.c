@@ -43,7 +43,7 @@ uint8_t current_error;
 uint8_t error_buffer[CONFIG_ERROR_BUFFER_SIZE];
 
 /// Version number string, will be added to message 73
-const char PROGMEM versionstr[] = HW_NAME " V" VERSION;
+const char PROGMEM versionstr[] = "SD2IEC V" VERSION;
 
 /// Long version string, used for message 9
 const char PROGMEM longverstr[] = LONGVERSION;

@@ -46,11 +46,6 @@ typedef uint8_t rawbutton_t;
 /* Some of the values are chosen randomly, so this variant is not   */
 /* expected to compile successfully.                                */
 
-/* Name the software should return in the Dos version message (73) */
-/* This should be upper-case because it isn't PETSCII-converted.   */
-/* Change this if you're forking the code!                         */
-#  define HW_NAME "SD2IEC"
-
 /*** SD card support ***/
 /* If your device supports SD cards by default, define this symbol. */
 #  define HAVE_SD
@@ -278,7 +273,6 @@ static inline void buttons_init(void) {
 
 #elif CONFIG_HARDWARE_VARIANT==2
 /* ---------- Hardware configuration: Shadowolf 1 ---------- */
-#  define HW_NAME "SD2IEC"
 #  define HAVE_SD
 #  define SD_CHANGE_HANDLER     ISR(INT0_vect)
 #  define SD_SUPPLY_VOLTAGE     (1L<<18)
@@ -366,7 +360,6 @@ static inline void buttons_init(void) {
 
 #elif CONFIG_HARDWARE_VARIANT == 3
 /* ---------- Hardware configuration: LarsP ---------- */
-#  define HW_NAME "SD2IEC"
 #  define HAVE_SD
 #  define SD_CHANGE_HANDLER     ISR(INT0_vect)
 #  define SD_SUPPLY_VOLTAGE     (1L<<21)
@@ -462,7 +455,6 @@ static inline void buttons_init(void) {
 #elif CONFIG_HARDWARE_VARIANT == 4
 /* ---------- Hardware configuration: uIEC ---------- */
 /* Note: This CONFIG_HARDWARE_VARIANT number is tested in system.c */
-#  define HW_NAME "UIEC"
 #  define HAVE_ATA
 #  ifndef CONFIG_NO_SD
 #    define HAVE_SD
@@ -600,7 +592,6 @@ static inline void board_init(void) {
 
 #elif CONFIG_HARDWARE_VARIANT==5
 /* ---------- Hardware configuration: Shadowolf 2 aka sd2iec 1.x ---------- */
-#  define HW_NAME "SD2IEC"
 #  define HAVE_SD
 #  define SD_CHANGE_HANDLER     ISR(INT0_vect)
 #  define SD2_CHANGE_HANDLER    ISR(INT2_vect)
@@ -730,7 +721,6 @@ static inline void buttons_init(void) {
 
 #elif CONFIG_HARDWARE_VARIANT == 7
 /* ---------- Hardware configuration: uIEC v3 ---------- */
-#  define HW_NAME "UIEC"
 #  define HAVE_SD
 #  define SD_CHANGE_HANDLER     ISR(INT6_vect)
 #  define SD_SUPPLY_VOLTAGE     (1L<<21)
@@ -826,7 +816,6 @@ static inline void board_init(void) {
 
 #elif CONFIG_HARDWARE_VARIANT == 8
 /* ---------- Hardware configuration: petSD ---------- */
-#  define HW_NAME "SD2IEC"
 #  define HAVE_SD
 #  define SD_CHANGE_HANDLER     ISR(PCINT3_vect)
 #  define SD_SUPPLY_VOLTAGE (1L<<21)
@@ -988,7 +977,6 @@ static inline void board_init(void) {
 
 #elif CONFIG_HARDWARE_VARIANT == 9
 /* ---------- Hardware configuration: XS-1541 ---------- */
-#  define HW_NAME "SD2IEC"
 #  define HAVE_SD
 #  define SD_SUPPLY_VOLTAGE     (1L<<18)
 

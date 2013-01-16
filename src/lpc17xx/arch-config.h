@@ -71,7 +71,6 @@ static inline void iec_interrupts_init(void) {
 
 #if CONFIG_HARDWARE_VARIANT == 100
 /* ---------- Hardware configuration: mbed LPC1768 ---------- */
-#  define HW_NAME "SD2IEC"
 #  define HAVE_SD
 #  define SD_SUPPLY_VOLTAGE (1L<<21)
 #  define SPI_ON_SSP 0
@@ -252,7 +251,6 @@ static inline __attribute__((always_inline)) void uart_pins_connect(void) {
 
 #elif CONFIG_HARDWARE_VARIANT == 101
 /* ---------- Hardware configuration: arm2iec v1.x ---------- */
-#  define HW_NAME "SD2IEC"
 #  define HAVE_SD
 #  define SD_SUPPLY_VOLTAGE (1L<<21)
 
