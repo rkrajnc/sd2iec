@@ -2,7 +2,7 @@
 #
 # Generate bootloader CRC for the LPC176x version of sd2iec
 #
-#  Copyright (C) 2012  Ingo Korb <ingo@akana.de>
+#  Copyright (C) 2012-2013  Ingo Korb <ingo@akana.de>
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
