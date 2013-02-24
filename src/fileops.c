@@ -796,12 +796,6 @@ void file_open(uint8_t secondary) {
 
   uart_trace(command_buffer,0,command_length);
 
-  /* Load directory? */
-  if (command_buffer[0] == '$') {
-    load_directory(secondary);
-    return;
-  }
-
   /* Direct access? */
   if (command_buffer[0] == '#') {
     open_buffer(secondary);
@@ -860,6 +854,12 @@ void file_open(uint8_t secondary) {
       i = 2;  // stop the scan
       break;
     }
+  }
+
+  /* Load directory? */
+  if (command_buffer[0] == '$') {
+    load_directory(secondary);
+    return;
   }
 
   /* Parse path+partition numbers */
